@@ -13,7 +13,7 @@ struct CustomTabBar: View {
                 // Apply corner radius only to top corners
                 TopRoundedRectangle(cornerRadius: 25)
                     .fill(outerContainerColor)
-                    .frame(height: 90)
+                    .frame(height: 110)
                     .shadow(radius: 5)
                     .edgesIgnoringSafeArea(.bottom) // Extend to the bottom edge
 
@@ -36,8 +36,8 @@ struct CustomTabBar: View {
                 .background(tabBarBackgroundColor)
                 .cornerRadius(25)
                 .padding(.horizontal, 20)
-                .padding(.top, 0) // Adjust this padding to move the control up
-                .padding(.bottom, 35)
+                .padding(.top, 15) // Adjust this padding to move the control up
+                .padding(.bottom, 40)
                 
                 
             }
@@ -49,7 +49,7 @@ struct CustomTabBar: View {
     }
 
     var outerContainerColor: Color {
-        colorScheme == .dark ? .black : .white
+        colorScheme == .dark ? Color(rgb: 30, 30, 30): .white
     }
 }
 
