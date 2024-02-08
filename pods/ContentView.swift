@@ -20,7 +20,10 @@ struct ContentView: View {
                 case 0:
                     HomeView()
                 case 1:
-                    CameraView()
+                    CameraView(captureAction: {
+                            // Define what should happen when the capture button is pressed
+                            print("Capture button tapped")
+                        })
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
                 default:
