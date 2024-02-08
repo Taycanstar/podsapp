@@ -14,6 +14,10 @@
 		36C458CB2B7421110060355F /* podsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458CA2B7421110060355F /* podsTests.swift */; };
 		36C458D52B7421110060355F /* podsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458D42B7421110060355F /* podsUITests.swift */; };
 		36C458D72B7421110060355F /* podsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458D62B7421110060355F /* podsUITestsLaunchTests.swift */; };
+		36C458E42B7457580060355F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E32B7457580060355F /* HomeView.swift */; };
+		36C458E62B7458720060355F /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E52B7458720060355F /* CameraView.swift */; };
+		36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E72B746B7C0060355F /* CustomTabBar.swift */; };
+		36C458EA2B746D650060355F /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E92B746D650060355F /* ProfileView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +48,10 @@
 		36C458D02B7421110060355F /* podsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = podsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458D42B7421110060355F /* podsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsUITests.swift; sourceTree = "<group>"; };
 		36C458D62B7421110060355F /* podsUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		36C458E32B7457580060355F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		36C458E52B7458720060355F /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		36C458E72B746B7C0060355F /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
+		36C458E92B746D650060355F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,7 +102,11 @@
 		36C458B82B7421100060355F /* pods */ = {
 			isa = PBXGroup;
 			children = (
+				36C458E32B7457580060355F /* HomeView.swift */,
 				36C458B92B7421100060355F /* podsApp.swift */,
+				36C458E52B7458720060355F /* CameraView.swift */,
+				36C458E92B746D650060355F /* ProfileView.swift */,
+				36C458E72B746B7C0060355F /* CustomTabBar.swift */,
 				36C458BB2B7421100060355F /* ContentView.swift */,
 				36C458BD2B7421110060355F /* Assets.xcassets */,
 				36C458BF2B7421110060355F /* Preview Content */,
@@ -257,8 +269,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36C458E42B7457580060355F /* HomeView.swift in Sources */,
+				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
+				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,8 +438,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
+				DEVELOPMENT_TEAM = RZU2ZRNK98;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture photos or videos to attach to your pods.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -450,8 +468,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
+				DEVELOPMENT_TEAM = RZU2ZRNK98;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture photos or videos to attach to your pods.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

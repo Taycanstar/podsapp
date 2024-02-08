@@ -7,15 +7,32 @@
 
 import SwiftUI
 
+
+
 struct ContentView: View {
+    @State private var selectedTab: Int = 0
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        ZStack(alignment: .bottom) {
+            // Content views
+            Group {
+                switch selectedTab {
+                case 0:
+                    HomeView()
+                case 1:
+                    CameraView()
+                case 2:
+                    ProfileView() // Assuming you have a ProfileView
+                default:
+                    Text("Content not available")
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Custom tab bar
+            CustomTabBar(selectedTab: $selectedTab)
+                .edgesIgnoringSafeArea(.bottom)
         }
-        .padding()
     }
 }
 
