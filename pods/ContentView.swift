@@ -24,6 +24,7 @@ struct ContentView: View {
                             // Define what should happen when the capture button is pressed
                             print("Capture button tapped")
                         })
+                    .edgesIgnoringSafeArea(.all)
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
                 default:

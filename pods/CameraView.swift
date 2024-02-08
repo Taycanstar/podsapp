@@ -6,56 +6,29 @@ struct CameraView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
-        let captureSession = AVCaptureSession()
-        captureSession.sessionPreset = .photo
 
-        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
-              captureSession.canAddInput(videoInput) else {
-            print("Failed to create video device/input")
-            return view
-        }
-
-        captureSession.addInput(videoInput)
-
-        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        
-        previewLayer.frame = UIScreen.main.bounds
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-
-        let videoOutput = AVCaptureVideoDataOutput()
-        if captureSession.canAddOutput(videoOutput) {
-            captureSession.addOutput(videoOutput)
-            videoOutput.setSampleBufferDelegate(context.coordinator as? AVCaptureVideoDataOutputSampleBufferDelegate, queue: DispatchQueue(label: "cameraQueue"))
-        } else {
-            print("Could not add video output")
-        }
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            captureSession.startRunning()
-        }
+        setupCameraSession(in: view, coordinator: context.coordinator)
 
         // Adding the capture button
         DispatchQueue.main.async {
             let backgroundView = UIView()
-            backgroundView.backgroundColor = UIColor.clear // Clear background for the ring
-            backgroundView.layer.cornerRadius = 35 // Half of width and height
-            backgroundView.layer.borderColor = UIColor.white.cgColor // White ring color
-            backgroundView.layer.borderWidth = 3 // Thickness of the ring
+            backgroundView.backgroundColor = UIColor.clear
+            backgroundView.layer.cornerRadius = 35
+            backgroundView.layer.borderColor = UIColor.white.cgColor
+            backgroundView.layer.borderWidth = 3
             backgroundView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(backgroundView)
 
             NSLayoutConstraint.activate([
                 backgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -95),
                 backgroundView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                backgroundView.widthAnchor.constraint(equalToConstant: 70), // Total diameter of the ring
+                backgroundView.widthAnchor.constraint(equalToConstant: 70),
                 backgroundView.heightAnchor.constraint(equalToConstant: 70)
             ])
 
             let button = UIButton(type: .custom)
-            button.backgroundColor = UIColor.white.withAlphaComponent(1) // Solid white button
-            button.layer.cornerRadius = 30 // Making the button slightly smaller than the ring
+            button.backgroundColor = UIColor.white.withAlphaComponent(1)
+            button.layer.cornerRadius = 30
             button.addTarget(context.coordinator, action: #selector(Coordinator.captureTapped), for: .touchUpInside)
             button.translatesAutoresizingMaskIntoConstraints = false
             backgroundView.addSubview(button)
@@ -63,14 +36,46 @@ struct CameraView: UIViewRepresentable {
             NSLayoutConstraint.activate([
                 button.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
                 button.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
-                button.widthAnchor.constraint(equalToConstant: 60), // Slightly smaller than the background ring
+                button.widthAnchor.constraint(equalToConstant: 60),
                 button.heightAnchor.constraint(equalToConstant: 60)
             ])
         }
+
         return view
     }
 
-    class Coordinator: NSObject {
+    private func setupCameraSession(in view: UIView, coordinator: Coordinator) {
+        let captureSession = AVCaptureSession()
+        captureSession.sessionPreset = .photo
+
+        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
+              captureSession.canAddInput(videoInput) else {
+            print("Failed to create video device/input")
+            return
+        }
+
+        captureSession.addInput(videoInput)
+
+        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+        previewLayer.frame = view.bounds
+        previewLayer.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(previewLayer)
+
+        let videoOutput = AVCaptureVideoDataOutput()
+        if captureSession.canAddOutput(videoOutput) {
+            captureSession.addOutput(videoOutput)
+            videoOutput.setSampleBufferDelegate(coordinator, queue: DispatchQueue(label: "cameraQueue"))
+        } else {
+            print("Could not add video output")
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            captureSession.startRunning()
+        }
+    }
+
+    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         var parent: CameraView
 
         init(_ parent: CameraView) {
@@ -79,6 +84,10 @@ struct CameraView: UIViewRepresentable {
 
         @objc func captureTapped() {
             parent.captureAction()
+        }
+
+        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+            // Handle frame capture
         }
     }
 
@@ -91,15 +100,10 @@ struct CameraView: UIViewRepresentable {
 
 struct CameraViewContainer: View {
     var body: some View {
-        GeometryReader { geometry in
-                   CameraView {
-                       // Implement capture functionality here
-                       print("Capture button tapped")
-                   }
-                   .frame(width: geometry.size.width, height: geometry.size.height)
-                   .edgesIgnoringSafeArea(.all)
-               }
-     
+        CameraView {
+            print("Capture button tapped")
+        }
+        .edgesIgnoringSafeArea(.all)
     }
 }
 
@@ -108,3 +112,4 @@ struct CameraViewContainer_Previews: PreviewProvider {
         CameraViewContainer()
     }
 }
+
