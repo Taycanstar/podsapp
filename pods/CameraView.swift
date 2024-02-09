@@ -7,8 +7,11 @@ struct CameraView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
 
+
         setupCameraSession(in: view, coordinator: context.coordinator)
         setupFloatingControls(in: view, coordinator: context.coordinator)
+        
+        
 
         // Adding the capture button
         DispatchQueue.main.async {
@@ -50,24 +53,25 @@ struct CameraView: UIViewRepresentable {
     private func setupCameraSession(in view: UIView, coordinator: Coordinator) {
         let captureSession = AVCaptureSession()
         captureSession.sessionPreset = .photo
-        
-        
-        
 
-        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
-              captureSession.canAddInput(videoInput) else {
-            print("Failed to create video device/input")
+        // Find the front camera
+        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+              let frontCameraInput = try? AVCaptureDeviceInput(device: frontCamera),
+              captureSession.canAddInput(frontCameraInput) else {
+            print("Failed to create front camera input")
             return
         }
 
-        captureSession.addInput(videoInput)
+        // Add the front camera input to the session
+        captureSession.addInput(frontCameraInput)
 
+        // Setup preview layer
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.frame = view.bounds
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
 
+        // Setup video output
         let videoOutput = AVCaptureVideoDataOutput()
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
@@ -76,11 +80,12 @@ struct CameraView: UIViewRepresentable {
             print("Could not add video output")
         }
 
+        // Start the session
         DispatchQueue.global(qos: .userInitiated).async {
             captureSession.startRunning()
         }
-        
     }
+
     private func setupFloatingControls(in view: UIView, coordinator: Coordinator) {
         let controlBar = UIStackView()
         controlBar.axis = .vertical
@@ -111,6 +116,7 @@ struct CameraView: UIViewRepresentable {
         switchCameraButton.tintColor = .white
         switchCameraButton.addTarget(coordinator, action: #selector(Coordinator.switchCamera), for: .touchUpInside)
 
+
         [flashButton, recordButton, switchCameraButton].forEach { button in
             controlBar.addArrangedSubview(button)
         }
@@ -138,7 +144,7 @@ struct CameraView: UIViewRepresentable {
 
             print("Video recording finished, file saved to: \(outputFileURL)")
         }
-        
+        weak var previewLayer: AVCaptureVideoPreviewLayer?
         var parent: CameraView
         var backFacingCamera: AVCaptureDevice?
         var frontFacingCamera: AVCaptureDevice?
@@ -150,19 +156,49 @@ struct CameraView: UIViewRepresentable {
           var isFlashOn = false
 //        weak var flashButton: UIButton?
 
-        init(_ parent: CameraView, captureSession: AVCaptureSession? = nil) {
+        init(_ parent: CameraView) {
             self.parent = parent
-            self.captureSession = captureSession
-            super.init() // Call super.init after all properties are initialized
-                findCameraDevices()
+            super.init()
+            self.captureSession = AVCaptureSession()
+            findCameraDevices()
+            setupCaptureSession()
             
-            if let captureSession = captureSession, !captureSession.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
-                       if captureSession.canAddOutput(photoOutput) {
-                           captureSession.addOutput(photoOutput)
-                       }
-                   }
+        }
+
+        
+        func setupCaptureSession() {
+            guard let captureSession = self.captureSession else {
+                print("Capture session could not be created")
+                return
+            }
+
+            // Check and add the front camera as the initial input
+            if let frontCamera = frontFacingCamera {
+                do {
+                    let input = try AVCaptureDeviceInput(device: frontCamera)
+                    if captureSession.canAddInput(input) {
+                        captureSession.addInput(input)
+                    }
+                } catch {
+                    print("Error setting up front camera input: \(error)")
+                }
+            }
+
+            // Add photo output
+            if !captureSession.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
+                if captureSession.canAddOutput(photoOutput) {
+                    captureSession.addOutput(photoOutput)
+                }
+            }
+
+            // Start the session
+            DispatchQueue.global(qos: .userInitiated).async {
+                captureSession.startRunning()
+            }
+            
         
         }
+
         @objc func toggleRecord() {
                 guard let captureSession = captureSession else {
                     print("Capture session is not initialized")
@@ -226,39 +262,58 @@ struct CameraView: UIViewRepresentable {
                // Use imageData (e.g., save to photo library, display in the app, etc.)
            }
 
-        
         @objc func switchCamera() {
+            print("Switch camera tapped")
+
             guard let captureSession = self.captureSession else {
                 print("Capture session is not initialized")
                 return
             }
 
-            guard let currentCameraInput = captureSession.inputs.first as? AVCaptureDeviceInput else { return }
-            
-            captureSession.beginConfiguration()
-            captureSession.removeInput(currentCameraInput)
-
-            let newCameraDevice: AVCaptureDevice?
-            if currentCameraInput.device.position == .back {
-                newCameraDevice = frontFacingCamera
-            } else {
-                newCameraDevice = backFacingCamera
+            guard let backFacingCamera = backFacingCamera, let frontFacingCamera = frontFacingCamera else {
+                print("One or both cameras are unavailable")
+                return
             }
 
-            guard let newCamera = newCameraDevice, let newVideoInput = try? AVCaptureDeviceInput(device: newCamera) else {
-                print("Failed to create video input")
+            captureSession.beginConfiguration()
+
+            guard let currentInput = captureSession.inputs.first as? AVCaptureDeviceInput else {
+                print("No current input to remove")
                 captureSession.commitConfiguration()
                 return
             }
 
-            if captureSession.canAddInput(newVideoInput) {
-                captureSession.addInput(newVideoInput)
-            } else {
-                print("Could not add video input")
+            print("Current camera: \(currentInput.device.position == .front ? "Front" : "Back")")
+
+            captureSession.removeInput(currentInput)
+
+            let newCameraDevice = (currentInput.device.position == .front) ? backFacingCamera : frontFacingCamera
+            do {
+                let newInput = try AVCaptureDeviceInput(device: newCameraDevice)
+                if captureSession.canAddInput(newInput) {
+                    captureSession.addInput(newInput)
+                    print("Switched camera to: \(newCameraDevice.position == .front ? "Front" : "Back")")
+                } else {
+                    print("Could not add input for new camera")
+                }
+            } catch {
+                print("Failed to create input for new camera: \(error)")
             }
 
             captureSession.commitConfiguration()
-        }
+
+            // Reconfigure the preview layer
+            // Reset the preview layer with the new input
+                  DispatchQueue.main.async {
+                      self.previewLayer?.session = captureSession
+                  }        }
+
+
+
+
+
+
+
 
 //
 //        @objc func captureTapped() {
@@ -281,7 +336,15 @@ struct CameraView: UIViewRepresentable {
                     frontFacingCamera = device
                 }
             }
+
+            // Ensure that both cameras are found
+            if backFacingCamera == nil || frontFacingCamera == nil {
+                print("Failed to find one or both cameras.")
+                return
+            }
         }
+
+
     }
 
     func makeCoordinator() -> Coordinator {
