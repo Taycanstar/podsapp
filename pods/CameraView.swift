@@ -6,12 +6,23 @@ struct CameraView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
-
+        let coordinator = context.coordinator
 
         setupCameraSession(in: view, coordinator: context.coordinator)
-        setupFloatingControls(in: view, coordinator: context.coordinator)
+
         
-        
+        // Setup preview layer
+        if let captureSession = coordinator.captureSession {
+            let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+            previewLayer.frame = view.bounds
+            previewLayer.videoGravity = .resizeAspectFill
+            view.layer.addSublayer(previewLayer)
+            coordinator.previewLayer = previewLayer
+        } else {
+            print("Failed to get capture session from coordinator")
+        }
+
+        setupFloatingControls(in: view, coordinator: coordinator)
 
         // Adding the capture button
         DispatchQueue.main.async {
@@ -168,9 +179,9 @@ struct CameraView: UIViewRepresentable {
         
         func setupCaptureSession() {
             guard let captureSession = self.captureSession else {
-                print("Capture session could not be created")
-                return
-            }
+                       print("Capture session could not be created")
+                       return
+                   }
 
             // Check and add the front camera as the initial input
             if let frontCamera = frontFacingCamera {
@@ -264,29 +275,29 @@ struct CameraView: UIViewRepresentable {
 
         @objc func switchCamera() {
             print("Switch camera tapped")
-
+            
             guard let captureSession = self.captureSession else {
                 print("Capture session is not initialized")
                 return
             }
-
+            
             guard let backFacingCamera = backFacingCamera, let frontFacingCamera = frontFacingCamera else {
                 print("One or both cameras are unavailable")
                 return
             }
-
+            
             captureSession.beginConfiguration()
-
+            
             guard let currentInput = captureSession.inputs.first as? AVCaptureDeviceInput else {
                 print("No current input to remove")
                 captureSession.commitConfiguration()
                 return
             }
-
+            
             print("Current camera: \(currentInput.device.position == .front ? "Front" : "Back")")
-
+            
             captureSession.removeInput(currentInput)
-
+            
             let newCameraDevice = (currentInput.device.position == .front) ? backFacingCamera : frontFacingCamera
             do {
                 let newInput = try AVCaptureDeviceInput(device: newCameraDevice)
@@ -299,17 +310,25 @@ struct CameraView: UIViewRepresentable {
             } catch {
                 print("Failed to create input for new camera: \(error)")
             }
-
+            
             captureSession.commitConfiguration()
-
+            
             // Reconfigure the preview layer
             // Reset the preview layer with the new input
-                  DispatchQueue.main.async {
-                      self.previewLayer?.session = captureSession
-                  }        }
-
-
-
+            //                  DispatchQueue.main.async {
+            //                      self.previewLayer?.session = captureSession
+            //                  }        }
+            
+            DispatchQueue.main.async {
+                self.previewLayer?.session = captureSession
+                // Ensure the capture session is running
+                if !captureSession.isRunning {
+                    captureSession.startRunning()
+                }
+            }
+            
+            
+        }
 
 
 
