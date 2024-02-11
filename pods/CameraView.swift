@@ -1,11 +1,17 @@
 import SwiftUI
 import AVFoundation
 
+
+
 struct CameraView: UIViewRepresentable {
     var captureAction: () -> Void
-
+    @Binding var isRecording: Bool  // Bind this variable to control recording status
+    @Binding var recordingProgress: CGFloat
+    let tabBarHeight: CGFloat = 85
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
+        // Adjust the view frame to exclude the tab bar area
+        view.frame.size.height -= tabBarHeight
         let coordinator = context.coordinator
 
         setupCameraSession(in: view, coordinator: context.coordinator)
@@ -28,33 +34,40 @@ struct CameraView: UIViewRepresentable {
         DispatchQueue.main.async {
             let backgroundView = UIView()
             backgroundView.backgroundColor = UIColor.clear
-            backgroundView.layer.cornerRadius = 35
+            backgroundView.layer.cornerRadius = 40 // Adjust for larger background view
             backgroundView.layer.borderColor = UIColor.white.cgColor
-            backgroundView.layer.borderWidth = 3
+            backgroundView.layer.borderWidth = 3 // Original thickness
             backgroundView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(backgroundView)
 
             NSLayoutConstraint.activate([
-                backgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -95),
+                backgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -85),
                 backgroundView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                backgroundView.widthAnchor.constraint(equalToConstant: 70),
-                backgroundView.heightAnchor.constraint(equalToConstant: 70)
+                backgroundView.widthAnchor.constraint(equalToConstant: 80), // Increased size for more space
+                backgroundView.heightAnchor.constraint(equalToConstant: 80)  // Increased size for more space
             ])
 
             let button = UIButton(type: .custom)
-            button.backgroundColor = UIColor.white.withAlphaComponent(1)
-            button.layer.cornerRadius = 30
+            button.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0)
+            button.layer.cornerRadius = 34 // Same as original
             button.addTarget(context.coordinator, action: #selector(Coordinator.captureTapped), for: .touchUpInside)
             button.translatesAutoresizingMaskIntoConstraints = false
             backgroundView.addSubview(button)
 
+            let gestureTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.captureTapped))
+            button.addGestureRecognizer(gestureTap)
+
+            let gestureLongPress = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress))
+            button.addGestureRecognizer(gestureLongPress)
+
             NSLayoutConstraint.activate([
                 button.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
                 button.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
-                button.widthAnchor.constraint(equalToConstant: 60),
-                button.heightAnchor.constraint(equalToConstant: 60)
+                button.widthAnchor.constraint(equalToConstant: 68), // Same as original
+                button.heightAnchor.constraint(equalToConstant: 68)  // Same as original
             ])
         }
+
 
         return view
     }
@@ -63,18 +76,51 @@ struct CameraView: UIViewRepresentable {
 
     private func setupCameraSession(in view: UIView, coordinator: Coordinator) {
         let captureSession = AVCaptureSession()
-        captureSession.sessionPreset = .photo
+//        captureSession.sessionPreset = .photo
+        captureSession.sessionPreset = .high
 
         // Find the front camera
-        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-              let frontCameraInput = try? AVCaptureDeviceInput(device: frontCamera),
-              captureSession.canAddInput(frontCameraInput) else {
-            print("Failed to create front camera input")
+//        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+//              let frontCameraInput = try? AVCaptureDeviceInput(device: frontCamera),
+//              
+//                
+//              captureSession.canAddInput(frontCameraInput) else {
+//            print("Failed to create front camera input")
+//            return
+//        }
+        // Add the front camera input to the session
+//        captureSession.addInput(frontCameraInput)
+        
+        // Find the front camera
+        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else {
+            print("Failed to find front camera")
+            return
+        }
+        
+        print("Using camera with device type: \(frontCamera.deviceType.rawValue), position: \(frontCamera.position.rawValue)")
+
+        do {
+            let frontCameraInput = try AVCaptureDeviceInput(device: frontCamera)
+            
+            // Adjust the zoom factor here
+            try frontCamera.lockForConfiguration()
+            frontCamera.videoZoomFactor = 1 // Adjust this value as needed
+            frontCamera.unlockForConfiguration()
+
+            print("Default videoZoomFactor: \(frontCamera.videoZoomFactor)")
+            print("Field of View: \(frontCamera.activeFormat.videoFieldOfView)")
+
+            // Add the front camera input to the session
+            if captureSession.canAddInput(frontCameraInput) {
+                captureSession.addInput(frontCameraInput)
+            }
+        } catch {
+            print("Failed to create front camera input or adjust zoom: \(error)")
             return
         }
 
-        // Add the front camera input to the session
-        captureSession.addInput(frontCameraInput)
+
+
 
         // Setup preview layer
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -161,11 +207,14 @@ struct CameraView: UIViewRepresentable {
         var frontFacingCamera: AVCaptureDevice?
         var captureSession: AVCaptureSession?
         var movieFileOutput: AVCaptureMovieFileOutput?
-          var isRecording = false
+        var isRecording = false
         var photoOutput = AVCapturePhotoOutput()
         var flashButton: UIButton?
-          var isFlashOn = false
-//        weak var flashButton: UIButton?
+        var isFlashOn = false
+        var timer: Timer?
+        var totalTime = 60.0 // Total recording time in seconds
+        var currentTime = 0.0
+
 
         init(_ parent: CameraView) {
             self.parent = parent
@@ -267,37 +316,99 @@ struct CameraView: UIViewRepresentable {
               photoOutput.capturePhoto(with: settings, delegate: self)
           }
         
-        // AVCapturePhotoCaptureDelegate methods
-           func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-               guard photo.fileDataRepresentation() != nil else { return }
-               // Use imageData (e.g., save to photo library, display in the app, etc.)
-           }
+       func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+            guard let imageData = photo.fileDataRepresentation() else { return }
+            // Handle the captured image (e.g., show a preview, save to photo album)
+        }
+       
+          @objc func handleLongPress(gesture: UILongPressGestureRecognizer) {
+              if gesture.state == .began {
+                  // Start recording
+                  startRecording()
+              } else if gesture.state == .ended {
+                  // Stop recording
+                  stopRecording()
+              }
+          }
 
-        @objc func switchCamera() {
+        func startRecording() {
+            timer?.invalidate()
+                   currentTime = 0.0
+
+            // Start the timer
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                self?.currentTime += 1.0
+
+                // Provide a default value for totalTime in case self is nil
+                let totalTime = self?.totalTime ?? 60.0 // Default to 60 seconds
+
+                if self?.currentTime ?? 0 >= totalTime {
+                    self?.stopRecording()
+                }
+
+                // Update the progress
+                DispatchQueue.main.async {
+                    // Unwrap currentTime safely, defaulting to 0 if nil
+                    let currentProgress = self?.currentTime ?? 0
+                    self?.parent.recordingProgress = CGFloat(currentProgress / totalTime)
+                }
+            }
+
+
+            guard let movieFileOutput = self.movieFileOutput else { return }
+
+            let outputPath = NSTemporaryDirectory() + "output.mov"
+            let outputFileURL = URL(fileURLWithPath: outputPath)
+            movieFileOutput.startRecording(to: outputFileURL, recordingDelegate: self)
+
+            parent.isRecording = true
+            // Start a timer to update recordingProgress
+            // Example timer (adjust according to your needs)
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+                self.parent.recordingProgress += 0.01
+                if self.parent.recordingProgress >= 1.0 {
+                    timer.invalidate()
+                    self.stopRecording()
+                }
+            }
+        }
+
+        func stopRecording() {
+            timer?.invalidate()
+            movieFileOutput?.stopRecording()
+            parent.isRecording = false
+            parent.recordingProgress = 0.0
+            // Stop the timer if you have started one
+        }
+
+        
+       
+
+        @objc func switchCamera(_ uiView: UIView) {
             print("Switch camera tapped")
-            
+
             guard let captureSession = self.captureSession else {
                 print("Capture session is not initialized")
                 return
             }
-            
+
             guard let backFacingCamera = backFacingCamera, let frontFacingCamera = frontFacingCamera else {
                 print("One or both cameras are unavailable")
                 return
             }
-            
+
             captureSession.beginConfiguration()
-            
+
             guard let currentInput = captureSession.inputs.first as? AVCaptureDeviceInput else {
                 print("No current input to remove")
                 captureSession.commitConfiguration()
                 return
             }
-            
+
             print("Current camera: \(currentInput.device.position == .front ? "Front" : "Back")")
-            
+
             captureSession.removeInput(currentInput)
-            
+
             let newCameraDevice = (currentInput.device.position == .front) ? backFacingCamera : frontFacingCamera
             do {
                 let newInput = try AVCaptureDeviceInput(device: newCameraDevice)
@@ -306,38 +417,32 @@ struct CameraView: UIViewRepresentable {
                     print("Switched camera to: \(newCameraDevice.position == .front ? "Front" : "Back")")
                 } else {
                     print("Could not add input for new camera")
+                    captureSession.commitConfiguration()
+                    return
                 }
             } catch {
                 print("Failed to create input for new camera: \(error)")
+                captureSession.commitConfiguration()
+                return
             }
-            
+
             captureSession.commitConfiguration()
-            
-            // Reconfigure the preview layer
-            // Reset the preview layer with the new input
-            //                  DispatchQueue.main.async {
-            //                      self.previewLayer?.session = captureSession
-            //                  }        }
-            
+
             DispatchQueue.main.async {
                 self.previewLayer?.session = captureSession
-                // Ensure the capture session is running
+                
+            }
+
+            DispatchQueue.global(qos: .userInitiated).async {
                 if !captureSession.isRunning {
                     captureSession.startRunning()
                 }
             }
-            
-            
+
         }
 
 
 
-
-
-//
-//        @objc func captureTapped() {
-//            parent.captureAction()
-//        }
 
         func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
             // Handle frame capture
@@ -370,17 +475,31 @@ struct CameraView: UIViewRepresentable {
         Coordinator(self)
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {
+//        if let previewLayer = context.coordinator.previewLayer {
+//            previewLayer.frame = uiView.bounds
+//        }
+    }
+
 }
 
 struct CameraViewContainer: View {
+    @State private var isRecording = false
+       @State private var recordingProgress: CGFloat = 0.0
     var body: some View {
-        CameraView {
-            print("Capture button tapped")
-        }
-        .edgesIgnoringSafeArea(.all)
-    }
+           ZStack {
+               CameraView(captureAction: { /* ... */ }, isRecording: $isRecording, recordingProgress: $recordingProgress)
+
+               if isRecording {
+                   CircularProgressView(progress: recordingProgress)
+                       .frame(width: 100, height: 100)
+                       .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+               }
+           }
+       }
 }
+
+
 
 struct CameraViewContainer_Previews: PreviewProvider {
     static var previews: some View {
@@ -388,3 +507,15 @@ struct CameraViewContainer_Previews: PreviewProvider {
     }
 }
 
+struct CircularProgressView: View {
+    var progress: CGFloat
+    var body: some View {
+        ZStack {
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(Color.blue, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .rotationEffect(.degrees(-90)) // Start from top
+                .animation(.linear, value: progress)
+        }
+    }
+}

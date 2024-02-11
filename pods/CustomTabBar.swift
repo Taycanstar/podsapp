@@ -4,6 +4,7 @@ struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
 
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -13,7 +14,7 @@ struct CustomTabBar: View {
                 // Apply corner radius only to top corners
                 TopRoundedRectangle(cornerRadius: 25)
                     .fill(outerContainerColor)
-                    .frame(height: 110)
+                    .frame(height: 100)
                     .shadow(radius: 5)
                     .edgesIgnoringSafeArea(.bottom) // Extend to the bottom edge
 
@@ -51,6 +52,8 @@ struct CustomTabBar: View {
     var outerContainerColor: Color {
         colorScheme == .dark ? Color(rgb: 30, 30, 30): .white
     }
+    
+
 }
 
 // Custom shape with top corners rounded
