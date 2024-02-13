@@ -3,6 +3,7 @@ import AVFoundation
 
 
 
+
 struct CameraView: UIViewRepresentable {
     var captureAction: () -> Void
     @Binding var isRecording: Bool  // Bind this variable to control recording status
@@ -14,7 +15,7 @@ struct CameraView: UIViewRepresentable {
         view.frame.size.height -= tabBarHeight
         let coordinator = context.coordinator
 
-        setupCameraSession(in: view, coordinator: context.coordinator)
+      
 
         
         // Setup preview layer
@@ -39,6 +40,7 @@ struct CameraView: UIViewRepresentable {
             backgroundView.layer.borderWidth = 3 // Original thickness
             backgroundView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(backgroundView)
+            backgroundView.isUserInteractionEnabled = true
 
             NSLayoutConstraint.activate([
                 backgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -85),
@@ -50,15 +52,35 @@ struct CameraView: UIViewRepresentable {
             let button = UIButton(type: .custom)
             button.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0)
             button.layer.cornerRadius = 34 // Same as original
-            button.addTarget(context.coordinator, action: #selector(Coordinator.captureTapped), for: .touchUpInside)
             button.translatesAutoresizingMaskIntoConstraints = false
+            coordinator.captureButton = button
             backgroundView.addSubview(button)
+            
+            let transparentButton = UIButton(type: .custom)
+             transparentButton.backgroundColor = .clear
+             transparentButton.translatesAutoresizingMaskIntoConstraints = false
+             backgroundView.addSubview(transparentButton)
 
-            let gestureTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.captureTapped))
-            button.addGestureRecognizer(gestureTap)
+             NSLayoutConstraint.activate([
+                 transparentButton.topAnchor.constraint(equalTo: backgroundView.topAnchor),
+                 transparentButton.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor),
+                 transparentButton.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
+                 transparentButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor)
+             ])
+
+            
+
+            
+            
+            let gestureTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.toggleRecord))
+     
+            transparentButton.addGestureRecognizer(gestureTap)
 
             let gestureLongPress = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress))
-            button.addGestureRecognizer(gestureLongPress)
+            transparentButton.addGestureRecognizer(gestureLongPress)
+           
+            
+            
 
             NSLayoutConstraint.activate([
                 button.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
@@ -72,76 +94,14 @@ struct CameraView: UIViewRepresentable {
         return view
     }
     
+ 
+
     
 
-    private func setupCameraSession(in view: UIView, coordinator: Coordinator) {
-        let captureSession = AVCaptureSession()
-//        captureSession.sessionPreset = .photo
-        captureSession.sessionPreset = .high
-
-        // Find the front camera
-//        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-//              let frontCameraInput = try? AVCaptureDeviceInput(device: frontCamera),
-//              
-//                
-//              captureSession.canAddInput(frontCameraInput) else {
-//            print("Failed to create front camera input")
-//            return
-//        }
-        // Add the front camera input to the session
-//        captureSession.addInput(frontCameraInput)
-        
-        // Find the front camera
-        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else {
-            print("Failed to find front camera")
-            return
-        }
-        
-        print("Using camera with device type: \(frontCamera.deviceType.rawValue), position: \(frontCamera.position.rawValue)")
-
-        do {
-            let frontCameraInput = try AVCaptureDeviceInput(device: frontCamera)
-            
-            // Adjust the zoom factor here
-            try frontCamera.lockForConfiguration()
-            frontCamera.videoZoomFactor = 1 // Adjust this value as needed
-            frontCamera.unlockForConfiguration()
-
-            print("Default videoZoomFactor: \(frontCamera.videoZoomFactor)")
-            print("Field of View: \(frontCamera.activeFormat.videoFieldOfView)")
-
-            // Add the front camera input to the session
-            if captureSession.canAddInput(frontCameraInput) {
-                captureSession.addInput(frontCameraInput)
-            }
-        } catch {
-            print("Failed to create front camera input or adjust zoom: \(error)")
-            return
-        }
+    
 
 
 
-
-        // Setup preview layer
-        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.bounds
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-
-        // Setup video output
-        let videoOutput = AVCaptureVideoDataOutput()
-        if captureSession.canAddOutput(videoOutput) {
-            captureSession.addOutput(videoOutput)
-            videoOutput.setSampleBufferDelegate(coordinator, queue: DispatchQueue(label: "cameraQueue"))
-        } else {
-            print("Could not add video output")
-        }
-
-        // Start the session
-        DispatchQueue.global(qos: .userInitiated).async {
-            captureSession.startRunning()
-        }
-    }
 
     private func setupFloatingControls(in view: UIView, coordinator: Coordinator) {
         let controlBar = UIStackView()
@@ -188,19 +148,9 @@ struct CameraView: UIViewRepresentable {
     }
 
 
-    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate  {
-        func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-            if let error = error {
-                // An error occurred while recording the video
-                print("Error recording video: \(error.localizedDescription)")
-                return
-            }
 
-            // Assuming you want to save the video to the Photos library
-            UISaveVideoAtPathToSavedPhotosAlbum(outputFileURL.path, nil, nil, nil)
-
-            print("Video recording finished, file saved to: \(outputFileURL)")
-        }
+    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate {
+   
         weak var previewLayer: AVCaptureVideoPreviewLayer?
         var parent: CameraView
         var backFacingCamera: AVCaptureDevice?
@@ -208,88 +158,153 @@ struct CameraView: UIViewRepresentable {
         var captureSession: AVCaptureSession?
         var movieFileOutput: AVCaptureMovieFileOutput?
         var isRecording = false
-        var photoOutput = AVCapturePhotoOutput()
         var flashButton: UIButton?
         var isFlashOn = false
         var timer: Timer?
         var totalTime = 60.0 // Total recording time in seconds
         var currentTime = 0.0
+        var captureButton: UIButton?
 
 
         init(_ parent: CameraView) {
             self.parent = parent
             super.init()
-            self.captureSession = AVCaptureSession()
             findCameraDevices()
             setupCaptureSession()
             
         }
 
-        
         func setupCaptureSession() {
-            guard let captureSession = self.captureSession else {
-                       print("Capture session could not be created")
-                       return
-                   }
-
-            // Check and add the front camera as the initial input
-            if let frontCamera = frontFacingCamera {
-                do {
-                    let input = try AVCaptureDeviceInput(device: frontCamera)
-                    if captureSession.canAddInput(input) {
-                        captureSession.addInput(input)
-                    }
-                } catch {
-                    print("Error setting up front camera input: \(error)")
-                }
-            }
-
-            // Add photo output
-            if !captureSession.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
-                if captureSession.canAddOutput(photoOutput) {
-                    captureSession.addOutput(photoOutput)
-                }
-            }
-
-            // Start the session
-            DispatchQueue.global(qos: .userInitiated).async {
-                captureSession.startRunning()
-            }
+            captureSession = AVCaptureSession()
+            captureSession?.sessionPreset = .high  // Suitable for video recording
             
-        
+
+            guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+                  let input = try? AVCaptureDeviceInput(device: frontCamera) else {
+                print("Failed to get front camera.")
+                return
+            }
+
+            if captureSession?.canAddInput(input) ?? false {
+                captureSession?.addInput(input)
+            }
+
+            movieFileOutput = AVCaptureMovieFileOutput()
+            if captureSession?.canAddOutput(movieFileOutput!) ?? false {
+                captureSession?.addOutput(movieFileOutput!)
+            }
+
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.captureSession?.startRunning()
+            }
         }
+        
 
         @objc func toggleRecord() {
-                guard let captureSession = captureSession else {
-                    print("Capture session is not initialized")
-                    return
+            print("Tap gesture recognized")
+            guard let movieFileOutput = self.movieFileOutput else {
+                print("Movie file output not initialized")
+                return
+            }
+
+            if isRecording {
+                // Stop recording
+                movieFileOutput.stopRecording()
+                isRecording = false
+                updateButtonAppearance(isRecording: false)
+            } else {
+                // Generate a unique file name using UUID
+                let uniqueFileName = "output_" + UUID().uuidString + ".mov"
+                let outputPath = NSTemporaryDirectory() + uniqueFileName
+                let savePathUrl = URL(fileURLWithPath: outputPath)
+
+                // Delete old video if it exists
+                do {
+                    if FileManager.default.fileExists(atPath: savePathUrl.path) {
+                        try FileManager.default.removeItem(at: savePathUrl)
+                    }
+                } catch {
+                    print("Error deleting existing file: \(error.localizedDescription)")
                 }
 
-                if movieFileOutput == nil {
-                    // Initialize and add movieFileOutput to the capture session if not done already
-                    movieFileOutput = AVCaptureMovieFileOutput()
-                    if captureSession.canAddOutput(movieFileOutput!) {
-                        captureSession.addOutput(movieFileOutput!)
+                // Start recording
+                movieFileOutput.startRecording(to: savePathUrl, recordingDelegate: self)
+                isRecording = true
+                updateButtonAppearance(isRecording: true)
+            }
+        }
+
+//        func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+//            if let error = error {
+//                print("Error recording video: \(error.localizedDescription)")
+//                print("Error recording video: \(error)")
+//            } else {
+//                // Post notification or call a method to update UI for video preview
+//                NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputFileURL)
+//                // Optionally, preview the video immediately or perform other actions
+//                print("success")
+//            }
+//        }
+
+        func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+            if let error = error {
+                print("Error recording video: \(error.localizedDescription)")
+                print("Error recording video: \(error)")
+            } else {
+                let fileManager = FileManager.default
+                let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+                let uniqueFileName = "output_" + UUID().uuidString + ".mov"
+                let finalURL = documentsDirectory.appendingPathComponent(uniqueFileName)
+
+                // Delete old video if it exists at the final URL
+                if fileManager.fileExists(atPath: finalURL.path) {
+                    do {
+                        try fileManager.removeItem(at: finalURL)
+                    } catch {
+                        print("Could not delete old recording: \(error.localizedDescription)")
                     }
                 }
 
-                if isRecording {
-                    // Stop recording
-                    movieFileOutput?.stopRecording()
-                    isRecording = false
-                } else {
-                    // Start recording
-                    let outputPath = NSTemporaryDirectory() + "output.mov"
-                    let outputFileURL = URL(fileURLWithPath: outputPath)
-                    movieFileOutput?.startRecording(to: outputFileURL, recordingDelegate: self)
-                    isRecording = true
+                // Move recorded video to the final URL
+                do {
+                    try fileManager.moveItem(at: outputFileURL, to: finalURL)
+                    NotificationCenter.default.post(name: .didFinishRecordingVideo, object: finalURL)
+                } catch {
+                    print("Error moving recorded video: \(error.localizedDescription)")
                 }
             }
+        }
+
+
+
+
+
         
         
-      
         @objc func toggleFlash() {
-            isFlashOn.toggle() // Toggle the flash state
+            guard let device = AVCaptureDevice.default(for: AVMediaType.video) else { return }
+            
+            if device.hasTorch {
+                do {
+                    try device.lockForConfiguration()
+                    
+                    if isFlashOn {
+                        // If the flash is currently on, turn it off
+                        device.torchMode = .off
+                        isFlashOn = false
+                    } else {
+                        // If the flash is currently off, turn it on
+                        try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+                        isFlashOn = true
+                    }
+
+                    device.unlockForConfiguration()
+                } catch {
+                    print("Torch could not be used: \(error)")
+                }
+            } else {
+                print("Torch is not available")
+            }
 
             // Update the flash button icon
             let iconName = isFlashOn ? "bolt.fill" : "bolt.slash.fill"
@@ -297,39 +312,32 @@ struct CameraView: UIViewRepresentable {
                 self.flashButton?.setImage(UIImage(systemName: iconName), for: .normal)
             }
         }
-
-
-     
-        
        
-        
-        @objc func captureTapped() {
-              let settings: AVCapturePhotoSettings
-              if isFlashOn {
-                  settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-                  settings.flashMode = .on
-              } else {
-                  settings = AVCapturePhotoSettings()
-                  settings.flashMode = .off
-              }
-              
-              photoOutput.capturePhoto(with: settings, delegate: self)
-          }
-        
-       func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-            guard let imageData = photo.fileDataRepresentation() else { return }
-            // Handle the captured image (e.g., show a preview, save to photo album)
+         
+        @objc func handleLongPress(gesture: UILongPressGestureRecognizer) {
+            if gesture.state == .began {
+                startRecording()
+            } else if gesture.state == .ended {
+                stopRecording()
+            }
         }
-       
-          @objc func handleLongPress(gesture: UILongPressGestureRecognizer) {
-              if gesture.state == .began {
-                  // Start recording
-                  startRecording()
-              } else if gesture.state == .ended {
-                  // Stop recording
-                  stopRecording()
-              }
-          }
+
+        private func updateButtonAppearance(isRecording: Bool) {
+            DispatchQueue.main.async {
+                UIView.animate(withDuration: 0.3, animations: {
+                    if isRecording {
+                        self.captureButton?.layer.cornerRadius = 15 // Rounded corners for smaller square
+                        self.captureButton?.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0) // Original color
+                        self.captureButton?.transform = CGAffineTransform(scaleX: 0.5, y: 0.5) // Shrink the button
+                    } else {
+                        self.captureButton?.layer.cornerRadius = 34 // Original corner radius
+                        self.captureButton?.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0) // Original color
+                        self.captureButton?.transform = CGAffineTransform.identity // Reset to original size
+                    }
+                })
+            }
+        }
+
 
         func startRecording() {
             timer?.invalidate()
@@ -345,6 +353,8 @@ struct CameraView: UIViewRepresentable {
                 if self?.currentTime ?? 0 >= totalTime {
                     self?.stopRecording()
                 }
+                
+               
 
                 // Update the progress
                 DispatchQueue.main.async {
@@ -371,6 +381,7 @@ struct CameraView: UIViewRepresentable {
                     self.stopRecording()
                 }
             }
+            updateButtonAppearance(isRecording: true)
         }
 
         func stopRecording() {
@@ -378,6 +389,7 @@ struct CameraView: UIViewRepresentable {
             movieFileOutput?.stopRecording()
             parent.isRecording = false
             parent.recordingProgress = 0.0
+            updateButtonAppearance(isRecording: false)
             // Stop the timer if you have started one
         }
 
@@ -441,13 +453,6 @@ struct CameraView: UIViewRepresentable {
 
         }
 
-
-
-
-        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-            // Handle frame capture
-        }
-        
         func findCameraDevices() {
             let devices = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera],
                                                            mediaType: .video,
@@ -483,18 +488,30 @@ struct CameraView: UIViewRepresentable {
 
 }
 
+extension Notification.Name {
+    static let didFinishRecordingVideo = Notification.Name("didFinishRecordingVideo")
+}
+
+
 struct CameraViewContainer: View {
     @State private var isRecording = false
        @State private var recordingProgress: CGFloat = 0.0
+    @State private var showVideoPreview = false
+    @State private var recordedVideoURL: URL?
     var body: some View {
            ZStack {
                CameraView(captureAction: { /* ... */ }, isRecording: $isRecording, recordingProgress: $recordingProgress)
+                   .onReceive(NotificationCenter.default.publisher(for: .didFinishRecordingVideo)) { notification in
+                                  if let url = notification.object as? URL {
+                                      self.recordedVideoURL = url
+                                      self.showVideoPreview = true
+                                  }
+                              }
 
-               if isRecording {
-                   CircularProgressView(progress: recordingProgress)
-                       .frame(width: 100, height: 100)
-                       .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
-               }
+                          if showVideoPreview, let videoURL = recordedVideoURL {
+                              VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview)
+                          }
+
            }
        }
 }
@@ -507,15 +524,3 @@ struct CameraViewContainer_Previews: PreviewProvider {
     }
 }
 
-struct CircularProgressView: View {
-    var progress: CGFloat
-    var body: some View {
-        ZStack {
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(Color.blue, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90)) // Start from top
-                .animation(.linear, value: progress)
-        }
-    }
-}

@@ -18,6 +18,7 @@
 		36C458E62B7458720060355F /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E52B7458720060355F /* CameraView.swift */; };
 		36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E72B746B7C0060355F /* CustomTabBar.swift */; };
 		36C458EA2B746D650060355F /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E92B746D650060355F /* ProfileView.swift */; };
+		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,8 @@
 		36C458E52B7458720060355F /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		36C458E72B746B7C0060355F /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		36C458E92B746D650060355F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPreviewView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,10 +105,12 @@
 		36C458B82B7421100060355F /* pods */ = {
 			isa = PBXGroup;
 			children = (
+				36EAFD3E2B79BBCE0001013F /* Info.plist */,
 				36C458B92B7421100060355F /* podsApp.swift */,
 				36C458E32B7457580060355F /* HomeView.swift */,
 				36C458E52B7458720060355F /* CameraView.swift */,
 				36C458E92B746D650060355F /* ProfileView.swift */,
+				36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */,
 				36C458E72B746B7C0060355F /* CustomTabBar.swift */,
 				36C458BB2B7421100060355F /* ContentView.swift */,
 				36C458BD2B7421110060355F /* Assets.xcassets */,
@@ -269,6 +274,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
@@ -441,9 +447,13 @@
 				DEVELOPMENT_TEAM = RZU2ZRNK98;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pods/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture photos or videos to attach to your pods.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Pods requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -472,9 +482,13 @@
 				DEVELOPMENT_TEAM = RZU2ZRNK98;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pods/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture photos or videos to attach to your pods.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Pods requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

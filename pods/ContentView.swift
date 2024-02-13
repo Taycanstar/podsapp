@@ -4,7 +4,7 @@
 //
 //  Created by Dimi Nunez on 2/7/24.
 //
-
+import AVFoundation
 import SwiftUI
 
 struct CurvedTopShape: Shape {
@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var recordingProgress: CGFloat = 0.0
 
     var body: some View {
+        
         ZStack(alignment: .bottom) {
             // Content views
             Group {
