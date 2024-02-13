@@ -314,13 +314,22 @@ struct CameraView: UIViewRepresentable {
         }
        
          
+
+        
         @objc func handleLongPress(gesture: UILongPressGestureRecognizer) {
-            if gesture.state == .began {
-                startRecording()
-            } else if gesture.state == .ended {
-                stopRecording()
+            print("Long press state: \(gesture.state.rawValue)") // Log the gesture state
+            switch gesture.state {
+            case .began:
+                print("Long press began, starting recording")
+                toggleRecord()
+            case .ended:
+                print("Long press ended, stopping recording")
+                toggleRecord()
+            default:
+                break
             }
         }
+
 
         private func updateButtonAppearance(isRecording: Bool) {
             DispatchQueue.main.async {
@@ -339,59 +348,6 @@ struct CameraView: UIViewRepresentable {
         }
 
 
-        func startRecording() {
-            timer?.invalidate()
-                   currentTime = 0.0
-
-            // Start the timer
-            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                self?.currentTime += 1.0
-
-                // Provide a default value for totalTime in case self is nil
-                let totalTime = self?.totalTime ?? 60.0 // Default to 60 seconds
-
-                if self?.currentTime ?? 0 >= totalTime {
-                    self?.stopRecording()
-                }
-                
-               
-
-                // Update the progress
-                DispatchQueue.main.async {
-                    // Unwrap currentTime safely, defaulting to 0 if nil
-                    let currentProgress = self?.currentTime ?? 0
-                    self?.parent.recordingProgress = CGFloat(currentProgress / totalTime)
-                }
-            }
-
-
-            guard let movieFileOutput = self.movieFileOutput else { return }
-
-            let outputPath = NSTemporaryDirectory() + "output.mov"
-            let outputFileURL = URL(fileURLWithPath: outputPath)
-            movieFileOutput.startRecording(to: outputFileURL, recordingDelegate: self)
-
-            parent.isRecording = true
-            // Start a timer to update recordingProgress
-            // Example timer (adjust according to your needs)
-            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-                self.parent.recordingProgress += 0.01
-                if self.parent.recordingProgress >= 1.0 {
-                    timer.invalidate()
-                    self.stopRecording()
-                }
-            }
-            updateButtonAppearance(isRecording: true)
-        }
-
-        func stopRecording() {
-            timer?.invalidate()
-            movieFileOutput?.stopRecording()
-            parent.isRecording = false
-            parent.recordingProgress = 0.0
-            updateButtonAppearance(isRecording: false)
-            // Stop the timer if you have started one
-        }
 
         
        

@@ -54,7 +54,7 @@ struct ContentView: View {
                     .onAppear { isCameraActive = true }
                     .onDisappear { isCameraActive = false }
                     .background(Color.black.edgesIgnoringSafeArea(.top))
-//                    .edgesIgnoringSafeArea(.all)
+
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
                 default:
