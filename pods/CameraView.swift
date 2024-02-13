@@ -9,14 +9,17 @@ struct CameraView: UIViewRepresentable {
     @Binding var isRecording: Bool  // Bind this variable to control recording status
     @Binding var recordingProgress: CGFloat
     let tabBarHeight: CGFloat = 85
+    
+    
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
         // Adjust the view frame to exclude the tab bar area
         view.frame.size.height -= tabBarHeight
         let coordinator = context.coordinator
-
       
+            
 
+           
         
         // Setup preview layer
         if let captureSession = coordinator.captureSession {
@@ -113,6 +116,9 @@ struct CameraView: UIViewRepresentable {
         controlBar.backgroundColor = UIColor.black.withAlphaComponent(0.15)
         controlBar.layer.cornerRadius = 25 // Fully rounded corners
         controlBar.translatesAutoresizingMaskIntoConstraints = false
+        
+        coordinator.controlBar = controlBar
+        
 
         // Flash Button
          let flashButton = UIButton(type: .system)
@@ -125,6 +131,7 @@ struct CameraView: UIViewRepresentable {
         let recordButton = UIButton(type: .system)
         recordButton.setImage(UIImage(systemName: "record.circle"), for: .normal)
         recordButton.tintColor = .white
+        coordinator.recordButton = recordButton
         // Add target for recordButton if needed
 
         // Switch Camera Button
@@ -132,9 +139,9 @@ struct CameraView: UIViewRepresentable {
         switchCameraButton.setImage(UIImage(systemName: "camera.rotate"), for: .normal)
         switchCameraButton.tintColor = .white
         switchCameraButton.addTarget(coordinator, action: #selector(Coordinator.switchCamera), for: .touchUpInside)
+        coordinator.switchCameraButton = switchCameraButton
 
-
-        [flashButton, recordButton, switchCameraButton].forEach { button in
+        [switchCameraButton,flashButton, recordButton].forEach { button in
             controlBar.addArrangedSubview(button)
         }
 
@@ -159,12 +166,14 @@ struct CameraView: UIViewRepresentable {
         var movieFileOutput: AVCaptureMovieFileOutput?
         var isRecording = false
         var flashButton: UIButton?
+        var recordButton: UIButton?
         var isFlashOn = false
         var timer: Timer?
         var totalTime = 60.0 // Total recording time in seconds
         var currentTime = 0.0
         var captureButton: UIButton?
-
+        weak var controlBar: UIStackView?
+        var switchCameraButton: UIButton?
 
         init(_ parent: CameraView) {
             self.parent = parent
@@ -212,6 +221,7 @@ struct CameraView: UIViewRepresentable {
                 movieFileOutput.stopRecording()
                 isRecording = false
                 updateButtonAppearance(isRecording: false)
+                updateUIForRecordingState(isRecording: false)
             } else {
                 // Generate a unique file name using UUID
                 let uniqueFileName = "output_" + UUID().uuidString + ".mov"
@@ -231,6 +241,7 @@ struct CameraView: UIViewRepresentable {
                 movieFileOutput.startRecording(to: savePathUrl, recordingDelegate: self)
                 isRecording = true
                 updateButtonAppearance(isRecording: true)
+                updateUIForRecordingState(isRecording: true)
             }
         }
 
@@ -276,6 +287,15 @@ struct CameraView: UIViewRepresentable {
         }
 
 
+
+        
+        private func updateUIForRecordingState(isRecording: Bool) {
+            flashButton?.isHidden = isRecording
+            recordButton?.isHidden = isRecording
+            controlBar?.backgroundColor = isRecording ?  UIColor.black.withAlphaComponent(0) : UIColor.black.withAlphaComponent(0.15)
+            // The switch camera button stays visible
+            switchCameraButton?.isHidden = false
+        }
 
 
 
