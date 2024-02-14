@@ -5,9 +5,9 @@ import AVFoundation
 
 
 struct CameraView: UIViewRepresentable {
-    var captureAction: () -> Void
+    
     @Binding var isRecording: Bool  // Bind this variable to control recording status
-    @Binding var recordingProgress: CGFloat
+   
     let tabBarHeight: CGFloat = 85
     
     
@@ -156,14 +156,14 @@ struct CameraView: UIViewRepresentable {
 
 
 
-    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate {
+    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
    
         weak var previewLayer: AVCaptureVideoPreviewLayer?
         var parent: CameraView
         var backFacingCamera: AVCaptureDevice?
         var frontFacingCamera: AVCaptureDevice?
         var captureSession: AVCaptureSession?
-        var movieFileOutput: AVCaptureMovieFileOutput?
+        var movieFileOutput: AVCaptureVideoDataOutput?
         var isRecording = false
         var flashButton: UIButton?
         var recordButton: UIButton?
@@ -174,6 +174,9 @@ struct CameraView: UIViewRepresentable {
         var captureButton: UIButton?
         weak var controlBar: UIStackView?
         var switchCameraButton: UIButton?
+        var assetWriter: AVAssetWriter?
+        var assetWriterInput: AVAssetWriterInput?
+
 
         init(_ parent: CameraView) {
             self.parent = parent
@@ -198,7 +201,7 @@ struct CameraView: UIViewRepresentable {
                 captureSession?.addInput(input)
             }
 
-            movieFileOutput = AVCaptureMovieFileOutput()
+            movieFileOutput = AVCaptureVideoDataOutput()
             if captureSession?.canAddOutput(movieFileOutput!) ?? false {
                 captureSession?.addOutput(movieFileOutput!)
             }
@@ -208,85 +211,101 @@ struct CameraView: UIViewRepresentable {
             }
         }
         
+        func startRecording() {
+            let uniqueFileName = "output_" + UUID().uuidString + ".mov"
+            let outputPath = NSTemporaryDirectory() + uniqueFileName
+            let outputURL = URL(fileURLWithPath: outputPath)
+            print("Output path: \(outputPath)")
 
+
+            do {
+                let assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+                let videoSettings: [String: Any] = [
+                    AVVideoCodecKey: AVVideoCodecType.h264,
+                    AVVideoWidthKey: 1920,
+                    AVVideoHeightKey: 1080
+                    // Add other settings as needed
+                ]
+                let assetWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+                assetWriterInput.expectsMediaDataInRealTime = true
+
+                if assetWriter.canAdd(assetWriterInput) {
+                    assetWriter.add(assetWriterInput)
+                }
+
+                assetWriter.startWriting()
+                assetWriter.startSession(atSourceTime: CMTime.zero)
+
+                // Store the assetWriter and assetWriterInput in your class for later use
+                self.assetWriter = assetWriter
+                self.assetWriterInput = assetWriterInput
+            } catch {
+                print("Error setting up asset writer: \(error)")
+            }
+        }
+
+
+        func stopRecording() {
+            print("Stopping recording...")
+
+            assetWriterInput?.markAsFinished()
+            assetWriter?.finishWriting { [weak self] in
+                guard let self = self else { return }
+                
+                // Check if there's an error in finishing the writing process
+                if let error = self.assetWriter?.error {
+                    print("Error finishing writing: \(error)")
+                } else {
+                    // Check the output URL
+                    if let outputURL = self.assetWriter?.outputURL {
+                        print("Writing finished successfully. Video saved at URL: \(outputURL)")
+
+                        // Post notification with the output URL
+                        DispatchQueue.main.async {
+                                       NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputURL)
+                                   }
+                       
+                    } else {
+                        print("Error: Output URL is nil")
+                    }
+                }
+
+                // Reset the asset writer and input
+                self.assetWriter = nil
+                self.assetWriterInput = nil
+            }
+        }
+
+
+
+
+          func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+              if isRecording && assetWriterInput?.isReadyForMoreMediaData ?? false {
+                  // Write the sample buffer to the asset writer
+                  assetWriterInput?.append(sampleBuffer)
+              }
+          }
+        
+        
         @objc func toggleRecord() {
             print("Tap gesture recognized")
-            guard let movieFileOutput = self.movieFileOutput else {
-                print("Movie file output not initialized")
-                return
-            }
 
             if isRecording {
                 // Stop recording
-                movieFileOutput.stopRecording()
-                isRecording = false
                 updateButtonAppearance(isRecording: false)
                 updateUIForRecordingState(isRecording: false)
+                stopRecording()
+                isRecording = false
+             
             } else {
-                // Generate a unique file name using UUID
-                let uniqueFileName = "output_" + UUID().uuidString + ".mov"
-                let outputPath = NSTemporaryDirectory() + uniqueFileName
-                let savePathUrl = URL(fileURLWithPath: outputPath)
-
-                // Delete old video if it exists
-                do {
-                    if FileManager.default.fileExists(atPath: savePathUrl.path) {
-                        try FileManager.default.removeItem(at: savePathUrl)
-                    }
-                } catch {
-                    print("Error deleting existing file: \(error.localizedDescription)")
-                }
-
                 // Start recording
-                movieFileOutput.startRecording(to: savePathUrl, recordingDelegate: self)
-                isRecording = true
                 updateButtonAppearance(isRecording: true)
                 updateUIForRecordingState(isRecording: true)
+                startRecording()
+                isRecording = true
+               
             }
         }
-
-//        func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-//            if let error = error {
-//                print("Error recording video: \(error.localizedDescription)")
-//                print("Error recording video: \(error)")
-//            } else {
-//                // Post notification or call a method to update UI for video preview
-//                NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputFileURL)
-//                // Optionally, preview the video immediately or perform other actions
-//                print("success")
-//            }
-//        }
-
-        func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-            if let error = error {
-                print("Error recording video: \(error.localizedDescription)")
-                print("Error recording video: \(error)")
-            } else {
-                let fileManager = FileManager.default
-                let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-                let uniqueFileName = "output_" + UUID().uuidString + ".mov"
-                let finalURL = documentsDirectory.appendingPathComponent(uniqueFileName)
-
-                // Delete old video if it exists at the final URL
-                if fileManager.fileExists(atPath: finalURL.path) {
-                    do {
-                        try fileManager.removeItem(at: finalURL)
-                    } catch {
-                        print("Could not delete old recording: \(error.localizedDescription)")
-                    }
-                }
-
-                // Move recorded video to the final URL
-                do {
-                    try fileManager.moveItem(at: outputFileURL, to: finalURL)
-                    NotificationCenter.default.post(name: .didFinishRecordingVideo, object: finalURL)
-                } catch {
-                    print("Error moving recorded video: \(error.localizedDescription)")
-                }
-            }
-        }
-
-
 
         
         private func updateUIForRecordingState(isRecording: Bool) {
@@ -296,10 +315,6 @@ struct CameraView: UIViewRepresentable {
             // The switch camera button stays visible
             switchCameraButton?.isHidden = false
         }
-
-
-
-        
         
         @objc func toggleFlash() {
             guard let device = AVCaptureDevice.default(for: AVMediaType.video) else { return }
@@ -468,30 +483,21 @@ extension Notification.Name {
     static let didFinishRecordingVideo = Notification.Name("didFinishRecordingVideo")
 }
 
-
 struct CameraViewContainer: View {
     @State private var isRecording = false
-       @State private var recordingProgress: CGFloat = 0.0
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
+
     var body: some View {
-           ZStack {
-               CameraView(captureAction: { /* ... */ }, isRecording: $isRecording, recordingProgress: $recordingProgress)
-                   .onReceive(NotificationCenter.default.publisher(for: .didFinishRecordingVideo)) { notification in
-                                  if let url = notification.object as? URL {
-                                      self.recordedVideoURL = url
-                                      self.showVideoPreview = true
-                                  }
-                              }
-
-                          if showVideoPreview, let videoURL = recordedVideoURL {
-                              VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview)
-                          }
-
-           }
-       }
+        ZStack {
+            // In your CameraViewContainer or another visible SwiftUI view
+       
+     
+            CameraView(isRecording: $isRecording)
+         
+        }
+    }
 }
-
 
 
 struct CameraViewContainer_Previews: PreviewProvider {

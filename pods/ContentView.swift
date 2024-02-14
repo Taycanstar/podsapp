@@ -33,7 +33,9 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var isCameraActive: Bool = false
     @State private var isRecording = false
-    @State private var recordingProgress: CGFloat = 0.0
+    @State private var showVideoPreview = false
+    @State private var recordedVideoURL: URL?
+    
 
     var body: some View {
         
@@ -44,16 +46,27 @@ struct ContentView: View {
                 case 0:
                     HomeView()
                 case 1:
-                    CameraView(captureAction: {
-                                                // Define what should happen when the capture button is pressed
-                                                print("Capture button tapped")
-                                            },
-                                            isRecording: $isRecording,
-                                            recordingProgress: $recordingProgress)
+                    CameraView(isRecording: $isRecording)
                     .mask(CurvedTopShape(cornerRadius: 18))
                     .onAppear { isCameraActive = true }
                     .onDisappear { isCameraActive = false }
                     .background(Color.black.edgesIgnoringSafeArea(.top))
+                    .onReceive(NotificationCenter.default.publisher(for: .didFinishRecordingVideo)) { notification in
+                        if let url = notification.object as? URL {
+                            self.recordedVideoURL = url
+                            self.showVideoPreview = true
+                            print("it fuckin works")
+                        }
+                    }
+
+
+
+                if showVideoPreview, let videoURL = recordedVideoURL {
+                    VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview, saveAction: {
+                        // Implement your save logic here
+                        print("Save video action")
+                    })
+                }
 
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
