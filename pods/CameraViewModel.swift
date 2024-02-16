@@ -110,18 +110,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
          }
      }
     
-    func confirmVideo(metadata: String = "Default Metadata") {
-           if let url = previewURL {
-               let newItem = PodItem(videoURL: url, metadata: metadata)
-               currentPod.items.append(newItem)
-           }
-           previewURL = nil
-           showPreview = false
-
-           if currentPod.items.isEmpty {
-               isPodRecording = true
-           }
-       }
 
        func reRecordVideo() {
            previewURL = nil
@@ -188,6 +176,96 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             session.addInput(newInput)
         }
     }
+    
+    func startRecordingNextItem() {
+        // Reset the preview URL for the new recording
+        self.previewURL = nil
+
+        // Check if the session is already running; if not, start it
+        if !session.isRunning {
+            session.startRunning()
+        }
+
+        // Generate a unique URL for the new recording
+        let tempURL = NSTemporaryDirectory() + "item_\(Date().timeIntervalSince1970).mov"
+        let outputFileURL = URL(fileURLWithPath: tempURL)
+
+        // Start recording to the new file URL
+        output.startRecording(to: outputFileURL, recordingDelegate: self)
+
+    }
+    
+    func confirmVideo(metadata: String = "Default Metadata") {
+        if let url = previewURL {
+            // Create a new Pod item with the recorded video URL and metadata
+            let newItem = PodItem(videoURL: url, metadata: metadata)
+            
+            // Add the new item to the existing currentPod
+            currentPod.items.append(newItem)
+            print("Item confirmed. Current Pod: \(currentPod.items)")
+
+            // Reset the preview URL for the next recording
+            previewURL = nil
+        }
+
+        // Check if the Pod is now non-empty (this might be always true after adding the first item)
+        isPodRecording = !currentPod.items.isEmpty
+
+        // Optionally, if your app design requires to start recording the next item immediately,
+        // you can call startRecordingNextItem() here.
+        // startRecordingNextItem()
+    }
+
+    func confirmAndProceedToNextVideo() {
+        // Confirm the current video
+        confirmVideo()
+
+        // Proceed to record the next item
+        startRecordingNextItem()
+    }
+    
+    func reRecordCurrentItem() {
+        // If the user is re-recording before confirming the video,
+        // we just reset the necessary states for a new recording
+
+        // Reset the preview URL for the new recording
+        previewURL = nil
+
+        // Indicate that we are not currently recording
+        isRecording = false
+        
+        print("Preparing to re-record. Current Pod: \(currentPod.items)")
+
+        // Depending on your app's flow, you might need to reset other states as well,
+        // such as any flags or timers related to the recording process
+
+        // Optionally, if you want to start the camera for a new recording immediately,
+        // you can call a function to start the camera.
+        // For instance, if you have a function to setup the camera for recording:
+        // setupCameraForRecording()
+    }
+
+    func confirmP(metadata: String = "Default Metadata") {
+        if let url = previewURL {
+            // Create a new Pod item with the recorded video URL and metadata
+            let newItem = PodItem(videoURL: url, metadata: metadata)
+            
+            // Add the new item to the existing currentPod
+            currentPod.items.append(newItem)
+            print("Item confirmed. Current Pod: \(currentPod.items.count)")
+
+            // Reset the preview URL
+            previewURL = nil
+            
+            showPreview = false
+            
+            // Update the recording state
+            isRecording = false
+        }
+    }
+
+
+
 
     
 
