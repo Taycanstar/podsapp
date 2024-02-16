@@ -4,29 +4,20 @@ import AVKit
 struct VideoPreviewView: View {
     var videoURL: URL
     @Binding var showPreview: Bool
-    var saveAction: () -> Void
 
     var body: some View {
         ZStack {
-            VideoPlayer(player: AVPlayer(url: videoURL))
+            AVPlayerViewControllerRepresentable(videoURL: videoURL)
                 .edgesIgnoringSafeArea(.all)
-               
 
             VStack {
-                HStack {
-                    Button(action: {
-                        self.showPreview = false
-                    }) {
-                        Image(systemName: "xmark")
-                            .padding()
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
+                Button(action: { self.showPreview = false }) {
+                    Image(systemName: "xmark")
+                        .padding()
+                        .foregroundColor(.white)
                 }
                 Spacer()
-                Button(action: {
-                    saveAction()
-                }) {
+                Button(action: { /* Save video action */ }) {
                     Image(systemName: "arrow.right")
                         .padding()
                         .foregroundColor(.white)
@@ -36,5 +27,20 @@ struct VideoPreviewView: View {
         .onAppear {
             print("VideoPreviewView appeared with video URL: \(videoURL)")
         }
+    }
+}
+
+struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
+    var videoURL: URL
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let playerViewController = AVPlayerViewController()
+        let player = AVPlayer(url: videoURL)
+        playerViewController.player = player
+        return playerViewController
+    }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        // Update the controller if needed
     }
 }

@@ -6,6 +6,8 @@ import AVFoundation
 
 struct CameraView: UIViewRepresentable {
     
+    
+   
     @Binding var isRecording: Bool  // Bind this variable to control recording status
    
     let tabBarHeight: CGFloat = 85
@@ -174,8 +176,10 @@ struct CameraView: UIViewRepresentable {
         var captureButton: UIButton?
         weak var controlBar: UIStackView?
         var switchCameraButton: UIButton?
+        @Published var alert = false
         var assetWriter: AVAssetWriter?
-        var assetWriterInput: AVAssetWriterInput?
+         var assetWriterInput: AVAssetWriterInput?
+         var videoDataOutput: AVCaptureVideoDataOutput?
 
 
         init(_ parent: CameraView) {
@@ -185,60 +189,99 @@ struct CameraView: UIViewRepresentable {
             setupCaptureSession()
             
         }
+        
+        func checkPermission(){
+            
+            switch AVCaptureDevice.authorizationStatus(for: .video) {
+            case .authorized:
+                setupCaptureSession()
+                return
+            case .notDetermined:
+                AVCaptureDevice.requestAccess(for: .video) { (status) in
+                    
+                    if status{
+                        self.setupCaptureSession()
+                    }
+                }
+            case .denied:
+                self.alert.toggle()
+                return
+            default:
+                return
+            }
+        }
 
         func setupCaptureSession() {
             captureSession = AVCaptureSession()
-            captureSession?.sessionPreset = .high  // Suitable for video recording
+            captureSession?.sessionPreset = AVCaptureSession.Preset.high  // Or use a specific preset like .hd1920x1080
+
+            // Prepare for both front and back cameras
+            setupCameraInput(position: .front)
+            setupCameraInput(position: .back)
+
+            // Setup Video Data Output
+            let videoDataOutput = AVCaptureVideoDataOutput()
+            videoDataOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoQueue"))
+
+            var videoSettings: [String: Any] = [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+            ]
             
-
-            guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-                  let input = try? AVCaptureDeviceInput(device: frontCamera) else {
-                print("Failed to get front camera.")
-                return
+            // Additional keys for iOS 16 and later
+            if #available(iOS 16.0, *) {
+                videoSettings[AVVideoColorPropertiesKey] = [
+                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+                ]
             }
 
-            if captureSession?.canAddInput(input) ?? false {
-                captureSession?.addInput(input)
-            }
+            videoDataOutput.videoSettings = videoSettings
 
-            movieFileOutput = AVCaptureVideoDataOutput()
-            if captureSession?.canAddOutput(movieFileOutput!) ?? false {
-                captureSession?.addOutput(movieFileOutput!)
+            if captureSession?.canAddOutput(videoDataOutput) ?? false {
+                captureSession?.addOutput(videoDataOutput)
             }
 
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 self?.captureSession?.startRunning()
             }
         }
-        
+
+
+        private func setupCameraInput(position: AVCaptureDevice.Position) {
+            guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
+                  let input = try? AVCaptureDeviceInput(device: camera),
+                  captureSession?.canAddInput(input) ?? false else {
+                print("Failed to get camera for position: \(position)")
+                return
+            }
+            captureSession?.addInput(input)
+        }
+
         func startRecording() {
             let uniqueFileName = "output_" + UUID().uuidString + ".mov"
             let outputPath = NSTemporaryDirectory() + uniqueFileName
             let outputURL = URL(fileURLWithPath: outputPath)
-            print("Output path: \(outputPath)")
-
 
             do {
-                let assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+                assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+
+                // Make sure the settings match the video data being captured
                 let videoSettings: [String: Any] = [
                     AVVideoCodecKey: AVVideoCodecType.h264,
-                    AVVideoWidthKey: 1920,
-                    AVVideoHeightKey: 1080
-                    // Add other settings as needed
+                    AVVideoWidthKey: 1920,   // Adjust if necessary
+                    AVVideoHeightKey: 1080   // Adjust if necessary
                 ]
-                let assetWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
-                assetWriterInput.expectsMediaDataInRealTime = true
 
-                if assetWriter.canAdd(assetWriterInput) {
-                    assetWriter.add(assetWriterInput)
+                assetWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+                assetWriterInput?.expectsMediaDataInRealTime = true
+
+                if assetWriter?.canAdd(assetWriterInput!) ?? false {
+                    assetWriter?.add(assetWriterInput!)
                 }
 
-                assetWriter.startWriting()
-                assetWriter.startSession(atSourceTime: CMTime.zero)
-
-                // Store the assetWriter and assetWriterInput in your class for later use
-                self.assetWriter = assetWriter
-                self.assetWriterInput = assetWriterInput
+                assetWriter?.startWriting()
+                assetWriter?.startSession(atSourceTime: CMTime.zero)
             } catch {
                 print("Error setting up asset writer: \(error)")
             }
@@ -246,31 +289,21 @@ struct CameraView: UIViewRepresentable {
 
 
         func stopRecording() {
-            print("Stopping recording...")
-
             assetWriterInput?.markAsFinished()
             assetWriter?.finishWriting { [weak self] in
                 guard let self = self else { return }
                 
-                // Check if there's an error in finishing the writing process
                 if let error = self.assetWriter?.error {
                     print("Error finishing writing: \(error)")
                 } else {
-                    // Check the output URL
                     if let outputURL = self.assetWriter?.outputURL {
-                        print("Writing finished successfully. Video saved at URL: \(outputURL)")
-
-                        // Post notification with the output URL
                         DispatchQueue.main.async {
-                                       NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputURL)
-                                   }
-                       
+                            NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputURL)
+                        }
                     } else {
                         print("Error: Output URL is nil")
                     }
                 }
-
-                // Reset the asset writer and input
                 self.assetWriter = nil
                 self.assetWriterInput = nil
             }
@@ -279,33 +312,47 @@ struct CameraView: UIViewRepresentable {
 
 
 
-          func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-              if isRecording && assetWriterInput?.isReadyForMoreMediaData ?? false {
-                  // Write the sample buffer to the asset writer
-                  assetWriterInput?.append(sampleBuffer)
-              }
-          }
+
+        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+            guard isRecording,
+                  let assetWriterInput = assetWriterInput,
+                  assetWriterInput.isReadyForMoreMediaData,
+                  CMSampleBufferDataIsReady(sampleBuffer) else {
+                print("Recording not started or sample buffer not ready")
+                return
+            }
+
+            if !assetWriterInput.append(sampleBuffer) {
+                print("Failed to append sample buffer: \(String(describing: assetWriter?.error))")
+            } else {
+                print("Sample buffer appended successfully.")
+            }
+        }
+        
+
+
+
+
         
         
         @objc func toggleRecord() {
-            print("Tap gesture recognized")
+            print("Toggle Record: Current state isRecording = \(isRecording)")
 
             if isRecording {
-                // Stop recording
-                updateButtonAppearance(isRecording: false)
-                updateUIForRecordingState(isRecording: false)
+                print("Stopping recording...")
                 stopRecording()
                 isRecording = false
-             
+                updateButtonAppearance(isRecording: false)
+                updateUIForRecordingState(isRecording: false)
             } else {
-                // Start recording
-                updateButtonAppearance(isRecording: true)
-                updateUIForRecordingState(isRecording: true)
+                print("Starting recording...")
                 startRecording()
                 isRecording = true
-               
+                updateButtonAppearance(isRecording: true)
+                updateUIForRecordingState(isRecording: true)
             }
         }
+
 
         
         private func updateUIForRecordingState(isRecording: Bool) {
@@ -494,6 +541,9 @@ struct CameraViewContainer: View {
        
      
             CameraView(isRecording: $isRecording)
+            if showVideoPreview, let videoURL = recordedVideoURL {
+                                    VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview)
+                                }
          
         }
     }
