@@ -12,21 +12,22 @@ struct Home: View {
 
             // Floating Camera Control Buttons
           
-                          VStack(spacing: 20) {  // Adjust spacing as needed
-                              Button(action: cameraModel.toggleFlash) {
-                                  Image(systemName: "bolt")
-                                      .font(.title)
-                                      .foregroundColor(.white)
-                              }
+            if !cameraModel.isRecording {
+                VStack(spacing: 20) {  // Adjust spacing as needed
+                    Button(action: cameraModel.switchCamera) {
+                        Image(systemName: "arrow.triangle.2.circlepath.camera")
+                            .font(.title)
+                            .foregroundColor(.white)
+                    }
+                    Button(action: cameraModel.toggleFlash) {
+                        Image(systemName: "bolt")
+                            .font(.title)
+                            .foregroundColor(.white)
+                    }
+                }
+                .position(x: UIScreen.main.bounds.width - 30, y: 80)
+            }
 
-                              Button(action: cameraModel.switchCamera) {
-                                  Image(systemName: "arrow.triangle.2.circlepath.camera")
-                                      .font(.title)
-                                      .foregroundColor(.white)
-                              }
-                          }
-                          .position(x: UIScreen.main.bounds.width - 30, y: 60)
-           
                      
             
             // MARK: Controls

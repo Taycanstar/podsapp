@@ -137,23 +137,34 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     
     func toggleFlash() {
-        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else {
-            print("Torch not available")
+        guard let currentCameraInput = session.inputs.first as? AVCaptureDeviceInput else {
+            print("Unable to identify current camera input")
+            return
+        }
+
+        let currentCamera = currentCameraInput.device
+
+        guard currentCamera.hasTorch else {
+            print("Current camera does not have a torch")
             return
         }
 
         do {
-            try device.lockForConfiguration()
-            if device.torchMode == .on {
-                device.torchMode = .off
+            try currentCamera.lockForConfiguration()
+
+            if currentCamera.torchMode == .on {
+                currentCamera.torchMode = .off
             } else {
-                try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+                try currentCamera.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
             }
-            device.unlockForConfiguration()
+
+            currentCamera.unlockForConfiguration()
         } catch {
-            print("Torch could not be used: \(error)")
+            print("Error toggling flash: \(error)")
+            currentCamera.unlockForConfiguration()
         }
     }
+
 
 
 
