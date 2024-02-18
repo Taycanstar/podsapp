@@ -6,6 +6,7 @@ import AVFoundation
 struct PodItem {
     var videoURL: URL
     var metadata: String
+    var thumbnail: UIImage?
 }
 
 struct Pod {
@@ -20,6 +21,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var alert = false
     @Published var output = AVCaptureMovieFileOutput()
     @Published var preview : AVCaptureVideoPreviewLayer!
+    @Published var isFrontCameraUsed: Bool = false
     
     // MARK: Video Recorder Properties
     @Published var isRecording: Bool = false
@@ -158,7 +160,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     func switchCamera() {
         guard let currentInput = session.inputs.first as? AVCaptureDeviceInput else { return }
-
+        
         session.beginConfiguration()
         defer { session.commitConfiguration() }
 
@@ -171,6 +173,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
               let newInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
             return
         }
+        
+        isFrontCameraUsed = (newCameraPosition == .front)
 
         if session.canAddInput(newInput) {
             session.addInput(newInput)
@@ -194,35 +198,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         output.startRecording(to: outputFileURL, recordingDelegate: self)
 
     }
-    
-    func confirmVideo(metadata: String = "Default Metadata") {
-        if let url = previewURL {
-            // Create a new Pod item with the recorded video URL and metadata
-            let newItem = PodItem(videoURL: url, metadata: metadata)
-            
-            // Add the new item to the existing currentPod
-            currentPod.items.append(newItem)
-            print("Item confirmed. Current Pod: \(currentPod.items)")
 
-            // Reset the preview URL for the next recording
-            previewURL = nil
-        }
-
-        // Check if the Pod is now non-empty (this might be always true after adding the first item)
-        isPodRecording = !currentPod.items.isEmpty
-
-        // Optionally, if your app design requires to start recording the next item immediately,
-        // you can call startRecordingNextItem() here.
-        // startRecordingNextItem()
-    }
-
-    func confirmAndProceedToNextVideo() {
-        // Confirm the current video
-        confirmVideo()
-
-        // Proceed to record the next item
-        startRecordingNextItem()
-    }
+   
     
     func reRecordCurrentItem() {
         // If the user is re-recording before confirming the video,
@@ -245,24 +222,53 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // setupCameraForRecording()
     }
 
-    func confirmP(metadata: String = "Default Metadata") {
+    func confirmVideo(metadata: String = "Default Metadata") {
         if let url = previewURL {
             // Create a new Pod item with the recorded video URL and metadata
-            let newItem = PodItem(videoURL: url, metadata: metadata)
-            
-            // Add the new item to the existing currentPod
+            // Pass the correct value for usingFrontCamera
+            let thumbnail = generateThumbnail(for: url, usingFrontCamera: isFrontCameraUsed)
+            let newItem = PodItem(videoURL: url, metadata: metadata, thumbnail: thumbnail)
             currentPod.items.append(newItem)
+            
             print("Item confirmed. Current Pod: \(currentPod.items.count)")
 
             // Reset the preview URL
             previewURL = nil
             
+            // Hide the preview
             showPreview = false
             
             // Update the recording state
             isRecording = false
         }
     }
+
+    
+    func generateThumbnail(for url: URL, usingFrontCamera: Bool) -> UIImage? {
+        let asset = AVAsset(url: url)
+        let assetImgGenerate = AVAssetImageGenerator(asset: asset)
+        assetImgGenerate.appliesPreferredTrackTransform = true
+        let time = CMTimeMakeWithSeconds(1.0, preferredTimescale: 600)
+        
+        do {
+            let img = try assetImgGenerate.copyCGImage(at: time, actualTime: nil)
+            var thumbnail = UIImage(cgImage: img)
+            
+            // Flip the thumbnail if it was taken with the front camera
+            if usingFrontCamera {
+                if let cgImage = thumbnail.cgImage {
+                    thumbnail = UIImage(cgImage: cgImage, scale: thumbnail.scale, orientation: .upMirrored)
+                }
+            }
+
+            return thumbnail
+        } catch {
+            print("Error generating thumbnail: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+
 
 
 

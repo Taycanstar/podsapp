@@ -10,8 +10,42 @@ struct Home: View {
             AltCameraView()
                 .environmentObject(cameraModel)
 
-            // Floating Camera Control Buttons
+     
+            // Add a button to reset the current pod
+                      if !cameraModel.currentPod.items.isEmpty {
+                          Button(action: {
+                              // Reset the current pod and any other necessary states
+                              cameraModel.currentPod = Pod()
+                              cameraModel.recordedDuration = 0
+                              cameraModel.previewURL = nil
+                              cameraModel.recordedURLs.removeAll()
+                          }) {
+                              Image(systemName: "xmark")
+                                  
+                                  .foregroundColor(.white)
+                                  .font(.system(size: 22))
+                                  .padding()
+                          }
+                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                          .padding(.top, 20)
+                          .padding(.leading, 0)
+                        
+                      }
+            
+            // Add Thumbnail Carousel
+                       if !cameraModel.currentPod.items.isEmpty {
+                           VStack {
+                               Spacer()
+                               HStack {
+                                   ThumbnailCarouselView(items: cameraModel.currentPod.items)
+                                       .padding(.leading)
+                                   Spacer()
+                               }
+                           }
+                           .padding(.vertical, 45)
+                       }
           
+            // Floating Camera Control Buttons
             if !cameraModel.isRecording {
                 VStack(spacing: 0) {  // Adjust spacing as needed
                     Button(action: cameraModel.switchCamera) {
@@ -123,7 +157,8 @@ struct Home: View {
         
         .overlay(content: {
             if let url = cameraModel.previewURL,cameraModel.showPreview{
-                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel)
+                
+                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed)
                     .transition(.move(edge: .trailing))
             }
         })
@@ -153,12 +188,14 @@ struct FinalPreview: View {
     @Binding var showPreview: Bool
     private let player = AVPlayer()
     @ObservedObject var cameraModel = CameraViewModel()
+    var isFrontCameraUsed: Bool
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
 
             VideoPlayer(player: player)
+                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: size.width, height: size.height)
                 .onAppear {
@@ -207,7 +244,7 @@ struct FinalPreview: View {
                         HStack {
                             Spacer()
                             Button(action: {
-                                cameraModel.confirmP()
+                                cameraModel.confirmVideo()
                             }) {
                                 ZStack {
                                     Circle()
@@ -251,13 +288,6 @@ extension Image {
             .foregroundColor(.white)
     }
 }
-
-
-
-
-
-
-
 
 
 #Preview {
