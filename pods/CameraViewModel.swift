@@ -230,24 +230,27 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     func confirmVideo(metadata: String = "Default Metadata") {
         if let url = previewURL {
-            // Create a new Pod item with the recorded video URL and metadata
-            // Pass the correct value for usingFrontCamera
-            let thumbnail = generateThumbnail(for: url, usingFrontCamera: isFrontCameraUsed)
-            let newItem = PodItem(videoURL: url, metadata: metadata, thumbnail: thumbnail)
-            currentPod.items.append(newItem)
-            
+            // Check if the last item in the Pod is the same as the current preview URL
+            if currentPod.items.last?.videoURL != url {
+                // Create a new Pod item with the recorded video URL and metadata
+                let thumbnail = generateThumbnail(for: url, usingFrontCamera: isFrontCameraUsed)
+                let newItem = PodItem(videoURL: url, metadata: metadata, thumbnail: thumbnail)
+                currentPod.items.append(newItem)
+            }
+
             print("Item confirmed. Current Pod: \(currentPod.items.count)")
 
             // Reset the preview URL
-            previewURL = nil
-            
+            previewURL = previewURL
+
             // Hide the preview
             showPreview = false
-            
+
             // Update the recording state
             isRecording = false
         }
     }
+
 
     
     func generateThumbnail(for url: URL, usingFrontCamera: Bool) -> UIImage? {

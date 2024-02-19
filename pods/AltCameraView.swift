@@ -18,16 +18,6 @@ struct AltCameraView: View {
             CameraPreview(size: size)
                 .environmentObject(cameraModel)
             
-//            ZStack(alignment: .leading) {
-//                Rectangle()
-//                    .fill(.black.opacity(0.25))
-                
-//                Rectangle()
-//                    .fill(Color("Instagram"))
-//                    .frame(width: size.width * (cameraModel.recordedDuration / cameraModel.maxDuration))
-//            }
-//            .frame(height: 8)
-//            .frame(maxHeight: .infinity,alignment: .top)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear(perform: cameraModel.checkPermission)

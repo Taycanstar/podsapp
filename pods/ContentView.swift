@@ -44,42 +44,16 @@ struct ContentView: View {
             Group {
                 switch selectedTab {
                 case 0:
-//                    HomeView()
-                    Home()
+                    HomeView()
+                  
+                case 1:
+
+                    CameraContainerView()
                         .mask(CurvedTopShape(cornerRadius: 18))
                         .onAppear { isCameraActive = true }
                         .onDisappear { isCameraActive = false }
                         .background(Color.black.edgesIgnoringSafeArea(.top))
                         .padding(.bottom, 45)
-                       
-                      
-                case 1:
-                    CameraView(isRecording: $isRecording)
-                    .mask(CurvedTopShape(cornerRadius: 18))
-                    .onAppear { isCameraActive = true }
-                    .onDisappear { isCameraActive = false }
-                    .background(Color.black.edgesIgnoringSafeArea(.top))
-                    
-                    .onReceive(NotificationCenter.default.publisher(for: .didFinishRecordingVideo)) { notification in
-                        if let url = notification.object as? URL {
-                            self.recordedVideoURL = url
-                            self.showVideoPreview = true
-                            print("url is", url)
-                        }
-                    }
-
-                    if showVideoPreview, let videoURL = recordedVideoURL {
-                                            VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview)
-                                        }
-
-
-//                if showVideoPreview, let videoURL = recordedVideoURL {
-//                    VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview, saveAction: {
-//                        // Implement your save logic here
-//                        print("Save video action")
-//                    })
-//                }
-
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
                 default:

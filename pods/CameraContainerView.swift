@@ -1,7 +1,7 @@
 import SwiftUI
 import AVKit
 
-struct Home: View {
+struct CameraContainerView: View {
     @StateObject var cameraModel = CameraViewModel()
     @State private var showCreatePodView = false
     
@@ -37,45 +37,58 @@ struct Home: View {
                         
                       }
             
-            
-            HStack { // Use an HStack for positioning
-                VStack {
-                              Spacer()
-                              Button(action: {
-                                  // TODO: Trigger the video picker
-                              }) {
-                                  Image(systemName: "photo")
-                                      
-                                      .font(.system(size: 18))
-                                      .foregroundColor(.white)
-                                      .padding(.horizontal, 10)
-                                      .padding(.vertical, 10)
+            if !cameraModel.isRecording {
+                HStack {
 
-                                      .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
-                                      .clipShape(Circle())
-                              }
-                              .padding(.bottom, 115) // Adjust depending on thumbnail location
-                          }
-                   Spacer() // Pushes the floating button left
-                Button(action: {
-                    // TODO: Trigger the video picker
-                }) {
-                    Image(systemName: "chevron.right")
-                        
-                        .font(.system(size: 18))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
+                                  Button(action: {
+                                      // TODO: Trigger the video picker
+                                  }) {
+                                      Image(systemName: "photo")
+                                          
+                                          .font(.system(size: 18))
+                                          .foregroundColor(.white)
+                                          .padding(.horizontal, 10)
+                                          .padding(.vertical, 10)
 
-                        .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
-                        .clipShape(Circle())
-                }
-                .padding(.bottom, 115)
+                                          .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
+                                          .clipShape(Circle())
+                                  }
+                                  .padding(.bottom, 115)
+                                  .frame(width: 60, height: 60) // Example size, adjust as needed
 
+                    Spacer()
+                    
+                    
+                    if !cameraModel.currentPod.items.isEmpty {
+                        Button(action: {
+                            // TODO: Trigger the video picker
+                            if let previewURL = cameraModel.previewURL {
+                                   print("Preview URL: \(previewURL)")
+                                   cameraModel.showPreview = true
+                               } else {
+                                   print("No preview URL available")
+                               }
+                        }) {
+                            Image(systemName: "chevron.right")
+                                
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 10)
 
-               }
-               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-               .padding(.horizontal, 10)
+                                .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
+                                .clipShape(Circle())
+                        }
+                        .frame(width: 60, height: 60) // Example size, adjust as needed
+
+                        .padding(.bottom, 115)
+                   
+                      }
+                    }
+                  
+                   .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            }
+          
         
             // Add Thumbnail Carousel
                        if !cameraModel.currentPod.items.isEmpty {
@@ -143,38 +156,38 @@ struct Home: View {
                         }
                 }
                 
-                // Preview Button
-                Button {
-                    if let _ = cameraModel.previewURL{
-                        cameraModel.showPreview.toggle()
-                    }
-                } label: {
-                    Group{
-                        if cameraModel.previewURL == nil && !cameraModel.recordedURLs.isEmpty{
-                            // Merging Videos
-                            ProgressView()
-                                .tint(.black)
-                        }
-                        else{
-                            Label {
-                                Image(systemName: "chevron.right")
-                                    .font(.callout)
-                            } icon: {
-                                Text("Preview")
-                            }
-                            .foregroundColor(.black)
-                        }
-                    }
-                    .padding(.horizontal,20)
-                    .padding(.vertical,8)
-                    .background{
-                        Capsule()
-                            .fill(.white)
-                    }
-                }
-                .frame(maxWidth: .infinity,alignment: .trailing)
-                .padding(.trailing)
-                .opacity((cameraModel.previewURL == nil && cameraModel.recordedURLs.isEmpty) || cameraModel.isRecording ? 0 : 1)
+//                // Preview Button
+//                Button {
+//                    if let _ = cameraModel.previewURL{
+//                        cameraModel.showPreview.toggle()
+//                    }
+//                } label: {
+//                    Group{
+//                        if cameraModel.previewURL == nil && !cameraModel.recordedURLs.isEmpty{
+//                            // Merging Videos
+//                            ProgressView()
+//                                .tint(.black)
+//                        }
+//                        else{
+//                            Label {
+//                                Image(systemName: "chevron.right")
+//                                    .font(.callout)
+//                            } icon: {
+//                                Text("Preview")
+//                            }
+//                            .foregroundColor(.black)
+//                        }
+//                    }
+//                    .padding(.horizontal,20)
+//                    .padding(.vertical,8)
+//                    .background{
+//                        Capsule()
+//                            .fill(.white)
+//                    }
+//                }
+//                .frame(maxWidth: .infinity,alignment: .trailing)
+//                .padding(.trailing)
+//                .opacity((cameraModel.previewURL == nil && cameraModel.recordedURLs.isEmpty) || cameraModel.isRecording ? 0 : 1)
             }
             .frame(maxHeight: .infinity,alignment: .bottom)
            
@@ -213,11 +226,6 @@ struct Home: View {
        
 }
 
-struct Home_Previews: PreviewProvider {
-    static var previews: some View {
-        Home()
-    }
-}
 
 
 extension View {
@@ -340,5 +348,5 @@ extension Image {
 
 
 #Preview {
-    Home()
+    CameraContainerView()
 }

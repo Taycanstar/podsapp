@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */; };
-		361507262B7DB8530060974A /* AltHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507252B7DB8530060974A /* AltHomeView.swift */; };
 		361507282B7DBA270060974A /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507272B7DBA270060974A /* CameraViewModel.swift */; };
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
+		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
 		36C458BE2B7421110060355F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
@@ -45,10 +45,10 @@
 
 /* Begin PBXFileReference section */
 		360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltCameraView.swift; sourceTree = "<group>"; };
-		361507252B7DB8530060974A /* AltHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltHomeView.swift; sourceTree = "<group>"; };
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
+		3682F09C2B8403D400ABF344 /* CameraContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContainerView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* pods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pods.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
 		36C458BB2B7421100060355F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -121,7 +121,7 @@
 				3615072D2B7EE48E0060974A /* CreatePodView.swift */,
 				36291B7F2B8166F9000B5F38 /* CarouselView.swift */,
 				360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */,
-				361507252B7DB8530060974A /* AltHomeView.swift */,
+				3682F09C2B8403D400ABF344 /* CameraContainerView.swift */,
 				36C458E32B7457580060355F /* HomeView.swift */,
 				36C458E52B7458720060355F /* CameraView.swift */,
 				36C458E92B746D650060355F /* ProfileView.swift */,
@@ -289,12 +289,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
-				361507262B7DB8530060974A /* AltHomeView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
