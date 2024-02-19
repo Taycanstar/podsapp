@@ -3,13 +3,18 @@ import AVKit
 
 struct Home: View {
     @StateObject var cameraModel = CameraViewModel()
-
+    @State private var showCreatePodView = false
+    
     var body: some View {
         ZStack {
             // MARK: Camera View
             AltCameraView()
                 .environmentObject(cameraModel)
-
+            
+                .fullScreenCover(isPresented: $showCreatePodView) {
+                              CreatePodView(pod: cameraModel.currentPod)
+                                  // Pass any required environment objects or parameters
+                          }
      
             // Add a button to reset the current pod
                       if !cameraModel.currentPod.items.isEmpty {
@@ -32,6 +37,46 @@ struct Home: View {
                         
                       }
             
+            
+            HStack { // Use an HStack for positioning
+                VStack {
+                              Spacer()
+                              Button(action: {
+                                  // TODO: Trigger the video picker
+                              }) {
+                                  Image(systemName: "photo")
+                                      
+                                      .font(.system(size: 18))
+                                      .foregroundColor(.white)
+                                      .padding(.horizontal, 10)
+                                      .padding(.vertical, 10)
+
+                                      .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
+                                      .clipShape(Circle())
+                              }
+                              .padding(.bottom, 115) // Adjust depending on thumbnail location
+                          }
+                   Spacer() // Pushes the floating button left
+                Button(action: {
+                    // TODO: Trigger the video picker
+                }) {
+                    Image(systemName: "chevron.right")
+                        
+                        .font(.system(size: 18))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+
+                        .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
+                        .clipShape(Circle())
+                }
+                .padding(.bottom, 115)
+
+
+               }
+               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+               .padding(.horizontal, 10)
+        
             // Add Thumbnail Carousel
                        if !cameraModel.currentPod.items.isEmpty {
                            VStack {
@@ -42,7 +87,7 @@ struct Home: View {
                                    Spacer()
                                }
                            }
-                           .padding(.vertical, 45)
+                           .padding(.vertical, 40)
                        }
           
             // Floating Camera Control Buttons
@@ -56,7 +101,7 @@ struct Home: View {
                             .padding()
                     }
                     Button(action: cameraModel.toggleFlash) {
-                        Image(systemName: "bolt")
+                        Image(systemName: cameraModel.isFlashOn ? "bolt" : "bolt.slash")
                             .font(.title)
                             .foregroundColor(.white)
                             .font(.system(size: 16))
@@ -158,7 +203,7 @@ struct Home: View {
         .overlay(content: {
             if let url = cameraModel.previewURL,cameraModel.showPreview{
                 
-                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed)
+                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView )
                     .transition(.move(edge: .trailing))
             }
         })
@@ -184,11 +229,13 @@ extension View {
 
 
 struct FinalPreview: View {
+    
     var url: URL
     @Binding var showPreview: Bool
     private let player = AVPlayer()
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
+    @Binding var showCreatePodView: Bool
 
     var body: some View {
         GeometryReader { proxy in
@@ -227,6 +274,8 @@ struct FinalPreview: View {
                             .padding(.leading, -15)
                             Spacer()
                             Button(action: {
+                                cameraModel.confirmAndNavigateToCreatePod()
+                                   showCreatePodView = true
                                 print("Forward arrow tapped")
                             }) {
                                 ZStack {

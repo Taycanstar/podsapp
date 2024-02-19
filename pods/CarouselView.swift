@@ -11,7 +11,7 @@ struct ThumbnailCarouselView: View {
                         Image(uiImage: item.thumbnail ?? UIImage())
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 40, height: 60) // Thumbnail size
+                            .frame(width: 50, height: 50) // Thumbnail size
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     // Add an invisible spacer to allow scrolling to the end

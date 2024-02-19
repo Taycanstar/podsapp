@@ -22,6 +22,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var output = AVCaptureMovieFileOutput()
     @Published var preview : AVCaptureVideoPreviewLayer!
     @Published var isFrontCameraUsed: Bool = false
+    @Published var showCreatePodView = false
+    @Published var isFlashOn: Bool = false
+    
     
     // MARK: Video Recorder Properties
     @Published var isRecording: Bool = false
@@ -148,6 +151,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 try currentCamera.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
             }
 
+            // Update the isFlashOn state based on the current torch mode
+            isFlashOn = currentCamera.torchMode == .on
+
             currentCamera.unlockForConfiguration()
         } catch {
             print("Error toggling flash: \(error)")
@@ -268,7 +274,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-
+    func confirmAndNavigateToCreatePod() {
+            confirmVideo()
+            showCreatePodView = true
+        }
 
 
 
