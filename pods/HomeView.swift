@@ -8,8 +8,17 @@
 import SwiftUI
 
 struct HomeView: View {
+    @StateObject var cameraModel = CameraViewModel()
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        Button("Test Transcription") {
+                   if let fileURL = Bundle.main.url(forResource: "space_oddity", withExtension: "wav") {
+                       cameraModel.transcribeAudio(from: fileURL) { transcribedText in
+                           print("Transcribed text: \(transcribedText ?? "Failed to transcribe")")
+                       }
+                   } else {
+                       print("Audio file not found")
+                   }
+               }
     }
 }
 

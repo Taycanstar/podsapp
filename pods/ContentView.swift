@@ -7,6 +7,11 @@
 import AVFoundation
 import SwiftUI
 
+//// For an iOS app in Swift
+import MicrosoftCognitiveServicesSpeech
+
+
+
 struct CurvedTopShape: Shape {
     var cornerRadius: CGFloat
 
@@ -29,12 +34,16 @@ struct CurvedTopShape: Shape {
 
 
 
+
 struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var isCameraActive: Bool = false
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
+    
+    
+
     
 
     var body: some View {

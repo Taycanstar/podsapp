@@ -3,6 +3,8 @@
 import SwiftUI
 import AVFoundation
 
+import MicrosoftCognitiveServicesSpeech
+
 struct PodItem {
     var videoURL: URL
     var metadata: String
@@ -17,6 +19,15 @@ struct Pod {
 
 // MARK: Camera View Model
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate{
+    
+    // Custom initializer
+        override init() {
+            super.init()
+            configureSpeechService()
+            checkPermission()
+            setupAudioRecorder()
+        }
+    
     @Published var session = AVCaptureSession()
     @Published var alert = false
     @Published var output = AVCaptureMovieFileOutput()
@@ -24,6 +35,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isFrontCameraUsed: Bool = false
     @Published var showCreatePodView = false
     @Published var isFlashOn: Bool = false
+    var audioRecorder: AVAudioRecorder?
     
     
     // MARK: Video Recorder Properties
@@ -64,6 +76,27 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
     
+    private func getDocumentsDirectory() -> URL {
+          FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+      }
+    
+    func setupAudioRecorder() {
+           let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+           let settings = [
+               AVFormatIDKey: Int(kAudioFormatLinearPCM),
+               AVSampleRateKey: 12000,
+               AVNumberOfChannelsKey: 1,
+               AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+           ]
+
+           do {
+               audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
+               audioRecorder?.prepareToRecord()
+           } catch {
+               print("Audio recorder setup failed: \(error)")
+           }
+       }
+    
     func setUp(){
         
         do{
@@ -96,11 +129,13 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         let tempURL = NSTemporaryDirectory() + "\(Date()).mov"
         output.startRecording(to: URL(fileURLWithPath: tempURL), recordingDelegate: self)
         isRecording = true
+        audioRecorder?.record()
     }
     
     func stopRecording(){
         output.stopRecording()
         isRecording = false
+        audioRecorder?.stop()
     }
     
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
@@ -228,28 +263,52 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // setupCameraForRecording()
     }
 
-    func confirmVideo(metadata: String = "Default Metadata") {
-        if let url = previewURL {
-            // Check if the last item in the Pod is the same as the current preview URL
-            if currentPod.items.last?.videoURL != url {
-                // Create a new Pod item with the recorded video URL and metadata
-                let thumbnail = generateThumbnail(for: url, usingFrontCamera: isFrontCameraUsed)
-                let newItem = PodItem(videoURL: url, metadata: metadata, thumbnail: thumbnail)
-                currentPod.items.append(newItem)
+    func confirmVideo() {
+        guard let videoURL = previewURL else {
+            print("No video to confirm.")
+            return
+        }
+
+        // Get the URL of the recorded audio
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+        print("Audio file path: \(audioFilename.path)")
+
+        // Check if audio file exists
+        if !FileManager.default.fileExists(atPath: audioFilename.path) {
+            print("Audio file does not exist.")
+        } else {
+            print("Audio file found, proceeding with transcription.")
+        }
+
+        // Transcribe the audio and then confirm the video
+        transcribeAudio(from: audioFilename) { [weak self] transcribedText in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                let metadata = transcribedText ?? "Transcription failed"
+                print("Transcription result: \(metadata)")
+                
+                // Check if the last item in the Pod is the same as the current preview URL
+                if self.currentPod.items.last?.videoURL != videoURL {
+                    let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                    self.currentPod.items.append(newItem)
+                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+                } else {
+                    print("The item is already in the Pod.")
+                }
+
+                // Reset the preview URL and hide the preview
+                self.previewURL = nil
+                self.showPreview = false
+
+                // Update the recording state
+                self.isRecording = false
             }
-
-            print("Item confirmed. Current Pod: \(currentPod.items.count)")
-
-            // Reset the preview URL
-            previewURL = previewURL
-
-            // Hide the preview
-            showPreview = false
-
-            // Update the recording state
-            isRecording = false
         }
     }
+
+
+
 
 
     
@@ -282,7 +341,58 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             showCreatePodView = true
         }
 
+ 
+    var speechConfig: SPXSpeechConfiguration?
+    
+    func configureSpeechService() {
+        if let subscriptionKey = ProcessInfo.processInfo.environment["SPEECH_KEY"],
+           let serviceRegion = ProcessInfo.processInfo.environment["SPEECH_REGION"] {
+            do {
+                speechConfig = try SPXSpeechConfiguration(subscription: subscriptionKey, region: serviceRegion)
+                print("Speech service configured successfully with key: \(subscriptionKey) and region: \(serviceRegion)")
+            } catch {
+                print("Error initializing speech configuration: \(error)")
+            }
+        } else {
+            print("Environment variables for SPEECH_KEY and SPEECH_REGION are not set.")
+        }
+    }
 
+
+  
+
+
+    func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
+        guard let speechConfig = speechConfig else {
+            print("Speech configuration not set up.")
+            completion(nil)
+            return
+        }
+        
+        do {
+            let audioConfig =  SPXAudioConfiguration(wavFileInput: url.path)
+            guard let audioConfigUnwrapped = audioConfig else {
+                print("Audio configuration could not be created.")
+                completion(nil)
+                return
+            }
+
+            let speechRecognizer = try SPXSpeechRecognizer(speechConfiguration: speechConfig, audioConfiguration: audioConfigUnwrapped)
+
+            try speechRecognizer.recognizeOnceAsync { result in
+                if let text = result.text, !text.isEmpty {
+                    completion(text)
+                } else {
+                    completion(nil)
+                }
+            }
+        } catch {
+            print("Error setting up speech recognizer: \(error)")
+            completion(nil)
+        }
+    }
+    
+    
 
 
     
