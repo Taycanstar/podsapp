@@ -156,38 +156,7 @@ struct CameraContainerView: View {
                         }
                 }
                 
-//                // Preview Button
-//                Button {
-//                    if let _ = cameraModel.previewURL{
-//                        cameraModel.showPreview.toggle()
-//                    }
-//                } label: {
-//                    Group{
-//                        if cameraModel.previewURL == nil && !cameraModel.recordedURLs.isEmpty{
-//                            // Merging Videos
-//                            ProgressView()
-//                                .tint(.black)
-//                        }
-//                        else{
-//                            Label {
-//                                Image(systemName: "chevron.right")
-//                                    .font(.callout)
-//                            } icon: {
-//                                Text("Preview")
-//                            }
-//                            .foregroundColor(.black)
-//                        }
-//                    }
-//                    .padding(.horizontal,20)
-//                    .padding(.vertical,8)
-//                    .background{
-//                        Capsule()
-//                            .fill(.white)
-//                    }
-//                }
-//                .frame(maxWidth: .infinity,alignment: .trailing)
-//                .padding(.trailing)
-//                .opacity((cameraModel.previewURL == nil && cameraModel.recordedURLs.isEmpty) || cameraModel.isRecording ? 0 : 1)
+
             }
             .frame(maxHeight: .infinity,alignment: .bottom)
            
@@ -202,7 +171,7 @@ struct CameraContainerView: View {
                     .font(.title)
                     .foregroundColor(.white)
             }
-//            .frame(maxWidth: .infinity,maxHeight: .infinity,alignment: .topLeading)
+
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
             .padding(.top)
@@ -244,6 +213,7 @@ struct FinalPreview: View {
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
     @Binding var showCreatePodView: Bool
+    
 
     var body: some View {
         GeometryReader { proxy in
@@ -282,6 +252,7 @@ struct FinalPreview: View {
                             .padding(.leading, -15)
                             Spacer()
                             Button(action: {
+                                cleanUpPlayer()
                                 cameraModel.confirmAndNavigateToCreatePod()
                                    showCreatePodView = true
                                 print("Forward arrow tapped")
@@ -301,16 +272,23 @@ struct FinalPreview: View {
                         HStack {
                             Spacer()
                             Button(action: {
+                                cleanUpPlayer()
                                 cameraModel.confirmVideo()
                             }) {
                                 ZStack {
                                     Circle()
                                         .foregroundColor(.blue)
                                         .frame(width: 44, height: 44) // Adjust size as needed
-
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.white)
+                                    if cameraModel.isTranscribing {
+                                                    // Show a loading animation or progress view
+                                                    ProgressView()
+                                                        .scaleEffect(1, anchor: .center)
+                                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 18))
+                                            .foregroundColor(.white)
+                                    }
                                 }
                             }
 
@@ -331,11 +309,11 @@ struct FinalPreview: View {
             player.play()
         }
     }
-
     private func cleanUpPlayer() {
-        player.pause()
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-    }
+           player.pause()
+           player.replaceCurrentItem(with: nil) // Reset the player
+           NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+       }
 }
 
 extension Image {

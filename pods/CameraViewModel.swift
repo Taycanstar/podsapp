@@ -36,6 +36,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var showCreatePodView = false
     @Published var isFlashOn: Bool = false
     var audioRecorder: AVAudioRecorder?
+    @Published var isTranscribing: Bool = false
     
     
     // MARK: Video Recorder Properties
@@ -96,17 +97,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                print("Audio recorder setup failed: \(error)")
            }
        }
-    
-    func testAudioRecording() {
-        setupAudioRecorder()
-        audioRecorder?.record(forDuration: 5) // Record for 5 seconds as a test
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
-            self?.audioRecorder?.stop()
-            print("Test recording stopped.")
-            // Now check the file at 'audioFilename' to see if it contains audio
-        }
-    }
 
 
     func setUp() {
@@ -329,6 +319,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             print("No video to confirm.")
             return
         }
+        isTranscribing = true
 
         // Get the URL of the recorded audio
         let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
@@ -359,11 +350,13 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 }
 
                 // Reset the preview URL and hide the preview
-                
+                self.isTranscribing = false
                 self.showPreview = false
 
                 // Update the recording state
                 self.isRecording = false
+                
+                
             }
         }
     }
@@ -410,7 +403,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
            let serviceRegion = ProcessInfo.processInfo.environment["SPEECH_REGION"] {
             do {
                 speechConfig = try SPXSpeechConfiguration(subscription: subscriptionKey, region: serviceRegion)
-                print("Speech service configured successfully with key: \(subscriptionKey) and region: \(serviceRegion)")
+             
             } catch {
                 print("Error initializing speech configuration: \(error)")
             }
