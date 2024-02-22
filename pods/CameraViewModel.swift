@@ -97,46 +97,68 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
            }
        }
     
-    func setUp(){
-        
-        do{
-            self.session.beginConfiguration()
-            let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-            let videoInput = try AVCaptureDeviceInput(device: cameraDevice!)
-            let audioDevice = AVCaptureDevice.default(for: .audio)
-            let audioInput = try AVCaptureDeviceInput(device: audioDevice!)
-            
-            // MARK: Audio Input
-            
-            if self.session.canAddInput(videoInput) && self.session.canAddInput(audioInput){
-                self.session.addInput(videoInput)
-                self.session.addInput(audioInput)
+    func testAudioRecording() {
+        setupAudioRecorder()
+        audioRecorder?.record(forDuration: 5) // Record for 5 seconds as a test
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+            self?.audioRecorder?.stop()
+            print("Test recording stopped.")
+            // Now check the file at 'audioFilename' to see if it contains audio
+        }
+    }
+
+
+    func setUp() {
+        do {
+            // Set up the audio session for recording
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .default)
+            try audioSession.setActive(true)
+
+            session.beginConfiguration()
+
+            // Video Input Setup
+            if let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+               let videoInput = try? AVCaptureDeviceInput(device: cameraDevice),
+               session.canAddInput(videoInput) {
+                session.addInput(videoInput)
             }
 
-            if self.session.canAddOutput(self.output){
-                self.session.addOutput(self.output)
+            // Audio Input Setup
+            if let audioDevice = AVCaptureDevice.default(for: .audio),
+               let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
+               session.canAddInput(audioInput) {
+                session.addInput(audioInput)
             }
-            
-            self.session.commitConfiguration()
+
+            if session.canAddOutput(output) {
+                session.addOutput(output)
+            }
+
+            session.commitConfiguration()
+        } catch {
+            print("Error setting up video/audio input: \(error)")
         }
-        catch{
-            print(error.localizedDescription)
-        }
     }
-    
-    func startRecording(){
-        // MARK: Temporary URL for recording Video
-        let tempURL = NSTemporaryDirectory() + "\(Date()).mov"
-        output.startRecording(to: URL(fileURLWithPath: tempURL), recordingDelegate: self)
-        isRecording = true
-        audioRecorder?.record()
-    }
-    
-    func stopRecording(){
-        output.stopRecording()
-        isRecording = false
-        audioRecorder?.stop()
-    }
+
+    func startRecording() {
+          let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
+          let videoFileURL = URL(fileURLWithPath: videoFilename)
+          output.startRecording(to: videoFileURL, recordingDelegate: self)
+
+        // Start audio recording
+           setupAudioRecorder()
+           audioRecorder?.record()
+        
+          isRecording = true
+      }
+
+      func stopRecording() {
+          output.stopRecording()
+          audioRecorder?.stop()
+          isRecording = false
+      }
     
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
          if let error = error {
@@ -199,29 +221,68 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
 
+//    func switchCamera() {
+//        guard let currentInput = session.inputs.first as? AVCaptureDeviceInput else { return }
+//        
+//        session.beginConfiguration()
+//        defer { session.commitConfiguration() }
+//
+//        // Remove current input
+//        session.removeInput(currentInput)
+//
+//        let newCameraPosition: AVCaptureDevice.Position = currentInput.device.position == .back ? .front : .back
+//
+//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
+//              let newInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+//            return
+//        }
+//        
+//        isFrontCameraUsed = (newCameraPosition == .front)
+//
+//        if session.canAddInput(newInput) {
+//            session.addInput(newInput)
+//        }
+//    }
+//    
+    
+
     func switchCamera() {
-        guard let currentInput = session.inputs.first as? AVCaptureDeviceInput else { return }
-        
-        session.beginConfiguration()
-        defer { session.commitConfiguration() }
-
-        // Remove current input
-        session.removeInput(currentInput)
-
-        let newCameraPosition: AVCaptureDevice.Position = currentInput.device.position == .back ? .front : .back
-
-        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-              let newInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+        guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {
             return
         }
-        
-        isFrontCameraUsed = (newCameraPosition == .front)
 
-        if session.canAddInput(newInput) {
-            session.addInput(newInput)
+        session.beginConfiguration()
+        session.removeInput(currentVideoInput)
+
+        let newCameraPosition: AVCaptureDevice.Position = currentVideoInput.device.position == .back ? .front : .back
+        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
+              let newVideoInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+            session.commitConfiguration()
+            return
+        }
+
+        if session.canAddInput(newVideoInput) {
+            session.addInput(newVideoInput)
+            isFrontCameraUsed = (newCameraPosition == .front)
+        }
+
+        // Reconfigure audio input as needed
+        reconfigureAudioInput()
+
+        session.commitConfiguration()
+    }
+
+    private func reconfigureAudioInput() {
+        if let currentAudioInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.audio) }) {
+            session.removeInput(currentAudioInput)
+        }
+
+        if let audioDevice = AVCaptureDevice.default(for: .audio),
+           let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
+           session.canAddInput(audioInput) {
+            session.addInput(audioInput)
         }
     }
-    
     func startRecordingNextItem() {
         // Reset the preview URL for the new recording
         self.previewURL = nil
@@ -298,7 +359,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 }
 
                 // Reset the preview URL and hide the preview
-                self.previewURL = nil
+                
                 self.showPreview = false
 
                 // Update the recording state

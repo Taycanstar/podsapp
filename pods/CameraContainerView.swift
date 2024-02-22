@@ -17,7 +17,7 @@ struct CameraContainerView: View {
                           }
      
             // Add a button to reset the current pod
-                      if !cameraModel.currentPod.items.isEmpty {
+                      if !cameraModel.currentPod.items.isEmpty  {
                           Button(action: {
                               // Reset the current pod and any other necessary states
                               cameraModel.currentPod = Pod()
