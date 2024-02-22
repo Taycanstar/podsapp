@@ -336,7 +336,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         transcribeAudio(from: audioFilename) { [weak self] transcribedText in
             guard let self = self else { return }
             DispatchQueue.main.async {
-                let metadata = transcribedText ?? "Transcription failed"
+                let metadata = transcribedText ?? ""
                 print("Transcription result: \(metadata)")
                 
                 // Check if the last item in the Pod is the same as the current preview URL
@@ -344,7 +344,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                     let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
                     let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
                     self.currentPod.items.append(newItem)
-                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+//                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
                 } else {
                     print("The item is already in the Pod.")
                 }

@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct CreatePodView: View {
     @State var podName: String = ""
     var pod: Pod
@@ -32,11 +33,11 @@ struct CreatePodView: View {
             List {
                 ForEach(pod.items, id: \.videoURL) { item in
                     HStack {
-                        TextField("Metadata", text: .constant(item.metadata))
-                            .foregroundColor(.black) // Ensure text is visible
+                        ColoredPlaceholderTextField(placeholder: "Element name", text: .constant(item.metadata), placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
+                                        .foregroundColor(.black)
                             .background(Color.white) // Explicitly set background to white
                           
-
+                         
                         Spacer()
 
                         Image(uiImage: item.thumbnail ?? UIImage())
@@ -45,11 +46,13 @@ struct CreatePodView: View {
                             .frame(width: 40, height: 40)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    
-                    .listRowBackground(Color.white) // Ensure list row background is white
+        
+                              
+                                    .listRowBackground(Color.white)
                 }
             }
             .listStyle(PlainListStyle()) // Use plain style for list
+    
 
 
             HStack { // Embed in HStack for padding
@@ -97,9 +100,34 @@ struct PlaceholderTextView: View {
             TextField("", text: $text)
                 .font(.system(size: 28, design: .rounded).bold())
                 .padding(.horizontal, 15)
-                .foregroundColor(.black)
+                .foregroundColor(.blue)
         }
         .frame(maxWidth: .infinity)
     }
 }
+
+struct ColoredPlaceholderTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    var placeholderColor: Color = .gray // Default color
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(placeholderColor)
+                    .font(.system(size: 18))
+                    .padding(.leading, 4)
+                
+            }
+            TextField("", text: $text)
+                .font(.system(size: 16))
+                
+        }
+    }
+}
+
+
+
+
 
