@@ -12,7 +12,7 @@ struct CameraContainerView: View {
                 .environmentObject(cameraModel)
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
-                              CreatePodView(pod: cameraModel.currentPod)
+                              CreatePodView(pod: $cameraModel.currentPod)
                                   // Pass any required environment objects or parameters
                           }
      

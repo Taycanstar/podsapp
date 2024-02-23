@@ -3,7 +3,7 @@ import SwiftUI
 
 struct CreatePodView: View {
     @State var podName: String = ""
-    var pod: Pod
+    @Binding var pod: Pod
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
@@ -31,9 +31,9 @@ struct CreatePodView: View {
 
             // List of Items
             List {
-                ForEach(pod.items, id: \.videoURL) { item in
+                ForEach($pod.items, id: \.videoURL) { $item in
                     HStack {
-                        ColoredPlaceholderTextField(placeholder: "Element name", text: .constant(item.metadata), placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
+                        ColoredPlaceholderTextField(placeholder: "Element name", text: $item.metadata, placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
                                         .foregroundColor(.black)
                             .background(Color.white) // Explicitly set background to white
                           
@@ -92,7 +92,6 @@ struct PlaceholderTextView: View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
                 Text(placeholder)
-                    /*.foregroundColor(Color(UIColor.lightGray))*/ // Customize as needed
                     .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                     .font(.system(size: 28, design: .rounded).bold())
                     .padding(.horizontal, 15)
@@ -102,9 +101,10 @@ struct PlaceholderTextView: View {
                 .padding(.horizontal, 15)
                 .foregroundColor(.blue)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: 30) // Set a fixed height
     }
 }
+
 
 struct ColoredPlaceholderTextField: View {
     var placeholder: String
@@ -118,16 +118,11 @@ struct ColoredPlaceholderTextField: View {
                     .foregroundColor(placeholderColor)
                     .font(.system(size: 18))
                     .padding(.leading, 4)
-                
             }
             TextField("", text: $text)
                 .font(.system(size: 16))
-                
+                .padding(.leading, 4)
+             
         }
     }
 }
-
-
-
-
-
