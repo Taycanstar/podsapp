@@ -1,9 +1,87 @@
 import SwiftUI
 import AVKit
+import PhotosUI
+import UniformTypeIdentifiers
+
+
+struct PhotoPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    var cameraViewModel: CameraViewModel
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 1
+        config.filter = .videos
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let parent: PhotoPicker
+
+        init(_ parent: PhotoPicker) {
+            self.parent = parent
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            parent.isPresented = false // Dismiss the picker immediately
+            guard let provider = results.first?.itemProvider else {
+                print("No provider found for the selected item.")
+                return
+            }
+
+            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            print("Error loading video data: \(error.localizedDescription)")
+                            return
+                        }
+                        
+                        guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
+                            print("Unable to write video data to temporary location.")
+                            return
+                        }
+
+                        self.parent.cameraViewModel.handleSelectedVideo(url)
+                    }
+                }
+            }
+        }
+
+        private func writeDataToTemporaryLocation(data: Data) -> URL? {
+            let tempDirectory = FileManager.default.temporaryDirectory
+            let tempUrl = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
+
+            do {
+                try data.write(to: tempUrl)
+                return tempUrl
+            } catch {
+                print("Error writing video data to temporary location: \(error)")
+                return nil
+            }
+        }
+    }
+}
+
+
+
+
+
 
 struct CameraContainerView: View {
     @StateObject var cameraModel = CameraViewModel()
     @State private var showCreatePodView = false
+    @State private var isShowingVideoPicker = false
+    @State private var selectedVideoURL: URL?
+
     
     var body: some View {
         ZStack {
@@ -41,7 +119,7 @@ struct CameraContainerView: View {
                 HStack {
 
                                   Button(action: {
-                                      // TODO: Trigger the video picker
+                                      isShowingVideoPicker = true
                                   }) {
                                       Image(systemName: "photo")
                                           
@@ -54,7 +132,11 @@ struct CameraContainerView: View {
                                           .clipShape(Circle())
                                   }
                                   .padding(.bottom, 115)
-                                  .frame(width: 60, height: 60) // Example size, adjust as needed
+                                  .frame(width: 60, height: 60)
+                                  .sheet(isPresented: $isShowingVideoPicker) {
+                                      PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
+                                  }
+
 
                     Spacer()
                     
@@ -192,6 +274,15 @@ struct CameraContainerView: View {
         .animation(.easeInOut, value: cameraModel.showPreview)
         .preferredColorScheme(.dark)
     }
+    
+    private func handleSelectedVideoURL() async {
+         if let url = selectedVideoURL {
+             // Set it as the preview URL and show the preview
+             cameraModel.previewURL = url
+             cameraModel.showPreview = true
+             selectedVideoURL = nil // Reset after handling
+         }
+     }
        
 }
 
@@ -202,6 +293,8 @@ extension View {
         self.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
     }
 }
+
+
 
 
 

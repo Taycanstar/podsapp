@@ -37,6 +37,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isFlashOn: Bool = false
     var audioRecorder: AVAudioRecorder?
     @Published var isTranscribing: Bool = false
+    static let shared = CameraViewModel()
     
     
     // MARK: Video Recorder Properties
@@ -207,34 +208,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             currentCamera.unlockForConfiguration()
         }
     }
-
-
-
-
-//    func switchCamera() {
-//        guard let currentInput = session.inputs.first as? AVCaptureDeviceInput else { return }
-//        
-//        session.beginConfiguration()
-//        defer { session.commitConfiguration() }
-//
-//        // Remove current input
-//        session.removeInput(currentInput)
-//
-//        let newCameraPosition: AVCaptureDevice.Position = currentInput.device.position == .back ? .front : .back
-//
-//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-//              let newInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
-//            return
-//        }
-//        
-//        isFrontCameraUsed = (newCameraPosition == .front)
-//
-//        if session.canAddInput(newInput) {
-//            session.addInput(newInput)
-//        }
-//    }
-//    
-    
 
     func switchCamera() {
         guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {
@@ -446,10 +419,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
     
-    
-
-
-    
+    func handleSelectedVideo(_ url: URL) {
+        print("Selected video URL: \(url)")
+        self.previewURL = url
+        _ = self.generateThumbnail(for: url, usingFrontCamera: false)
+      
+        print("Showing preview with URL: \(url)")
+        self.showPreview = true
+    }
 
 }
 
