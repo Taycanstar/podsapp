@@ -38,6 +38,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     var audioRecorder: AVAudioRecorder?
     @Published var isTranscribing: Bool = false
     static let shared = CameraViewModel()
+    var savedAudioURL: URL?
     
     
     // MARK: Video Recorder Properties
@@ -333,6 +334,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
+    
+    
 
 
 
@@ -424,9 +427,39 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         self.previewURL = url
         _ = self.generateThumbnail(for: url, usingFrontCamera: false)
       
+        extractAudioFromVideo(videoURL: url) { extractedAudioURL in
+               self.savedAudioURL = extractedAudioURL
+           }
+
         print("Showing preview with URL: \(url)")
         self.showPreview = true
     }
+    
+    func extractAudioFromVideo(videoURL: URL, completion: @escaping (URL?) -> Void) {
+        let asset = AVURLAsset(url: videoURL)
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            print("Cannot create export session.")
+            completion(nil)
+            return
+        }
+
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("extractedAudio.m4a")
+        exportSession.outputURL = audioFilename
+        exportSession.outputFileType = .m4a
+
+        exportSession.exportAsynchronously {
+            DispatchQueue.main.async {
+                switch exportSession.status {
+                case .completed:
+                    completion(audioFilename)
+                default:
+                    print("Audio extraction failed: \(String(describing: exportSession.error))")
+                    completion(nil)
+                }
+            }
+        }
+    }
+
 
 }
 
