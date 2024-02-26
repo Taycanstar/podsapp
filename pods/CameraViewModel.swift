@@ -421,40 +421,112 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             completion(nil)
         }
     }
-    
+      
+
     func handleSelectedVideo(_ url: URL) {
         print("Selected video URL: \(url)")
-        self.previewURL = url
-        _ = self.generateThumbnail(for: url, usingFrontCamera: false)
-      
-        extractAudioFromVideo(videoURL: url) { extractedAudioURL in
-               self.savedAudioURL = extractedAudioURL
-           }
 
-        print("Showing preview with URL: \(url)")
-        self.showPreview = true
+        // Extract and convert audio from the picked video
+        extractAudioFromVideo(videoURL: url) { [weak self] success in
+            guard let self = self else { return }
+
+            DispatchQueue.main.async {
+                if success {
+                    // Audio is now saved in .wav format and ready for transcription
+                    self.previewURL = url
+                    
+                    self.showPreview = true
+                } else {
+                    print("Failed to extract and convert audio from the selected video.")
+                }
+            }
+        }
     }
-    
-    func extractAudioFromVideo(videoURL: URL, completion: @escaping (URL?) -> Void) {
-        let asset = AVURLAsset(url: videoURL)
-        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
-            print("Cannot create export session.")
-            completion(nil)
+
+    func extractAudioFromVideo(videoURL: URL, completion: @escaping (Bool) -> Void) {
+        let asset = AVAsset(url: videoURL)
+        guard let assetTrack = asset.tracks(withMediaType: .audio).first else {
+            print("No audio track found in the video file.")
+            completion(false)
             return
         }
 
-        let audioFilename = getDocumentsDirectory().appendingPathComponent("extractedAudio.m4a")
-        exportSession.outputURL = audioFilename
-        exportSession.outputFileType = .m4a
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+        do {
+            if FileManager.default.fileExists(atPath: audioFilename.path) {
+                try FileManager.default.removeItem(at: audioFilename)
+            }
+        } catch {
+            print("Error deleting existing audio file: \(error)")
+            completion(false)
+            return
+        }
 
-        exportSession.exportAsynchronously {
-            DispatchQueue.main.async {
-                switch exportSession.status {
-                case .completed:
-                    completion(audioFilename)
-                default:
-                    print("Audio extraction failed: \(String(describing: exportSession.error))")
-                    completion(nil)
+        guard let assetReader = try? AVAssetReader(asset: asset),
+              let assetWriter = try? AVAssetWriter(url: audioFilename, fileType: .wav) else {
+            print("Could not create asset reader/writer.")
+            completion(false)
+            return
+        }
+
+        let readerOutputSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+
+        let writerOutputSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+
+        let assetReaderOutput = AVAssetReaderTrackOutput(track: assetTrack, outputSettings: readerOutputSettings)
+        let assetWriterInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerOutputSettings)
+
+        if assetReader.canAdd(assetReaderOutput) {
+            assetReader.add(assetReaderOutput)
+        } else {
+            print("Cannot add reader output.")
+            completion(false)
+            return
+        }
+
+        if assetWriter.canAdd(assetWriterInput) {
+            assetWriter.add(assetWriterInput)
+        } else {
+            print("Cannot add writer input.")
+            completion(false)
+            return
+        }
+
+        assetReader.startReading()
+        assetWriter.startWriting()
+        assetWriter.startSession(atSourceTime: .zero)
+
+        let processingQueue = DispatchQueue(label: "audioProcessingQueue")
+        assetWriterInput.requestMediaDataWhenReady(on: processingQueue) {
+            while assetWriterInput.isReadyForMoreMediaData {
+                if let sampleBuffer = assetReaderOutput.copyNextSampleBuffer() {
+                    assetWriterInput.append(sampleBuffer)
+                } else {
+                    assetWriterInput.markAsFinished()
+                    assetWriter.finishWriting {
+                        if assetWriter.status == .completed {
+                            completion(true)
+                        } else {
+                            print("Failed to write audio file: \(String(describing: assetWriter.error))")
+                            completion(false)
+                        }
+                    }
+                    assetReader.cancelReading()
+                    break
                 }
             }
         }
