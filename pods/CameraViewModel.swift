@@ -58,6 +58,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     // YOUR OWN TIMING
     @Published var maxDuration: CGFloat = 20
     
+    @Published var isProcessingVideo = false
+    
     func checkPermission(){
         
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -145,6 +147,26 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         
           isRecording = true
       }
+    
+//    func startRecording() {
+//        let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
+//        let videoFileURL = URL(fileURLWithPath: videoFilename)
+//        output.startRecording(to: videoFileURL, recordingDelegate: self)
+//
+//        // Start audio recording
+//        setupAudioRecorder()
+//        audioRecorder?.record()
+//
+//        isRecording = true
+//
+//        // Stop recording after 60 seconds
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
+//            if self.isRecording {
+//                self.stopRecording()
+//            }
+//        }
+//    }
+
 
       func stopRecording() {
           output.stopRecording()
@@ -421,27 +443,30 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             completion(nil)
         }
     }
-      
 
+    
     func handleSelectedVideo(_ url: URL) {
+//        self.isProcessingVideo = true // Notify that processing starts
         print("Selected video URL: \(url)")
 
-        // Extract and convert audio from the picked video
+        // Your video processing logic here...
         extractAudioFromVideo(videoURL: url) { [weak self] success in
             guard let self = self else { return }
 
             DispatchQueue.main.async {
                 if success {
-                    // Audio is now saved in .wav format and ready for transcription
+                    // Processing succeeded, update accordingly
                     self.previewURL = url
-                    
                     self.showPreview = true
                 } else {
+                    // Processing failed, log or handle error
                     print("Failed to extract and convert audio from the selected video.")
                 }
+             self.isProcessingVideo = false // Notify that processing ends
             }
         }
     }
+    
 
     func extractAudioFromVideo(videoURL: URL, completion: @escaping (Bool) -> Void) {
         let asset = AVAsset(url: videoURL)

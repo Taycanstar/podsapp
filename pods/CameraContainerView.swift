@@ -2,11 +2,12 @@ import SwiftUI
 import AVKit
 import PhotosUI
 import UniformTypeIdentifiers
-
-
+//
+//
 struct PhotoPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var cameraViewModel: CameraViewModel
+   
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -38,18 +39,23 @@ struct PhotoPicker: UIViewControllerRepresentable {
             }
 
             if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                self.parent.cameraViewModel.isProcessingVideo = true // Start loading immediately
+
                 provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
                     DispatchQueue.main.async {
                         if let error = error {
                             print("Error loading video data: \(error.localizedDescription)")
+                            self.parent.cameraViewModel.isProcessingVideo = false // Stop loading if error
                             return
                         }
                         
                         guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
                             print("Unable to write video data to temporary location.")
+                            self.parent.cameraViewModel.isProcessingVideo = false // Stop loading if unable to write data
                             return
                         }
 
+                        // Process the selected video
                         self.parent.cameraViewModel.handleSelectedVideo(url)
                     }
                 }
@@ -73,14 +79,14 @@ struct PhotoPicker: UIViewControllerRepresentable {
 
 
 
-
-
-
 struct CameraContainerView: View {
     @StateObject var cameraModel = CameraViewModel()
     @State private var showCreatePodView = false
     @State private var isShowingVideoPicker = false
     @State private var selectedVideoURL: URL?
+    @State private var isProcessingVideo = false
+    
+
 
     
     var body: some View {
@@ -260,8 +266,7 @@ struct CameraContainerView: View {
             .opacity(!cameraModel.recordedURLs.isEmpty && cameraModel.previewURL != nil && !cameraModel.isRecording ? 1 : 0)
         }
         
-       
-                  
+
         
         
         .overlay(content: {
@@ -270,9 +275,17 @@ struct CameraContainerView: View {
                 FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView )
                     .transition(.move(edge: .trailing))
             }
+            
+            
+            
+            
         })
         .animation(.easeInOut, value: cameraModel.showPreview)
         .preferredColorScheme(.dark)
+        
+        .overlay(
+                fullScreenOverlayView
+            )
     }
     
     private func handleSelectedVideoURL() async {
@@ -281,6 +294,25 @@ struct CameraContainerView: View {
              cameraModel.previewURL = url
              cameraModel.showPreview = true
              selectedVideoURL = nil // Reset after handling
+         }
+     }
+    
+    private var fullScreenOverlayView: some View {
+         Group {
+             if cameraModel.isProcessingVideo {
+                 ZStack {
+                     // Changed the background color to the specified RGB value
+                     Color(red: 30 / 255, green: 30 / 255, blue: 30 / 255)
+                         
+                         .ignoresSafeArea() // Ensures the overlay covers the full screen
+                     
+                     // Customized ProgressView for a larger display
+                     ProgressView()
+                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                         .scaleEffect(2) // Scale up the ProgressView to make it larger
+                         .foregroundColor(.white)
+                 }
+             }
          }
      }
        
