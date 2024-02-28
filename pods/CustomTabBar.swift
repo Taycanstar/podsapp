@@ -45,9 +45,14 @@ struct CustomTabBar: View {
         }
     }
 
+//    var tabBarBackgroundColor: Color {
+//        colorScheme == .dark ? Color(rgb: 33, 33, 33) : Color(rgb: 250, 250, 250)
+//    }
     var tabBarBackgroundColor: Color {
-        colorScheme == .dark ? Color(rgb: 33, 33, 33) : Color(rgb: 250, 250, 250)
+        colorScheme == .dark ? Color(rgb: 33, 33, 33) : .white
+        
     }
+    
 
     var outerContainerColor: Color {
         colorScheme == .dark ? Color(rgb: 30, 30, 30): .white

@@ -37,15 +37,10 @@ struct CurvedTopShape: Shape {
 
 struct ContentView: View {
     @State private var selectedTab: Int = 0
-    @State private var isCameraActive: Bool = false
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
     
-    
-
-    
-
     var body: some View {
         
         ZStack(alignment: .bottom) {
@@ -59,10 +54,9 @@ struct ContentView: View {
 
                     CameraContainerView()
                         .mask(CurvedTopShape(cornerRadius: 18))
-                        .onAppear { isCameraActive = true }
-                        .onDisappear { isCameraActive = false }
                         .background(Color.black.edgesIgnoringSafeArea(.top))
                         .padding(.bottom, 45)
+                        .environment(\.colorScheme, .dark)
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
                 default:
@@ -75,7 +69,7 @@ struct ContentView: View {
                       CustomTabBar(selectedTab: $selectedTab)
                           .edgesIgnoringSafeArea(.bottom)
         }
-        .environment(\.colorScheme, isCameraActive ? .dark : .light)
+
     }
 }
 

@@ -9,6 +9,7 @@ struct PodItem {
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage?
+    var title: String
 }
 
 struct Pod {
@@ -147,25 +148,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         
           isRecording = true
       }
-    
-//    func startRecording() {
-//        let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
-//        let videoFileURL = URL(fileURLWithPath: videoFilename)
-//        output.startRecording(to: videoFileURL, recordingDelegate: self)
-//
-//        // Start audio recording
-//        setupAudioRecorder()
-//        audioRecorder?.record()
-//
-//        isRecording = true
-//
-//        // Stop recording after 60 seconds
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
-//            if self.isRecording {
-//                self.stopRecording()
-//            }
-//        }
-//    }
 
 
       func stopRecording() {
@@ -338,7 +320,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 // Check if the last item in the Pod is the same as the current preview URL
                 if self.currentPod.items.last?.videoURL != videoURL {
                     let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, title: "")
                     self.currentPod.items.append(newItem)
 //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
                 } else {
