@@ -104,7 +104,7 @@ struct CameraContainerView: View {
                       if !cameraModel.currentPod.items.isEmpty  {
                           Button(action: {
                               // Reset the current pod and any other necessary states
-                              cameraModel.currentPod = Pod()
+                              cameraModel.currentPod = Pod( title: "")
                               cameraModel.recordedDuration = 0
                               cameraModel.previewURL = nil
                               cameraModel.recordedURLs.removeAll()

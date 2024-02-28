@@ -9,11 +9,11 @@ struct PodItem {
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage?
-    var title: String
 }
 
 struct Pod {
     var items: [PodItem] = []
+    var title: String
 }
 
 
@@ -49,7 +49,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var showPreview: Bool = false
     
     //MARK: Pod variables
-    @Published var currentPod = Pod()
+    @Published var currentPod = Pod( title: "")
     @Published var isPodRecording: Bool = false
     @Published var isPodFinalized = false
 
@@ -320,7 +320,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 // Check if the last item in the Pod is the same as the current preview URL
                 if self.currentPod.items.last?.videoURL != videoURL {
                     let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, title: "")
+                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
                     self.currentPod.items.append(newItem)
 //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
                 } else {
