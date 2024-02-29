@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		36004B422B9000DF00423AB1 /* PodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36004B412B9000DF00423AB1 /* PodView.swift */; };
 		360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */; };
 		361507282B7DBA270060974A /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507272B7DBA270060974A /* CameraViewModel.swift */; };
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
@@ -53,6 +54,7 @@
 		2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_podsTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		235692826E2BB2BFC29AD543 /* Pods_pods_podsUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_pods_podsUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		318FA7B7FE47A42EB705EC9E /* Pods-pods-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-pods-podsUITests/Pods-pods-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
+		36004B412B9000DF00423AB1 /* PodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodView.swift; sourceTree = "<group>"; };
 		360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltCameraView.swift; sourceTree = "<group>"; };
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				36C458B92B7421100060355F /* podsApp.swift */,
 				3682F0A42B85699900ABF344 /* space_oddity.wav */,
 				361507272B7DBA270060974A /* CameraViewModel.swift */,
+				36004B412B9000DF00423AB1 /* PodView.swift */,
 				3615072D2B7EE48E0060974A /* CreatePodView.swift */,
 				36291B7F2B8166F9000B5F38 /* CarouselView.swift */,
 				360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */,
@@ -458,6 +461,7 @@
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
+				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

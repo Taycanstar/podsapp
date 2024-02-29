@@ -9,11 +9,13 @@ struct PodItem {
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage?
+    var id: UUID = UUID()
 }
 
 struct Pod {
     var items: [PodItem] = []
     var title: String
+    var id: UUID = UUID()
 }
 
 

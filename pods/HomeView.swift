@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     // Assuming CameraViewModel is accessible and contains an array of Pods
     @ObservedObject var cameraModel = CameraViewModel()
+    @State private var selectedPod: Pod?
     
     // Example Pods Data - Replace with actual data fetching mechanism
     private let pods = [
@@ -11,145 +12,37 @@ struct HomeView: View {
         // Add more pods for demonstration
     ]
     
-    // Environment property to detect color scheme
     @Environment(\.colorScheme) var colorScheme
-    
+
     @State private var expandedPods = Set<String>()
-//
-//    
-//    var body: some View {
-//           NavigationView {
-//               List(pods.indices, id: \.self) { index in
-//                   VStack(alignment: .leading, spacing: 0) {
-//                       HStack {
-//                           Text(pods[index].title )
-//                               .font(.system(size: 16, design: .rounded))
-//                               .fontWeight(.bold)
-//                           Spacer()
-//                           Text("\(pods[index].items.count)")
-//                               .foregroundColor(.gray)
-//                           
-//                           Image(systemName: "chevron.right")
-//                               .font(.system(size: 14))
-//                               .foregroundColor(.gray)
-//                       }
-//                       .padding(17)
-//                       .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
-//                   }
-//                   .listRowInsets(EdgeInsets())
-//                   
-//              
-//
-//               }
-//               .navigationTitle("Pods")
-//               .navigationBarTitleDisplayMode(.inline)
-//           }
-//           .background(backgroundColor)
-//           .edgesIgnoringSafeArea(.all)
-//       }
-    
-//    var body: some View {
-//        NavigationView {
-//            List {
-//                ForEach(pods.indices, id: \.self) { index in
-//                    Section(header: PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title))
-//                        .onTapGesture {
-//                            withAnimation(.easeInOut) {
-//                                togglePodExpansion(for: pods[index].title)
-//                            }
-//                        }
-//                    ) {
-//                        if expandedPods.contains(pods[index].title) {
-//                            ForEach(pods[index].items, id: \.metadata) { item in
-//                                ItemRow(item: item)
-//                            }
-//                        }
-//                    }
-//                    .textCase(nil)
-//                    .listRowInsets(EdgeInsets())
-//                }
-//            }
-//            .listStyle(InsetGroupedListStyle())
-//            .navigationTitle("Pods")
-//        }
-//        .background(backgroundColor.edgesIgnoringSafeArea(.all))
-//    }
-//    
-//    private func togglePodExpansion(for title: String) {
-//        if expandedPods.contains(title) {
-//            expandedPods.remove(title)
-//        } else {
-//            expandedPods.insert(title)
-//        }
-//    }
-//    
-//    private var backgroundColor: Color {
-//        colorScheme == .dark ? Color.black : Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
-//    }
-    
-//    var body: some View {
-//        NavigationView {
-//            List {
-//                ForEach(pods.indices, id: \.self) { index in
-//                    VStack(alignment: .leading, spacing: 0) {
-//                        PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title))
-//                            .onTapGesture {
-//                                togglePodExpansion(for: pods[index].title)
-//                            }
-//                        
-//                        if expandedPods.contains(pods[index].title) {
-//                            ForEach(pods[index].items, id: \.metadata) { item in
-//                                ItemRow(item: item)
-//                            }
-//                            .animation(.easeInOut, value: expandedPods.contains(pods[index].title))
-//                        }
-//                    }
-//                    .listRowInsets(EdgeInsets())
-//                }
-//            }
-//            .listStyle(InsetGroupedListStyle())
-//            .navigationTitle("Pods")
-//            .navigationBarTitleDisplayMode(.automatic)
-//        }
-//        .background(backgroundColor.edgesIgnoringSafeArea(.all))
-//    }
-//    
-//    private func togglePodExpansion(for title: String) {
-//        withAnimation(.easeInOut) {
-//            if expandedPods.contains(title) {
-//                expandedPods.remove(title)
-//            } else {
-//                expandedPods.insert(title)
-//            }
-//        }
-//    }
-//    
-//    private var backgroundColor: Color {
-//        colorScheme == .dark ? Color.black : Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
-//    }
-    
-    
+
     var body: some View {
         NavigationView {
             List {
                 ForEach(pods.indices, id: \.self) { index in
                     VStack {
-                        PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title))
-                         
-                            .onTapGesture {
-                                togglePodExpansion(for: pods[index].title)
-                            }
-                            .listRowInsets(EdgeInsets())
-
-                        if expandedPods.contains(pods[index].title) {
-                            ForEach(pods[index].items, id: \.metadata) { item in
-                                ItemRow(item: item)
+                     
+                                PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title), onExpandCollapseTapped: {
+                                    // This closure is what you pass to the button inside PodTitleRow
+                                    withAnimation {
+                                        togglePodExpansion(for: pods[index].title)
+                                    }
+                                })
+                              
                                     .listRowInsets(EdgeInsets())
-                            }
-                        }
+                           
+                                    .buttonStyle(PlainButtonStyle())
+
                     }
                     .listRowInsets(EdgeInsets())
-                    .animation(nil) // Disable animations for the pod title changes
+                    .animation(nil)
+                    
+                    if expandedPods.contains(pods[index].title) {
+                        ForEach(pods[index].items, id: \.metadata) { item in
+                            ItemRow(item: item)
+                                .listRowInsets(EdgeInsets())
+                        }
+                    }
                 }
             }
             
@@ -176,25 +69,37 @@ struct HomeView: View {
     
 }
 
-
 struct PodTitleRow: View {
     let pod: Pod
     let isExpanded: Bool
+    var onExpandCollapseTapped: () -> Void
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         HStack {
-            Text(pod.title)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .padding(.leading, 0) // Apply padding to the text element itself
+            ZStack{
+                NavigationLink(destination: PodView()){ EmptyView() }.opacity(0.0)
+                    .padding(.trailing, -5).frame(width:0, height:0)
+                Text(pod.title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .padding(.leading, 0) // Apply padding to the text element itself
+            }
+            
             Spacer()
-            Text("\(pod.items.count)")
-                .foregroundColor(.gray)
-                .padding(.trailing, 4) // Adjust as necessary for alignment
-            Image(systemName: "chevron.right")
-                .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                .foregroundColor(.gray)
-                .padding(.trailing, 0) // Apply padding to the chevron icon itself
+            Button(action: onExpandCollapseTapped) {
+                HStack{
+                    Text("\(pod.items.count)")
+                        .foregroundColor(.gray)
+                        .padding(.trailing, 4) // Adjust as necessary for alignment
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+
+                        .foregroundColor(.gray)
+                        .padding(.trailing, 0)
+                    
+                }
+        
+            }
+          
         }
         .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
         .cornerRadius(10)
@@ -223,6 +128,7 @@ struct ItemRow: View {
         .padding(.leading, 30)
         .padding(.trailing, 10)
         .padding(.bottom, 5)
+        .padding(.top, 5)
 
     }
 }
