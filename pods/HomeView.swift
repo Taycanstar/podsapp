@@ -78,7 +78,7 @@ struct PodTitleRow: View {
     var body: some View {
         HStack {
             ZStack{
-                NavigationLink(destination: PodView()){ EmptyView() }.opacity(0.0)
+                NavigationLink(destination: PodView(pod: pod)){ EmptyView() }.opacity(0.0)
                     .padding(.trailing, -5).frame(width:0, height:0)
                 Text(pod.title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -127,8 +127,8 @@ struct ItemRow: View {
         }
         .padding(.leading, 30)
         .padding(.trailing, 10)
-        .padding(.bottom, 5)
-        .padding(.top, 5)
+        .padding(.bottom, 7)
+        .padding(.top, 7)
 
     }
 }
