@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
-    // Assuming CameraViewModel is accessible and contains an array of Pods
+
     @ObservedObject var cameraModel = CameraViewModel()
-    @State private var selectedPod: Pod?
     
     // Example Pods Data - Replace with actual data fetching mechanism
     private let pods = [
@@ -15,11 +14,13 @@ struct HomeView: View {
     @Environment(\.colorScheme) var colorScheme
 
     @State private var expandedPods = Set<String>()
+    @State private var currentItemIndex = 0
 
     var body: some View {
         NavigationView {
             List {
                 ForEach(pods.indices, id: \.self) { index in
+                   
                     VStack {
                      
                                 PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title), onExpandCollapseTapped: {
@@ -34,20 +35,25 @@ struct HomeView: View {
                                     .buttonStyle(PlainButtonStyle())
 
                     }
-                    .listRowInsets(EdgeInsets())
-                    .animation(nil)
                     
-                    if expandedPods.contains(pods[index].title) {
-                        ForEach(pods[index].items, id: \.metadata) { item in
-                            NavigationLink(destination: ItemView(url: item.videoURL)) {
-                                ItemRow(item: item)
-                                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets())
+//                    .animation(nil)
+                    
+                        if expandedPods.contains(pods[index].title) {
+                            ForEach(pods[index].items, id: \.metadata) { item in
+                                NavigationLink(destination: ItemView(items: pods[index].items)) {
+                                    ItemRow(item: item)
+                                        .listRowInsets(EdgeInsets())
+                                }
                             }
+                            .listRowInsets(EdgeInsets())
+                            .padding(.trailing, 15)
                         }
-                        .listRowInsets(EdgeInsets())
-                        .padding(.trailing, 15)
+                  
+                
+                    
                     }
-                }
+                    
             }
             
             .listStyle(InsetGroupedListStyle())
@@ -110,6 +116,8 @@ struct PodTitleRow: View {
         .padding(.vertical, 17)
         .padding(.horizontal, 15)
     }
+    
+
     
 }
 

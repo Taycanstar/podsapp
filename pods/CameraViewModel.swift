@@ -6,16 +6,18 @@ import AVFoundation
 import MicrosoftCognitiveServicesSpeech
 
 struct PodItem {
+//    var id: Int
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage?
-    var id: UUID = UUID()
+   
 }
 
 struct Pod {
+//    var id: Int
     var items: [PodItem] = []
     var title: String
-    var id: UUID = UUID()
+  
 }
 
 
@@ -51,7 +53,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var showPreview: Bool = false
     
     //MARK: Pod variables
-    @Published var currentPod = Pod( title: "")
+    @Published var currentPod = Pod(title: "")
     @Published var isPodRecording: Bool = false
     @Published var isPodFinalized = false
 

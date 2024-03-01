@@ -1,45 +1,38 @@
-//
-//  PodView.swift
-//  pods
-//
-//  Created by Dimi Nunez on 2/28/24.
-//
-
 import SwiftUI
+
 
 struct PodView: View {
     var pod: Pod
     @Environment(\.presentationMode) var presentationMode
     @State private var isEditing = false
+    @State private var currentIndex: Int = 0
 
     var body: some View {
-      
-            List {
-                // Your pod items go here
-                ForEach(pod.items, id: \.metadata) { item in
-                    NavigationLink(destination: ItemView(url: item.videoURL)) {
-                        HStack {
-                            Text(item.metadata)
-                            Spacer()
-                            if let thumbnail = item.thumbnail {
-                                Image(uiImage: thumbnail)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 35, height: 35)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
+        List {
+            ForEach(pod.items.indices, id: \.self) { index in
+//                NavigationLink(destination: ItemView(items: pod.items, currentIndex: $currentIndex)) {
+                NavigationLink(destination: ItemView(items: pod.items)) {
+                    HStack {
+                        Text(pod.items[index].metadata)
+                        Spacer()
+                        if let thumbnail = pod.items[index].thumbnail {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 35, height: 35)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .padding(.vertical, 1)
                     }
+                    .padding(.vertical, 1)
                 }
-                .onMove(perform: moveItem)
-                .onDelete(perform: deleteItem)
             }
-            .navigationTitle(pod.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems( trailing: editButton)
-            .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
-      
+            .onMove(perform: moveItem)
+            .onDelete(perform: deleteItem)
+        }
+        .navigationTitle(pod.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(trailing: editButton)
+        .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
     }
 
     private var backButton: some View {
@@ -68,8 +61,5 @@ struct PodView: View {
 }
 
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        PodView(pod: Pod(items: [PodItem(videoURL: URL(string: "https://example.com")!, metadata: "Example Item", thumbnail: UIImage(systemName: "photo"))], title: "Example Pod"))
-    }
-}
+
+
