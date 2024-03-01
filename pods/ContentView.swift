@@ -53,9 +53,9 @@ struct ContentView: View {
                 case 1:
 
                     CameraContainerView()
-                        .mask(CurvedTopShape(cornerRadius: 18))
+//                        .mask(CurvedTopShape(cornerRadius: 18))
                         .background(Color.black.edgesIgnoringSafeArea(.top))
-                        .padding(.bottom, 45)
+                        .padding(.bottom, 46)
                         .environment(\.colorScheme, .dark)
                 case 2:
                     ProfileView() // Assuming you have a ProfileView
@@ -67,7 +67,7 @@ struct ContentView: View {
 
             // Custom tab bar
                       CustomTabBar(selectedTab: $selectedTab)
-                          .edgesIgnoringSafeArea(.bottom)
+//                          .edgesIgnoringSafeArea(.bottom)
         }
 
     }

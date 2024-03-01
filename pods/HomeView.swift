@@ -7,8 +7,8 @@ struct HomeView: View {
     
     // Example Pods Data - Replace with actual data fetching mechanism
     private let pods = [
-        Pod(items: [PodItem(videoURL: URL(string: "video1")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")),PodItem(videoURL: URL(string: "video1")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: URL(string: "video1")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: URL(string: "video1")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: URL(string: "video1")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy"))], title: "Pod 1"),
-        Pod(items: [PodItem(videoURL: URL(string: "video2")!, metadata: "Pod 2", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: URL(string: "video3")!, metadata: "Pod 3", thumbnail: UIImage(named: "livvy"))], title: "Pod 3"),
+        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")),PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy"))], title: "Pod 1"),
+        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "Pod 2", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "Pod 3", thumbnail: UIImage(named: "livvy"))], title: "Pod 3"),
         // Add more pods for demonstration
     ]
     
@@ -39,9 +39,13 @@ struct HomeView: View {
                     
                     if expandedPods.contains(pods[index].title) {
                         ForEach(pods[index].items, id: \.metadata) { item in
-                            ItemRow(item: item)
-                                .listRowInsets(EdgeInsets())
+                            NavigationLink(destination: ItemView(url: item.videoURL)) {
+                                ItemRow(item: item)
+                                    .listRowInsets(EdgeInsets())
+                            }
                         }
+                        .listRowInsets(EdgeInsets())
+                        .padding(.trailing, 15)
                     }
                 }
             }
@@ -126,9 +130,9 @@ struct ItemRow: View {
             }
         }
         .padding(.leading, 30)
-        .padding(.trailing, 10)
-        .padding(.bottom, 7)
-        .padding(.top, 7)
+
+        .padding(.bottom, 10)
+        .padding(.top, 10)
 
     }
 }

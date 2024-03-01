@@ -17,20 +17,21 @@ struct PodView: View {
             List {
                 // Your pod items go here
                 ForEach(pod.items, id: \.metadata) { item in
-            HStack {
-                   Text(item.metadata)
-                   Spacer()
-                   if let thumbnail = item.thumbnail {
-                       Image(uiImage: thumbnail)
-                           .resizable()
-                           .aspectRatio(contentMode: .fill)
-                           .frame(width: 35, height: 35)
-                           .clipShape(RoundedRectangle(cornerRadius: 8))
-                                           }
-                                       }
-            .padding(.vertical, 1)
+                    NavigationLink(destination: ItemView(url: item.videoURL)) {
+                        HStack {
+                            Text(item.metadata)
+                            Spacer()
+                            if let thumbnail = item.thumbnail {
+                                Image(uiImage: thumbnail)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 35, height: 35)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
                 }
-              
                 .onMove(perform: moveItem)
                 .onDelete(perform: deleteItem)
             }
