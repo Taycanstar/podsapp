@@ -137,7 +137,7 @@ struct CameraContainerView: View {
                                           .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
                                           .clipShape(Circle())
                                   }
-                                  .padding(.bottom, 115)
+                                  .padding(.bottom, 100)
                                   .frame(width: 60, height: 60)
                                   .sheet(isPresented: $isShowingVideoPicker) {
                                       PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
@@ -169,7 +169,7 @@ struct CameraContainerView: View {
                         }
                         .frame(width: 60, height: 60) // Example size, adjust as needed
 
-                        .padding(.bottom, 115)
+                        .padding(.bottom, 100)
                    
                       }
                     }
@@ -188,7 +188,7 @@ struct CameraContainerView: View {
                                    Spacer()
                                }
                            }
-                           .padding(.vertical, 40)
+                           .padding(.vertical, 25)
                        }
           
             // Floating Camera Control Buttons
@@ -248,7 +248,7 @@ struct CameraContainerView: View {
             }
             .frame(maxHeight: .infinity,alignment: .bottom)
            
-            .padding(.bottom,35)
+            .padding(.bottom,20)
             
             Button {
                 cameraModel.recordedDuration = 0
