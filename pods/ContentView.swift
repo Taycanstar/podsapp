@@ -40,36 +40,39 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
+    @State private var isAuthenticated = false // Track authentication status
     
     var body: some View {
-        
-        ZStack(alignment: .bottom) {
-            // Content views
-            Group {
-                switch selectedTab {
-                case 0:
-                    HomeView()
-                  
-                case 1:
-
-                    CameraContainerView()
-//                        .mask(CurvedTopShape(cornerRadius: 18))
-                        .background(Color.black.edgesIgnoringSafeArea(.top))
-                        .padding(.bottom, 46)
-                        .environment(\.colorScheme, .dark)
-                case 2:
-                    ProfileView() // Assuming you have a ProfileView
-                default:
-                    Text("Content not available")
+        Group {
+            if isAuthenticated {
+                // User is authenticated, show main content
+                ZStack(alignment: .bottom) {
+                    // Content views
+                    Group {
+                        switch selectedTab {
+                        case 0:
+                            HomeView()
+                        case 1:
+                            CameraContainerView()
+                                .background(Color.black.edgesIgnoringSafeArea(.top))
+                                .padding(.bottom, 46)
+                                .environment(\.colorScheme, .dark)
+                        case 2:
+                            ProfileView() // Assuming you have a ProfileView
+                        default:
+                            Text("Content not available")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    
+                    // Custom tab bar
+                    CustomTabBar(selectedTab: $selectedTab)
                 }
+            } else {
+                // User is not authenticated, show the landing/authentication view
+                LandingView(isAuthenticated: $isAuthenticated)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Custom tab bar
-                      CustomTabBar(selectedTab: $selectedTab)
-//                          .edgesIgnoringSafeArea(.bottom)
         }
-
     }
 }
 
