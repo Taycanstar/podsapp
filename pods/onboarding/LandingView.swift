@@ -4,9 +4,8 @@ import AuthenticationServices  // For Apple Sign In
 struct LandingView: View {
     // Background color as specified
     let backgroundColor = Color(red: 70/255, green: 87/255, blue: 245/255)
-    @State private var isShowingInfoView = false 
     @Binding var isAuthenticated: Bool
-    @State private var showInfoView = false
+    @State private var showSignupView = false
 
     var body: some View {
         NavigationStack {
@@ -56,7 +55,7 @@ struct LandingView: View {
                         
                         Button(action: {
                             // Handle Email Signup
-                            showInfoView = true
+                            showSignupView = true
                         }) {
                             HStack {
                                 Image(systemName: "envelope.fill") // Apple's envelope icon
@@ -66,8 +65,8 @@ struct LandingView: View {
                                     .foregroundColor(.black) // Set text color
                             }
                         }
-                        .navigationDestination(isPresented: $showInfoView) {
-                                            InfoView()
+                        .navigationDestination(isPresented: $showSignupView) {
+                                            SignupView()
                                         }
                                    
                         .buttonStyle(AuthenticationButtonStyle())
