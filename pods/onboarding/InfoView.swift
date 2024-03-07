@@ -14,14 +14,15 @@ struct InfoView: View {
         return formatter
     }()
     
-
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.presentationMode) var presentationMode // For dismissing the view
     
     var body: some View {
         VStack {
             HStack {
                 Button("Sign out") {
-                    presentationMode.wrappedValue.dismiss()
+//                    presentationMode.wrappedValue.dismiss()
+                    viewModel.currentStep = .landing
                 }
                 .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
                 .padding()

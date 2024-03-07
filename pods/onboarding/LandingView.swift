@@ -6,6 +6,7 @@ struct LandingView: View {
     let backgroundColor = Color(red: 70/255, green: 87/255, blue: 245/255)
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     var body: some View {
         NavigationStack {
@@ -55,7 +56,8 @@ struct LandingView: View {
                         
                         Button(action: {
                             // Handle Email Signup
-                            showSignupView = true
+//                            showSignupView = true
+                            viewModel.currentStep = .signup
                         }) {
                             HStack {
                                 Image(systemName: "envelope.fill") // Apple's envelope icon
@@ -65,9 +67,9 @@ struct LandingView: View {
                                     .foregroundColor(.black) // Set text color
                             }
                         }
-                        .navigationDestination(isPresented: $showSignupView) {
-                                            SignupView()
-                                        }
+//                        .navigationDestination(isPresented: $showSignupView) {
+//                                            SignupView()
+//                                        }
                                    
                         .buttonStyle(AuthenticationButtonStyle())
                         

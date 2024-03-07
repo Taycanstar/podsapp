@@ -5,6 +5,9 @@ struct EmailVerificationView: View {
     @State private var lastName: String = ""
     @State private var birthday: Date? = nil
     @State private var showingDatePicker = false
+    var email: String
+    
+    
     
     // DateFormatter to display the date
     private let dateFormatter: DateFormatter = {
@@ -16,12 +19,14 @@ struct EmailVerificationView: View {
     
 
     @Environment(\.presentationMode) var presentationMode // For dismissing the view
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     var body: some View {
         VStack {
             HStack {
                 Button("Sign out") {
-                    presentationMode.wrappedValue.dismiss()
+//                    presentationMode.wrappedValue.dismiss()
+                    viewModel.currentStep = .landing
                 }
                 .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
                 .padding()
@@ -35,7 +40,7 @@ struct EmailVerificationView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 
-                Text("An email to {email} has been sent. Click on the link to get started.")
+                Text("An email to \(viewModel.email) has been sent. Click on the link to get started.")
                     .font(.headline)
                     .foregroundColor(.black)
                 
@@ -56,6 +61,7 @@ struct EmailVerificationView: View {
 
                 Button(action: {
                     // Handle continue action here
+                    viewModel.currentStep = .info(email: email)
                 }) {
                     Text("I have verified my email")
                         .foregroundColor(.black)
@@ -76,7 +82,7 @@ struct EmailVerificationView: View {
 
 struct EmailVerificationView_Previews: PreviewProvider {
     static var previews: some View {
-        EmailVerificationView()
+        EmailVerificationView(email:"sample@humuli.com")
     }
 }
 

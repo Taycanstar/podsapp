@@ -6,7 +6,8 @@ struct SignupView: View {
     @State private var showPassword: Bool = false
     @State private var errorMessage: String? = nil // Consolidated error message for simplicity
     @State private var navigateToEmailVerification = false // Controls navigation to the email verification view
-
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.presentationMode) var presentationMode
     var body: some View {
         NavigationView {
             ScrollView {
@@ -30,6 +31,8 @@ struct SignupView: View {
         HStack {
             Button("Sign out") {
                 // Logic to handle sign out
+//                presentationMode.wrappedValue.dismiss()
+                viewModel.currentStep = .landing
             }
             .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
             .padding()
@@ -95,7 +98,8 @@ struct SignupView: View {
                     self.errorMessage = "Password must be at least 8 characters."
                 } else {
                     self.errorMessage = nil
-                    self.navigateToEmailVerification = true // This triggers navigation
+//                    self.navigateToEmailVerification = true // This triggers navigation
+                    viewModel.currentStep = .emailVerification(email: email)
                 }
             }) {
                 Text("Continue")
@@ -110,10 +114,10 @@ struct SignupView: View {
        
         .padding(.bottom, 50)
         // Navigation link to trigger navigation programmatically
-       
-        .navigationDestination(isPresented: $navigateToEmailVerification) {
-            EmailVerificationView()
-                        }
+//       
+//        .navigationDestination(isPresented: $navigateToEmailVerification) {
+//            EmailVerificationView(email: email)
+//                        }
     }
     
 }

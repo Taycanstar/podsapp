@@ -70,7 +70,9 @@ struct ContentView: View {
                 }
             } else {
                 // User is not authenticated, show the landing/authentication view
-                LandingView(isAuthenticated: $isAuthenticated)
+                MainOnboardingView(isAuthenticated:$isAuthenticated)
+//                EmptyView()
+                    
             }
         }
     }
