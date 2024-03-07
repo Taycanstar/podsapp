@@ -25,6 +25,7 @@
 		3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */; };
 		3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9602B99939600D211D7 /* OnboardingViewModel.swift */; };
 		3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9622B99990E00D211D7 /* MainOnboardingView.swift */; };
+		3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9642B999B3A00D211D7 /* WelcomeView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
 		36C458BE2B7421110060355F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
@@ -82,6 +83,7 @@
 		3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerificationView.swift; sourceTree = "<group>"; };
 		3696B9602B99939600D211D7 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		3696B9622B99990E00D211D7 /* MainOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainOnboardingView.swift; sourceTree = "<group>"; };
+		3696B9642B999B3A00D211D7 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* pods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pods.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
 		36C458BB2B7421100060355F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */,
 				3696B9602B99939600D211D7 /* OnboardingViewModel.swift */,
 				3696B9622B99990E00D211D7 /* MainOnboardingView.swift */,
+				3696B9642B999B3A00D211D7 /* WelcomeView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -511,6 +514,7 @@
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,

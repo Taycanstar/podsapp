@@ -113,6 +113,7 @@ struct InfoView: View {
 
                 Button(action: {
                     // Handle continue action here
+                    viewModel.currentStep = .welcome
                 }) {
                     Text("Continue")
                         .foregroundColor(.white)
