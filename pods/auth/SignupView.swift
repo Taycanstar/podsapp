@@ -97,9 +97,21 @@ struct SignupView: View {
                 } else if password.count < 8 {
                     self.errorMessage = "Password must be at least 8 characters."
                 } else {
+                    
                     self.errorMessage = nil
-//                    self.navigateToEmailVerification = true // This triggers navigation
-                    viewModel.currentStep = .emailVerification(email: email)
+                          let networkManager = NetworkManager()
+                          networkManager.signup(email: email, password: password) { success, message in
+                              if success {
+                                  // Handle success, navigate to next view
+                                  DispatchQueue.main.async {
+                                      self.viewModel.currentStep = .emailVerification
+                                      self.viewModel.email = self.email
+                                  }
+                              } else {
+                                  // Handle failure, show error message
+                                  self.errorMessage = message
+                              }
+                          }
                 }
             }) {
                 Text("Continue")
@@ -119,6 +131,8 @@ struct SignupView: View {
 //            EmailVerificationView(email: email)
 //                        }
     }
+    
+    
     
 }
 

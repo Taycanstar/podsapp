@@ -5,8 +5,8 @@ class OnboardingViewModel: ObservableObject {
     enum OnboardingStep {
         case landing
         case signup
-        case emailVerification(email: String)
-        case info(email: String)
+        case emailVerification
+        case info
         case welcome
     }
 

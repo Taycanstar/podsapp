@@ -11,7 +11,7 @@ struct MainOnboardingView: View {
         case .signup:
             SignupView()
         case .emailVerification:
-            EmailVerificationView(email: viewModel.email) // Modified to not require passing email as a parameter
+            EmailVerificationView() // Modified to not require passing email as a parameter
         case .info:
             InfoView()
         case .welcome:

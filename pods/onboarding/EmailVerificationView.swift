@@ -5,8 +5,9 @@ struct EmailVerificationView: View {
     @State private var lastName: String = ""
     @State private var birthday: Date? = nil
     @State private var showingDatePicker = false
-    var email: String
-    
+    private let networkManager = NetworkManager()
+    @State private var showingAlert = false
+       @State private var alertMessage = ""
     
     
     // DateFormatter to display the date
@@ -21,7 +22,9 @@ struct EmailVerificationView: View {
     @Environment(\.presentationMode) var presentationMode // For dismissing the view
     @EnvironmentObject var viewModel: OnboardingViewModel
     
+    
     var body: some View {
+       
         VStack {
             HStack {
                 Button("Sign out") {
@@ -44,13 +47,17 @@ struct EmailVerificationView: View {
                     .font(.headline)
                     .foregroundColor(.black)
                 
-                Text("Resend email")
-                    .font(.headline)
-                    .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
-                
-              
-            
+                Button("Resend email") {
+                           resendVerificationEmail()
+                       }
+                       .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                       .padding()
 
+                    
+                   }
+            .alert(isPresented: $showingAlert) {
+                       Alert(title: Text("Email Verification"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+                   
             }
             .padding(.horizontal)
             
@@ -61,7 +68,8 @@ struct EmailVerificationView: View {
 
                 Button(action: {
                     // Handle continue action here
-                    viewModel.currentStep = .info(email: email)
+                    print(viewModel.email, "email")
+                  checkEmailVerification()
                 }) {
                     Text("I have verified my email")
                         .foregroundColor(.black)
@@ -77,12 +85,38 @@ struct EmailVerificationView: View {
         }
         .navigationBarBackButtonHidden(true)
     }
+    private func checkEmailVerification() {
+        networkManager.checkEmailVerified(email: viewModel.email) { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    // Navigate to the next view or update the state as necessary
+                    self.viewModel.currentStep = .info 
+                } else {
+                    self.alertMessage = message ?? "Your email  hasn't been verified. Check your email."
+                    self.showingAlert = true
+                }
+            }
+        }
+    }
+    
+    private func resendVerificationEmail() {
+        networkManager.resendVerificationEmail(email: viewModel.email) { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    self.alertMessage = "Verification email resent successfully."
+                } else {
+                    self.alertMessage = message ?? "Failed to resend verification email."
+                }
+                self.showingAlert = true
+            }
+        }
+    }
     
 }
 
 struct EmailVerificationView_Previews: PreviewProvider {
     static var previews: some View {
-        EmailVerificationView(email:"sample@humuli.com")
+        EmailVerificationView()
     }
 }
 
