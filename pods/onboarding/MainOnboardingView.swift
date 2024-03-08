@@ -15,7 +15,7 @@ struct MainOnboardingView: View {
         case .info:
             InfoView()
         case .welcome:
-            WelcomeView()
+            WelcomeView(isAuthenticated: $isAuthenticated)
         }
    
     

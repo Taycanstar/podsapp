@@ -7,6 +7,7 @@ struct WelcomeView: View {
     @State private var errorMessage: String? = nil
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.presentationMode) var presentationMode
+    @Binding var isAuthenticated: Bool
 
     var body: some View {
         NavigationView {
@@ -100,7 +101,19 @@ struct WelcomeView: View {
 
     private var continueButton: some View {
         Button(action: {
-            // Action for the button
+            let networkManager = NetworkManager()
+                     networkManager.login(email: viewModel.email, password: viewModel.password) { success, _ in
+                         if success {
+                             // If login is successful, update the authenticated state
+                             DispatchQueue.main.async {
+                                 self.isAuthenticated = true
+                                 self.viewModel.password = ""
+                             }
+                         } else {
+                             // Handle login failure, e.g., by showing an error message
+                             self.errorMessage = "Login failed. Please check your credentials and try again."
+                         }
+                     }
         }) {
             Text("Continue")
                 .foregroundColor(.white)
@@ -131,8 +144,8 @@ struct InfoItem: Identifiable {
     let color: Color
 }
 
-struct WelcomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        WelcomeView().environmentObject(OnboardingViewModel())
-    }
-}
+//struct WelcomeView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        WelcomeView().environmentObject(OnboardingViewModel())
+//    }
+//}

@@ -51,7 +51,7 @@ struct EmailVerificationView: View {
                            resendVerificationEmail()
                        }
                        .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
-                       .padding()
+//                       .padding()
 
                     
                    }

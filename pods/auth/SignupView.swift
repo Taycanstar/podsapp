@@ -106,6 +106,7 @@ struct SignupView: View {
                                   DispatchQueue.main.async {
                                       self.viewModel.currentStep = .emailVerification
                                       self.viewModel.email = self.email
+                                      self.viewModel.password = self.password
                                   }
                               } else {
                                   // Handle failure, show error message

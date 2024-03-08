@@ -5,6 +5,8 @@ struct InfoView: View {
     @State private var lastName: String = ""
     @State private var birthday: Date? = nil
     @State private var showingDatePicker = false
+    @State private var showError: Bool = false // State to control error message visibility
+    @State private var errorMessage: String = ""
     
     // DateFormatter to display the date
     private let dateFormatter: DateFormatter = {
@@ -15,6 +17,7 @@ struct InfoView: View {
     }()
     
     @EnvironmentObject var viewModel: OnboardingViewModel
+    var networkManager: NetworkManager = NetworkManager()
     @Environment(\.presentationMode) var presentationMode // For dismissing the view
     
     var body: some View {
@@ -98,8 +101,14 @@ struct InfoView: View {
                                    .padding()
                                }
                            }
+                if showError {
+                          Text(errorMessage)
+                              .foregroundColor(.red)
+                              .padding()
+                      }
 
             }
+            
             .padding(.horizontal)
             
             Spacer()
@@ -113,7 +122,38 @@ struct InfoView: View {
 
                 Button(action: {
                     // Handle continue action here
-                    viewModel.currentStep = .welcome
+                    // Check for required fields before proceeding
+                                 guard !firstName.isEmpty, !lastName.isEmpty, let birthdayDate = birthday else {
+                                     self.errorMessage = "First name, last name, and birthday are required."
+                                     self.showError = true
+                                     return
+                                 }
+                                 
+                                 // Proceed with formatting the birthday and calling network manager function
+                                
+                    
+                    let isoDateFormatter = ISO8601DateFormatter()
+                    isoDateFormatter.formatOptions = [.withFullDate, .withDashSeparatorInDate] // Ensure YYYY-MM-DD format
+                    let formattedBirthday = isoDateFormatter.string(from: birthdayDate)
+
+                                 
+                                 // Example function call, replace with actual implementation
+                    networkManager.updateUserInformation(email: viewModel.email, firstName: firstName, lastName: lastName, birthday: formattedBirthday) { success, message in
+                                     DispatchQueue.main.async {
+                                         if success {
+                                             // Handle success
+                                             
+                                viewModel.currentStep = .welcome
+                                         } else {
+                                             // Handle error, optionally update errorMessage and showError to inform the user
+                                             print("Error updating user information: \(message)")
+                                         }
+                                     }
+                                 }
+                                 
+                                 // Reset error state when button action is successfully triggered
+                                 self.showError = false
+               
                 }) {
                     Text("Continue")
                         .foregroundColor(.white)
