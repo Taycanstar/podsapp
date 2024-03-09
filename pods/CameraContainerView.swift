@@ -402,7 +402,7 @@ struct FinalPreview: View {
                             }) {
                                 ZStack {
                                     Circle()
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
                                         .frame(width: 44, height: 44) // Adjust size as needed
                                     if cameraModel.isTranscribing {
                                                     // Show a loading animation or progress view

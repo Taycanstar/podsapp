@@ -14,6 +14,8 @@ struct MainOnboardingView: View {
             EmailVerificationView() // Modified to not require passing email as a parameter
         case .info:
             InfoView()
+        case .login:
+            LoginView(isAuthenticated: $isAuthenticated)
         case .welcome:
             WelcomeView(isAuthenticated: $isAuthenticated)
         }

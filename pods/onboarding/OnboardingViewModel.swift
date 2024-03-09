@@ -8,6 +8,7 @@ class OnboardingViewModel: ObservableObject {
         case emailVerification
         case info
         case welcome
+        case login
     }
 
     @Published var currentStep: OnboardingStep = .landing

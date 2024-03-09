@@ -5,6 +5,9 @@ struct CreatePodView: View {
     @State var podName: String = ""
     @Binding var pod: Pod
     @Environment(\.presentationMode) var presentationMode
+    var networkManager: NetworkManager = NetworkManager()
+    @State private var isLoading = false
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     var body: some View {
         VStack {
@@ -57,14 +60,51 @@ struct CreatePodView: View {
 
             HStack { // Embed in HStack for padding
                 Spacer() // Push button left
-                Button("Create") {
-                    // Handle creating the pod
+                Button(action: {
+                  
+                    guard !podName.isEmpty else {
+                        print("Pod name is required.")
+                        return
+                    }
+                    print("create tapped")
+                    isLoading = true // Start loading
+                    
+                    let items = pod.items.map { item -> PodItem in
+                        return PodItem(id: item.id, videoURL: item.videoURL, metadata: item.metadata, thumbnail: item.thumbnail)
+                    }
+                    
+                    networkManager.createPod(podTitle: podName, items: items, email: viewModel.email) { success, message in
+                        DispatchQueue.main.async {
+                            isLoading = false // Stop loading
+                            if success {
+                                print("upload succesful")
+                                print("email", viewModel.email)
+                                self.presentationMode.wrappedValue.dismiss()
+                            } else {
+                                // Optionally show an error message to the user
+                                print("Failed to create pod: \(message ?? "Unknown error")")
+                            }
+                        }
+                    }
+                }) {
+                    Group {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.5)
+                        } else {
+                            Text("Create")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity) // Full width within HStack
                 .padding() // Add padding around the button content
                 .foregroundColor(.white)
-                .background(Color.blue)
+                .background(Color(red: 70/255, green: 87/255, blue: 245/255))
                 .cornerRadius(8)
+                .contentShape(Rectangle())
+//                .disabled(isLoading)
                 
                
             }
@@ -99,7 +139,7 @@ struct PlaceholderTextView: View {
             TextField("", text: $text)
                 .font(.system(size: 28, design: .rounded).bold())
                 .padding(.horizontal, 15)
-                .foregroundColor(.blue)
+                .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
         }
         .frame(maxWidth: .infinity, maxHeight: 30) // Set a fixed height
     }

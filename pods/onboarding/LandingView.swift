@@ -17,7 +17,7 @@ struct LandingView: View {
                 VStack {
                     Spacer()
                     // Image centered on the screen
-                    Image("clear-logo") // Make sure the image is added in your assets with this exact name
+                    Image("clear-logo")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 200, height: 200) // Adjust size as needed
@@ -47,7 +47,7 @@ struct LandingView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 20) // Adjust based on your design needs
                                 
-                                Text("Continue with Google")
+                                Text("Sign in with Google")
                                     .foregroundColor(.black) // Set text color
                             }
                         }
@@ -55,8 +55,7 @@ struct LandingView: View {
                         
                         
                         Button(action: {
-                            // Handle Email Signup
-//                            showSignupView = true
+
                             viewModel.currentStep = .signup
                         }) {
                             HStack {
@@ -67,9 +66,7 @@ struct LandingView: View {
                                     .foregroundColor(.black) // Set text color
                             }
                         }
-//                        .navigationDestination(isPresented: $showSignupView) {
-//                                            SignupView()
-//                                        }
+
                                    
                         .buttonStyle(AuthenticationButtonStyle())
                         
@@ -77,6 +74,7 @@ struct LandingView: View {
                         
                         Button("Login") {
                             // Handle Login
+                            viewModel.currentStep = .login
                         }
                         .buttonStyle(AuthenticationButtonStyle())
                     }
@@ -86,7 +84,7 @@ struct LandingView: View {
                     .background(Color.white.cornerRadius(25, corners: [.topLeft, .topRight]))
                     //                .shadow(radius: 10)
                 }
-                .edgesIgnoringSafeArea(.bottom) // Ensure the card extends to the bottom edge
+                .edgesIgnoringSafeArea(.bottom)
             }
             .padding(.bottom, 1)
         }

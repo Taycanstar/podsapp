@@ -84,6 +84,46 @@
             value = "eastus"
             isEnabled = "YES">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BLOB_CONTAINER"
+            value = "video-elements"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BLOB_NAME"
+            value = "storagehumuli"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "SAS_TOKEN"
+            value = "sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BLOB_URL"
+            value = "https://storagehumuli.blob.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "FILE_SAS_URL"
+            value = "https://storagehumuli.file.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "QUEUE_SAS_URL"
+            value = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "TABLE_SAS_URL"
+            value = "https://storagehumuli.table.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "CONN_STRING"
+            value = "BlobEndpoint=https://storagehumuli.blob.core.windows.net/;QueueEndpoint=https://storagehumuli.queue.core.windows.net/;FileEndpoint=https://storagehumuli.file.core.windows.net/;TableEndpoint=https://storagehumuli.table.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

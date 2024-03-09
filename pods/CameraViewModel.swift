@@ -5,16 +5,16 @@ import AVFoundation
 
 import MicrosoftCognitiveServicesSpeech
 
-struct PodItem {
-//    var id: Int
+struct PodItem: Identifiable {
+    var id = UUID()
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage?
    
 }
 
-struct Pod {
-//    var id: Int
+struct Pod: Identifiable {
+    var id = UUID()
     var items: [PodItem] = []
     var title: String
   
