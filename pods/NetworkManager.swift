@@ -185,7 +185,7 @@ class NetworkManager {
     }
     
     func updateUserInformation(email: String, firstName: String, lastName: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
-         let url = URL(string: "\(baseUrl)/add_info/")! // Adjust the URL
+         let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
          var request = URLRequest(url: url)
          request.httpMethod = "PUT"
          request.addValue("application/json", forHTTPHeaderField: "Content-Type")

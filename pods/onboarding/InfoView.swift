@@ -177,6 +177,10 @@ struct InfoView_Previews: PreviewProvider {
     }
 }
 
+
+
+
+
 struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -189,5 +193,3 @@ struct CustomTextFieldStyle: TextFieldStyle {
             )
     }
 }
-
-

@@ -1,20 +1,19 @@
 import SwiftUI
+import Combine
 
 struct LoginView: View {
-    @State private var password: String = ""
-    @Binding var isAuthenticated: Bool
-    @State private var email: String = ""
-    @State private var showPassword: Bool = false
-    @State private var errorMessage: String? = nil // Consolidated error message for simplicity
-    @State private var navigateToEmailVerification = false // Controls navigation to the email verification view
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @Environment(\.presentationMode) var presentationMode
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var showPassword: Bool = false
+    @State private var errorMessage: String? = nil
+    @Binding var isAuthenticated: Bool
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack {
                     topBar
-//                    logo
                     formSection
                     Spacer(minLength: 20)
                     continueButton
@@ -24,15 +23,12 @@ struct LoginView: View {
             }
             .navigationBarHidden(true)
         }
-        
         .navigationBarBackButtonHidden(true)
     }
 
     private var topBar: some View {
         HStack {
             Button("Sign out") {
-                // Logic to handle sign out
-//                presentationMode.wrappedValue.dismiss()
                 viewModel.currentStep = .landing
             }
             .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
@@ -41,31 +37,17 @@ struct LoginView: View {
         }
     }
 
-    private var logo: some View {
-        HStack {
-            Spacer()
-            Image("black-logo") // Make sure the logo image is added to your asset catalog
-                .resizable()
-                .scaledToFit()
-                .frame(width: 50, height: 50)
-            Spacer()
-        }
-    }
-
     private var formSection: some View {
         VStack(alignment: .leading, spacing: 20) {
-            
-                Text("Welcome back")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-              
-            
-            
+            Text("Welcome back")
+                .font(.title2)
+                .fontWeight(.semibold)
+
             TextField("Email", text: $email)
                 .textFieldStyle(CustomTextFieldStyle())
                 .autocapitalization(.none)
                 .keyboardType(.emailAddress)
-            
+
             ZStack(alignment: .trailing) {
                 if showPassword {
                     TextField("Password", text: $password)
@@ -74,7 +56,7 @@ struct LoginView: View {
                     SecureField("Password", text: $password)
                         .textFieldStyle(CustomTextFieldStyle())
                 }
-                
+
                 Button(action: {
                     self.showPassword.toggle()
                 }) {
@@ -83,7 +65,7 @@ struct LoginView: View {
                 }
                 .padding(.trailing, 15)
             }
-            
+
             if let errorMessage = errorMessage {
                 Text(errorMessage)
                     .font(.caption)
@@ -94,47 +76,50 @@ struct LoginView: View {
     }
 
     private var continueButton: some View {
-        VStack {
-            Button(action: {
-                if email.isEmpty || !email.contains("@") {
-                    self.errorMessage = "Please enter a valid email address."
-                } else if password.count < 8 {
-                    self.errorMessage = "Password must be at least 8 characters."
-                } else {
-                    
-                    
-                    let networkManager = NetworkManager()
-                             networkManager.login(email: email, password: password) { success, _ in
-                                 if success {
-                                     // If login is successful, update the authenticated state
-                                     DispatchQueue.main.async {
-                                         self.isAuthenticated = true
-                                         self.viewModel.email = email
-                                     }
-                                 } else {
-                                     // Handle login failure, e.g., by showing an error message
-                                     self.errorMessage = "Login failed. Please check your credentials and try again."
-                                 }
-                             }
-                }
-            }) {
-                Text("Continue")
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(red: 70/255, green: 87/255, blue: 245/255))
-                    .cornerRadius(10)
-            }
-            .padding(.horizontal)
+        Button(action: loginAction) {
+            Text("Continue")
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+                .cornerRadius(10)
         }
-       
+        .padding(.horizontal)
         .padding(.bottom, 50)
-        
     }
-    
-    
-    
+
+    private func loginAction() {
+        if email.isEmpty || !email.contains("@") {
+            self.errorMessage = "Please enter a valid email address."
+            return
+        }
+
+        if password.count < 8 {
+            self.errorMessage = "Password must be at least 8 characters."
+            return
+        }
+
+        authenticateUser()
+    }
+
+    private func authenticateUser() {
+        // Assuming you have a function to authenticate the user
+        NetworkManager().login(email: email, password: password) { success, error in
+            if success {
+                DispatchQueue.main.async {
+                    self.isAuthenticated = true
+                    viewModel.email = email
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.errorMessage = error ?? "Login failed. Please check your credentials and try again."
+                }
+            }
+        }
+    }
 }
+
+
 
 //
 //
