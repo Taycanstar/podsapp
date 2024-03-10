@@ -124,6 +124,11 @@
             value = "BlobEndpoint=https://storagehumuli.blob.core.windows.net/;QueueEndpoint=https://storagehumuli.queue.core.windows.net/;FileEndpoint=https://storagehumuli.file.core.windows.net/;TableEndpoint=https://storagehumuli.table.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "IDEPreferLogStreaming"
+            value = "YES"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

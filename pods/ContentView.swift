@@ -40,7 +40,7 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
-    @State private var isAuthenticated = false // Track authentication status
+    @State private var isAuthenticated = true // Track authentication status
     
     var body: some View {
         Group {

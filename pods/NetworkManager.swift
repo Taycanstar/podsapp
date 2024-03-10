@@ -297,7 +297,7 @@ class NetworkManager {
 //        request.addValue("Bearer YOUR_ACCESS_TOKEN", forHTTPHeaderField: "Authorization") // Include authorization header
 
         let itemsForBody = items.map { item -> [String: Any] in
-            let itemDict: [String: Any] = ["videoURL": item.videoURL.absoluteString, "label": item.metadata]
+            let itemDict: [String: Any] = ["videoURL": item.videoURL.absoluteString, "label": item.metadata, "thumbnail":item.thumbnail]
             // Include thumbnail if necessary. This example skips thumbnail data for simplicity.
             return itemDict
         }
@@ -399,5 +399,95 @@ class NetworkManager {
             }
         }.resume()
     }
+    
+//    func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+//        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+//        guard let url = URL(string: "\(NetworkManager().baseUrl)/get-user-pods/\(encodedEmail)") else {
+//            completion(false, nil, "Invalid URL")
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "GET"
+//        // Add headers if needed, e.g., Authorization
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            guard let data = data, error == nil else {
+//                completion(false, nil, "Network request failed")
+//                return
+//            }
+//            
+//            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+//                do {
+//                    let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
+//                    // Use the custom initializer for Pod which was added as an extension.
+//                    let pods = podResponse.pods.map { Pod(from: $0) }
+//                    completion(true, pods, nil)
+//                } catch {
+//                    // Attempt to print the raw JSON string for debugging
+//                    if let rawJSONString = String(data: data, encoding: .utf8) {
+//                        print("Raw JSON string: \(rawJSONString)")
+//                    }
+//                    print("Decoding error: \(error)")
+//                    let detailedError = (error as? DecodingError).flatMap { decodingError -> String in
+//                        switch decodingError {
+//                        case .dataCorrupted(let context):
+//                            return "Data corrupted: \(context)"
+//                        case .keyNotFound(let key, let context):
+//                            return "Key '\(key.stringValue)' not found: \(context)"
+//                        case .typeMismatch(let type, let context):
+//                            return "Type '\(type)' mismatch: \(context)"
+//                        case .valueNotFound(let type, let context):
+//                            return "Value of type '\(type)' not found: \(context)"
+//                        @unknown default:
+//                            return "Unknown decoding error"
+//                        }
+//                    } ?? "Failed to decode pods"
+//                    completion(false, nil, detailedError)
+//                }
+//            } else {
+//                // Handling non-200 HTTP responses
+//                if let httpResponse = response as? HTTPURLResponse {
+//                    completion(false, nil, "Failed to fetch pods with HTTP status code: \(httpResponse.statusCode)")
+//                } else {
+//                    completion(false, nil, "Failed to fetch pods")
+//                }
+//            }
+//        }.resume()
+//    }
+
+    func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        guard let url = URL(string: "\(NetworkManager().baseUrl)/get-user-pods/\(encodedEmail)") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        // Add headers if needed, e.g., Authorization
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                completion(false, nil, "Network request failed")
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                do {
+                    let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
+                    // Use the custom initializer for Pod which was added as an extension.
+                    let pods = podResponse.pods.map { Pod(from: $0) }
+                    completion(true, pods, nil)
+                } catch {
+                    print(error)
+                    completion(false, nil, "Failed to decode pods")
+                }
+            } else {
+                completion(false, nil, "Failed to fetch pods")
+            }
+        }.resume()
+    }
+
 
 }

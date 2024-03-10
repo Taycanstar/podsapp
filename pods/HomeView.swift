@@ -3,45 +3,46 @@ import SwiftUI
 struct HomeView: View {
 
     @ObservedObject var cameraModel = CameraViewModel()
+    @ObservedObject var homeViewModel = HomeViewModel()
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    var networkManager: NetworkManager = NetworkManager()
     
     // Example Pods Data - Replace with actual data fetching mechanism
-    private let pods = [
-        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")),PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy"))], title: "Pod 1"),
-        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "Pod 2", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "Pod 3", thumbnail: UIImage(named: "livvy"))], title: "Pod 3"),
-        // Add more pods for demonstration
-    ]
-    
+//    private let pods = [
+//        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")),PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy"))], title: "Pod 1"),
+//        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "Pod 2", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "Pod 3", thumbnail: UIImage(named: "livvy"))], title: "Pod 3"),
+//        // Add more pods for demonstration
+//    ]
+//    
     @Environment(\.colorScheme) var colorScheme
 
     @State private var expandedPods = Set<String>()
     @State private var currentItemIndex = 0
 
+    
     var body: some View {
+      
         NavigationView {
             List {
-                ForEach(pods.indices, id: \.self) { index in
+                ForEach(homeViewModel.pods.indices, id: \.self) { index in
                    
                     VStack {
                      
-                                PodTitleRow(pod: pods[index], isExpanded: expandedPods.contains(pods[index].title), onExpandCollapseTapped: {
+                        PodTitleRow(pod: homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
                                     // This closure is what you pass to the button inside PodTitleRow
                                     withAnimation {
-                                        togglePodExpansion(for: pods[index].title)
+                                        togglePodExpansion(for: homeViewModel.pods[index].title)
                                     }
                                 })
-                              
                                     .listRowInsets(EdgeInsets())
-                           
                                     .buttonStyle(PlainButtonStyle())
-
                     }
-                    
                     .listRowInsets(EdgeInsets())
 //                    .animation(nil)
                     
-                        if expandedPods.contains(pods[index].title) {
-                            ForEach(pods[index].items, id: \.metadata) { item in
-                                NavigationLink(destination: ItemView(items: pods[index].items)) {
+                    if expandedPods.contains(homeViewModel.pods[index].title) {
+                        ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
+                            NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items)) {
                                     ItemRow(item: item)
                                         .listRowInsets(EdgeInsets())
                                 }
@@ -49,12 +50,14 @@ struct HomeView: View {
                             .listRowInsets(EdgeInsets())
                             .padding(.trailing, 15)
                         }
-                  
-                
                     
                     }
                     
             }
+            .onAppear {
+                print(homeViewModel.pods, "pods")
+                homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
+                       }
             
             .listStyle(InsetGroupedListStyle())
                            .navigationTitle("Pods")

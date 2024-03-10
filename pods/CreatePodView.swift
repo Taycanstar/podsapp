@@ -190,7 +190,7 @@ struct CreatePodView: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1.5)
+                        .scaleEffect(1)
                 } else {
                     Text("Create")
                         .frame(maxWidth: .infinity)

@@ -5,19 +5,122 @@ import AVFoundation
 
 import MicrosoftCognitiveServicesSpeech
 
-struct PodItem: Identifiable {
-    var id = UUID()
-    var videoURL: URL
-    var metadata: String
-    var thumbnail: UIImage?
-   
+
+// Represents an item within a Pod. It has a local ID for SwiftUI identification.
+//struct PodItem: Identifiable {
+//    var id = UUID()
+//    var videoURL: URL
+//    var metadata: String
+//    var thumbnail: UIImage?  // For local/temporary usage
+//    var thumbnailURL: URL?   // For items fetched from the server
+//}
+//
+// Represents a Pod, which is a collection of PodItems and has a title.
+//struct Pod: Identifiable {
+//    var id = UUID() // Local ID for SwiftUI
+//    var items: [PodItem]
+//    var title: String
+//}
+
+//// Codable structures for JSON decoding from the server.
+//struct PodResponse: Codable {
+//    let pods: [PodJSON]
+//}
+//
+//struct PodJSON: Codable {
+//    let id: Int
+//    let title: String
+//    let items: [PodItemJSON]
+//}
+//
+//struct PodItemJSON: Codable {
+//    let id: Int
+//    let videoURL: URL
+//    let metadata: String
+//    let thumbnailURL: URL?
+//}
+//
+//extension Pod {
+//    // Initializes a Pod from PodJSON, including its items.
+//    init(from podJSON: PodJSON) {
+//        self.id = UUID()
+//        self.title = podJSON.title
+//        self.items = podJSON.items.map { itemJSON in
+//            PodItem(id: UUID(), videoURL: itemJSON.videoURL, metadata: itemJSON.metadata, thumbnail: nil, thumbnailURL: itemJSON.thumbnailURL)
+//        }
+//    }
+//}
+
+struct PodJSON: Codable {
+    let id: Int
+    let title: String
+    let created_at: String
+    let items: [PodItemJSON] // Add this line
 }
+
+struct PodItemJSON: Codable {
+    let id: Int
+    let videoURL: String
+    let label: String
+    let thumbnail: String
+}
+
+
+struct PodResponse: Codable {
+    let pods: [PodJSON]
+}
+
+extension Pod {
+    init(from podJSON: PodJSON) {
+        self.id = UUID()
+        self.title = podJSON.title
+        // Map each PodItemJSON to a PodItem
+        self.items = podJSON.items.map { PodItem(from: $0) }
+    }
+}
+
+extension PodItem {
+    // Add an initializer that converts from PodItemJSON to PodItem
+    init(from itemJSON: PodItemJSON) {
+        self.id = UUID() // Assuming you want to keep this as a unique identifier
+        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
+        self.metadata = itemJSON.label
+        // Assuming 'thumbnail' field is a URL to an image. You might need to download the image or adjust this logic.
+        self.thumbnail = UIImage() // Placeholder. Implement image fetching based on 'thumbnail' URL.
+    }
+}
+
+//struct PodJSON: Codable {
+//    let id: Int // Change this to Int to match the JSON format
+//    let title: String
+//    let created_at: String
+//}
+
+//extension Pod {
+//    // Add an initializer that converts from PodJSON to Pod
+//    init(from podJSON: PodJSON) {
+//        // Here, we're converting the integer id to a UUID string format.
+//        // Note: This creates a new UUID each time. If you need to keep consistent UUIDs for the same id, you might need a more complex mapping.
+//        self.id = UUID()
+//        self.title = podJSON.title
+//        // Initialize items with an empty array, assuming items will be populated later or modified to be fetched/converted from podJSON if needed.
+//        self.items = []
+//    }
+//}
 
 struct Pod: Identifiable {
     var id = UUID()
     var items: [PodItem] = []
     var title: String
   
+}
+
+struct PodItem: Identifiable {
+    var id = UUID()
+    var videoURL: URL
+    var metadata: String
+    var thumbnail: UIImage?
+   
 }
 
 
@@ -106,7 +209,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                print("Audio recorder setup failed: \(error)")
            }
        }
-
 
     func setUp() {
         do {
