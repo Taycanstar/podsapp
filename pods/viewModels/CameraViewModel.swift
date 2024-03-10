@@ -5,51 +5,15 @@ import AVFoundation
 
 import MicrosoftCognitiveServicesSpeech
 
+struct PodItem: Identifiable {
+    var id = UUID()
+    var videoURL: URL
+    var metadata: String
+    var thumbnail: UIImage? // For local UI usage
+    var thumbnailURL: URL?  // For networking and referencing the image's location
+}
 
-// Represents an item within a Pod. It has a local ID for SwiftUI identification.
-//struct PodItem: Identifiable {
-//    var id = UUID()
-//    var videoURL: URL
-//    var metadata: String
-//    var thumbnail: UIImage?  // For local/temporary usage
-//    var thumbnailURL: URL?   // For items fetched from the server
-//}
-//
-// Represents a Pod, which is a collection of PodItems and has a title.
-//struct Pod: Identifiable {
-//    var id = UUID() // Local ID for SwiftUI
-//    var items: [PodItem]
-//    var title: String
-//}
 
-//// Codable structures for JSON decoding from the server.
-//struct PodResponse: Codable {
-//    let pods: [PodJSON]
-//}
-//
-//struct PodJSON: Codable {
-//    let id: Int
-//    let title: String
-//    let items: [PodItemJSON]
-//}
-//
-//struct PodItemJSON: Codable {
-//    let id: Int
-//    let videoURL: URL
-//    let metadata: String
-//    let thumbnailURL: URL?
-//}
-//
-//extension Pod {
-//    // Initializes a Pod from PodJSON, including its items.
-//    init(from podJSON: PodJSON) {
-//        self.id = UUID()
-//        self.title = podJSON.title
-//        self.items = podJSON.items.map { itemJSON in
-//            PodItem(id: UUID(), videoURL: itemJSON.videoURL, metadata: itemJSON.metadata, thumbnail: nil, thumbnailURL: itemJSON.thumbnailURL)
-//        }
-//    }
-//}
 
 struct PodJSON: Codable {
     let id: Int
@@ -79,16 +43,41 @@ extension Pod {
     }
 }
 
+//extension PodItem {
+//    // Add an initializer that converts from PodItemJSON to PodItem
+//    init(from itemJSON: PodItemJSON) {
+//        self.id = UUID() // Assuming you want to keep this as a unique identifier
+//        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
+//        self.metadata = itemJSON.label
+//        // Assuming 'thumbnail' field is a URL to an image. You might need to download the image or adjust this logic.
+//        self.thumbnail = UIImage() // Placeholder. Implement image fetching based on 'thumbnail' URL.
+//    }
+//}
+
+struct Pod: Identifiable {
+    var id = UUID()
+    var items: [PodItem] = []
+    var title: String
+  
+}
+
 extension PodItem {
-    // Add an initializer that converts from PodItemJSON to PodItem
     init(from itemJSON: PodItemJSON) {
-        self.id = UUID() // Assuming you want to keep this as a unique identifier
-        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
+        self.id = UUID()
+        self.videoURL = URL(string: itemJSON.videoURL)! // Ensure safe unwrapping in production code
         self.metadata = itemJSON.label
-        // Assuming 'thumbnail' field is a URL to an image. You might need to download the image or adjust this logic.
-        self.thumbnail = UIImage() // Placeholder. Implement image fetching based on 'thumbnail' URL.
+        self.thumbnailURL = URL(string: itemJSON.thumbnail) // Convert the thumbnail string to a URL
     }
 }
+
+
+//struct PodItem: Identifiable {
+//    var id = UUID()
+//    var videoURL: URL
+//    var metadata: String
+//    var thumbnail: UIImage?
+//   
+//}
 
 //struct PodJSON: Codable {
 //    let id: Int // Change this to Int to match the JSON format
@@ -107,21 +96,6 @@ extension PodItem {
 //        self.items = []
 //    }
 //}
-
-struct Pod: Identifiable {
-    var id = UUID()
-    var items: [PodItem] = []
-    var title: String
-  
-}
-
-struct PodItem: Identifiable {
-    var id = UUID()
-    var videoURL: URL
-    var metadata: String
-    var thumbnail: UIImage?
-   
-}
 
 
 
@@ -444,13 +418,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-    
-    
-
-
-
-
-
     
     func generateThumbnail(for url: URL, usingFrontCamera: Bool) -> UIImage? {
         let asset = AVAsset(url: url)

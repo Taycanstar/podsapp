@@ -7,13 +7,6 @@ struct HomeView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     var networkManager: NetworkManager = NetworkManager()
     
-    // Example Pods Data - Replace with actual data fetching mechanism
-//    private let pods = [
-//        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")),PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "dummy data", thumbnail: UIImage(named: "livvy"))], title: "Pod 1"),
-//        Pod(items: [PodItem(videoURL: Bundle.main.url(forResource: "vid2", withExtension: "mov")!, metadata: "Pod 2", thumbnail: UIImage(named: "livvy")), PodItem(videoURL: Bundle.main.url(forResource: "vid", withExtension: "mp4")!, metadata: "Pod 3", thumbnail: UIImage(named: "livvy"))], title: "Pod 3"),
-//        // Add more pods for demonstration
-//    ]
-//    
     @Environment(\.colorScheme) var colorScheme
 
     @State private var expandedPods = Set<String>()
@@ -132,13 +125,23 @@ struct ItemRow: View {
         HStack {
             Text(item.metadata)
             Spacer()
-            if let thumbnail = item.thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 35, height: 35)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
+//            if let thumbnail = item.thumbnail {
+//                Image(uiImage: thumbnail)
+//                    .resizable()
+//                    .aspectRatio(contentMode: .fill)
+//                    .frame(width: 35, height: 35)
+//                    .clipShape(RoundedRectangle(cornerRadius: 8))
+//            }
+            if let thumbnailURL = item.thumbnailURL {
+                       AsyncImage(url: thumbnailURL) { image in
+                           image.resizable()
+                       } placeholder: {
+                           ProgressView() // Show a placeholder or a default image until the image loads
+                       }
+                       .aspectRatio(contentMode: .fill)
+                       .frame(width: 35, height: 35)
+                       .clipShape(RoundedRectangle(cornerRadius: 8))
+                   }
         }
         .padding(.leading, 30)
 
@@ -147,3 +150,5 @@ struct ItemRow: View {
 
     }
 }
+
+
