@@ -85,7 +85,8 @@ struct CameraContainerView: View {
     @State private var isShowingVideoPicker = false
     @State private var selectedVideoURL: URL?
     @State private var isProcessingVideo = false
-    
+    @Binding var shouldNavigateToHome: Bool
+
 
 
     
@@ -96,7 +97,7 @@ struct CameraContainerView: View {
                 .environmentObject(cameraModel)
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
-                              CreatePodView(pod: $cameraModel.currentPod)
+                    CreatePodView(pod: $cameraModel.currentPod, shouldNavigateToHome: $shouldNavigateToHome)
                                   // Pass any required environment objects or parameters
                           }
      
@@ -450,6 +451,6 @@ extension Image {
 }
 
 
-#Preview {
-    CameraContainerView()
-}
+//#Preview {
+//    CameraContainerView()
+//}

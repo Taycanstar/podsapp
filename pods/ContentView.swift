@@ -41,6 +41,8 @@ struct ContentView: View {
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
     @State private var isAuthenticated = true // Track authentication status
+    @State private var shouldNavigateToHome = false
+
     
     var body: some View {
         Group {
@@ -53,7 +55,7 @@ struct ContentView: View {
                         case 0:
                             HomeView()
                         case 1:
-                            CameraContainerView()
+                            CameraContainerView(shouldNavigateToHome: $shouldNavigateToHome)
                                 .background(Color.black.edgesIgnoringSafeArea(.top))
                                 .padding(.bottom, 46)
                                 .environment(\.colorScheme, .dark)
@@ -62,9 +64,17 @@ struct ContentView: View {
                         default:
                             Text("Content not available")
                         }
+                            
+
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
+                    .onChange(of: shouldNavigateToHome) { [shouldNavigateToHome] in
+                        if shouldNavigateToHome {
+                            selectedTab = 0 // Assuming HomeView is at index 0
+                            self.shouldNavigateToHome = false // Reset the flag
+                        }
+                    }
+
                     // Custom tab bar
                     CustomTabBar(selectedTab: $selectedTab)
                 }
