@@ -23,12 +23,7 @@ struct HomeView: View {
                     VStack {
                      
                         PodTitleRow(pod: homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
-                                    // This closure is what you pass to the button inside PodTitleRow
-//                                    withAnimation {
-//                                        togglePodExpansion(for: homeViewModel.pods[index].title)
-//                                    }
                             if editMode == .inactive {
-                                                                       // Only allow expansion/collapse if not in edit mode
                                                                        withAnimation {
                                                                            togglePodExpansion(for: homeViewModel.pods[index].title)
                                                                        }
@@ -83,34 +78,7 @@ struct HomeView: View {
             }
         }
     }
-    
-//    private var editButton: some View {
-//         Button(action: {
-//             // Toggle between active and inactive edit modes directly.
-//             
-//             editMode = editMode == .active ? .inactive : .active
-////             expandedPods.removeAll()
-//             
-//             // Check if exiting edit mode and pods have been reordered.
-//             if editMode == .inactive && podsReordered {
-//                 let orderedPodIds = homeViewModel.pods.map { $0.id }
-//                 
-//                 // Send the new order to the backend.
-//                 networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
-//                     DispatchQueue.main.async {
-//                         if success {
-//                             print("Pods reordered successfully on the backend.")
-//                         } else {
-//                             print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
-//                         }
-//                     }
-//                 }
-//                 podsReordered = false // Reset the reorder flag.
-//             }
-//         }) {
-//             Text(editMode == .active ? "Done" : "Edit")
-//         }
-//     }
+
     private var editButton: some View {
         Button(action: {
             // Collapse all expanded pods before toggling edit mode

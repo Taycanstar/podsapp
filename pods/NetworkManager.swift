@@ -526,6 +526,93 @@ class NetworkManager {
             completion(false, "Failed to encode request body")
         }
     }
+    
+    func deletePodItem(itemId: Int, completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/delete-pod-item/\(itemId)/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        // Add any necessary headers here, e.g., Authorization
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let httpResponse = response as? HTTPURLResponse, error == nil else {
+                DispatchQueue.main.async {
+                    completion(false, "Network request failed: \(error?.localizedDescription ?? "Unknown error")")
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 204 {
+                // PodItem deleted successfully
+                DispatchQueue.main.async {
+                    completion(true, nil)
+                }
+            } else {
+                // Handle errors
+                var errorMessage = "Failed to delete pod item with statusCode: \(httpResponse.statusCode)"
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let serverMessage = json["error"] as? String {
+                    errorMessage = serverMessage
+                }
+                DispatchQueue.main.async {
+                    completion(false, errorMessage)
+                }
+            }
+        }.resume()
+    }
+
+    func reorderPodItems(podId: Int, itemIds: [Int], completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/reorder-items/\(podId)/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+        
+        let body: [String: Any] = [
+            "item_ids": itemIds
+        ]
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        completion(false, "Network error: \(error.localizedDescription)")
+                    }
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        completion(false, "No response from server")
+                    }
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    DispatchQueue.main.async {
+                        completion(true, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let errorMessage = "Server returned status code: \(httpResponse.statusCode)"
+                        completion(false, errorMessage)
+                    }
+                }
+            }.resume()
+        } catch {
+            DispatchQueue.main.async {
+                completion(false, "Failed to encode request body")
+            }
+        }
+    }
 
 
 

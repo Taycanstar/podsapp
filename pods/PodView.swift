@@ -6,16 +6,19 @@ struct PodView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var isEditing = false
     @State private var currentIndex: Int = 0
+    @State private var reorderedItems: [PodItem] = []
+    @State private var deletedItemIDs: [Int] = []
+    var networkManager: NetworkManager = NetworkManager()
     
     var body: some View {
             List {
-                ForEach(pod.items.indices, id: \.self) { index in
-                    NavigationLink(destination: ItemView(items: pod.items)) {
+                ForEach(reorderedItems.indices, id: \.self) { index in
+                    NavigationLink(destination: ItemView(items: reorderedItems)) {
                         HStack {
-                            Text(pod.items[index].metadata)
+                            Text(reorderedItems[index].metadata)
                             Spacer()
                             // Use AsyncImage for thumbnails loaded from URLs
-                            if let thumbnailURL = pod.items[index].thumbnailURL {
+                            if let thumbnailURL = reorderedItems[index].thumbnailURL {
                                 AsyncImage(url: thumbnailURL) { phase in
                                     switch phase {
                                     case .empty:
@@ -54,6 +57,9 @@ struct PodView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: editButton)
             .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
+            .onAppear {
+                        self.reorderedItems = self.pod.items // Initialize reorderedItems with the current items
+                    }
         }
     
 
@@ -67,19 +73,50 @@ struct PodView: View {
 
     private var editButton: some View {
         Button(action: {
+            // Toggle the edit mode
             isEditing.toggle()
+
+            // If exiting edit mode, apply changes
+            if !isEditing {
+                // Call API to delete items
+                deletedItemIDs.forEach { itemId in
+                    networkManager.deletePodItem(itemId: itemId) { success, errorMessage in
+                        if success {
+                            print("Item \(itemId) deleted successfully.")
+                        } else {
+                            print("Failed to delete item \(itemId): \(errorMessage ?? "Unknown error")")
+                        }
+                    }
+                }
+                
+                // Call API to reorder items
+                let itemIDs = reorderedItems.map { $0.id }
+                networkManager.reorderPodItems(podId: pod.id, itemIds: itemIDs) { success, errorMessage in
+                    if success {
+                        print("Items reordered successfully.")
+                    } else {
+                        print("Failed to reorder items: \(errorMessage ?? "Unknown error")")
+                    }
+                }
+
+                // Reset local changes
+                deletedItemIDs.removeAll()
+            }
         }) {
             Text(isEditing ? "Done" : "Edit")
         }
     }
 
+
     func moveItem(from source: IndexSet, to destination: Int) {
-        // Implement moving of items if necessary
+        reorderedItems.move(fromOffsets: source, toOffset: destination)
     }
 
     func deleteItem(at offsets: IndexSet) {
-        // Implement deletion of items if necessary
+        offsets.map { reorderedItems[$0].id }.forEach { deletedItemIDs.append($0) }
+        reorderedItems.remove(atOffsets: offsets)
     }
+
 }
 
 
