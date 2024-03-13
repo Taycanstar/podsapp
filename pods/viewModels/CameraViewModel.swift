@@ -6,12 +6,19 @@ import AVFoundation
 import MicrosoftCognitiveServicesSpeech
 
 struct PodItem: Identifiable {
-    var id = UUID()
+    var id: Int // Correctly declare the type of `id`
     var videoURL: URL
     var metadata: String
     var thumbnail: UIImage? // For local UI usage
     var thumbnailURL: URL?  // For networking and referencing the image's location
 }
+
+struct Pod: Identifiable {
+    var id: Int // Correctly declare the type of `id`
+    var items: [PodItem] = []
+    var title: String
+}
+
 
 
 
@@ -36,66 +43,22 @@ struct PodResponse: Codable {
 
 extension Pod {
     init(from podJSON: PodJSON) {
-        self.id = UUID()
+        self.id = podJSON.id
         self.title = podJSON.title
-        // Map each PodItemJSON to a PodItem
         self.items = podJSON.items.map { PodItem(from: $0) }
     }
 }
 
-//extension PodItem {
-//    // Add an initializer that converts from PodItemJSON to PodItem
-//    init(from itemJSON: PodItemJSON) {
-//        self.id = UUID() // Assuming you want to keep this as a unique identifier
-//        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
-//        self.metadata = itemJSON.label
-//        // Assuming 'thumbnail' field is a URL to an image. You might need to download the image or adjust this logic.
-//        self.thumbnail = UIImage() // Placeholder. Implement image fetching based on 'thumbnail' URL.
-//    }
-//}
-
-struct Pod: Identifiable {
-    var id = UUID()
-    var items: [PodItem] = []
-    var title: String
-  
-}
-
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
-        self.id = UUID()
-        self.videoURL = URL(string: itemJSON.videoURL)! // Ensure safe unwrapping in production code
+        self.id = itemJSON.id
+        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
         self.metadata = itemJSON.label
-        self.thumbnailURL = URL(string: itemJSON.thumbnail) // Convert the thumbnail string to a URL
+        self.thumbnailURL = URL(string: itemJSON.thumbnail) // Consider safer unwrapping
     }
 }
 
 
-//struct PodItem: Identifiable {
-//    var id = UUID()
-//    var videoURL: URL
-//    var metadata: String
-//    var thumbnail: UIImage?
-//   
-//}
-
-//struct PodJSON: Codable {
-//    let id: Int // Change this to Int to match the JSON format
-//    let title: String
-//    let created_at: String
-//}
-
-//extension Pod {
-//    // Add an initializer that converts from PodJSON to Pod
-//    init(from podJSON: PodJSON) {
-//        // Here, we're converting the integer id to a UUID string format.
-//        // Note: This creates a new UUID each time. If you need to keep consistent UUIDs for the same id, you might need a more complex mapping.
-//        self.id = UUID()
-//        self.title = podJSON.title
-//        // Initialize items with an empty array, assuming items will be populated later or modified to be fetched/converted from podJSON if needed.
-//        self.items = []
-//    }
-//}
 
 
 
@@ -130,7 +93,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var showPreview: Bool = false
     
     //MARK: Pod variables
-    @Published var currentPod = Pod(title: "")
+    @Published var currentPod = Pod(id: -1,title: "")
     @Published var isPodRecording: Bool = false
     @Published var isPodFinalized = false
 
@@ -400,7 +363,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 // Check if the last item in the Pod is the same as the current preview URL
                 if self.currentPod.items.last?.videoURL != videoURL {
                     let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-                    let newItem = PodItem(videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                    let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
                     self.currentPod.items.append(newItem)
 //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
                 } else {
