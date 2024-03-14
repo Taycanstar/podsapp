@@ -462,28 +462,42 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
+//    
+//    func handleSelectedVideo(_ url: URL) {
+////        self.isProcessingVideo = true // Notify that processing starts
+//        print("Selected video URL: \(url)")
+//
+//        // Your video processing logic here...
+//        extractAudioFromVideo(videoURL: url) { [weak self] success in
+//            guard let self = self else { return }
+//
+//            DispatchQueue.main.async {
+//                if success {
+//                    // Processing succeeded, update accordingly
+//                    self.previewURL = url
+//                    self.showPreview = true
+//                } else {
+//                    // Processing failed, log or handle error
+//                    print("Failed to extract and convert audio from the selected video.")
+//                }
+//             self.isProcessingVideo = false // Notify that processing ends
+//            }
+//        }
+//    }
     
     func handleSelectedVideo(_ url: URL) {
-//        self.isProcessingVideo = true // Notify that processing starts
         print("Selected video URL: \(url)")
 
-        // Your video processing logic here...
-        extractAudioFromVideo(videoURL: url) { [weak self] success in
-            guard let self = self else { return }
-
-            DispatchQueue.main.async {
-                if success {
-                    // Processing succeeded, update accordingly
-                    self.previewURL = url
-                    self.showPreview = true
-                } else {
-                    // Processing failed, log or handle error
-                    print("Failed to extract and convert audio from the selected video.")
-                }
-             self.isProcessingVideo = false // Notify that processing ends
-            }
+        // Immediately proceed without extracting audio
+        DispatchQueue.main.async {
+            // Assuming the rest of the processing does not depend on the audio extraction outcome,
+            // you can directly set the preview and show it.
+            self.previewURL = url
+            self.showPreview = true
+            self.isProcessingVideo = false // Notify that processing ends
         }
     }
+
     
 
     func extractAudioFromVideo(videoURL: URL, completion: @escaping (Bool) -> Void) {

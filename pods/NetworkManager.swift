@@ -293,55 +293,58 @@ class NetworkManager {
 
     func sendPodCreationRequest(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-pod/") else {
+            print("Invalid URL for pod creation")
             completion(false, "Invalid URL")
             return
         }
 
+        print("Sending pod creation request to \(url)")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let itemsForBody = items.map { item -> [String: Any] in
-            var itemDict: [String: Any] = [
-                "videoURL": item.videoURL.absoluteString,
-                "label": item.metadata
-            ]
+            var itemDict: [String: Any] = ["videoURL": item.videoURL.absoluteString, "label": item.metadata]
             if let thumbnailURL = item.thumbnailURL {
                 itemDict["thumbnail"] = thumbnailURL.absoluteString
             }
             return itemDict
         }
 
-        let body: [String: Any] = [
-            "title": podTitle,
-            "items": itemsForBody,
-            "email": email
-        ]
-
+        let body: [String: Any] = ["title": podTitle, "items": itemsForBody, "email": email]
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            if let requestBody = request.httpBody, let requestBodyString = String(data: requestBody, encoding: .utf8) {
+                print("Request Body: \(requestBodyString)")
+            }
         } catch {
+            print("Failed to encode request body, error: \(error)")
             completion(false, "Failed to encode request body")
             return
         }
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            guard error == nil else {
-                completion(false, "Network error: \(error!.localizedDescription)")
+            if let error = error {
+                print("Network error on pod creation request: \(error.localizedDescription)")
+                completion(false, "Network error: \(error.localizedDescription)")
                 return
             }
 
             if let httpResponse = response as? HTTPURLResponse {
+                print("Pod creation response status code: \(httpResponse.statusCode)")
                 if httpResponse.statusCode == 201 {
+                    print("Pod created successfully.")
                     completion(true, nil)
                 } else {
                     var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
-                    if let data = data, let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any], let message = jsonResponse["error"] as? String {
-                        errorMessage = message
+                    if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
+                        print("Server response: \(responseString)")
+                        errorMessage += ", Response: \(responseString)"
                     }
                     completion(false, errorMessage)
                 }
             } else {
+                print("No response received from server.")
                 completion(false, "No response from server")
             }
         }.resume()
@@ -362,51 +365,43 @@ class NetworkManager {
             return
         }
 
+        print("Attempting to upload to: \(url)")
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         request.setValue("\(fileData.count)", forHTTPHeaderField: "Content-Length")
-        // Set the x-ms-blob-type header to BlockBlob
         request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
         request.httpBody = fileData
 
-        // Logging request details
-        print("Sending request to URL: \(url.absoluteString)")
-        print("Request headers: \(request.allHTTPHeaderFields ?? [:])")
-        if let requestBody = request.httpBody, let _ = String(data: requestBody, encoding: .utf8) {
-            print("Request body size: \(requestBody.count) bytes")
-        }
-
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // Handle network error
             if let error = error {
                 print("Network error during upload to Azure Blob Storage: \(error.localizedDescription)")
                 completion(false, "Network error: \(error.localizedDescription)")
                 return
             }
 
-            // Handle HTTP response
             if let httpResponse = response as? HTTPURLResponse {
-                print("HTTP Status Code: \(httpResponse.statusCode)")
-                print("Response headers: \(httpResponse.allHeaderFields)")
-
-                // Check for non-success status codes
-                if httpResponse.statusCode != 201 {
-                    let responseBody = data.flatMap { String(data: $0, encoding: .utf8) } ?? "N/A"
-                    print("Server returned response: \(responseBody)")
-
-                    completion(false, "Server returned status code: \(httpResponse.statusCode)")
-                } else {
+                print("Response status code: \(httpResponse.statusCode)")
+                if httpResponse.statusCode == 201 {
                     let blobUrl = "https://\(accountName).blob.core.windows.net/\(containerName)/\(blobName)"
                     print("Upload successful to Azure Blob Storage: \(blobUrl)")
                     completion(true, blobUrl)
+                } else {
+                    if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
+                        print("Response Data: \(responseString)")
+                    }
+                    print("Failed to upload to Azure Blob Storage, status code: \(httpResponse.statusCode)")
+                    completion(false, "Upload failed with status code: \(httpResponse.statusCode)")
                 }
             } else {
-                print("No response from server during upload to Azure Blob Storage")
+                print("No HTTP response received.")
                 completion(false, "No response from server")
             }
         }.resume()
     }
+
+
+
 
     func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
         let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

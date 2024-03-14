@@ -86,17 +86,17 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "BLOB_CONTAINER"
-            value = "video-elements"
+            value = "videos"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "BLOB_NAME"
-            value = "storagehumuli"
+            value = "humulipremiumstorage"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "SAS_TOKEN"
-            value = "sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-03-15T00:00:30Z&amp;st=2024-03-14T16:00:30Z&amp;spr=https,http&amp;sig=1k0Op1b%2F6h3ZFv8oTC4JAJALVP69hnHOXLxXl4DCX%2BU%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
@@ -106,7 +106,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "FILE_SAS_URL"
-            value = "https://storagehumuli.file.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            value = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-03-15T00:00:30Z&amp;st=2024-03-14T16:00:30Z&amp;spr=https,http&amp;sig=1k0Op1b%2F6h3ZFv8oTC4JAJALVP69hnHOXLxXl4DCX%2BU%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
@@ -121,7 +121,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "CONN_STRING"
-            value = "BlobEndpoint=https://storagehumuli.blob.core.windows.net/;QueueEndpoint=https://storagehumuli.queue.core.windows.net/;FileEndpoint=https://storagehumuli.file.core.windows.net/;TableEndpoint=https://storagehumuli.table.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D"
+            value = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-03-15T00:00:30Z&amp;st=2024-03-14T16:00:30Z&amp;spr=https,http&amp;sig=1k0Op1b%2F6h3ZFv8oTC4JAJALVP69hnHOXLxXl4DCX%2BU%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
