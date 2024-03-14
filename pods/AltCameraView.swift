@@ -18,7 +18,10 @@ struct AltCameraView: View {
             CameraPreview(size: size)
                 .environmentObject(cameraModel)
             
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+//                .frame(width: size.width, height: size.height)
+                .frame(width: size.width, height: size.width * 9 / 16)
+                
+//            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear(perform: cameraModel.checkPermission)
         .alert(isPresented: $cameraModel.alert) {

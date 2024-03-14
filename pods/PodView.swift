@@ -13,7 +13,7 @@ struct PodView: View {
     var body: some View {
             List {
                 ForEach(reorderedItems.indices, id: \.self) { index in
-                    NavigationLink(destination: ItemView(items: reorderedItems)) {
+                    NavigationLink(destination: ItemView(items: reorderedItems , initialIndex: index)) {
                         HStack {
                             Text(reorderedItems[index].metadata)
                             Spacer()

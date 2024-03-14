@@ -2,23 +2,41 @@ import SwiftUI
 import AVKit
 
 struct ItemView: View {
+//    var items: [PodItem]
+//    @State private var currentIndex: Int = 0
+//    @State private var dragOffset: CGFloat = 0 // Track drag offset
+//    @Environment(\.presentationMode) var presentationMode
+    
     var items: [PodItem]
-    @State private var currentIndex: Int = 0
-    @State private var dragOffset: CGFloat = 0 // Track drag offset
+    var initialIndex: Int // Add this line
+    
+    @State private var currentIndex: Int // Now we will initialize this with initialIndex
+    @State private var dragOffset: CGFloat = 0
     @Environment(\.presentationMode) var presentationMode
+
+    // Initialize the state variable from the parameter
+    init(items: [PodItem], initialIndex: Int) {
+        self.items = items
+        self.initialIndex = initialIndex
+        _currentIndex = State(initialValue: initialIndex) // Correct way to initialize state variable
+    }
+
 
     var body: some View {
         GeometryReader { geometry in
+       
             ZStack {
                 ForEach(items.indices, id: \.self) { index in
-//                    VideoContentView(url: items[index].videoURL)
+
                     VideoContentView(url: items[index].videoURL, isActive: index == currentIndex)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .offset(x: 0, y: getYOffsetFor(index: index, in: geometry.size.height))
+                        
                         .animation(.easeInOut(duration: 0.3), value: dragOffset) // Smooth transition
                         .animation(.easeInOut(duration: 0.3), value: currentIndex)
                 }
             }
+
             .gesture(
                 DragGesture().onChanged { gesture in
                     dragOffset = gesture.translation.height
@@ -32,10 +50,14 @@ struct ItemView: View {
                 }
             )
         }
+     
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(leading: backButton)
-        .padding(.bottom, 46) // Adjust based on your UI needs
+       
+//        .padding(.bottom, 46)
+
     }
+    
 
     private func getYOffsetFor(index: Int, in height: CGFloat) -> CGFloat {
         // Calculate offsets to ensure videos are attached
@@ -79,10 +101,15 @@ struct VideoContentView: View {
     var isActive: Bool // Determines if this view is the active (current) item
     @State private var player = AVPlayer()
 
+
     var body: some View {
         VideoPlayer(player: player)
+            
             .edgesIgnoringSafeArea(.all)
+
             .aspectRatio(contentMode: .fill)
+
+
             .onAppear {
                 setupPlayer()
             }

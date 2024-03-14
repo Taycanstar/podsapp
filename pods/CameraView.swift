@@ -10,13 +10,13 @@ struct CameraView: UIViewRepresentable {
    
     @Binding var isRecording: Bool  // Bind this variable to control recording status
    
-    let tabBarHeight: CGFloat = 85
+//    let tabBarHeight: CGFloat = 85
     
     
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
         // Adjust the view frame to exclude the tab bar area
-        view.frame.size.height -= tabBarHeight
+//        view.frame.size.height -= tabBarHeight
         let coordinator = context.coordinator
       
             

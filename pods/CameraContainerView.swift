@@ -117,6 +117,7 @@ struct CameraContainerView: View {
                                   .padding()
                           }
                           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                       
                           .padding(.top, 20)
                           .padding(.leading, 0)
                         
@@ -138,7 +139,7 @@ struct CameraContainerView: View {
                                           .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
                                           .clipShape(Circle())
                                   }
-                                  .padding(.bottom, 100)
+                                  .padding(.bottom, 146)
                                   .frame(width: 60, height: 60)
                                   .sheet(isPresented: $isShowingVideoPicker) {
                                       PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
@@ -170,7 +171,7 @@ struct CameraContainerView: View {
                         }
                         .frame(width: 60, height: 60) // Example size, adjust as needed
 
-                        .padding(.bottom, 100)
+                        .padding(.bottom, 146)
                    
                       }
                     }
@@ -189,7 +190,7 @@ struct CameraContainerView: View {
                                    Spacer()
                                }
                            }
-                           .padding(.vertical, 25)
+                           .padding(.vertical, 71)
                        }
           
             // Floating Camera Control Buttons
@@ -247,9 +248,9 @@ struct CameraContainerView: View {
                 
 
             }
-            .frame(maxHeight: .infinity,alignment: .bottom)
+            .frame(maxWidth: .infinity, maxHeight: .infinity,alignment: .bottom)
            
-            .padding(.bottom,20)
+            .padding(.bottom,66)
             
             Button {
                 cameraModel.recordedDuration = 0
@@ -289,6 +290,7 @@ struct CameraContainerView: View {
             )
     }
     
+    
     private func handleSelectedVideoURL() async {
          if let url = selectedVideoURL {
              // Set it as the preview URL and show the preview
@@ -305,8 +307,7 @@ struct CameraContainerView: View {
                      // Changed the background color to the specified RGB value
                      Color(red: 30 / 255, green: 30 / 255, blue: 30 / 255)
                          
-                         .ignoresSafeArea() // Ensures the overlay covers the full screen
-                     
+                         .ignoresSafeArea(.all)
                      // Customized ProgressView for a larger display
                      ProgressView()
                          .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -344,17 +345,31 @@ struct FinalPreview: View {
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
+            ZStack {
+                VideoPlayer(player: player)
+                    .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+//                    .edgesIgnoringSafeArea(.all)
+                    .ignoresSafeArea()
+                    .aspectRatio(CGSize(width: 9, height: 16), contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+//                    .aspectRatio(16/9, contentMode: .fill)
+                //                .edgesIgnoringSafeArea(.all)
+                //                .aspectRatio(contentMode: .fill)
+                //                .frame(width: size.width, height: size.height)
+                
+            
+                
+                    .onAppear {
+                        setupPlayer()
+                    }
+                    .onDisappear {
+                        cleanUpPlayer()
+                    }
+            }
+//            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+//                .padding(.bottom, proxy.safeAreaInsets.bottom)
+//                .padding(.top, proxy.safeAreaInsets.top)
 
-            VideoPlayer(player: player)
-                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
-                .aspectRatio(contentMode: .fill)
-                .frame(width: size.width, height: size.height)
-                .onAppear {
-                    setupPlayer()
-                }
-                .onDisappear {
-                    cleanUpPlayer()
-                }
                 .overlay {
                     VStack {
                         HStack {
@@ -419,7 +434,7 @@ struct FinalPreview: View {
                             }
 
                         }
-                        .padding(.vertical, 30)
+                        .padding(.vertical, 76)
                         
                     }
                     .padding()

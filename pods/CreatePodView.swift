@@ -61,7 +61,7 @@ struct CreatePodView: View {
 
     private var createButton: some View {
         VStack {
-            Spacer() // Use to push everything up
+//            Spacer() // Use to push everything up
             Button(action: createPodAction) {
                 if isLoading {
                     ProgressView()
@@ -73,14 +73,16 @@ struct CreatePodView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
             .foregroundColor(.white)
             .background(Color(red: 70/255, green: 87/255, blue: 245/255))
             .cornerRadius(8)
-            .overlay(Divider().opacity(0.5), alignment: .top)
+
         }
         .padding(.horizontal, 15)
-        .padding(.vertical, 10)
+        .padding(.bottom, 10)
+        .overlay(Divider().opacity(0.5), alignment: .top)
     }
 
     private func createPodAction() {

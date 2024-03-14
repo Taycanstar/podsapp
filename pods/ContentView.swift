@@ -12,24 +12,24 @@ import MicrosoftCognitiveServicesSpeech
 
 
 
-struct CurvedTopShape: Shape {
-    var cornerRadius: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-
-        // Draw a path with curved top corners
-        path.move(to: CGPoint(x: 0, y: cornerRadius))
-        path.addArc(center: CGPoint(x: cornerRadius, y: cornerRadius), radius: cornerRadius, startAngle: Angle(degrees: 180), endAngle: Angle(degrees: 270), clockwise: false)
-        path.addLine(to: CGPoint(x: rect.width - cornerRadius, y: 0))
-        path.addArc(center: CGPoint(x: rect.width - cornerRadius, y: cornerRadius), radius: cornerRadius, startAngle: Angle(degrees: 270), endAngle: Angle(degrees: 0), clockwise: false)
-        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
-        path.addLine(to: CGPoint(x: 0, y: rect.height))
-        path.closeSubpath()
-
-        return path
-    }
-}
+//struct CurvedTopShape: Shape {
+//    var cornerRadius: CGFloat
+//
+//    func path(in rect: CGRect) -> Path {
+//        var path = Path()
+//
+//        // Draw a path with curved top corners
+//        path.move(to: CGPoint(x: 0, y: cornerRadius))
+//        path.addArc(center: CGPoint(x: cornerRadius, y: cornerRadius), radius: cornerRadius, startAngle: Angle(degrees: 180), endAngle: Angle(degrees: 270), clockwise: false)
+//        path.addLine(to: CGPoint(x: rect.width - cornerRadius, y: 0))
+//        path.addArc(center: CGPoint(x: rect.width - cornerRadius, y: cornerRadius), radius: cornerRadius, startAngle: Angle(degrees: 270), endAngle: Angle(degrees: 0), clockwise: false)
+//        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+//        path.addLine(to: CGPoint(x: 0, y: rect.height))
+//        path.closeSubpath()
+//
+//        return path
+//    }
+//}
 
 
 
@@ -56,8 +56,10 @@ struct ContentView: View {
                             HomeView()
                         case 1:
                             CameraContainerView(shouldNavigateToHome: $shouldNavigateToHome)
-                                .background(Color.black.edgesIgnoringSafeArea(.top))
-                                .padding(.bottom, 46)
+//                                .background(Color.black.edgesIgnoringSafeArea(.top))
+                               
+//                                .padding(.bottom, 46)
+//                                .edgesIgnoringSafeArea(.all)
                                 .environment(\.colorScheme, .dark)
                         case 2:
                             ProfileView() // Assuming you have a ProfileView

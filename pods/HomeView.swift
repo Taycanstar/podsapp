@@ -39,11 +39,13 @@ struct HomeView: View {
                     
                     if(expandedPods.contains(homeViewModel.pods[index].title)) {
                         ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
-                            NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items)) {
+                            if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
+                                NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items, initialIndex: initialIndex)) {
                                     ItemRow(item: item)
                                         .listRowInsets(EdgeInsets())
                                 }
                             }
+                        }
                             .listRowInsets(EdgeInsets())
                             .padding(.trailing, 15)
                         }
@@ -181,7 +183,7 @@ struct PodTitleRow: View {
             }
           
         }
-        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
+//        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
         .cornerRadius(10)
         .padding(.vertical, 17)
         .padding(.horizontal, 15)
