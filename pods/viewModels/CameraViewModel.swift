@@ -198,18 +198,81 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           audioRecorder?.stop()
           isRecording = false
       }
-    
+//    
+//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+//         if let error = error {
+//             print(error.localizedDescription)
+//             return
+//         }
+//
+//         DispatchQueue.main.async {
+//             self.previewURL = outputFileURL
+//             self.showPreview = true
+//         }
+//     }
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-         if let error = error {
-             print(error.localizedDescription)
-             return
-         }
+        if let error = error {
+            print("Recording error: \(error)")
+            return
+        }
 
-         DispatchQueue.main.async {
-             self.previewURL = outputFileURL
-             self.showPreview = true
-         }
-     }
+        // Specify the output path for the compressed video
+        let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
+        
+        // Call the compression function
+        compressVideo(inputURL: outputFileURL, outputURL: compressedURL) { [weak self] (success, compressedURL) in
+            guard let self = self, success, let compressedURL = compressedURL else {
+                print("Compression failed.")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                // Use the compressed video URL
+                self.previewURL = compressedURL
+                self.showPreview = true
+                // Now you can proceed with uploading compressedURL
+                // Remember to clean up temporary files when done
+            }
+        }
+    }
+
+
+    
+    func compressVideo(inputURL: URL, outputURL: URL, handler: @escaping (Bool, URL?) -> Void) {
+        let asset = AVURLAsset(url: inputURL, options: nil)
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+            print("Cannot create export session.")
+            handler(false, nil)
+            return
+        }
+
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mp4
+
+        let start = CMTimeMake(value: 0, timescale: 600)
+        let range = CMTimeRangeMake(start: start, duration: asset.duration)
+        exportSession.timeRange = range
+
+        exportSession.exportAsynchronously {
+            DispatchQueue.main.async {
+                switch exportSession.status {
+                case .completed:
+                    print("Video compression succeeded.")
+                    handler(true, outputURL)
+                case .failed:
+                    print("Video compression failed: \(String(describing: exportSession.error))")
+                    handler(false, nil)
+                case .cancelled:
+                    print("Video compression cancelled.")
+                    handler(false, nil)
+                default:
+                    print("Unknown error during video compression")
+                    handler(false, nil)
+                }
+            }
+        }
+    }
+
     
 
        func reRecordVideo() {
@@ -485,18 +548,44 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //        }
 //    }
     
+//    func handleSelectedVideo(_ url: URL) {
+//        print("Selected video URL: \(url)")
+//
+//        // Immediately proceed without extracting audio
+//        DispatchQueue.main.async {
+//            // Assuming the rest of the processing does not depend on the audio extraction outcome,
+//            // you can directly set the preview and show it.
+//            self.previewURL = url
+//            self.showPreview = true
+//            self.isProcessingVideo = false // Notify that processing ends
+//        }
+//    }
+    
     func handleSelectedVideo(_ url: URL) {
         print("Selected video URL: \(url)")
 
-        // Immediately proceed without extracting audio
-        DispatchQueue.main.async {
-            // Assuming the rest of the processing does not depend on the audio extraction outcome,
-            // you can directly set the preview and show it.
-            self.previewURL = url
-            self.showPreview = true
-            self.isProcessingVideo = false // Notify that processing ends
+        // Specify the output path for the compressed video
+        let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
+        
+        // Call the compression function
+        compressVideo(inputURL: url, outputURL: compressedURL) { [weak self] (success, compressedURL) in
+            guard let self = self, success, let compressedURL = compressedURL else {
+                print("Compression failed.")
+                // Ensure to stop the loading indicator in case of failure
+                return
+            }
+            
+            DispatchQueue.main.async {
+                // Use the compressed video URL
+                self.previewURL = compressedURL
+                self.showPreview = true
+                self.isProcessingVideo = false // Notify that processing ends
+                // Now you can proceed with uploading compressedURL
+                // Remember to clean up temporary files when done
+            }
         }
     }
+
 
     
 
