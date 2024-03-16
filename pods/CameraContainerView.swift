@@ -102,7 +102,7 @@ struct CameraContainerView: View {
                           }
      
             // Add a button to reset the current pod
-                      if !cameraModel.currentPod.items.isEmpty && !cameraModel.isRecording {
+                      if !cameraModel.currentPod.items.isEmpty {
                           Button(action: {
                               // Reset the current pod and any other necessary states
                               print("xxx")
@@ -182,7 +182,7 @@ struct CameraContainerView: View {
           
         
             // Add Thumbnail Carousel
-                       if !cameraModel.currentPod.items.isEmpty && !cameraModel.isRecording {
+                       if !cameraModel.currentPod.items.isEmpty {
                            VStack {
                                Spacer()
                                HStack {

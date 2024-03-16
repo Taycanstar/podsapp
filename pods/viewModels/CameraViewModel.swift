@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 import AVFoundation
 
@@ -544,7 +543,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //            DispatchQueue.main.async {
 //                let metadata = transcribedText ?? ""
 //                print("Transcription result: \(metadata)")
-//                
+//
 //                // Check if the last item in the Pod is the same as the current preview URL
 //                if self.currentPod.items.last?.videoURL != videoURL {
 //                    let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
@@ -561,8 +560,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //
 //                // Update the recording state
 //                self.isRecording = false
-//                
-//                
+//
+//
 //            }
 //        }
 //    }
@@ -660,7 +659,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-//    
+//
 //    func handleSelectedVideo(_ url: URL) {
 ////        self.isProcessingVideo = true // Notify that processing starts
 //        print("Selected video URL: \(url)")
