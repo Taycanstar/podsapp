@@ -273,28 +273,64 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
         
+//    private func handleRecognizedText(_ text: String) {
+//        let command = text.lowercased()
+//        if command.contains("start recording") {
+//            if !self.isRecording {
+//                DispatchQueue.main.async {
+//                    self.startRecording()
+//                }
+//            }
+//        } else if command.contains("stop recording") {
+//            if self.isRecording {
+//                DispatchQueue.main.async {
+//                    self.stopRecording()
+//                }
+//            }
+//        } else {
+//            DispatchQueue.main.async {
+//                if !self.voiceCommands.contains(where: { command.contains($0) }) {
+//                    self.transcription += text + " "
+//                }
+//            }
+//        }
+//    }
+    
     private func handleRecognizedText(_ text: String) {
-        let command = text.lowercased()
-        if command.contains("start recording") {
-            if !self.isRecording {
-                DispatchQueue.main.async {
+        let command = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Using a switch statement can prepare the structure for easier extension with new commands
+        switch command {
+        case let cmd where cmd.contains("start recording"):
+            DispatchQueue.main.async {
+                if !self.isRecording {
                     self.startRecording()
                 }
             }
-        } else if command.contains("stop recording") {
-            if self.isRecording {
-                DispatchQueue.main.async {
+        case let cmd where cmd.contains("stop recording"):
+            DispatchQueue.main.async {
+                if self.isRecording {
                     self.stopRecording()
                 }
             }
-        } else {
-            DispatchQueue.main.async {
-                if !self.voiceCommands.contains(where: { command.contains($0) }) {
-                    self.transcription += text + " "
-                }
+        default:
+            // Handle transcription updates outside the main thread if not necessary,
+            // then update the UI or state on the main thread if needed.
+            if !self.voiceCommands.contains(where: { command.contains($0) }) {
+                // Consider adding a mechanism to update transcription less frequently
+                // if updates are very frequent. This is just an example, adjust as needed.
+                self.appendTranscription(text)
             }
         }
     }
+
+    // Helper function to append text to the transcription safely
+    private func appendTranscription(_ text: String) {
+        DispatchQueue.main.async {
+            self.transcription += text + " "
+        }
+    }
+
     
 
     func startRecording() {
