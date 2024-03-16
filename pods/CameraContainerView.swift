@@ -140,7 +140,7 @@ struct CameraContainerView: View {
                                           .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
                                           .clipShape(Circle())
                                   }
-                                  .padding(.bottom, 146)
+                                  .padding(.bottom, 100)
                                   .frame(width: 60, height: 60)
                                   .sheet(isPresented: $isShowingVideoPicker) {
                                       PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
@@ -172,7 +172,7 @@ struct CameraContainerView: View {
                         }
                         .frame(width: 60, height: 60) // Example size, adjust as needed
 
-                        .padding(.bottom, 146)
+                        .padding(.bottom, 100)
                    
                       }
                     }
@@ -191,7 +191,7 @@ struct CameraContainerView: View {
                                    Spacer()
                                }
                            }
-                           .padding(.vertical, 71)
+                           .padding(.vertical, 25)
                        }
           
             // Floating Camera Control Buttons
@@ -260,8 +260,8 @@ struct CameraContainerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity,alignment: .bottom)
            
-            .padding(.bottom,66)
-//            
+            .padding(.bottom,20)
+//
 //            Button {
 ////                cameraModel.recordedDuration = 0
 //                cameraModel.previewURL = nil
@@ -293,7 +293,7 @@ struct CameraContainerView: View {
             
         })
         .animation(.easeInOut, value: cameraModel.showPreview)
-        .preferredColorScheme(.dark)
+//        .preferredColorScheme(.dark)
         
         .overlay(
                 fullScreenOverlayView
@@ -359,16 +359,10 @@ struct FinalPreview: View {
                 VideoPlayer(player: player)
                     .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
 //                    .edgesIgnoringSafeArea(.all)
-                    .ignoresSafeArea()
+//                    .ignoresSafeArea()
                     .aspectRatio(CGSize(width: 9, height: 16), contentMode: .fill)
                     .frame(width: size.width, height: size.height)
-//                    .aspectRatio(16/9, contentMode: .fill)
-                //                .edgesIgnoringSafeArea(.all)
-                //                .aspectRatio(contentMode: .fill)
-                //                .frame(width: size.width, height: size.height)
-                
-            
-                
+      
                     .onAppear {
                         setupPlayer()
                     }
@@ -376,10 +370,6 @@ struct FinalPreview: View {
                         cleanUpPlayer()
                     }
             }
-//            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-//                .padding(.bottom, proxy.safeAreaInsets.bottom)
-//                .padding(.top, proxy.safeAreaInsets.top)
-
                 .overlay {
                     VStack {
                         HStack {
@@ -444,7 +434,7 @@ struct FinalPreview: View {
                             }
 
                         }
-                        .padding(.vertical, 76)
+                        .padding(.vertical, 30)
                         
                     }
                     .padding()
