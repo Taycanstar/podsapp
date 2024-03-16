@@ -211,14 +211,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-
-
-    // Ensure to call this method appropriately, for example, before starting a new recording
-    // or in error handling scenarios to prepare the session for another attempt.
-
-
-
-    
     // Speech Service Configuration
         func configureSpeechService() {
             guard let subscriptionKey = ProcessInfo.processInfo.environment["SPEECH_KEY"],
@@ -332,13 +324,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
               }
           print(transcription, "transcription after")
       }
-    
- 
-
- 
-
-    
-    
 //
 //    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
 //         if let error = error {
@@ -374,13 +359,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-    
-    
-
-    
-    
-
-
     
     func compressVideo(inputURL: URL, outputURL: URL, handler: @escaping (Bool, URL?) -> Void) {
         let asset = AVURLAsset(url: inputURL, options: nil)
@@ -588,42 +566,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //            }
 //        }
 //    }
-//    
-    
-//    func confirmVideo() {
-//        guard let videoURL = previewURL else {
-//            print("No video to confirm.")
-//            return
-//        }
 //
-//        // Ensure the transcription process is marked as complete
-//        isTranscribing = false
-//
-//        // Use the live transcription directly, since it's been accumulating during recording
-//        let metadata = self.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
-//        
-//        // Clear the transcription for the next recording
-//        self.transcription = ""
-//
-//        // Process the metadata to create and append a new PodItem
-//        DispatchQueue.main.async {
-//            if self.currentPod.items.last?.videoURL != videoURL {
-//                let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-//                let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-//                self.currentPod.items.append(newItem)
-//                print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
-//            } else {
-//                print("The item is already in the Pod.")
-//            }
-//
-//            // Reset the preview URL and hide the preview
-//            self.showPreview = false
-//
-//            // Update the recording state
-//            self.isRecording = false
-//        }
-//    }
-    
     func confirmVideo() {
         guard let videoURL = previewURL else {
             print("No video to confirm.")
