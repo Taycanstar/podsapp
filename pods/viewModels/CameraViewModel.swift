@@ -96,7 +96,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     
     // MARK: Video Recorder Properties
     @Published var isRecording: Bool = false
-    @Published var recordedURLs: [URL] = []
+//    @Published var recordedURLs: [URL] = []
     @Published var previewURL: URL?
     @Published var showPreview: Bool = false
     
@@ -108,7 +108,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     
     // Top Progress Bar
     @Published var recordedDuration: CGFloat = 0
-    // YOUR OWN TIMING
     @Published var maxDuration: CGFloat = 20
     
     @Published var isProcessingVideo = false
@@ -328,11 +327,16 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           output.stopRecording()
 //          audioRecorder?.stop()
           isRecording = false
-//          if self.isWaveformEnabled {
-//              self.toggleWaveformRecognition() // Assuming this method toggles the state and stops recognition
-//              }
+          if self.isWaveformEnabled {
+              self.toggleWaveformRecognition() // Assuming this method toggles the state and stops recognition
+              }
           print(transcription, "transcription after")
       }
+    
+ 
+
+ 
+
     
     
 //
@@ -347,16 +351,16 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //             self.showPreview = true
 //         }
 //     }
+    
+    
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         if let error = error {
             print("Recording error: \(error)")
             return
         }
 
-        // Specify the output path for the compressed video
         let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
         
-        // Call the compression function
         compressVideo(inputURL: outputFileURL, outputURL: compressedURL) { [weak self] (success, compressedURL) in
             guard let self = self, success, let compressedURL = compressedURL else {
                 print("Compression failed.")
@@ -364,15 +368,17 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
             
             DispatchQueue.main.async {
-                // Use the compressed video URL
                 self.previewURL = compressedURL
                 self.showPreview = true
-               
-                // Now you can proceed with uploading compressedURL
-                // Remember to clean up temporary files when done
+
             }
         }
     }
+    
+    
+
+    
+    
 
 
     
@@ -626,14 +632,20 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
         DispatchQueue.main.async {
             // Here, create and append a new PodItem with the metadata
-            let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
             let metadata = self.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
+            let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+           
             let newItem = PodItem(id: UUID().hashValue, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
             self.currentPod.items.append(newItem)
             
             
             print("Metadata added to new item and appended to Pod.")
+            
 
+              // Prepare the session for the next recording
+            self.recordedDuration = 0
+          
+//            self.recordedURLs.removeAll()
             // Reset states as necessary
 //            self.previewURL = nil
             self.showPreview = false
