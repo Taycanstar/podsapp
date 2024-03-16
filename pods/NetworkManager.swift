@@ -1,6 +1,10 @@
 import Foundation
 
 class NetworkManager {
+
+    
+//    let baseUrl = "http://192.168.1.12:8000"
+
     let baseUrl = "http://192.168.1.251:8000"
 
     
