@@ -377,9 +377,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     
     
 
-    
-    
-
 
     
     func compressVideo(inputURL: URL, outputURL: URL, handler: @escaping (Bool, URL?) -> Void) {
