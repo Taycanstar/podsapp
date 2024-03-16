@@ -210,8 +210,17 @@ struct CameraContainerView: View {
                             .font(.system(size: 16))
                             .padding()
                     }
+                    
+                    Button(action: cameraModel.toggleWaveform) {
+                        Image(systemName: "waveform")
+                            .font(.title)
+                            .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
+                            .font(.system(size: 16))
+                            .padding()
+                    }
+
                 }
-                .position(x: UIScreen.main.bounds.width - 33, y: 80)
+                .position(x: UIScreen.main.bounds.width - 33, y: 100)
             }
 
                      
