@@ -33,10 +33,7 @@ struct ContentView: View {
                             HomeView()
                         case 1:
                             CameraContainerView(shouldNavigateToHome: $shouldNavigateToHome)
-//                                .background(Color.black.edgesIgnoringSafeArea(.top))
 
-//                                .padding(.bottom, 46)
-//                                .edgesIgnoringSafeArea(.all)
                                 .environment(\.colorScheme, .dark)
                         case 2:
                             ProfileView() // Assuming you have a ProfileView
