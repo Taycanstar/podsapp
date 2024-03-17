@@ -154,6 +154,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
     
+    
     private func getDocumentsDirectory() -> URL {
           FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
       }
@@ -203,8 +204,16 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             if session.canAddOutput(output) {
                 session.addOutput(output)
             }
+            
+            
 
             session.commitConfiguration()
+            
+            // Start the session on a background thread
+                  DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                      print("Is main thread: \(Thread.isMainThread)")
+                      self?.session.startRunning()
+                  }
         } catch {
             print("Error setting up video/audio input: \(error)")
         }

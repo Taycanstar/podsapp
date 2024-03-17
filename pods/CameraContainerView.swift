@@ -226,7 +226,7 @@ struct CameraContainerView: View {
                            }
 
                         // Hide the popup after a few seconds and reset the message
-                          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                          DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                               showingVoiceCommandPopup = false
                               // Reset the message after the animation completes to ensure it's ready for the next toggle
                               DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
