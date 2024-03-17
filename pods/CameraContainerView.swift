@@ -122,7 +122,7 @@ struct CameraContainerView: View {
                           }
                           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                        
-                          .padding(.top, 20)
+                          .padding(.top, 15)
                           .padding(.leading, 0)
                         
                       }
@@ -143,7 +143,7 @@ struct CameraContainerView: View {
                                           .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
                                           .clipShape(Circle())
                                   }
-                                  .padding(.bottom, 100)
+                                  .padding(.bottom, 146)
                                   .frame(width: 60, height: 60)
                                   .sheet(isPresented: $isShowingVideoPicker) {
                                       PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
@@ -175,7 +175,7 @@ struct CameraContainerView: View {
                         }
                         .frame(width: 60, height: 60) // Example size, adjust as needed
 
-                        .padding(.bottom, 100)
+                        .padding(.bottom, 146)
                    
                       }
                     }
@@ -194,7 +194,7 @@ struct CameraContainerView: View {
                                    Spacer()
                                }
                            }
-                           .padding(.vertical, 25)
+                           .padding(.vertical, 71)
                        }
           
             // Floating Camera Control Buttons
@@ -284,7 +284,7 @@ struct CameraContainerView: View {
 
 
            
-            .padding(.bottom,20)
+            .padding(.bottom,66)
 //
 //            Button {
 ////                cameraModel.recordedDuration = 0
@@ -391,96 +391,96 @@ struct FinalPreview: View {
     var isFrontCameraUsed: Bool
     @Binding var showCreatePodView: Bool
     
-
     var body: some View {
-        GeometryReader { proxy in
-            let size = proxy.size
-            ZStack {
-                VideoPlayer(player: player)
-                    .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
-//                    .edgesIgnoringSafeArea(.all)
-//                    .ignoresSafeArea()
-                    .aspectRatio(CGSize(width: 9, height: 16), contentMode: .fill)
-                    .frame(width: size.width, height: size.height)
-      
-                    .onAppear {
-                        setupPlayer()
-                    }
-                    .onDisappear {
-                        cleanUpPlayer()
-                    }
-            }
-                .overlay {
-                    VStack {
-                        HStack {
-                            Button(action: {
-                                if cameraModel.currentPod.items.isEmpty {
-                                       // If it's the first item (Pod is empty), just close the preview
-                                       // This essentially cancels the recording
-                                       showPreview = false
-                                   } else {
-                                       // If Pod has items, prepare to re-record the current item
-                                       // This keeps the Pod items intact but allows for re-recording
-                                       cameraModel.reRecordCurrentItem()
-                                       showPreview = false
-                                   }
-                            }) {
-                                Image(systemName: "xmark")
-                                    .foregroundColor(.white)
-                                    .font(.system(size: 22))
-                                    .padding() // Adds more tappable area around the icon
-                            }
-                            .padding(.leading, -15)
-                            Spacer()
-                            Button(action: {
-                                cleanUpPlayer()
-                                cameraModel.confirmAndNavigateToCreatePod()
-                                   showCreatePodView = true
-                                print("Forward arrow tapped")
-                            }) {
-                                ZStack {
-                                    Circle()
-                                        .foregroundColor(.black)
-                                        .frame(width: 44, height: 44)  // Adjust the size as needed
+            GeometryReader { proxy in
+                let size = proxy.size
+                ZStack {
+                    VideoPlayer(player: player)
+                        .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+    //                    .edgesIgnoringSafeArea(.all)
+                        .ignoresSafeArea()
+                        .aspectRatio(CGSize(width: 9, height: 16), contentMode: .fill)
+                        .frame(width: size.width, height: size.height)
+ 
+                        .onAppear {
+                            setupPlayer()
+                        }
+                        .onDisappear {
+                            cleanUpPlayer()
+                        }
+                }
 
-                                    Image(systemName: "arrow.forward")
-                                        .font(.system(size: 24))
+                    .overlay {
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    if cameraModel.currentPod.items.isEmpty {
+                                           // If it's the first item (Pod is empty), just close the preview
+                                           // This essentially cancels the recording
+                                           showPreview = false
+                                       } else {
+                                           // If Pod has items, prepare to re-record the current item
+                                           // This keeps the Pod items intact but allows for re-recording
+                                           cameraModel.reRecordCurrentItem()
+                                           showPreview = false
+                                       }
+                                }) {
+                                    Image(systemName: "xmark")
                                         .foregroundColor(.white)
-                                        .scaleEffect(0.8)  // Adjust the scale to fit the icon within the black circle
+                                        .font(.system(size: 22))
+                                        .padding() // Adds more tappable area around the icon
                                 }
-                            }                        }
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                cleanUpPlayer()
-                                cameraModel.confirmVideo()
-                            }) {
-                                ZStack {
-                                    Circle()
-                                        .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
-                                        .frame(width: 44, height: 44) // Adjust size as needed
-                                    if cameraModel.isTranscribing {
-                                                    // Show a loading animation or progress view
-                                                    ProgressView()
-                                                        .scaleEffect(1, anchor: .center)
-                                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    } else {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 18))
+                                .padding(.leading, -15)
+                                Spacer()
+                                Button(action: {
+                                    cleanUpPlayer()
+                                    cameraModel.confirmAndNavigateToCreatePod()
+                                       showCreatePodView = true
+                                    print("Forward arrow tapped")
+                                }) {
+                                    ZStack {
+                                        Circle()
+                                            .foregroundColor(.black)
+                                            .frame(width: 44, height: 44)  // Adjust the size as needed
+
+                                        Image(systemName: "arrow.forward")
+                                            .font(.system(size: 24))
                                             .foregroundColor(.white)
+                                            .scaleEffect(0.8)  // Adjust the scale to fit the icon within the black circle
+                                    }
+                                }                        }
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                Button(action: {
+                                    cleanUpPlayer()
+                                    cameraModel.confirmVideo()
+                                }) {
+                                    ZStack {
+                                        Circle()
+                                            .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                                            .frame(width: 44, height: 44) // Adjust size as needed
+                                        if cameraModel.isTranscribing {
+                                                        // Show a loading animation or progress view
+                                                        ProgressView()
+                                                            .scaleEffect(1, anchor: .center)
+                                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        } else {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.white)
+                                        }
                                     }
                                 }
-                            }
 
+                            }
+                            .padding(.vertical, 76)
+                            
                         }
-                        .padding(.vertical, 30)
-                        
+                        .padding()
                     }
-                    .padding()
-                }
+            }
         }
-    }
 
     private func setupPlayer() {
         player.replaceCurrentItem(with: AVPlayerItem(url: url))
@@ -504,6 +504,7 @@ extension Image {
             .foregroundColor(.white)
     }
 }
+
 
 
 //#Preview {

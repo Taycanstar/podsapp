@@ -11,78 +11,62 @@ import SwiftUI
 import MicrosoftCognitiveServicesSpeech
 
 
+
 struct ContentView: View {
-    @State private var selectedTab = 0
-    @State private var isAuthenticated = true
-    @Environment(\.colorScheme) var colorScheme
+    @State private var selectedTab: Int = 0
+    @State private var isRecording = false
+    @State private var showVideoPreview = false
+    @State private var recordedVideoURL: URL?
+    @State private var isAuthenticated = true // Track authentication status
     @State private var shouldNavigateToHome = false
+
 
     var body: some View {
         Group {
             if isAuthenticated {
-                TabView(selection: $selectedTab) {
-                    HomeView()
-//                        .preferredColorScheme(determineAccentColor())
-                        .tag(0)
-                        .tabItem {
-                            Image(systemName: "house")
-                             
-                            
-                               
+                // User is authenticated, show main content
+                ZStack(alignment: .bottom) {
+                    // Content views
+                    Group {
+                        switch selectedTab {
+                        case 0:
+                            HomeView()
+                        case 1:
+                            CameraContainerView(shouldNavigateToHome: $shouldNavigateToHome)
+//                                .background(Color.black.edgesIgnoringSafeArea(.top))
+
+//                                .padding(.bottom, 46)
+//                                .edgesIgnoringSafeArea(.all)
+                                .environment(\.colorScheme, .dark)
+                        case 2:
+                            ProfileView() // Assuming you have a ProfileView
+                        default:
+                            Text("Content not available")
                         }
-                        
-                    CameraContainerView(shouldNavigateToHome: $shouldNavigateToHome)
-                        .preferredColorScheme(selectedTab == 1 ? .dark : nil)
-                                                /* .background(Color.black.edgesIgnoringSafeArea(.top))*/ // Assume necessary properties are passed
-                        .tag(1)
-                        .tabItem {
-                            Image(systemName: "camera")
-                             
+
+
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onChange(of: shouldNavigateToHome) { [shouldNavigateToHome] in
+                        if shouldNavigateToHome {
+                            selectedTab = 0 // Assuming HomeView is at index 0
+                            self.shouldNavigateToHome = false // Reset the flag
                         }
-                        
-                    ProfileView() // Assume ProfileView exists
-                        .tag(2)
-                        .tabItem {
-                            Image(systemName: "person")
-                               
-                        }
+                    }
+
+                    // Custom tab bar
+                    CustomTabBar(selectedTab: $selectedTab)
                 }
-                .accentColor(determineAccentColor())
-         
-                .onChange(of: selectedTab) {
-                                   // Call setTabBarAppearance here if you need to adjust based on the selected tab
-                                   setTabBarAppearanceBasedOnSelectedTab()
-                               }
             } else {
-                // Show authentication view if not authenticated
-                MainOnboardingView(isAuthenticated: $isAuthenticated)
+                // User is not authenticated, show the landing/authentication view
+                MainOnboardingView(isAuthenticated:$isAuthenticated)
+//                EmptyView()
+
             }
         }
     }
-    
-    private func determineAccentColor() -> Color {
-          colorScheme == .dark ? .white : .black
-      }
-    
-    private func setTabBarAppearanceBasedOnSelectedTab() {
-        // This function now checks the selectedTab and applies appearance changes accordingly
-        if selectedTab == 1 { // Assuming the Camera view is at index 1
-            // Apply dark appearance specifically for Camera view
-            setTabBarAppearance(colorScheme: .dark)
-        } else {
-            // Apply appearance based on system colorScheme for other tabs
-            setTabBarAppearance(colorScheme: colorScheme)
-        }
-    }
-
-    private func setTabBarAppearance(colorScheme: ColorScheme) {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = colorScheme == .dark ? UIColor.black : UIColor.white
-
-        UITabBar.appearance().standardAppearance = appearance
-        if #available(iOS 15.0, *) {
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
-    }
 }
+
+//#Preview {
+//    ContentView()
+//}
