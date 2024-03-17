@@ -226,39 +226,63 @@ struct CameraContainerView: View {
 
                      
             
+//            // MARK: Controls
+//            ZStack{
+//                
+//                Button {
+//                    if cameraModel.isRecording{
+//                        cameraModel.stopRecording()
+//                    }
+//                    else{
+//                        cameraModel.startRecording()
+//                    }
+//                } label: {
+//                    Image("Reels")
+//                        .resizable()
+//                        .renderingMode(.template)
+//                        .aspectRatio(contentMode: .fit)
+//                        .foregroundColor(.black)
+//                        .opacity(cameraModel.isRecording ? 0 : 1)
+//                        .padding(12)
+//                        .frame(width: 60, height: 60)
+//                        .background{
+//                            Circle()
+//                                .stroke(cameraModel.isRecording ? .clear : .black)
+//                        }
+//                        .padding(6)
+//                        .background{
+//                            Circle()
+//                                .fill(cameraModel.isRecording ? .red : .white)
+//                        }
+//                }
+//                
+//
+//            }
+//            .frame(maxWidth: .infinity, maxHeight: .infinity,alignment: .bottom)
             // MARK: Controls
             ZStack{
-                
                 Button {
                     if cameraModel.isRecording{
                         cameraModel.stopRecording()
-                    }
-                    else{
+                    } else {
                         cameraModel.startRecording()
                     }
                 } label: {
-                    Image("Reels")
-                        .resizable()
-                        .renderingMode(.template)
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundColor(.black)
-                        .opacity(cameraModel.isRecording ? 0 : 1)
-                        .padding(12)
-                        .frame(width: 60, height: 60)
-                        .background{
-                            Circle()
-                                .stroke(cameraModel.isRecording ? .clear : .black)
-                        }
-                        .padding(6)
-                        .background{
-                            Circle()
-                                .fill(cameraModel.isRecording ? .red : .white)
-                        }
-                }
-                
+                    ZStack {
+                        Circle()
+                            .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
+                            .frame(width: 62, height: 62) // Inner circle size
 
+                        Circle()
+                            .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
+                            .frame(width: 72, height: 72) // Outer circle size (including padding)
+                    }
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity,alignment: .bottom)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+
+
+
            
             .padding(.bottom,20)
 //
