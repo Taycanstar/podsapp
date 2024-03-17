@@ -86,6 +86,9 @@ struct CameraContainerView: View {
     @State private var selectedVideoURL: URL?
     @State private var isProcessingVideo = false
     @Binding var shouldNavigateToHome: Bool
+    @State private var showingVoiceCommandPopup = false
+    @State private var voiceCommandPopupMessage: String? = nil
+
 
 
 
@@ -212,7 +215,25 @@ struct CameraContainerView: View {
                             .padding()
                     }
                     
-                    Button(action: cameraModel.toggleWaveform) {
+                    Button(action: {
+                        cameraModel.toggleWaveform()
+                           // Set the message based on the waveform state
+                           voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Voice commands enabled: Say 'start recording' or 'stop recording'" : "Voice commands disabled"
+
+                           // Show the message
+                           withAnimation {
+                               showingVoiceCommandPopup = true
+                           }
+
+                        // Hide the popup after a few seconds and reset the message
+                          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                              showingVoiceCommandPopup = false
+                              // Reset the message after the animation completes to ensure it's ready for the next toggle
+                              DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                  voiceCommandPopupMessage = nil
+                              }
+                          }
+                    }) {
                         Image(systemName: "waveform")
                             .font(.title)
                             .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
@@ -223,42 +244,21 @@ struct CameraContainerView: View {
                 }
                 .position(x: UIScreen.main.bounds.width - 33, y: 100)
             }
+            
+            if let message = voiceCommandPopupMessage {
+                   VStack {
+                       VoiceCommandPopupView(message: message)
+                           .padding(.top, 20) // Adjust this value to ensure it doesn't overlap with the notch or status bar
+                           .transition(.move(edge: .top).combined(with: .opacity))
+                           .animation(.easeInOut, value: UUID())
+
+                       Spacer() // Pushes the popup to the top
+                   }
+                   .zIndex(1) // Ensure it's above other content
+               }
 
                      
-            
-//            // MARK: Controls
-//            ZStack{
-//                
-//                Button {
-//                    if cameraModel.isRecording{
-//                        cameraModel.stopRecording()
-//                    }
-//                    else{
-//                        cameraModel.startRecording()
-//                    }
-//                } label: {
-//                    Image("Reels")
-//                        .resizable()
-//                        .renderingMode(.template)
-//                        .aspectRatio(contentMode: .fit)
-//                        .foregroundColor(.black)
-//                        .opacity(cameraModel.isRecording ? 0 : 1)
-//                        .padding(12)
-//                        .frame(width: 60, height: 60)
-//                        .background{
-//                            Circle()
-//                                .stroke(cameraModel.isRecording ? .clear : .black)
-//                        }
-//                        .padding(6)
-//                        .background{
-//                            Circle()
-//                                .fill(cameraModel.isRecording ? .red : .white)
-//                        }
-//                }
-//                
-//
-//            }
-//            .frame(maxWidth: .infinity, maxHeight: .infinity,alignment: .bottom)
+
             // MARK: Controls
             ZStack{
                 Button {
@@ -361,6 +361,22 @@ extension View {
         self.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
     }
 }
+
+struct VoiceCommandPopupView: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .font(.system(size: 14))
+            .fontWeight(.semibold)
+            .padding(15)
+            .background(Color(red: 66 / 255, green: 66 / 255, blue: 66 / 255))
+            .foregroundColor(.white)
+            .cornerRadius(100)
+            .frame(width: 300) // Set a fixed width for the popup
+    }
+}
+
 
 
 
