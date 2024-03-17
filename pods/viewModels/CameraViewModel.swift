@@ -159,22 +159,22 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
       }
     
-//    func setupAudioRecorder() {
-//           let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-//           let settings = [
-//               AVFormatIDKey: Int(kAudioFormatLinearPCM),
-//               AVSampleRateKey: 12000,
-//               AVNumberOfChannelsKey: 1,
-//               AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-//           ]
-//
-//           do {
-//               audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
-//               audioRecorder?.prepareToRecord()
-//           } catch {
-//               print("Audio recorder setup failed: \(error)")
-//           }
-//       }
+    func setupAudioRecorder() {
+           let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+           let settings = [
+               AVFormatIDKey: Int(kAudioFormatLinearPCM),
+               AVSampleRateKey: 12000,
+               AVNumberOfChannelsKey: 1,
+               AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+           ]
+
+           do {
+               audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
+               audioRecorder?.prepareToRecord()
+           } catch {
+               print("Audio recorder setup failed: \(error)")
+           }
+       }
 
 
     func setUp() {
@@ -319,13 +319,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 }
             }
         default:
-            // Handle transcription updates outside the main thread if not necessary,
-            // then update the UI or state on the main thread if needed.
-            if !self.voiceCommands.contains(where: { command.contains($0) }) {
-                // Consider adding a mechanism to update transcription less frequently
-                // if updates are very frequent. This is just an example, adjust as needed.
-                self.appendTranscription(text)
-            }
+            break
+//            // Handle transcription updates outside the main thread if not necessary,
+//            // then update the UI or state on the main thread if needed.
+//            if !self.voiceCommands.contains(where: { command.contains($0) }) {
+//                // Consider adding a mechanism to update transcription less frequently
+//                // if updates are very frequent. This is just an example, adjust as needed.
+//                self.appendTranscription(text)
+//            }
         }
     }
 
@@ -345,8 +346,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         print(transcription, "transcription before")
 
         // Start audio recording
-//           setupAudioRecorder()
-//           audioRecorder?.record()
+           setupAudioRecorder()
+           audioRecorder?.record()
         
           isRecording = true
       }
@@ -357,7 +358,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
       func stopRecording() {
           output.stopRecording()
-//          audioRecorder?.stop()
+          audioRecorder?.stop()
           isRecording = false
           if self.isWaveformEnabled {
               self.toggleWaveformRecognition() // Assuming this method toggles the state and stops recognition
@@ -365,40 +366,40 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           print(transcription, "transcription after")
       }
 //
-//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-//         if let error = error {
-//             print(error.localizedDescription)
-//             return
-//         }
-//
-//         DispatchQueue.main.async {
-//             self.previewURL = outputFileURL
-//             self.showPreview = true
-//         }
-//     }
-    
-    
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-        if let error = error {
-            print("Recording error: \(error)")
-            return
-        }
+         if let error = error {
+             print(error.localizedDescription)
+             return
+         }
 
-        let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
-        
-        compressVideo(inputURL: outputFileURL, outputURL: compressedURL) { [weak self] (success, compressedURL) in
-            guard let self = self, success, let compressedURL = compressedURL else {
-                print("Compression failed.")
-                return
-            }
-            
-            DispatchQueue.main.async {
-                self.previewURL = compressedURL
-                self.showPreview = true
-
-            }
-        }
-    }
+         DispatchQueue.main.async {
+             self.previewURL = outputFileURL
+             self.showPreview = true
+         }
+     }
+    
+    
+//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+//        if let error = error {
+//            print("Recording error: \(error)")
+//            return
+//        }
+//
+//        let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
+//        
+//        compressVideo(inputURL: outputFileURL, outputURL: compressedURL) { [weak self] (success, compressedURL) in
+//            guard let self = self, success, let compressedURL = compressedURL else {
+//                print("Compression failed.")
+//                return
+//            }
+//            
+//            DispatchQueue.main.async {
+//                self.previewURL = compressedURL
+//                self.showPreview = true
+//
+//            }
+//        }
+//    }
     
     func compressVideo(inputURL: URL, outputURL: URL, handler: @escaping (Bool, URL?) -> Void) {
         let asset = AVURLAsset(url: inputURL, options: nil)
@@ -559,84 +560,94 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // For instance, if you have a function to setup the camera for recording:
         // setupCameraForRecording()
     }
+    
+    func filterCommands(from transcription: String) -> String {
+        let commandsToFilter = ["stop recording"] // Add any other commands you want to filter out
+        var filteredTranscription = transcription
+        for command in commandsToFilter {
+            filteredTranscription = filteredTranscription.replacingOccurrences(of: command, with: "")
+        }
+        return filteredTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-//    func confirmVideo() {
-//        guard let videoURL = previewURL else {
-//            print("No video to confirm.")
-//            return
-//        }
-//        isTranscribing = true
-//
-//        // Get the URL of the recorded audio
-//        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-//        print("Audio file path: \(audioFilename.path)")
-//
-//        // Check if audio file exists
-//        if !FileManager.default.fileExists(atPath: audioFilename.path) {
-//            print("Audio file does not exist.")
-//        } else {
-//            print("Audio file found, proceeding with transcription.")
-//        }
-//
-//        // Transcribe the audio and then confirm the video
-//        transcribeAudio(from: audioFilename) { [weak self] transcribedText in
-//            guard let self = self else { return }
-//            DispatchQueue.main.async {
-//                let metadata = transcribedText ?? ""
-//                print("Transcription result: \(metadata)")
-//
-//                // Check if the last item in the Pod is the same as the current preview URL
-//                if self.currentPod.items.last?.videoURL != videoURL {
-//                    let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-//                    let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-//                    self.currentPod.items.append(newItem)
-////                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
-//                } else {
-//                    print("The item is already in the Pod.")
-//                }
-//
-//                // Reset the preview URL and hide the preview
-//                self.isTranscribing = false
-//                self.showPreview = false
-//
-//                // Update the recording state
-//                self.isRecording = false
-//
-//
-//            }
-//        }
-//    }
-//
     func confirmVideo() {
         guard let videoURL = previewURL else {
             print("No video to confirm.")
             return
         }
+        isTranscribing = true
 
-        DispatchQueue.main.async {
-            // Here, create and append a new PodItem with the metadata
-            let metadata = self.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
-            let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-           
-            let newItem = PodItem(id: UUID().hashValue, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-            self.currentPod.items.append(newItem)
-            
-            
-            print("Metadata added to new item and appended to Pod.")
-            
+        // Get the URL of the recorded audio
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+        print("Audio file path: \(audioFilename.path)")
 
-              // Prepare the session for the next recording
-            self.recordedDuration = 0
-          
-//            self.recordedURLs.removeAll()
-            // Reset states as necessary
-//            self.previewURL = nil
-            self.showPreview = false
-            self.isRecording = false
-            self.transcription = ""
+        // Check if audio file exists
+        if !FileManager.default.fileExists(atPath: audioFilename.path) {
+            print("Audio file does not exist.")
+        } else {
+            print("Audio file found, proceeding with transcription.")
+        }
 
+        // Transcribe the audio and then confirm the video
+        transcribeAudio(from: audioFilename) { [weak self] transcribedText in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                var metadata = transcribedText ?? ""
+                metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
+                print("Transcription result: \(metadata)")
+
+                // Check if the last item in the Pod is the same as the current preview URL
+                if self.currentPod.items.last?.videoURL != videoURL {
+                    let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+                    let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                    self.currentPod.items.append(newItem)
+//                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+                } else {
+                    print("The item is already in the Pod.")
+                }
+
+                // Reset the preview URL and hide the preview
+                self.isTranscribing = false
+                self.showPreview = false
+                self.recordedDuration = 0
+                // Update the recording state
+                self.isRecording = false
+
+
+            }
         }
     }
+//
+//    func confirmVideo() {
+//        guard let videoURL = previewURL else {
+//            print("No video to confirm.")
+//            return
+//        }
+//
+//        DispatchQueue.main.async {
+//            // Here, create and append a new PodItem with the metadata
+//            let metadata = self.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
+//            let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+//           
+//            let newItem = PodItem(id: UUID().hashValue, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+//            self.currentPod.items.append(newItem)
+//            
+//            
+//            print("Metadata added to new item and appended to Pod.")
+//            
+//
+//              // Prepare the session for the next recording
+//            self.recordedDuration = 0
+//          
+////            self.recordedURLs.removeAll()
+//            // Reset states as necessary
+////            self.previewURL = nil
+//            self.showPreview = false
+//            self.isRecording = false
+//            self.transcription = ""
+//
+//        }
+//    }
 
 
     
