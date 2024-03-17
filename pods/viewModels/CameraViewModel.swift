@@ -209,11 +209,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
             session.commitConfiguration()
             
-            // Start the session on a background thread
-                  DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                      print("Is main thread: \(Thread.isMainThread)")
-                      self?.session.startRunning()
-                  }
+        
         } catch {
             print("Error setting up video/audio input: \(error)")
         }
