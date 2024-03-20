@@ -390,6 +390,8 @@ struct FinalPreview: View {
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
     @Binding var showCreatePodView: Bool
+    @State private var isPresentingEditor = false
+
     
     var body: some View {
             GeometryReader { proxy in
@@ -415,15 +417,15 @@ struct FinalPreview: View {
                             HStack {
                                 Button(action: {
                                     if cameraModel.currentPod.items.isEmpty {
-                                           // If it's the first item (Pod is empty), just close the preview
-                                           // This essentially cancels the recording
-                                           showPreview = false
-                                       } else {
-                                           // If Pod has items, prepare to re-record the current item
-                                           // This keeps the Pod items intact but allows for re-recording
-                                           cameraModel.reRecordCurrentItem()
-                                           showPreview = false
-                                       }
+                                        // If it's the first item (Pod is empty), just close the preview
+                                        // This essentially cancels the recording
+                                        showPreview = false
+                                    } else {
+                                        // If Pod has items, prepare to re-record the current item
+                                        // This keeps the Pod items intact but allows for re-recording
+                                        cameraModel.reRecordCurrentItem()
+                                        showPreview = false
+                                    }
                                 }) {
                                     Image(systemName: "xmark")
                                         .foregroundColor(.white)
@@ -435,20 +437,38 @@ struct FinalPreview: View {
                                 Button(action: {
                                     cleanUpPlayer()
                                     cameraModel.confirmAndNavigateToCreatePod()
-                                       showCreatePodView = true
+                                    showCreatePodView = true
                                     print("Forward arrow tapped")
                                 }) {
                                     ZStack {
                                         Circle()
                                             .foregroundColor(.black)
                                             .frame(width: 44, height: 44)  // Adjust the size as needed
-
+                                        
                                         Image(systemName: "arrow.forward")
                                             .font(.system(size: 24))
                                             .foregroundColor(.white)
                                             .scaleEffect(0.8)  // Adjust the scale to fit the icon within the black circle
                                     }
-                                }                        }
+                                }
+                                
+                            }
+                            
+                            HStack{
+                                Spacer()
+                                Button(action: {
+                                    // Trigger crop and rotate mode
+                                    player.pause()
+                                    isPresentingEditor = true
+                                }) {
+                                    Image(systemName: "crop")
+                                        .iconStyle()
+                                        
+                                }
+                            }
+                            .padding(.vertical, 15)
+                            
+                            
                             Spacer()
                             HStack {
                                 Spacer()
@@ -479,6 +499,13 @@ struct FinalPreview: View {
                         }
                         .padding()
                     }
+                    .sheet(isPresented: $isPresentingEditor, onDismiss: {
+                        player.play()  // Resume playing the video
+                    }) {
+                        VideoEditorRepresentable(videoURL: url)
+                            .ignoresSafeArea()
+                    }
+                    
             }
         }
 

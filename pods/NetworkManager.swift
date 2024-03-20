@@ -3,7 +3,7 @@ import Foundation
 class NetworkManager {
 
     
-//    let baseUrl = "http://192.168.1.12:8000"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
     let baseUrl = "http://192.168.1.251:8000"
 

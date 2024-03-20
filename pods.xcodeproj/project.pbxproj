@@ -14,13 +14,13 @@
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362170B22B90F91700DA93EE /* vid.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 362170B02B90F81C00DA93EE /* vid.mp4 */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
+		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
+		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
 		3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */; };
-		3658C3672B91150300137922 /* vid2.mov in Resources */ = {isa = PBXBuildFile; fileRef = 3658C3662B91150300137922 /* vid2.mov */; };
 		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
-		3682F0A52B85699900ABF344 /* space_oddity.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A42B85699900ABF344 /* space_oddity.wav */; };
 		368A27332B9597CE0001BBCA /* pods-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 368A27322B9597CE0001BBCA /* pods-logo.png */; };
 		368A27372B977F5A0001BBCA /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27362B977F5A0001BBCA /* LandingView.swift */; };
 		368A27392B9818330001BBCA /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27382B9818330001BBCA /* InfoView.swift */; };
@@ -75,13 +75,13 @@
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362170B02B90F81C00DA93EE /* vid.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = vid.mp4; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
+		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
+		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
-		3658C3662B91150300137922 /* vid2.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; name = vid2.mov; path = ../../../../Downloads/vid2.mov; sourceTree = "<group>"; };
 		3682F09C2B8403D400ABF344 /* CameraContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContainerView.swift; sourceTree = "<group>"; };
 		3682F0A22B84173100ABF344 /* Podfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Podfile; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		3682F0A42B85699900ABF344 /* space_oddity.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = space_oddity.wav; path = ../../../../../Downloads/space_oddity.wav; sourceTree = "<group>"; };
 		368A27322B9597CE0001BBCA /* pods-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "pods-logo.png"; path = "../../../../../Downloads/pods-logo.png"; sourceTree = "<group>"; };
 		368A27362B977F5A0001BBCA /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
 		368A27382B9818330001BBCA /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
@@ -176,7 +176,6 @@
 			isa = PBXGroup;
 			children = (
 				362170B02B90F81C00DA93EE /* vid.mp4 */,
-				3658C3662B91150300137922 /* vid2.mov */,
 				36C458B82B7421100060355F /* pods */,
 				36C458C92B7421110060355F /* podsTests */,
 				36C458D32B7421110060355F /* podsUITests */,
@@ -199,6 +198,7 @@
 		36C458B82B7421100060355F /* pods */ = {
 			isa = PBXGroup;
 			children = (
+				363889402BAA92010062631B /* VideoEditorRepresentable.swift */,
 				3642C2252B9D3BF100D059B9 /* viewModels */,
 				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
 				3696B9572B98305C00D211D7 /* auth */,
@@ -206,13 +206,13 @@
 				3682F0A22B84173100ABF344 /* Podfile */,
 				36EAFD3E2B79BBCE0001013F /* Info.plist */,
 				36C458B92B7421100060355F /* podsApp.swift */,
-				3682F0A42B85699900ABF344 /* space_oddity.wav */,
 				36004B412B9000DF00423AB1 /* PodView.swift */,
 				3615072D2B7EE48E0060974A /* CreatePodView.swift */,
 				36291B7F2B8166F9000B5F38 /* CarouselView.swift */,
 				362170AE2B90EF0C00DA93EE /* ItemView.swift */,
 				360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */,
 				3682F09C2B8403D400ABF344 /* CameraContainerView.swift */,
+				3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */,
 				36C458E32B7457580060355F /* HomeView.swift */,
 				36C458E52B7458720060355F /* CameraView.swift */,
 				36C458E92B746D650060355F /* ProfileView.swift */,
@@ -386,9 +386,7 @@
 			files = (
 				362170B22B90F91700DA93EE /* vid.mp4 in Resources */,
 				368A27332B9597CE0001BBCA /* pods-logo.png in Resources */,
-				3682F0A52B85699900ABF344 /* space_oddity.wav in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
-				3658C3672B91150300137922 /* vid2.mov in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
 				36C458BE2B7421110060355F /* Assets.xcassets in Resources */,
 			);
@@ -523,6 +521,7 @@
 				3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
+				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
@@ -533,6 +532,7 @@
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
