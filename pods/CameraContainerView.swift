@@ -117,6 +117,7 @@ struct CameraContainerView: View {
                               Image(systemName: "xmark")
                                   
                                   .foregroundColor(.white)
+                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                                   .font(.system(size: 22))
                                   .padding()
                           }
@@ -204,6 +205,7 @@ struct CameraContainerView: View {
                         Image(systemName: "arrow.triangle.capsulepath")
                             .font(.title)
                             .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                             .font(.system(size: 16))
                             .padding()
                     }
@@ -211,6 +213,7 @@ struct CameraContainerView: View {
                         Image(systemName: cameraModel.isFlashOn ? "bolt" : "bolt.slash")
                             .font(.title)
                             .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                             .font(.system(size: 16))
                             .padding()
                     }
@@ -238,6 +241,7 @@ struct CameraContainerView: View {
                             .font(.title)
                             .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
                             .font(.system(size: 16))
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                             .padding()
                     }
 
@@ -285,16 +289,6 @@ struct CameraContainerView: View {
 
            
             .padding(.bottom,66)
-//
-//            Button {
-////                cameraModel.recordedDuration = 0
-//                cameraModel.previewURL = nil
-////                cameraModel.recordedURLs.removeAll()
-//            } label: {
-//                Image(systemName: "xmark")
-//                    .font(.title)
-//                    .foregroundColor(.white)
-//            }
 
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
@@ -443,6 +437,7 @@ struct FinalPreview: View {
                                     Image(systemName: "xmark")
                                         .foregroundColor(.white)
                                         .font(.system(size: 22))
+                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                                         .padding() // Adds more tappable area around the icon
                                 }
                                 .padding(.leading, -15)
@@ -454,16 +449,19 @@ struct FinalPreview: View {
                                     print("Forward arrow tapped")
                                 }) {
                                     ZStack {
-                                        Circle()
+                                        RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
                                             .foregroundColor(.black)
-                                            .frame(width: 44, height: 44)  // Adjust the size as needed
-                                        
-                                        Image(systemName: "arrow.forward")
-                                            .font(.system(size: 24))
+                                            .opacity(0.4)
+                                            .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+
+                                        Text("Next")
+                                            .font(.system(size: 17))
+                                            .fontWeight(.bold)
                                             .foregroundColor(.white)
-                                            .scaleEffect(0.8)  // Adjust the scale to fit the icon within the black circle
+                                            .scaleEffect(0.8) // Adjust the scale if needed
                                     }
                                 }
+
                                 
                             }
                             
@@ -476,6 +474,7 @@ struct FinalPreview: View {
                                 }) {
                                     Image(systemName: "crop")
                                         .iconStyle()
+                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                                         
                                 }
                             }

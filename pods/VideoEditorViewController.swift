@@ -121,37 +121,6 @@ class VideoEditorViewController: UIViewController {
            layer.setAffineTransform(CGAffineTransform(rotationAngle: newRotation))
        }
 
-//   
-//    @objc private func handleConfirm() {
-//        // Instead of exporting, simply prepare the edit parameters
-//        let editParameters = VideoEditParameters(rotationAngle: CGFloat.pi / 2) // Example rotation angle
-//
-//        // Pass the edit parameters back
-//        DispatchQueue.main.async {
-//            self.onConfirmEditing?(editParameters)
-//            self.dismiss(animated: true, completion: nil)
-//        }
-//    }
-
-
-
-//    private func setupVideoPlayer() {
-//        guard let videoURL = videoURL else { return }
-//        player = AVPlayer(url: videoURL)
-//        playerLayer = AVPlayerLayer(player: player)
-//        playerLayer?.frame = view.bounds
-//        playerLayer?.videoGravity = .resizeAspect // Change here for no cropping
-//        guard let playerLayer = playerLayer else { return }
-//        view.layer.addSublayer(playerLayer)
-//        player?.play()
-//        player?.actionAtItemEnd = .none // Loop the video
-//        
-//        NotificationCenter.default.addObserver(self,
-//                                               selector: #selector(playerItemDidReachEnd(notification:)),
-//                                               name: .AVPlayerItemDidPlayToEndTime,
-//                                               object: player?.currentItem)
-//    }
-    
     private func setupVideoPlayer() {
         guard let videoURL = videoURL else { return }
         player = AVPlayer(url: videoURL)
@@ -186,43 +155,10 @@ class VideoEditorViewController: UIViewController {
         let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         view.addGestureRecognizer(pinchRecognizer)
 
-        let rotationRecognizer = UIRotationGestureRecognizer(target: self, action: #selector(handleRotation(_:)))
-        view.addGestureRecognizer(rotationRecognizer)
+
     }
 
-//    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
-//        guard let layer = playerLayer else { return }
-//        
-//        // Adjust scale based on pinch
-//        if recognizer.state == .changed {
-//            let scale = recognizer.scale
-//            var currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
-//            
-//            // Apply pinch scale to current scale but prevent zooming out beyond the initial scale
-//            currentScale *= scale
-//            let initialScale: CGFloat = 1.0 // Assume initial scale is 1.0 (fill screen)
-//            currentScale = max(currentScale, initialScale)
-//            
-//            // Apply scale to layer
-//            layer.setAffineTransform(CGAffineTransform(scaleX: currentScale, y: currentScale))
-//            recognizer.scale = 1 // Reset recognizer scale to 1
-//        }
-//        
-//        // When pinch ends, check if video is smaller than view and snap back if necessary
-//        if recognizer.state == .ended {
-//            // Calculate the scale that perfectly fits the video in the view
-//            let fitScale = calculateFitScaleForVideo()
-//            let currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
-//            
-//            // If current scale is less than the fit scale, animate back to fitting the view
-//            if currentScale < fitScale {
-//                UIView.animate(withDuration: 0.25) {
-//                    layer.setAffineTransform(CGAffineTransform(scaleX: fitScale, y: fitScale))
-//                }
-//            }
-//        }
-//    }
-//
+
     private func calculateFitScaleForVideo() -> CGFloat {
         guard let layer = playerLayer else { return 1.0 }
         let videoAspect = layer.bounds.width / layer.bounds.height
@@ -247,41 +183,6 @@ class VideoEditorViewController: UIViewController {
         }
     }
 
-//    @objc private func handleRotation(_ recognizer: UIRotationGestureRecognizer) {
-//        guard let layer = playerLayer else { return }
-//
-//        if recognizer.state == .changed {
-//            let rotation = recognizer.rotation
-//            layer.transform = CATransform3DRotate(layer.transform, rotation, 0, 0, 1)
-//            recognizer.rotation = 0 // Reset the rotation to 0 to continuously compute rotation change
-//        }
-//    }
-    
-//    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
-//        guard let layer = playerLayer else { return }
-//        
-//        if recognizer.state == .changed {
-//            let scale = recognizer.scale
-//            cumulativeScale *= scale // Update cumulative scale with each pinch gesture scale change
-//            
-//            // Apply updated scale to layer directly
-//            let newTransform = layer.affineTransform().scaledBy(x: scale, y: scale)
-//            layer.setAffineTransform(newTransform)
-//            
-//            recognizer.scale = 1 // Reset recognizer scale to 1 for incremental scaling
-//        } else if recognizer.state == .ended {
-//            // Enforce any constraints or adjustments after pinch ends
-//            let minScale: CGFloat = 1.0 // Minimum scale factor
-//            if cumulativeScale < minScale {
-//                cumulativeScale = minScale
-//                let resetTransform = CGAffineTransform(rotationAngle: cumulativeRotation).scaledBy(x: cumulativeScale, y: cumulativeScale)
-//                UIView.animate(withDuration: 0.25) {
-//                    layer.setAffineTransform(resetTransform)
-//                }
-//            }
-//        }
-//    }
-    
     @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
         guard let layer = playerLayer else { return }
 
