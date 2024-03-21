@@ -384,13 +384,14 @@ struct VoiceCommandPopupView: View {
 
 struct FinalPreview: View {
     
-    var url: URL
+    @State var url: URL
     @Binding var showPreview: Bool
-    private let player = AVPlayer()
+     var player = AVPlayer()
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
     @Binding var showCreatePodView: Bool
     @State private var isPresentingEditor = false
+    @State private var editParameters = VideoEditParameters()
 
     
     var body: some View {
@@ -398,6 +399,7 @@ struct FinalPreview: View {
                 let size = proxy.size
                 ZStack {
                     VideoPlayer(player: player)
+                        .id(url)
                         .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
     //                    .edgesIgnoringSafeArea(.all)
                         .ignoresSafeArea()
@@ -410,7 +412,18 @@ struct FinalPreview: View {
                         .onDisappear {
                             cleanUpPlayer()
                         }
+
+                        .onChange(of: editParameters) { _ in
+                                                // Apply edit parameters to the video preview
+                                                // This is a placeholder action; actual implementation depends on your video processing approach
+                                                applyEditParametersAndSetupPlayer()
+                                            }
+
+
+
+
                 }
+//
 
                     .overlay {
                         VStack {
@@ -499,29 +512,89 @@ struct FinalPreview: View {
                         }
                         .padding()
                     }
+
                     .sheet(isPresented: $isPresentingEditor, onDismiss: {
-                        player.play()  // Resume playing the video
-                    }) {
-                        VideoEditorRepresentable(videoURL: url)
-                            .ignoresSafeArea()
-                    }
+                            // Handle what to do when the editor is dismissed
+                            // For example, re-setup the player if needed
+                        
+                        
+                        }) {
+                            // Update representable to pass and receive edit parameters instead of new URL
+                            VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
+                                DispatchQueue.main.async {
+                                    // Update the edit parameters to reflect the changes made
+                                    self.editParameters = parameters
+                                    // Potentially re-setup the player or apply edits as needed
+                                    applyEditParametersAndSetupPlayer()
+                                }
+                            })
+                        }
+
+
+                    // Example method to re-setup the player with a new URL
+                
+
                     
             }
         }
+    
 
+//    private func setupPlayer() {
+//        print("Setting up player with URL: \(url)")
+//        let playerItem = AVPlayerItem(url: url)
+//        self.player.replaceCurrentItem(with: playerItem)
+//        self.player.play()
+//    }
     private func setupPlayer() {
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-        player.play()
-        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
-            player.seek(to: .zero)
-            player.play()
+        DispatchQueue.main.async {
+            print("Setting up player with URL: \(self.url)")
+            let playerItem = AVPlayerItem(url: self.url)
+            self.player.replaceCurrentItem(with: playerItem)
+            self.player.play()
+            
+            // Additional step: Ensure the observer for loop playback is correctly set up
+            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.player.currentItem, queue: .main) { [self] _ in
+                self.player.seek(to: .zero)
+                self.player.play()
+            }
         }
     }
+
     private func cleanUpPlayer() {
            player.pause()
            player.replaceCurrentItem(with: nil) // Reset the player
            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
        }
+    
+    // Assuming editParameters is already part of your FinalPreview and set appropriately
+    private func applyEditParametersAndSetupPlayer() {
+        // Since url is not optional, you can use it directly
+        let videoURL = self.url
+
+        // Create an AVAsset and AVPlayerItem from your video URL
+        let asset = AVAsset(url: videoURL)
+        let playerItem = AVPlayerItem(asset: asset)
+
+        // Apply your edit parameters to the playerItem if needed
+        // Note: This placeholder for applying rotation and scaling is conceptual.
+        // You might need to adjust this approach based on your app's specific requirements.
+        
+        let videoComposition = AVVideoComposition(asset: asset) { request in
+            let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
+            let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
+            let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
+            request.finish(with: image, context: nil)
+        }
+
+        playerItem.videoComposition = videoComposition
+        
+        DispatchQueue.main.async {
+            self.player.replaceCurrentItem(with: playerItem)
+            self.player.play()
+        }
+    }
+
+
 }
 
 extension Image {

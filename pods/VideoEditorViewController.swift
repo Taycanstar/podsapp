@@ -10,13 +10,25 @@ import Foundation
 import UIKit
 import AVFoundation
 
+struct VideoEditParameters: Equatable {
+    var rotationAngle: CGFloat = 0.0
+    var scale: CGFloat?
+    // Add other parameters like cropRect if needed
+}
+
 class VideoEditorViewController: UIViewController {
     var videoURL: URL?
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     
+    // Properties to track cumulative adjustments
+    private var cumulativeRotation: CGFloat = 0.0
+    private var cumulativeScale: CGFloat = 1.0
+    
     // Add a delegate or closure to pass the edited video back
-    var onConfirmEditing: ((URL) -> Void)?
+    // Update the delegate or closure type to pass edit parameters instead of URL
+    var onConfirmEditing: ((VideoEditParameters) -> Void)?
+
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,37 +36,82 @@ class VideoEditorViewController: UIViewController {
         setupVideoPlayer()
         setupGestureRecognizers()
         setupUIControls()
-//        extendViewToCoverEntireScreen()
+
     }
     
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        playerLayer?.frame = self.view.bounds
+    }
+
+    
     private func setupUIControls() {
-           let expandButton = UIButton(type: .system)
-           expandButton.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
-           expandButton.addTarget(self, action: #selector(handleExpand), for: .touchUpInside)
+        // Create and style the expand button
+        let expandButton = createIconButton(systemName: "arrow.up.left.and.arrow.down.right", action: #selector(handleExpand))
 
-           let rotateButton = UIButton(type: .system)
-           rotateButton.setImage(UIImage(systemName: "rotate.right"), for: .normal)
-           rotateButton.addTarget(self, action: #selector(handleRotate), for: .touchUpInside)
+        // Create and style the rotate button
+        let rotateButton = createIconButton(systemName: "arrow.clockwise", action: #selector(handleRotate))
 
-           let confirmButton = UIButton(type: .system)
-           confirmButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
-           confirmButton.addTarget(self, action: #selector(handleConfirm), for: .touchUpInside)
+        // Create and style the confirm button
+        let confirmButton = createIconButton(systemName: "checkmark", action: #selector(handleConfirm))
 
-           // Layout buttons, for simplicity we're adding them directly to the view
-           let stackView = UIStackView(arrangedSubviews: [expandButton, rotateButton, confirmButton])
-           stackView.axis = .horizontal
-           stackView.distribution = .equalSpacing
-           stackView.translatesAutoresizingMaskIntoConstraints = false
-           view.addSubview(stackView)
+        // Stack view for left-aligned buttons
+        let leftStackView = UIStackView(arrangedSubviews: [expandButton, rotateButton])
+        leftStackView.axis = .horizontal
+        leftStackView.distribution = .equalSpacing
+        leftStackView.spacing = 20 // Adjust the spacing between buttons
 
-           // Constraints (adjust as needed)
-           stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20).isActive = true
-           stackView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20).isActive = true
-       }
+        // Layout buttons, for simplicity we're adding them directly to the view
+        leftStackView.translatesAutoresizingMaskIntoConstraints = false
+        confirmButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(leftStackView)
+        view.addSubview(confirmButton)
 
-       @objc private func handleExpand() {
-           // Implement zoom-out to fit behavior
-       }
+        // Constraints (adjust as needed)
+        NSLayoutConstraint.activate([
+            leftStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            leftStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+
+            confirmButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            confirmButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+        ])
+    }
+
+    /// Helper function to create a styled icon button.
+    private func createIconButton(systemName: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: systemName)?.withRenderingMode(.alwaysTemplate), for: .normal)
+        button.tintColor = .white // Set icon color to white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.6) // Black background with opacity
+        button.layer.cornerRadius = 22 // Half of width and height to make it circular
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 44), // Set width
+            button.heightAnchor.constraint(equalToConstant: 44) // Set height
+        ])
+        return button
+    }
+
+
+
+    @objc private func handleExpand() {
+        guard let layer = playerLayer else { return }
+
+        // Calculate the maximum scale factor that allows the video to fill the view, considering current rotation
+        let videoBounds = layer.bounds.applying(layer.affineTransform())
+        let scaleX = view.bounds.width / videoBounds.width
+        let scaleY = view.bounds.height / videoBounds.height
+        let maxScale = min(scaleX, scaleY)
+
+        // Apply scale transformation on top of existing transformations, without resetting them
+        var currentTransform = layer.affineTransform()
+        currentTransform = currentTransform.scaledBy(x: maxScale, y: maxScale)
+        UIView.animate(withDuration: 0.25) {
+            layer.setAffineTransform(currentTransform)
+        }
+    }
+
 
        @objc private func handleRotate() {
            // Rotate the video by 90 degrees
@@ -64,28 +121,60 @@ class VideoEditorViewController: UIViewController {
            layer.setAffineTransform(CGAffineTransform(rotationAngle: newRotation))
        }
 
-       @objc private func handleConfirm() {
-           // Pass the edited video URL back and dismiss the editor
-           onConfirmEditing?(videoURL!) // Ensure you're passing the correct URL, possibly the edited one
-           dismiss(animated: true, completion: nil)
-       }
+//   
+//    @objc private func handleConfirm() {
+//        // Instead of exporting, simply prepare the edit parameters
+//        let editParameters = VideoEditParameters(rotationAngle: CGFloat.pi / 2) // Example rotation angle
+//
+//        // Pass the edit parameters back
+//        DispatchQueue.main.async {
+//            self.onConfirmEditing?(editParameters)
+//            self.dismiss(animated: true, completion: nil)
+//        }
+//    }
 
+
+
+//    private func setupVideoPlayer() {
+//        guard let videoURL = videoURL else { return }
+//        player = AVPlayer(url: videoURL)
+//        playerLayer = AVPlayerLayer(player: player)
+//        playerLayer?.frame = view.bounds
+//        playerLayer?.videoGravity = .resizeAspect // Change here for no cropping
+//        guard let playerLayer = playerLayer else { return }
+//        view.layer.addSublayer(playerLayer)
+//        player?.play()
+//        player?.actionAtItemEnd = .none // Loop the video
+//        
+//        NotificationCenter.default.addObserver(self,
+//                                               selector: #selector(playerItemDidReachEnd(notification:)),
+//                                               name: .AVPlayerItemDidPlayToEndTime,
+//                                               object: player?.currentItem)
+//    }
+    
     private func setupVideoPlayer() {
         guard let videoURL = videoURL else { return }
         player = AVPlayer(url: videoURL)
         playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = view.bounds
-        playerLayer?.videoGravity = .resizeAspect // Change here for no cropping
+
+        // Set the playerLayer's frame to match the parent view's bounds
+        playerLayer?.frame = self.view.bounds
+        
+        // Set videoGravity to .resizeAspectFill to cover the full area
+        playerLayer?.videoGravity = .resizeAspectFill
+
         guard let playerLayer = playerLayer else { return }
-        view.layer.addSublayer(playerLayer)
+        self.view.layer.insertSublayer(playerLayer, at: 0) // Ensure it's the bottommost layer
+
         player?.play()
         player?.actionAtItemEnd = .none // Loop the video
-        
+
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(playerItemDidReachEnd(notification:)),
                                                name: .AVPlayerItemDidPlayToEndTime,
                                                object: player?.currentItem)
     }
+
 
     @objc func playerItemDidReachEnd(notification: Notification) {
         player?.seek(to: CMTime.zero)
@@ -103,48 +192,37 @@ class VideoEditorViewController: UIViewController {
 
 //    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
 //        guard let layer = playerLayer else { return }
-//
+//        
+//        // Adjust scale based on pinch
 //        if recognizer.state == .changed {
 //            let scale = recognizer.scale
-//            layer.transform = CATransform3DScale(layer.transform, scale, scale, scale)
-//            recognizer.scale = 1 // Reset the scale to 1 to continuously compute scale change
+//            var currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
+//            
+//            // Apply pinch scale to current scale but prevent zooming out beyond the initial scale
+//            currentScale *= scale
+//            let initialScale: CGFloat = 1.0 // Assume initial scale is 1.0 (fill screen)
+//            currentScale = max(currentScale, initialScale)
+//            
+//            // Apply scale to layer
+//            layer.setAffineTransform(CGAffineTransform(scaleX: currentScale, y: currentScale))
+//            recognizer.scale = 1 // Reset recognizer scale to 1
+//        }
+//        
+//        // When pinch ends, check if video is smaller than view and snap back if necessary
+//        if recognizer.state == .ended {
+//            // Calculate the scale that perfectly fits the video in the view
+//            let fitScale = calculateFitScaleForVideo()
+//            let currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
+//            
+//            // If current scale is less than the fit scale, animate back to fitting the view
+//            if currentScale < fitScale {
+//                UIView.animate(withDuration: 0.25) {
+//                    layer.setAffineTransform(CGAffineTransform(scaleX: fitScale, y: fitScale))
+//                }
+//            }
 //        }
 //    }
-    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
-        guard let layer = playerLayer else { return }
-        
-        // Adjust scale based on pinch
-        if recognizer.state == .changed {
-            let scale = recognizer.scale
-            var currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
-            
-            // Apply pinch scale to current scale but prevent zooming out beyond the initial scale
-            currentScale *= scale
-            let initialScale: CGFloat = 1.0 // Assume initial scale is 1.0 (fill screen)
-            currentScale = max(currentScale, initialScale)
-            
-            // Apply scale to layer
-            layer.setAffineTransform(CGAffineTransform(scaleX: currentScale, y: currentScale))
-            recognizer.scale = 1 // Reset recognizer scale to 1
-        }
-        
-        // When pinch ends, check if video is smaller than view and snap back if necessary
-        if recognizer.state == .ended {
-            // Calculate the scale that perfectly fits the video in the view
-            let fitScale = calculateFitScaleForVideo()
-            let currentScale = sqrt(abs(layer.transform.m11 * layer.transform.m22))
-            
-            // If current scale is less than the fit scale, animate back to fitting the view
-            if currentScale < fitScale {
-                UIView.animate(withDuration: 0.25) {
-                    layer.setAffineTransform(CGAffineTransform(scaleX: fitScale, y: fitScale))
-                }
-            }
-        }
-    }
-
-    /// Calculate the scale that would make the video fill the view.
-    /// - Returns: A CGFloat representing the scale factor.
+//
     private func calculateFitScaleForVideo() -> CGFloat {
         guard let layer = playerLayer else { return 1.0 }
         let videoAspect = layer.bounds.width / layer.bounds.height
@@ -169,13 +247,119 @@ class VideoEditorViewController: UIViewController {
         }
     }
 
+//    @objc private func handleRotation(_ recognizer: UIRotationGestureRecognizer) {
+//        guard let layer = playerLayer else { return }
+//
+//        if recognizer.state == .changed {
+//            let rotation = recognizer.rotation
+//            layer.transform = CATransform3DRotate(layer.transform, rotation, 0, 0, 1)
+//            recognizer.rotation = 0 // Reset the rotation to 0 to continuously compute rotation change
+//        }
+//    }
+    
+//    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
+//        guard let layer = playerLayer else { return }
+//        
+//        if recognizer.state == .changed {
+//            let scale = recognizer.scale
+//            cumulativeScale *= scale // Update cumulative scale with each pinch gesture scale change
+//            
+//            // Apply updated scale to layer directly
+//            let newTransform = layer.affineTransform().scaledBy(x: scale, y: scale)
+//            layer.setAffineTransform(newTransform)
+//            
+//            recognizer.scale = 1 // Reset recognizer scale to 1 for incremental scaling
+//        } else if recognizer.state == .ended {
+//            // Enforce any constraints or adjustments after pinch ends
+//            let minScale: CGFloat = 1.0 // Minimum scale factor
+//            if cumulativeScale < minScale {
+//                cumulativeScale = minScale
+//                let resetTransform = CGAffineTransform(rotationAngle: cumulativeRotation).scaledBy(x: cumulativeScale, y: cumulativeScale)
+//                UIView.animate(withDuration: 0.25) {
+//                    layer.setAffineTransform(resetTransform)
+//                }
+//            }
+//        }
+//    }
+    
+    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
+        guard let layer = playerLayer else { return }
+
+        let pinchCenter = recognizer.location(in: view)
+        let pinchCenterLayer = layer.convert(pinchCenter, from: layer.superlayer)
+
+        if recognizer.state == .began {
+            adjustAnchorPointForGestureRecognizer(recognizer)
+        } else if recognizer.state == .changed {
+            let scale = recognizer.scale
+            // Combine the scales
+            let combinedScale = cumulativeScale * scale
+            
+            // Enforce min/max scale limits
+            let minScale: CGFloat = 1.0 // Example minimum scale
+            let maxScale: CGFloat = 7.0 // Example maximum scale
+            let finalScale = min(max(combinedScale, minScale), maxScale)
+            
+            if finalScale != cumulativeScale {
+                let scaleAdjustment = finalScale / cumulativeScale
+                let transform = layer.affineTransform().scaledBy(x: scaleAdjustment, y: scaleAdjustment)
+                layer.setAffineTransform(transform)
+                cumulativeScale = finalScale
+            }
+            recognizer.scale = 1 // Reset the scale for the next change
+        }
+        // No immediate reset on .ended or .cancelled to maintain focus
+    }
+
+    private func adjustAnchorPointForGestureRecognizer(_ gestureRecognizer: UIGestureRecognizer) {
+        if let view = gestureRecognizer.view, let layer = playerLayer {
+            let locationInView = gestureRecognizer.location(in: view)
+            // Use the view's layer to convert the view location to the layer's coordinate system
+            let locationInLayer = layer.convert(locationInView, from: view.layer)
+
+            // Calculate new anchor point based on the location in the layer
+            let anchorPointX = locationInLayer.x / layer.bounds.width
+            let anchorPointY = locationInLayer.y / layer.bounds.height
+
+            // Adjust anchor point without moving the layer
+            let oldPosition = layer.position
+            let newPosition = CGPoint(
+                x: oldPosition.x + (anchorPointX - layer.anchorPoint.x) * layer.bounds.width,
+                y: oldPosition.y + (anchorPointY - layer.anchorPoint.y) * layer.bounds.height
+            )
+
+            layer.anchorPoint = CGPoint(x: anchorPointX, y: anchorPointY)
+            layer.position = newPosition
+        }
+    }
+
+
+
+
     @objc private func handleRotation(_ recognizer: UIRotationGestureRecognizer) {
         guard let layer = playerLayer else { return }
 
         if recognizer.state == .changed {
             let rotation = recognizer.rotation
-            layer.transform = CATransform3DRotate(layer.transform, rotation, 0, 0, 1)
-            recognizer.rotation = 0 // Reset the rotation to 0 to continuously compute rotation change
+            cumulativeRotation += rotation // Update cumulative rotation with each rotation gesture change
+            
+            // Apply updated rotation to layer directly
+            let newTransform = layer.affineTransform().rotated(by: rotation)
+            layer.setAffineTransform(newTransform)
+            
+            recognizer.rotation = 0 // Reset the rotation to 0 for incremental rotation
+        }
+    }
+
+    // In the handleConfirm method, use cumulativeScale and cumulativeRotation for the final edit parameters
+    @objc private func handleConfirm() {
+        // Prepare the edit parameters based on cumulative changes
+        let editParameters = VideoEditParameters(rotationAngle: cumulativeRotation, scale: cumulativeScale)
+        // Additional parameters like scale can be added to VideoEditParameters if needed
+        
+        DispatchQueue.main.async {
+            self.onConfirmEditing?(editParameters)
+            self.dismiss(animated: true, completion: nil)
         }
     }
     
