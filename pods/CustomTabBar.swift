@@ -4,19 +4,23 @@ import SwiftUI
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
+    @Binding var showVideoCreationScreen: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
             HStack {
                 // Pass the action directly to avoid confusion with parameter labels
-                TabBarButton(iconName: "house", isSelected: selectedTab == 0) { selectedTab = 0 }
+                TabBarButton(iconName: "house", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                     .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                 Spacer()
-                TabBarButton(iconName: "camera", isSelected: selectedTab == 1) { selectedTab = 1 }
+                TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
+                    // Directly trigger the video creation screen without changing the selectedTab
+                    showVideoCreationScreen = true
+                }
                     .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
                 Spacer()
-                TabBarButton(iconName: "person", isSelected: selectedTab == 2) { selectedTab = 2 }
+                TabBarButton(iconName: "person", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
                     .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
             }
             .padding(.horizontal, 35)
@@ -48,12 +52,14 @@ struct CustomTabBar: View {
 struct TabBarButton: View {
     var iconName: String
     var isSelected: Bool
+    var iconSize: CGFloat = UIFont.preferredFont(forTextStyle: .title1).pointSize
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: isSelected ? iconName + ".fill" : iconName)
                 .imageScale(.large)
+                .font(.system(size: iconSize))
         }
     }
 }

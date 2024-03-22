@@ -28,6 +28,15 @@ class VideoEditorViewController: UIViewController {
     // Add a delegate or closure to pass the edited video back
     // Update the delegate or closure type to pass edit parameters instead of URL
     var onConfirmEditing: ((VideoEditParameters) -> Void)?
+    
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        playerLayer?.frame = self.view.bounds
+        print("View bounds: \(self.view.bounds)") // Debugging frame sizes
+        print("Player layer frame: \(playerLayer?.frame ?? CGRect.zero)") // Debugging frame sizes
+    }
+
 
 
     override func viewDidLoad() {
@@ -36,13 +45,13 @@ class VideoEditorViewController: UIViewController {
         setupVideoPlayer()
         setupGestureRecognizers()
         setupUIControls()
+        
+        if #available(iOS 11.0, *) {
+             self.view.insetsLayoutMarginsFromSafeArea = false
+         }
 
     }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        playerLayer?.frame = self.view.bounds
-    }
+ 
 
     
     private func setupUIControls() {
@@ -111,23 +120,48 @@ class VideoEditorViewController: UIViewController {
             layer.setAffineTransform(currentTransform)
         }
     }
+ 
+    @objc private func handleRotate() {
+        guard let layer = playerLayer else { return }
+
+        // Increment the cumulative rotation by 90 degrees
+        cumulativeRotation = fmod(cumulativeRotation + CGFloat.pi / 2, 2 * CGFloat.pi)
+
+        // Reset the transform to calculate scale factors for the current video size
+        let originalTransform = layer.affineTransform()
+        layer.setAffineTransform(.identity)
+        let originalSize = CGSize(width: layer.bounds.width, height: layer.bounds.height)
+        layer.setAffineTransform(originalTransform)
+
+        // Calculate new size considering the rotation
+        let newSize: CGSize
+        if Int(cumulativeRotation * 2 / CGFloat.pi) % 2 == 0 {
+            newSize = originalSize
+        } else {
+            newSize = CGSize(width: originalSize.height, height: originalSize.width)
+        }
+
+        // Calculate scale factors to fit the new size within the view bounds
+        let scaleToFit = min(view.bounds.width / newSize.width, view.bounds.height / newSize.height)
+
+        // Apply the rotation transform with scaling
+        let rotationTransform = CGAffineTransform(rotationAngle: cumulativeRotation)
+        let transform = rotationTransform.scaledBy(x: scaleToFit, y: scaleToFit)
+
+        UIView.animate(withDuration: 0.25) {
+            layer.setAffineTransform(transform)
+        }
+    }
 
 
-       @objc private func handleRotate() {
-           // Rotate the video by 90 degrees
-           guard let layer = playerLayer else { return }
-           let currentRotation = atan2(layer.transform.m12, layer.transform.m11)
-           let newRotation = currentRotation + CGFloat.pi / 2 // Add 90 degrees
-           layer.setAffineTransform(CGAffineTransform(rotationAngle: newRotation))
-       }
 
     private func setupVideoPlayer() {
         guard let videoURL = videoURL else { return }
         player = AVPlayer(url: videoURL)
         playerLayer = AVPlayerLayer(player: player)
-
         // Set the playerLayer's frame to match the parent view's bounds
         playerLayer?.frame = self.view.bounds
+
         
         // Set videoGravity to .resizeAspectFill to cover the full area
         playerLayer?.videoGravity = .resizeAspectFill
@@ -233,25 +267,7 @@ class VideoEditorViewController: UIViewController {
             layer.position = newPosition
         }
     }
-
-
-
-
-    @objc private func handleRotation(_ recognizer: UIRotationGestureRecognizer) {
-        guard let layer = playerLayer else { return }
-
-        if recognizer.state == .changed {
-            let rotation = recognizer.rotation
-            cumulativeRotation += rotation // Update cumulative rotation with each rotation gesture change
-            
-            // Apply updated rotation to layer directly
-            let newTransform = layer.affineTransform().rotated(by: rotation)
-            layer.setAffineTransform(newTransform)
-            
-            recognizer.rotation = 0 // Reset the rotation to 0 for incremental rotation
-        }
-    }
-
+    
     // In the handleConfirm method, use cumulativeScale and cumulativeRotation for the final edit parameters
     @objc private func handleConfirm() {
         // Prepare the edit parameters based on cumulative changes

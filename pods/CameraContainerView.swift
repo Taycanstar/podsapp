@@ -1,6 +1,7 @@
 import SwiftUI
 import AVKit
 import PhotosUI
+import Photos
 import UniformTypeIdentifiers
 //
 //
@@ -88,6 +89,9 @@ struct CameraContainerView: View {
     @Binding var shouldNavigateToHome: Bool
     @State private var showingVoiceCommandPopup = false
     @State private var voiceCommandPopupMessage: String? = nil
+    @Binding var showingVideoCreationScreen: Bool
+    @State private var latestPhoto: UIImage? = nil
+
 
 
 
@@ -105,99 +109,171 @@ struct CameraContainerView: View {
                           }
      
             // Add a button to reset the current pod
-                      if !cameraModel.currentPod.items.isEmpty {
-                          Button(action: {
-                              // Reset the current pod and any other necessary states
-                              print("xxx")
-                              cameraModel.currentPod = Pod(id: -1, items:[],title: "")
-                              cameraModel.recordedDuration = 0
-                              cameraModel.previewURL = nil
-//                              cameraModel.recordedURLs.removeAll()
-                          }) {
-                              Image(systemName: "xmark")
-                                  
-                                  .foregroundColor(.white)
-                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                                  .font(.system(size: 22))
-                                  .padding()
-                          }
-                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                       
-                          .padding(.top, 15)
-                          .padding(.leading, 0)
-                        
-                      }
+//                      if !cameraModel.currentPod.items.isEmpty {
+//                          Button(action: {
+//                              // Reset the current pod and any other necessary states
+//                              print("xxx")
+//                              cameraModel.currentPod = Pod(id: -1, items:[],title: "")
+//                              cameraModel.recordedDuration = 0
+//                              cameraModel.previewURL = nil
+//                          }) {
+//                              Image(systemName: "xmark")
+//                                  
+//                                  .foregroundColor(.white)
+//                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                  .font(.system(size: 22))
+//                                  .padding()
+//                          }
+//                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+//                       
+//                          .padding(.top, 15)
+//                          .padding(.leading, 0)
+//                        
+//                      }
             
             if !cameraModel.isRecording {
-                HStack {
+                Button(action: {
+                    // Instead of resetting properties, just close the video creation screen
+                    showingVideoCreationScreen = false
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                        .font(.system(size: 22))
+                        .padding()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, 15)
+                .padding(.leading, 5)
+                .padding(.leading, 0)
 
-                                  Button(action: {
-                                      isShowingVideoPicker = true
-                                  }) {
-                                      Image(systemName: "photo")
-                                          
-                                          .font(.system(size: 18))
-                                          .foregroundColor(.white)
-                                          .padding(.horizontal, 10)
-                                          .padding(.vertical, 10)
-
-                                          .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
-                                          .clipShape(Circle())
-                                  }
-                                  .padding(.bottom, 146)
-                                  .frame(width: 60, height: 60)
-                                  .sheet(isPresented: $isShowingVideoPicker) {
-                                      PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
-                                  }
-
-
-                    Spacer()
-                    
-                    
-                    if !cameraModel.currentPod.items.isEmpty {
-                        Button(action: {
-                            // TODO: Trigger the video picker
-                            if let previewURL = cameraModel.previewURL {
-                                   print("Preview URL: \(previewURL)")
-                                   cameraModel.showPreview = true
-                               } else {
-                                   print("No preview URL available")
-                               }
-                        }) {
-                            Image(systemName: "chevron.right")
-                                
-                                .font(.system(size: 18))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 10)
-
-                                .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
-                                .clipShape(Circle())
-                        }
-                        .frame(width: 60, height: 60) // Example size, adjust as needed
-
-                        .padding(.bottom, 146)
-                   
-                      }
-                    }
-                  
-                   .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
-          
+            
+         
+            
+//            if !cameraModel.isRecording {
+//                HStack {
+//
+//                                  Button(action: {
+//                                      isShowingVideoPicker = true
+//                                  }) {
+//                                      Image(systemName: "photo")
+//                                          
+//                                          .font(.system(size: 18))
+//                                          .foregroundColor(.white)
+////                                          .padding(.horizontal, 10)
+////                                          .padding(.vertical, 10)
+////
+//                                          .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5))
+//                                         
+//                                          .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
+//                                          .frame(width: 60, height: 60)
+//                                  }
+////                                  .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
+//                                  .padding(.bottom, 100)
+//                                  .frame(width: 60, height: 60)
+//                                  .sheet(isPresented: $isShowingVideoPicker) {
+//                                      PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
+//                                  }
+//
+//
+//                    Spacer()
+//                    
+//                    
+//                    if !cameraModel.currentPod.items.isEmpty {
+//                        Button(action: {
+//                            // TODO: Trigger the video picker
+//                            if let previewURL = cameraModel.previewURL {
+//                                   print("Preview URL: \(previewURL)")
+//                                   cameraModel.showPreview = true
+//                               } else {
+//                                   print("No preview URL available")
+//                               }
+//                        }) {
+//                            Image(systemName: "chevron.right")
+//                                
+//                                .font(.system(size: 18))
+//                                .foregroundColor(.white)
+//                            
+////                                .padding(.horizontal, 10)
+////                                .padding(.vertical, 10)
+////
+////                                .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
+////                                .clipShape(Circle())
+//                        }
+//                        .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
+//                        .frame(width: 60, height: 60) // Example size, adjust as needed
+//
+//                        .padding(.bottom, 100)
+//                   
+//                      }
+//                    }
+//                  
+//                   .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+//            }
+//          
+//            
+//            if !cameraModel.isRecording {
+//                HStack {
+//                    // "photo" button with circular background
+//                    Button(action: {
+//                        isShowingVideoPicker = true
+//                    }) {
+//                        Image(systemName: "photo")
+//                            .font(.system(size: 18))
+//                            .foregroundColor(.white)
+//                    }
+//                    .frame(width: 40, height: 40) // Ensures the touch area is a 60x60 square
+//                    .background(Circle().fill(Color.black.opacity(0.5))) // Creates the circular background
+//                    .padding(.bottom, 100) // Adjust the position as needed
+//                    .sheet(isPresented: $isShowingVideoPicker) {
+//                        PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
+//                    }
+//
+//                    Spacer()
+//                    
+//                    if !cameraModel.currentPod.items.isEmpty {
+//                        // "chevron.right" button with circular background
+//                        Button(action: {
+//                            // Action for the button
+//                            if let previewURL = cameraModel.previewURL {
+//                                print("Preview URL: \(previewURL)")
+//                                cameraModel.showPreview = true
+//                            } else {
+//                                print("No preview URL available")
+//                            }
+//                        }) {
+//                            Image(systemName: "chevron.right")
+//                                .font(.system(size: 18))
+//                                .foregroundColor(.white)
+//                        }
+//                        .frame(width: 40, height: 40) // Ensures the touch area is a 60x60 square
+//                        .background(Circle().fill(Color.black.opacity(0.5))) // Creates the circular background
+//                        .padding(.bottom, 100) // Adjust the position as needed
+//                    }
+//                }
+//                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+//                .padding(15)
+//            }
+
         
-            // Add Thumbnail Carousel
-                       if !cameraModel.currentPod.items.isEmpty {
-                           VStack {
-                               Spacer()
-                               HStack {
-                                   ThumbnailCarouselView(items: cameraModel.currentPod.items)
-                                       .padding(.leading)
-                                   Spacer()
-                               }
-                           }
-                           .padding(.vertical, 71)
-                       }
-          
+//            // Add Thumbnail Carousel
+//                       if !cameraModel.currentPod.items.isEmpty {
+//                           VStack {
+//                               Spacer()
+//                               HStack {
+//                                  
+//                                       ThumbnailCarouselView(items: cameraModel.currentPod.items)
+//                                           .padding(.leading)
+//                                    
+//                                 
+//                                   Spacer()
+//
+//                               }
+//                           }
+////                           .padding(.vertical, 35)
+//                       }
+
             // Floating Camera Control Buttons
             if !cameraModel.isRecording {
                 VStack(spacing: 0) {  // Adjust spacing as needed
@@ -263,32 +339,123 @@ struct CameraContainerView: View {
 
                      
 
-            // MARK: Controls
-            ZStack{
-                Button {
+//            // MARK: Controls
+//            ZStack{
+//                Button {
+//                    if cameraModel.isRecording{
+//                        cameraModel.stopRecording()
+//                    } else {
+//                        cameraModel.startRecording()
+//                    }
+//                } label: {
+//                    ZStack {
+//                        Circle()
+//                            .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
+//                            .frame(width: 65, height: 65) // Inner circle size
+//
+//                        Circle()
+//                            .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
+//                            .frame(width: 75, height: 75) // Outer circle size (including padding)
+//                    }
+//                }
+//            }
+//            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+
+            HStack(spacing: 55) { // This HStack contains all main elements
+
+                
+                if !cameraModel.currentPod.items.isEmpty {
+                        // Thumbnail Carousel
+                        ThumbnailCarouselView(items: cameraModel.currentPod.items)
+//                            .frame(width: 40, height: 40) 
+                        .frame(width: 40, height: 40)
+                        .padding(.top, -5)
+                   
+                               
+                    } else {
+                        // Invisible Placeholder when there are no items
+                        VStack {
+                            Color.clear
+                                .frame(width: 40, height: 40)
+                            Text(" ")
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.clear)
+                        }
+                    }
+                
+                Button(action: {
                     if cameraModel.isRecording{
                         cameraModel.stopRecording()
                     } else {
                         cameraModel.startRecording()
                     }
-                } label: {
+                }) {
                     ZStack {
                         Circle()
                             .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
-                            .frame(width: 62, height: 62) // Inner circle size
+                            .frame(width: 65, height: 65) // Inner circle size
 
                         Circle()
                             .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-                            .frame(width: 72, height: 72) // Outer circle size (including padding)
+                            .frame(width: 75, height: 75) // Outer circle size (including padding)
                     }
                 }
+                
+                if !cameraModel.isRecording {
+                    
+                    VStack {
+                        if let latestPhoto = latestPhoto {
+                            Button(action: {
+                                // Trigger upload functionality
+                                isShowingVideoPicker = true
+                                print("xy")
+                            }) {
+                                Image(uiImage: latestPhoto)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 40, height: 40) // Adjust size as needed
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                            }
+                        } else {
+                            Button(action: {
+                                // Placeholder or action for when no photo is available
+                            }) {
+                                RoundedRectangle(cornerRadius: 8)
+    //                                .strokeBorder(Color.gray, lineWidth: 0.5)
+                                    .frame(width: 40, height: 40)
+                                    .foregroundColor(.black)
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                            }
+                        }
+                        Text("Upload") // This ensures the text is below the button
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                    .sheet(isPresented: $isShowingVideoPicker) {
+                        PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
+                    }
+                } else {
+                    VStack {
+                        Color.clear
+                            .frame(width: 40, height: 40)
+                        Text(" ")
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.clear)
+                    }
+                    
+                }
+
+               
+                
+                
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
-
-
-           
-            .padding(.bottom,66)
+            .padding(.bottom,15)
 
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
@@ -298,25 +465,103 @@ struct CameraContainerView: View {
         
 
         
+//                .overlay(content: {
+//            if let url = cameraModel.previewURL,cameraModel.showPreview{
+//                
+//                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView )
+//                    .transition(.move(edge: .trailing))
+//            }
+//            
+//            
+//            
+//            
+//        })
+//        .animation(.easeInOut, value: cameraModel.showPreview)
+////        .preferredColorScheme(.dark)
+//        
         
-        .overlay(content: {
-            if let url = cameraModel.previewURL,cameraModel.showPreview{
-                
-                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView )
-                    .transition(.move(edge: .trailing))
+        .fullScreenCover(isPresented: $cameraModel.showPreview) {
+                // Make sure to safely unwrap the `cameraModel.previewURL` or handle nil case appropriately
+                if let url = cameraModel.previewURL {
+                    FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
+                        .background(Color.black.edgesIgnoringSafeArea(.all))
+                        .environment(\.colorScheme, .dark)
+                }
             }
-            
-            
-            
-            
-        })
-        .animation(.easeInOut, value: cameraModel.showPreview)
-//        .preferredColorScheme(.dark)
-        
+
         .overlay(
                 fullScreenOverlayView
             )
+        Spacer() // Pushes the bar to the bottom
+        
+//        HStack {
+//                       
+//                       Rectangle() // Represents the bottom bar
+//                           .foregroundColor(.black) // Set the color to black
+//                           .frame(height: 60) // Set the height of the bottom bar
+//                           .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
+//                   }
+        
+        
+        HStack(spacing: 10) { // Spacing between buttons is 10
+            // Start Over Button
+            
+            if !cameraModel.currentPod.items.isEmpty {
+                Button("Start over") {
+                    // Action for Start Over
+                    cameraModel.currentPod = Pod(id: -1, items:[],title: "")
+                    cameraModel.recordedDuration = 0
+                    cameraModel.previewURL = nil
+                }
+                .foregroundColor(.black) // Text color
+                .padding(.vertical, 15) // Padding for thickness
+                .frame(maxWidth: .infinity) // Make button expand
+                .background(Color.white) // Background color of the button
+                .cornerRadius(8) // Rounded corners
+                .fontWeight(.semibold)
+
+                // Next Button
+                Button("Next") {
+                    // Action for Next
+                    if let previewURL = cameraModel.previewURL {
+                        print("Preview URL: \(previewURL)")
+                        cameraModel.showPreview = true
+                    } else {
+                        print("No preview URL available")
+                    }
+                }
+                .foregroundColor(.white) // Text color for the Next button
+                .padding(.vertical, 15) // Padding for thickness
+                .frame(maxWidth: .infinity) // Make button expand
+                .fontWeight(.semibold)
+                .background(Color(red: 70/255, green: 87/255, blue: 245/255)) // Background color
+                .cornerRadius(8) // Rounded corners
+            } else{
+                Rectangle()
+                    .foregroundColor(.black)
+            }
+     
+        }
+        .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each side
+        .frame(height: 60) // Set the height of the bottom bar
+        .background(Color.black) // Set the color to black
+        .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
+
+
+
+        .onAppear {
+                  // Request authorization and fetch latest photo
+                  PHPhotoLibrary.requestAuthorization { status in
+                      if status == .authorized {
+                          self.fetchLatestPhoto { photo in
+                              self.latestPhoto = photo
+                          }
+                      }
+                  }
+              }
+        
     }
+    
     
     
     private func handleSelectedVideoURL() async {
@@ -326,7 +571,34 @@ struct CameraContainerView: View {
              cameraModel.showPreview = true
              selectedVideoURL = nil // Reset after handling
          }
+        
+      
      }
+    
+    
+
+    func fetchLatestPhoto(completion: @escaping (UIImage?) -> Void) {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.fetchLimit = 1
+
+        let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        guard let lastAsset = fetchResult.firstObject else {
+            completion(nil)
+            return
+        }
+
+        let options = PHImageRequestOptions()
+        options.version = .current
+        options.isSynchronous = true
+
+        PHImageManager.default().requestImage(for: lastAsset, targetSize: CGSize(width: 60, height: 60), contentMode: .aspectFill, options: options) { image, _ in
+            completion(image)
+        }
+    }
+
+    
+    
     
     private var fullScreenOverlayView: some View {
          Group {
@@ -434,13 +706,25 @@ struct FinalPreview: View {
                                         showPreview = false
                                     }
                                 }) {
-                                    Image(systemName: "xmark")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 22))
-                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                                        .padding() // Adds more tappable area around the icon
+//                                    Image(systemName: "xmark")
+//                                        .foregroundColor(.white)
+//                                        .font(.system(size: 22))
+//                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                        .padding()
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
+                                            .foregroundColor(.black)
+                                            .opacity(0.4)
+                                            .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+
+                                        Text("Cancel")
+                                            .font(.system(size: 17))
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .scaleEffect(0.8) // Adjust the scale if needed
+                                    }
                                 }
-                                .padding(.leading, -15)
+                                .padding(.leading, -5)
                                 Spacer()
                                 Button(action: {
                                     cleanUpPlayer()
@@ -461,6 +745,7 @@ struct FinalPreview: View {
                                             .scaleEffect(0.8) // Adjust the scale if needed
                                     }
                                 }
+                                .padding(.trailing, -5)
 
                                 
                             }
@@ -527,13 +812,10 @@ struct FinalPreview: View {
                                     applyEditParametersAndSetupPlayer()
                                 }
                             })
+                            .ignoresSafeArea()
                         }
-
-
-                    // Example method to re-setup the player with a new URL
-                
-
-                    
+                       
+  
             }
         }
     
