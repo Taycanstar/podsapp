@@ -300,7 +300,7 @@ class VideoEditorViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 12.0/255.0, green: 12.0/255.0, blue: 12.0/255.0, alpha: 1.0)
+        view.backgroundColor = UIColor(red: 20.0/255.0, green: 20.0/255.0, blue: 20.0/255.0, alpha: 1.0)
         
         setupControlsContainer()
         setupPlayer()
@@ -327,7 +327,7 @@ class VideoEditorViewController: UIViewController {
     
     private func setupControlsContainer() {
         // Removed the local declaration here
-        controlsContainer.backgroundColor = UIColor(red: 12.0/255.0, green: 12.0/255.0, blue: 12.0/255.0, alpha: 1.0)
+        controlsContainer.backgroundColor = UIColor(red: 20.0/255.0, green: 20.0/255.0, blue: 20.0/255.0, alpha: 1.0)
 
         view.addSubview(controlsContainer)
         controlsContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -423,21 +423,48 @@ class VideoEditorViewController: UIViewController {
            }
        }
     
+//    private func setupActionButtons() {
+//        // Create buttons with specific font styles and sizes
+//        let cancelButton = createButton(title: "Cancel", font: UIFont.systemFont(ofSize: 17), action: #selector(cancelAction))
+//        let cropButton = createButton(title: "Crop", font: UIFont.boldSystemFont(ofSize: 17), action: #selector(cropAction))
+//        let saveButton = createButton(title: "Save", font: UIFont.systemFont(ofSize: 17, weight: .medium), action: #selector(saveAction))
+//        
+//        let stackView = UIStackView(arrangedSubviews: [cancelButton, cropButton, saveButton])
+//        stackView.axis = .horizontal
+//        stackView.distribution = .fillEqually
+//        stackView.translatesAutoresizingMaskIntoConstraints = false
+//        controlsContainer.addSubview(stackView)
+//        
+//        NSLayoutConstraint.activate([
+//            stackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor, constant: -25), // Adjust constant for edge padding
+//            stackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor, constant: 25), // Adjust constant for edge padding
+//            stackView.topAnchor.constraint(equalTo: controlsContainer.topAnchor),
+//            stackView.heightAnchor.constraint(equalToConstant: 150) // Adjust as needed
+//        ])
+//    }
     private func setupActionButtons() {
-        // Create buttons with specific font styles and sizes
-        let cancelButton = createButton(title: "Cancel", font: UIFont.systemFont(ofSize: 17), action: #selector(cancelAction))
-        let cropButton = createButton(title: "Crop", font: UIFont.boldSystemFont(ofSize: 17), action: #selector(cropAction))
-        let saveButton = createButton(title: "Save", font: UIFont.systemFont(ofSize: 17, weight: .medium), action: #selector(saveAction))
-        
-        let stackView = UIStackView(arrangedSubviews: [cancelButton, cropButton, saveButton])
+        let cancelButton = createButton(title: "Cancel", font: UIFont.systemFont(ofSize: 16), action: #selector(cancelAction))
+        let saveButton = createButton(title: "Save", font: UIFont.systemFont(ofSize: 16, weight: .medium), action: #selector(saveAction))
+
+        // Create a UILabel for "Crop" instead of a UIButton
+        let cropLabel = UILabel()
+        cropLabel.text = "Crop"
+        cropLabel.font = UIFont.boldSystemFont(ofSize: 18)
+        cropLabel.textColor = .white
+        cropLabel.textAlignment = .center
+        cropLabel.isUserInteractionEnabled = true // To respond to taps
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(cropAction))
+        cropLabel.addGestureRecognizer(tapGesture)
+
+        let stackView = UIStackView(arrangedSubviews: [cancelButton, cropLabel, saveButton])
         stackView.axis = .horizontal
         stackView.distribution = .fillEqually
         stackView.translatesAutoresizingMaskIntoConstraints = false
         controlsContainer.addSubview(stackView)
-        
+
         NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor, constant: -25), // Adjust constant for edge padding
-            stackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor, constant: 25), // Adjust constant for edge padding
+            stackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor, constant: -35), // Adjust constant for edge padding
+            stackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor, constant: 35), // Adjust constant for edge padding
             stackView.topAnchor.constraint(equalTo: controlsContainer.topAnchor),
             stackView.heightAnchor.constraint(equalToConstant: 150) // Adjust as needed
         ])

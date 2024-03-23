@@ -800,6 +800,8 @@ struct FinalPreview: View {
                                 applyEditParametersAndSetupPlayer()
                             }
                         })
+                        .background(Color(red: 20/255, green: 20/255, blue: 20/255))
+                                   .edgesIgnoringSafeArea(.bottom)
                         // .ignoresSafeArea() is optional based on your layout needs
                     }
 
