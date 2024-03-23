@@ -9,7 +9,6 @@ struct VideoEditorRepresentable: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> VideoEditorViewController {
         let editorVC = VideoEditorViewController()
         editorVC.videoURL = videoURL
-        // Pass the editing parameters back to the SwiftUI view
         editorVC.onConfirmEditing = { editParameters in
             DispatchQueue.main.async {
                 self.onConfirmEditing?(editParameters)
@@ -17,6 +16,7 @@ struct VideoEditorRepresentable: UIViewControllerRepresentable {
         }
         return editorVC
     }
+
 
     func updateUIViewController(_ uiViewController: VideoEditorViewController, context: Context) {
         // Update the videoURL of the UIViewController if needed

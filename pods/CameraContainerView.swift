@@ -643,11 +643,6 @@ struct VoiceCommandPopupView: View {
     }
 }
 
-
-
-
-
-
 struct FinalPreview: View {
     
     @State var url: URL
@@ -775,8 +770,8 @@ struct FinalPreview: View {
                                 }) {
                                     ZStack {
                                         Circle()
-                                            .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
-                                            .frame(width: 44, height: 44) // Adjust size as needed
+                                            .foregroundColor(.white)
+                                            .frame(width: 50, height: 50) // Adjust size as needed
                                         if cameraModel.isTranscribing {
                                                         // Show a loading animation or progress view
                                                         ProgressView()
@@ -784,8 +779,8 @@ struct FinalPreview: View {
                                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         } else {
                                             Image(systemName: "checkmark")
-                                                .font(.system(size: 18))
-                                                .foregroundColor(.white)
+                                                .font(.system(size: 22))
+                                                .foregroundColor(.black)
                                         }
                                     }
                                 }
@@ -797,23 +792,39 @@ struct FinalPreview: View {
                         .padding()
                     }
 
-                    .sheet(isPresented: $isPresentingEditor, onDismiss: {
-                            // Handle what to do when the editor is dismissed
-                            // For example, re-setup the player if needed
-                        
-                        
-                        }) {
-                            // Update representable to pass and receive edit parameters instead of new URL
-                            VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
-                                DispatchQueue.main.async {
-                                    // Update the edit parameters to reflect the changes made
-                                    self.editParameters = parameters
-                                    // Potentially re-setup the player or apply edits as needed
-                                    applyEditParametersAndSetupPlayer()
-                                }
-                            })
-                            .ignoresSafeArea()
-                        }
+//                    .sheet(isPresented: $isPresentingEditor, onDismiss: {
+//                            // Handle what to do when the editor is dismissed
+//                            // For example, re-setup the player if needed
+//                        
+//                        
+//                        }) {
+//                            // Update representable to pass and receive edit parameters instead of new URL
+//                            VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
+//                                DispatchQueue.main.async {
+//                                    // Update the edit parameters to reflect the changes made
+//                                    self.editParameters = parameters
+//                                    // Potentially re-setup the player or apply edits as needed
+//                                    applyEditParametersAndSetupPlayer()
+//                                }
+//                            })
+//                            .ignoresSafeArea()
+//                        }
+                    .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
+                        // Handle what to do when the editor is dismissed
+                        // For example, re-setup the player if needed
+                    }) {
+                        // Update representable to pass and receive edit parameters instead of new URL
+                        VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
+                            DispatchQueue.main.async {
+                                // Update the edit parameters to reflect the changes made
+                                self.editParameters = parameters
+                                // Potentially re-setup the player or apply edits as needed
+                                applyEditParametersAndSetupPlayer()
+                            }
+                        })
+                        // .ignoresSafeArea() is optional based on your layout needs
+                    }
+
                        
   
             }
