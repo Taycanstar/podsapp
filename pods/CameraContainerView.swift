@@ -422,10 +422,11 @@ struct CameraContainerView: View {
                             Button(action: {
                                 // Placeholder or action for when no photo is available
                             }) {
-                                RoundedRectangle(cornerRadius: 8)
-    //                                .strokeBorder(Color.gray, lineWidth: 0.5)
-                                    .frame(width: 40, height: 40)
-                                    .foregroundColor(.black)
+                                Image("ms")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 40, height: 40) // Adjust size as needed
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
                             }
                         }
@@ -460,26 +461,10 @@ struct CameraContainerView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
             .padding(.top)
-//            .opacity(!cameraModel.recordedURLs.isEmpty && cameraModel.previewURL != nil && !cameraModel.isRecording ? 1 : 0)
+
         }
         
 
-        
-//                .overlay(content: {
-//            if let url = cameraModel.previewURL,cameraModel.showPreview{
-//                
-//                FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView )
-//                    .transition(.move(edge: .trailing))
-//            }
-//            
-//            
-//            
-//            
-//        })
-//        .animation(.easeInOut, value: cameraModel.showPreview)
-////        .preferredColorScheme(.dark)
-//        
-        
         .fullScreenCover(isPresented: $cameraModel.showPreview) {
                 // Make sure to safely unwrap the `cameraModel.previewURL` or handle nil case appropriately
                 if let url = cameraModel.previewURL {
@@ -494,14 +479,7 @@ struct CameraContainerView: View {
             )
         Spacer() // Pushes the bar to the bottom
         
-//        HStack {
-//                       
-//                       Rectangle() // Represents the bottom bar
-//                           .foregroundColor(.black) // Set the color to black
-//                           .frame(height: 60) // Set the height of the bottom bar
-//                           .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
-//                   }
-        
+
         
         HStack(spacing: 10) { // Spacing between buttons is 10
             // Start Over Button

@@ -424,56 +424,39 @@ class VideoEditorViewController: UIViewController {
        }
     
     private func setupActionButtons() {
-        let cancelButton = createButton(title: "Cancel", action: #selector(cancelAction))
-        let cropButton = createButton(title: "Crop", action: #selector(cropAction))
-        let saveButton = createButton(title: "Save", action: #selector(saveAction))
+        // Create buttons with specific font styles and sizes
+        let cancelButton = createButton(title: "Cancel", font: UIFont.systemFont(ofSize: 17), action: #selector(cancelAction))
+        let cropButton = createButton(title: "Crop", font: UIFont.boldSystemFont(ofSize: 17), action: #selector(cropAction))
+        let saveButton = createButton(title: "Save", font: UIFont.systemFont(ofSize: 17, weight: .medium), action: #selector(saveAction))
         
         let stackView = UIStackView(arrangedSubviews: [cancelButton, cropButton, saveButton])
         stackView.axis = .horizontal
         stackView.distribution = .fillEqually
-        controlsContainer.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        controlsContainer.addSubview(stackView)
         
         NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor),
+            stackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor, constant: -25), // Adjust constant for edge padding
+            stackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor, constant: 25), // Adjust constant for edge padding
             stackView.topAnchor.constraint(equalTo: controlsContainer.topAnchor),
-            stackView.heightAnchor.constraint(equalToConstant: 50) // Match the action buttons' height
+            stackView.heightAnchor.constraint(equalToConstant: 150) // Adjust as needed
         ])
     }
+
+    private func createButton(title: String, font: UIFont, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.titleLabel?.font = font
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.tintColor = .white
+        // Adjust contentEdgeInsets if needed to position "Cancel" and "Save" closer to edges
+        return button
+    }
+
     
  
 
 
-//
-//    private func setupUI() {
-//        // Assuming you have extension methods or similar for creating buttons
-//        let cancelButton = createButton(title: "Cancel", action: #selector(cancelAction))
-//        let cropButton = createButton(title: "Crop", action: #selector(cropAction))
-//        let saveButton = createButton(title: "Save", action: #selector(saveAction))
-//        
-//        // Position your buttons according to your layout
-//        // For simplicity, let's add them directly to the view
-//        let stackView = UIStackView(arrangedSubviews: [cancelButton, cropButton, saveButton])
-//        stackView.axis = .horizontal
-//        stackView.distribution = .fillEqually
-//        stackView.translatesAutoresizingMaskIntoConstraints = false
-//        view.addSubview(stackView)
-//        
-//        NSLayoutConstraint.activate([
-//            stackView.leftAnchor.constraint(equalTo: view.leftAnchor),
-//            stackView.rightAnchor.constraint(equalTo: view.rightAnchor),
-//            stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -50), // Adjust based on your UI
-//            stackView.heightAnchor.constraint(equalToConstant: 50)
-//        ])
-//        
-//        setupAspectRatioSelector()
-//        
-//        // Additional UI setup for aspect ratio selector and crop area goes here
-//        // Placeholder for cropping area UI setup
-//    }
-//    
-    
 
     private func createButton(title: String, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
