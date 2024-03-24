@@ -770,23 +770,6 @@ struct FinalPreview: View {
                         .padding()
                     }
 
-//                    .sheet(isPresented: $isPresentingEditor, onDismiss: {
-//                            // Handle what to do when the editor is dismissed
-//                            // For example, re-setup the player if needed
-//                        
-//                        
-//                        }) {
-//                            // Update representable to pass and receive edit parameters instead of new URL
-//                            VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
-//                                DispatchQueue.main.async {
-//                                    // Update the edit parameters to reflect the changes made
-//                                    self.editParameters = parameters
-//                                    // Potentially re-setup the player or apply edits as needed
-//                                    applyEditParametersAndSetupPlayer()
-//                                }
-//                            })
-//                            .ignoresSafeArea()
-//                        }
                     .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
                         // Handle what to do when the editor is dismissed
                         // For example, re-setup the player if needed
