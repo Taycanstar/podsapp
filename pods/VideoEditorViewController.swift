@@ -41,6 +41,17 @@ class VideoEditorViewController: UIViewController {
         // Ensure controlsContainer stays on top
            view.bringSubviewToFront(controlsContainer)
         
+      
+
+        
+    }
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // Set default selection to Freeform
+        if let freeformButton = self.view.viewWithTag(1) as? UIView { // Ensure it's the correct type
+            self.handleAspectRatioSelection(freeformButton)
+        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -49,33 +60,80 @@ class VideoEditorViewController: UIViewController {
         croppingAreaView?.frame = playerLayer?.frame ?? .zero
         addGridLinesToCroppingArea()
         addCornerHandlesToCroppingArea()
-    }
+        
+            }
     
+ 
 
-    @objc private func handleAspectRatioSelection(_ recognizer: UITapGestureRecognizer) {
-        if let selectedView = recognizer.view {
-            // Reset previously selected button's icon and label color
-            if let previousSelectedButton = selectedAspectRatioButton {
-                let iconView = previousSelectedButton.subviews.compactMap { $0 as? UIImageView }.first
-                let labelView = previousSelectedButton.subviews.compactMap { $0 as? UILabel }.first
-                iconView?.tintColor = .white // Reset icon color
-                labelView?.textColor = .white // Reset label color
-            }
-            
-            // Highlight the newly selected button's icon and label
-            let iconView = selectedView.subviews.compactMap { $0 as? UIImageView }.first
-            let labelView = selectedView.subviews.compactMap { $0 as? UILabel }.first
-            iconView?.tintColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected icon color
-            labelView?.textColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected label color
-            
-            selectedAspectRatioButton = selectedView // Update the reference to the newly selected button
-            
-            // Adjust cropping area and player layer according to the selected aspect ratio
-            if let aspectRatioTag = selectedView.tag as? Int {
-                adjustCroppingAreaAndPlayer(for: aspectRatioTag)
-            }
+    @objc private func handleAspectRatioSelection(_ sender: Any) {
+        // Determine whether the sender is a view or a gesture recognizer
+        let selectedView: UIView?
+        if let recognizer = sender as? UITapGestureRecognizer {
+            // Sender is a gesture recognizer; use its view
+            selectedView = recognizer.view
+        } else if let view = sender as? UIView {
+            // Sender is directly a view
+            selectedView = view
+        } else {
+            // Unrecognized sender; abort
+            return
+        }
+        
+        guard let viewToSelect = selectedView else { return }
+        
+        // Reset previously selected button's icon and label color
+        if let previousSelectedButton = selectedAspectRatioButton {
+            let iconView = previousSelectedButton.subviews.compactMap { $0 as? UIImageView }.first
+            let labelView = previousSelectedButton.subviews.compactMap { $0 as? UILabel }.first
+            iconView?.tintColor = .white // Reset icon color
+            labelView?.textColor = .white // Reset label color
+        }
+        
+        // Highlight the newly selected button's icon and label
+        let iconView = viewToSelect.subviews.compactMap { $0 as? UIImageView }.first
+        let labelView = viewToSelect.subviews.compactMap { $0 as? UILabel }.first
+        iconView?.tintColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected icon color
+        labelView?.textColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected label color
+        
+        selectedAspectRatioButton = viewToSelect // Update the reference to the newly selected button
+        
+        // Adjust cropping area and player layer according to the selected aspect ratio
+        if let aspectRatioTag = viewToSelect.tag as? Int {
+            adjustCroppingAreaAndPlayer(for: aspectRatioTag)
         }
     }
+
+    
+
+//    @objc private func handleAspectRatioSelection(_ recognizer: UITapGestureRecognizer) {
+//        
+//        let selectedView = recognizer.view ?? self.view.viewWithTag(1)
+//           
+//           guard let viewToSelect = selectedView else { return }
+//        
+//        if let selectedView = recognizer.view {
+//            // Reset previously selected button's icon and label color
+//            if let previousSelectedButton = selectedAspectRatioButton {
+//                let iconView = previousSelectedButton.subviews.compactMap { $0 as? UIImageView }.first
+//                let labelView = previousSelectedButton.subviews.compactMap { $0 as? UILabel }.first
+//                iconView?.tintColor = .white // Reset icon color
+//                labelView?.textColor = .white // Reset label color
+//            }
+//            
+//            // Highlight the newly selected button's icon and label
+//            let iconView = selectedView.subviews.compactMap { $0 as? UIImageView }.first
+//            let labelView = selectedView.subviews.compactMap { $0 as? UILabel }.first
+//            iconView?.tintColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected icon color
+//            labelView?.textColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected label color
+//            
+//            selectedAspectRatioButton = selectedView // Update the reference to the newly selected button
+//            
+//            // Adjust cropping area and player layer according to the selected aspect ratio
+//            if let aspectRatioTag = selectedView.tag as? Int {
+//                adjustCroppingAreaAndPlayer(for: aspectRatioTag)
+//            }
+//        }
+//    }
 
     
 
