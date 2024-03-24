@@ -195,27 +195,77 @@ class VideoEditorViewController: UIViewController {
             topContainer.layer.addSublayer(layer)
         }
         player?.play()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(loopVideo), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
 
         // Add Pinch Gesture Recognizer to the topContainer
         let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         topContainer.addGestureRecognizer(pinchGesture)
     }
+    
+    @objc func loopVideo() {
+        player?.seek(to: CMTime.zero)
+        player?.play()
+    }
+
+    deinit {
+        // Don't forget to remove the observer
+        NotificationCenter.default.removeObserver(self)
+    }
+
+
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-        guard gesture.view != nil else { return }
+        guard let playerLayer = self.playerLayer, let croppingAreaView = self.croppingAreaView else { return }
+
+        if gesture.state == .began {
+            let locationInView = gesture.location(in: gesture.view)
+            // Assuming gesture.view is the view that contains playerLayer, like your topContainer
+            let locationInPlayerLayer = playerLayer.superlayer!.convert(locationInView, to: playerLayer)
+
+            // Convert pinch location to a normalized anchor point for the playerLayer
+            let anchorPointX = locationInPlayerLayer.x / playerLayer.bounds.width
+            let anchorPointY = locationInPlayerLayer.y / playerLayer.bounds.height
+
+            // Adjust playerLayer's anchorPoint without moving it
+            updateAnchorPointWithoutMoving(playerLayer, toPoint: CGPoint(x: anchorPointX, y: anchorPointY))
+        }
 
         if gesture.state == .began || gesture.state == .changed {
-            let scale = gesture.scale
-            // Safely unwrap playerLayer to apply the transform
-            if let playerLayer = self.playerLayer {
-                // Apply scaling only to the playerLayer's transform
-                let currentScale = sqrt(playerLayer.affineTransform().a * playerLayer.affineTransform().d)
-                // Limit the scale factor to a reasonable range, for example, 1x to 4x
-                let newScale = min(max(currentScale * scale, 1), 4)
-                playerLayer.setAffineTransform(CGAffineTransform(scaleX: newScale, y: newScale))
-            }
-            gesture.scale = 1.0
+            let pinchScale = gesture.scale
+            let currentAffineTransform = playerLayer.affineTransform()
+            let currentScale = sqrt(currentAffineTransform.a * currentAffineTransform.d) // Extracting scale from CGAffineTransform
+
+            // Calculating the bounds of the cropping area in terms of the initial video size
+            let minScaleWidth = croppingAreaView.bounds.width / playerLayer.bounds.width
+            let minScaleHeight = croppingAreaView.bounds.height / playerLayer.bounds.height
+            let minScale = max(minScaleWidth, minScaleHeight)
+
+            // Applying the pinch scale to the current scale
+            var newScale = currentScale * pinchScale
+            newScale = max(newScale, minScale) // Ensuring not smaller than the cropping area
+            newScale = min(newScale, 4.0) // Maximum allowed zoom
+
+            // Apply scaling transform with respect to the current scale
+            let scaleAdjustment = newScale / currentScale
+            playerLayer.setAffineTransform(currentAffineTransform.scaledBy(x: scaleAdjustment, y: scaleAdjustment))
+
+            gesture.scale = 1.0 // Resetting the gesture scale for the next pinch event
         }
     }
+
+
+
+
+    func updateAnchorPointWithoutMoving(_ layer: CALayer, toPoint newAnchorPoint: CGPoint) {
+        let oldOrigin = layer.frame.origin
+        layer.anchorPoint = newAnchorPoint
+        let newOrigin = layer.frame.origin
+
+        let transition = CGPoint(x: newOrigin.x - oldOrigin.x, y: newOrigin.y - oldOrigin.y)
+        layer.position = CGPoint(x: layer.position.x - transition.x, y: layer.position.y - transition.y)
+    }
+    
+ 
 
 
     private func setupControlsContainer() {
