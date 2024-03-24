@@ -165,36 +165,56 @@ class VideoEditorViewController: UIViewController {
     }
 
 
+//
 //    private func setupPlayer() {
 //        guard let videoURL = videoURL else { return }
 //        player = AVPlayer(url: videoURL)
-//        playerLayer = AVPlayerLayer(player: player)
-//        playerLayer?.videoGravity = .resizeAspect // Maintain aspect ratio
+//        let playerView = UIView() // Hosting view for playerLayer
+//        playerView.frame = topContainer.bounds // Make playerView's frame match topContainer
+//        playerView.backgroundColor = .clear // Ensure the background is transparent
+//        topContainer.addSubview(playerView) // Add playerView to topContainer
 //        
+//        playerLayer = AVPlayerLayer(player: player)
+//        playerLayer?.frame = playerView.bounds // Make playerLayer's frame match playerView
+//        playerLayer?.videoGravity = .resizeAspect
 //        if let playerLayer = playerLayer {
-//            topContainer.layer.addSublayer(playerLayer)
+//            playerView.layer.addSublayer(playerLayer) // Add playerLayer to playerView
 //        }
 //        
 //        player?.play()
+//
+//        topContainer.sendSubviewToBack(playerView) // Send playerView (hosting playerLayer) to the back
 //    }
     private func setupPlayer() {
-        guard let videoURL = videoURL else { return }
+        guard let videoURL = self.videoURL else { return }
         player = AVPlayer(url: videoURL)
-        let playerView = UIView() // Hosting view for playerLayer
-        playerView.frame = topContainer.bounds // Make playerView's frame match topContainer
-        playerView.backgroundColor = .clear // Ensure the background is transparent
-        topContainer.addSubview(playerView) // Add playerView to topContainer
-        
         playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = playerView.bounds // Make playerLayer's frame match playerView
+        playerLayer?.frame = topContainer.bounds
         playerLayer?.videoGravity = .resizeAspect
-        if let playerLayer = playerLayer {
-            playerView.layer.addSublayer(playerLayer) // Add playerLayer to playerView
+        if let layer = playerLayer {
+            topContainer.layer.addSublayer(layer)
         }
-        
         player?.play()
 
-        topContainer.sendSubviewToBack(playerView) // Send playerView (hosting playerLayer) to the back
+        // Add Pinch Gesture Recognizer to the topContainer
+        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        topContainer.addGestureRecognizer(pinchGesture)
+    }
+    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+        guard gesture.view != nil else { return }
+
+        if gesture.state == .began || gesture.state == .changed {
+            let scale = gesture.scale
+            // Safely unwrap playerLayer to apply the transform
+            if let playerLayer = self.playerLayer {
+                // Apply scaling only to the playerLayer's transform
+                let currentScale = sqrt(playerLayer.affineTransform().a * playerLayer.affineTransform().d)
+                // Limit the scale factor to a reasonable range, for example, 1x to 4x
+                let newScale = min(max(currentScale * scale, 1), 4)
+                playerLayer.setAffineTransform(CGAffineTransform(scaleX: newScale, y: newScale))
+            }
+            gesture.scale = 1.0
+        }
     }
 
 
@@ -282,7 +302,7 @@ class VideoEditorViewController: UIViewController {
 
     private func setupAspectRatioSelector() -> UIView {
         let aspectRatios: [(title: String, imageSystemName: String, tag: Int)] = [
-            ("Freeform", "square.arrowtriangle.4.outward", 1),
+            ("Free", "square.arrowtriangle.4.outward", 1),
             ("9:16", "rectangle.ratio.9.to.16", 2),
             ("16:9", "rectangle.ratio.16.to.9", 3),
             ("1:1", "square", 4),
@@ -431,125 +451,6 @@ class VideoEditorViewController: UIViewController {
         }
     }
 
-//    private func adjustCroppingAreaAndPlayer(for aspectRatioTag: Int) {
-//        guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
-//
-//        // Determine the new aspect ratio from the selected option
-//        let selectedAspectRatio: CGFloat = aspectRatio(forTag: aspectRatioTag)
-//
-//        let containerSize = topContainer.bounds.size
-//        var newCroppingSize: CGSize = .zero
-//
-//        // Calculate new size based on selected aspect ratio
-//        if selectedAspectRatio > (containerSize.width / containerSize.height) {
-//            newCroppingSize.width = containerSize.width
-//            newCroppingSize.height = containerSize.width / selectedAspectRatio
-//        } else {
-//            newCroppingSize.height = containerSize.height
-//            newCroppingSize.width = containerSize.height * selectedAspectRatio
-//        }
-//
-//        // Update croppingAreaView's frame
-//        let newX = (containerSize.width - newCroppingSize.width) / 2
-//        let newY = (containerSize.height - newCroppingSize.height) / 2
-//        croppingAreaView?.frame = CGRect(x: newX, y: newY, width: newCroppingSize.width, height: newCroppingSize.height)
-//
-//        // Now that the cropping area has been adjusted, update the player frame
-//        // This is a placeholder; implement this based on your app's requirements
-//        // adjustPlayerLayerFrame(toFit: newCroppingSize)
-//        
-//        // After adjusting the cropping area, reposition corner handles and redraw grid lines
-//        addCornerHandlesToCroppingArea()
-//        addGridLinesToCroppingArea()
-//
-//        // Optionally, add an overlay to areas outside the cropping area if needed
-//        addOverlayOutsideCroppingArea()
-//    }
-
-//    private func adjustCroppingAreaAndPlayer(for aspectRatioTag: Int) {
-//        guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
-//
-//        let selectedAspectRatio: CGFloat = aspectRatio(forTag: aspectRatioTag)
-//        let containerSize = topContainer.bounds.size
-//        var newCroppingSize: CGSize = .zero
-//
-//        if selectedAspectRatio > (containerSize.width / containerSize.height) {
-//            newCroppingSize.width = containerSize.width
-//            newCroppingSize.height = containerSize.width / selectedAspectRatio
-//        } else {
-//            newCroppingSize.height = containerSize.height
-//            newCroppingSize.width = containerSize.height * selectedAspectRatio
-//        }
-//
-//        let newX = (containerSize.width - newCroppingSize.width) / 2
-//        let newY = (containerSize.height - newCroppingSize.height) / 2
-//        croppingAreaView?.frame = CGRect(x: newX, y: newY, width: newCroppingSize.width, height: newCroppingSize.height)
-//
-//        // Adjust the playerLayer according to the aspect ratio
-//        if aspectRatioTag == 2 { // For 9:16, the player matches the cropping area
-//            playerLayer?.frame = CGRect(x: newX, y: newY, width: newCroppingSize.width, height: newCroppingSize.height)
-//        } else { // For other ratios, fill the width or height while respecting the aspect ratio
-//            let playerHeight = containerSize.width / videoAspectRatio
-//            if playerHeight >= containerSize.height { // Fill height, overflow width
-//                let playerWidth = playerHeight * videoAspectRatio
-//                playerLayer?.frame = CGRect(x: (containerSize.width - playerWidth) / 2, y: 0, width: playerWidth, height: containerSize.height)
-//            } else { // Fill width, adjust height
-//                playerLayer?.frame = CGRect(x: 0, y: (containerSize.height - playerHeight) / 2, width: containerSize.width, height: playerHeight)
-//            }
-//        }
-//
-//        // Ensure the playerLayer does not overlap with controls or extend outside the topContainer
-//        playerLayer?.masksToBounds = true
-//
-//        addCornerHandlesToCroppingArea()
-//        addGridLinesToCroppingArea()
-//        addOverlayOutsideCroppingArea()
-//    }
-
-
-//
-//    private func adjustCroppingAreaAndPlayer(for aspectRatioTag: Int) {
-//        guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
-//
-//        let containerSize = topContainer.bounds.size
-//        let selectedAspectRatio: CGFloat = aspectRatio(forTag: aspectRatioTag)
-//        
-//        // Adjust cropping area and player for specific aspect ratios
-//        var newCroppingSize: CGSize
-//        var playerFrame: CGRect
-//        
-//        switch aspectRatioTag {
-//        case 2: // 9:16 Aspect Ratio
-//            newCroppingSize = CGSize(width: containerSize.height * 9 / 16, height: containerSize.height)
-//            let playerWidth = containerSize.width
-//            let playerHeight = playerWidth / (9 / 16) // Calculate height based on extending width to full container width for 9:16 ratio
-//            playerFrame = CGRect(x: 0, y: (containerSize.height - playerHeight) / 2, width: playerWidth, height: playerHeight)
-//            
-//        case 1: // Freeform (use video's original aspect ratio)
-//            newCroppingSize = videoAspectRatio > (containerSize.width / containerSize.height) ?
-//                CGSize(width: containerSize.width, height: containerSize.width / videoAspectRatio) :
-//                CGSize(width: containerSize.height * videoAspectRatio, height: containerSize.height)
-//            playerFrame = CGRect(x: (containerSize.width - newCroppingSize.width) / 2, y: (containerSize.height - newCroppingSize.height) / 2, width: newCroppingSize.width, height: newCroppingSize.height)
-//            
-//        default: // Other aspect ratios
-//            if selectedAspectRatio > (containerSize.width / containerSize.height) {
-//                newCroppingSize = CGSize(width: containerSize.width, height: containerSize.width / selectedAspectRatio)
-//            } else {
-//                newCroppingSize = CGSize(width: containerSize.height * selectedAspectRatio, height: containerSize.height)
-//            }
-//            let playerHeight = containerSize.width / videoAspectRatio
-//            playerFrame = CGRect(x: 0, y: (containerSize.height - playerHeight) / 2, width: containerSize.width, height: playerHeight)
-//        }
-//        
-//        // Apply calculated frames
-//        croppingAreaView?.frame = CGRect(x: (containerSize.width - newCroppingSize.width) / 2, y: (containerSize.height - newCroppingSize.height) / 2, width: newCroppingSize.width, height: newCroppingSize.height)
-//        playerLayer?.frame = playerFrame
-//        
-//        playerLayer?.masksToBounds = true // Ensure player content does not visually overflow
-//        addCornerHandlesToCroppingArea()
-//        addGridLinesToCroppingArea()
-//        addOverlayOutsideCroppingArea()
-//    }
     private func adjustCroppingAreaAndPlayer(for aspectRatioTag: Int) {
         guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
 
