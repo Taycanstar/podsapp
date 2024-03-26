@@ -5,45 +5,70 @@ struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @Binding var showVideoCreationScreen: Bool
+    @EnvironmentObject var sharedViewModel: SharedViewModel
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
-            HStack {
-                // Pass the action directly to avoid confusion with parameter labels
-                TabBarButton(iconName: "house", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
-                    .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
-                Spacer()
-                TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
-                    // Directly trigger the video creation screen without changing the selectedTab
-                    showVideoCreationScreen = true
+            ZStack(alignment: .top) {
+                // This rectangle acts as the top border
+                Rectangle()
+                    .frame(height: 0.5)
+                    .foregroundColor(sharedViewModel.isItemViewActive ? Color(uiColor: UIColor.darkGray) : (colorScheme == .dark ? Color(uiColor: UIColor.darkGray) : Color(red: 0.9, green: 0.9, blue: 0.9)))
+                    .zIndex(1)
+                
+                HStack {
+                    // Pass the action directly to avoid confusion with parameter labels
+                    TabBarButton(iconName: "house", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
+                        .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
+                    Spacer()
+                    TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
+                        // Directly trigger the video creation screen without changing the selectedTab
+                        showVideoCreationScreen = true
+                    }
+                        .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
+                    Spacer()
+                    TabBarButton(iconName: "person", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
+                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
                 }
-                    .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
-                Spacer()
-                TabBarButton(iconName: "person", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
-                    .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                .padding(.horizontal, 35)
+                .padding(.vertical, 11)
+                .background(tabBarBackgroundColor)
+                
             }
-            .padding(.horizontal, 35)
-            .padding(.vertical, 11)
-            .background(tabBarBackgroundColor)
+           
+          
         }
+
+
     }
 
     var tabBarBackgroundColor: Color {
-        if selectedTab == 1 { // Camera tab is selected
+        if sharedViewModel.isItemViewActive { // Check if ItemView is active
+                   return .black
+        } else if selectedTab == 1  { // Camera tab is selected
             return .black
-        } else {
-            return colorScheme == .dark ? Color(rgb: 33, 33, 33) : .white
+        } else if selectedTab == 4  { // Saved for when tab is like for u page
+            return .black
+        }
+        else {
+//            return colorScheme == .dark ? .black : .white
+            return .white
         }
     }
 
     var selectedIconColor: Color {
         // When the camera tab is selected, ensure icon visibility against the black background
-        if selectedTab == 1 {
+        if sharedViewModel.isItemViewActive { // Check if ItemView is active
+                   return .white
+        } else if selectedTab == 1  { // Camera tab is selected
             return .white
-        } else {
-            // Adjust icon color based on system theme for other tabs
-            return colorScheme == .dark ? .white : .black
+        }  else if selectedTab == 4  { // Saved for when tab is like for u page
+            return .white
+        }
+        else {
+//            return colorScheme == .dark ? .black : .white
+            return .black
         }
     }
 }

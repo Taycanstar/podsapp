@@ -5,6 +5,7 @@ class HomeViewModel: ObservableObject {
     @Published var pods: [Pod] = []
     private var networkManager = NetworkManager()
     @Published var shouldUseDarkTheme: Bool = false
+    @Published var isItemViewActive: Bool = false
 
     func fetchPodsForUser(email: String) {
         networkManager.fetchPodsForUser(email: email) { [weak self] success, pods, errorMessage in

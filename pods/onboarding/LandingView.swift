@@ -87,6 +87,7 @@ struct LandingView: View {
                 .edgesIgnoringSafeArea(.bottom)
             }
             .padding(.bottom, 1)
+            .preferredColorScheme(.light)
         }
     }
 }

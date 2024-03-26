@@ -7,6 +7,7 @@ struct ItemView: View {
     @State private var currentIndex: Int
     @State private var dragOffset: CGFloat = 0
     @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject var sharedViewModel: SharedViewModel
 
     init(items: [PodItem], initialIndex: Int) {
         self.items = items
@@ -40,6 +41,14 @@ struct ItemView: View {
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(leading: backButton)
+        .preferredColorScheme(.dark)
+        .onAppear {
+                   sharedViewModel.isItemViewActive = true
+               }
+               .onDisappear {
+                   sharedViewModel.isItemViewActive = false
+               }
+        
     }
 
     private func getYOffsetFor(index: Int, in height: CGFloat) -> CGFloat {
@@ -99,7 +108,9 @@ struct VideoContentView: View {
                     player.pause()
                 }
             }
+           
     }
+    
 
     private func setupPlayer() {
         let playerItem = AVPlayerItem(url: url)

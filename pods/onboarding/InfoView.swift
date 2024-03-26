@@ -167,6 +167,7 @@ struct InfoView: View {
             .padding(.bottom, 50)
         }
         .navigationBarBackButtonHidden(true)
+        .preferredColorScheme(.light)
     }
     
 }

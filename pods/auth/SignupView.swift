@@ -163,6 +163,7 @@ struct SignupView: View {
             .navigationBarHidden(true)
         }
         .navigationBarBackButtonHidden(true)
+        .preferredColorScheme(.light)
     }
 
     private var topBar: some View {

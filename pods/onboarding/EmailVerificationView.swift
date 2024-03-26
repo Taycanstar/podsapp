@@ -84,6 +84,7 @@ struct EmailVerificationView: View {
             .padding(.bottom, 50)
         }
         .navigationBarBackButtonHidden(true)
+        .preferredColorScheme(.light)
     }
     private func checkEmailVerification() {
         networkManager.checkEmailVerified(email: viewModel.email) { success, message in

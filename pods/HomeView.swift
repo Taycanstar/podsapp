@@ -67,8 +67,9 @@ struct HomeView: View {
                            .navigationBarTitleDisplayMode(.inline)
                            .navigationBarItems(trailing: editButton)
                            .environment(\.editMode, $editMode)
+                           .preferredColorScheme(.light)
         }
-        .background(backgroundColor.edgesIgnoringSafeArea(.all))
+//        .background(backgroundColor.edgesIgnoringSafeArea(.all))
     }
 
     private func togglePodExpansion(for title: String) {
@@ -116,11 +117,12 @@ struct HomeView: View {
             Text(editMode == .active ? "Done" : "Edit")
         }
     }
+    
 
 
-    private var backgroundColor: Color {
-        colorScheme == .dark ? Color.black : Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
-    }
+//    private var backgroundColor: Color {
+//        colorScheme == .dark ? Color.black : Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
+//    }
     
         func movePod(from source: IndexSet, to destination: Int) {
             // Move the pods in the local data source to reflect the new order

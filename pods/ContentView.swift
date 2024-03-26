@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var isAuthenticated = true // Track authentication status
     @State private var shouldNavigateToHome = false
     @State private var showingVideoCreationScreen = false
+ 
 
 
     var body: some View {
@@ -37,7 +38,6 @@ struct ContentView: View {
                         default:
                                                     EmptyView() // Removed placeholder text to avoid showing incorrect content
                                                 }
-
 
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,7 +60,7 @@ struct ContentView: View {
                                      
                                            CameraContainerView(shouldNavigateToHome: .constant(false), showingVideoCreationScreen: $showingVideoCreationScreen) 
                                                .background(Color.black.edgesIgnoringSafeArea(.all))
-                                                                             .environment(\.colorScheme, .dark)
+//                                                                             .environment(\.colorScheme, .dark)
                                        })
                 }
             } else {
