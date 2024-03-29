@@ -1,15 +1,14 @@
 import SwiftUI
 import AVKit
 
-struct VideoEditorRepresentable: UIViewControllerRepresentable {
-    var videoURL: URL?
+struct PhotoEditorRepresentable: UIViewControllerRepresentable {
     var editingImage: UIImage?
     // Update the closure type to accept VideoEditParameters
     var onConfirmEditing: ((VideoEditParameters) -> Void)?
 
-    func makeUIViewController(context: Context) -> VideoEditorViewController {
-        let editorVC = VideoEditorViewController()
-        editorVC.videoURL = videoURL
+    func makeUIViewController(context: Context) -> PhotoEditorViewController {
+        let editorVC = PhotoEditorViewController()
+        editorVC.editingImage = editingImage
         editorVC.onConfirmEditing = { editParameters in
             DispatchQueue.main.async {
                 self.onConfirmEditing?(editParameters)
@@ -19,10 +18,10 @@ struct VideoEditorRepresentable: UIViewControllerRepresentable {
     }
 
 
-    func updateUIViewController(_ uiViewController: VideoEditorViewController, context: Context) {
+    func updateUIViewController(_ uiViewController: PhotoEditorViewController, context: Context) {
         // Update the videoURL of the UIViewController if needed
-        if uiViewController.videoURL != videoURL {
-            uiViewController.videoURL = videoURL
+        if uiViewController.editingImage != editingImage {
+            uiViewController.editingImage = editingImage
         }
     }
     

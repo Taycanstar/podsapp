@@ -7,6 +7,7 @@ import MicrosoftCognitiveServicesSpeech
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
     var videoURL: URL
+    var image: UIImage?
     var metadata: String
     var thumbnail: UIImage? // For local UI usage
     var thumbnailURL: URL?  // For networking and referencing the image's location
@@ -89,7 +90,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     
     private var commandRecognizer: SPXSpeechRecognizer?
     var speechConfig: SPXSpeechConfiguration?
-    
+    @Published var selectedImage: UIImage?
     
     
     
@@ -746,6 +747,17 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.isProcessingVideo = false // Notify that processing ends
         }
     }
+    
+    func handleSelectedImage(_ image: UIImage) {
+        DispatchQueue.main.async {
+            self.selectedImage = image
+            print("Selected image set in CameraViewModel. Size: \(image.size)")
+            self.showPreview = true // Triggering preview
+            self.isProcessingVideo = false
+            self.previewURL = nil
+        }
+    }
+
     
 //    func handleSelectedVideo(_ url: URL) {
 //        print("Selected video URL: \(url)")

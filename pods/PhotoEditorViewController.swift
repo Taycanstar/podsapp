@@ -4,15 +4,9 @@ import UIKit
 import AVFoundation
 import AVKit
 
-struct VideoEditParameters: Equatable {
-    var rotationAngle: CGFloat = 0.0
-    var scale: CGFloat?
-    var cropRect: CGRect?
-    // Add other parameters like cropRect if needed
-}
 
 
-class VideoEditorViewController: UIViewController {
+class PhotoEditorViewController: UIViewController {
     var videoURL: URL?
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
@@ -23,6 +17,11 @@ class VideoEditorViewController: UIViewController {
     private var croppingAreaView: UIView?
     private var topContainer = UIView()
     var selectedAspectRatioButton: UIView?
+    var editingImage: UIImage?
+    private var imageView: UIImageView?
+    var imageViewConstraints: [NSLayoutConstraint] = []
+
+
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,36 +29,125 @@ class VideoEditorViewController: UIViewController {
         
         setupControlsContainer()
         setupTopContainer()
-        setupPlayer()
-
+        setupImageView()
         setupCroppingArea()
-        
         // Ensure controlsContainer stays on top
            view.bringSubviewToFront(controlsContainer)
-        
-    }
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        // Set default selection to Freeform
-        if let freeformButton = self.view.viewWithTag(1) { // Ensure it's the correct type
-            self.handleAspectRatioSelection(freeformButton)
-        }
+        print("viewDidLoad - topContainer size: \(topContainer.frame.size), controlsContainer size: \(controlsContainer.frame.size)")
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if let freeformButton = self.view.viewWithTag(1) { // Ensure it's the correct type
+               self.handleAspectRatioSelection(freeformButton)
+           }
+    }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-                setupPlayerFrame()
-            addCornerHandlesToCroppingArea()
-            croppingAreaView?.frame = playerLayer?.frame ?? .zero
+        setupImageViewFrame()
+        if let imageView = self.imageView {
+            croppingAreaView?.frame = imageView.frame
+        }
+        updateCornerHandlesPosition()
         addGridLinesToCroppingArea()
+        
+        print("viewDidLayoutSubviews - topContainer size: \(topContainer.frame.size), controlsContainer size: \(controlsContainer.frame.size)")
+    
+    }
 
-            }
+    private func adjustCroppingAreaAndImageView(for aspectRatioTag: Int) {
+        guard let image = editingImage else { return }
 
+        let containerSize = topContainer.bounds.size
+        let selectedAspectRatio = aspectRatio(forTag: aspectRatioTag)
+
+        // Calculate new size and position for cropping area
+        var newCroppingSize: CGSize
+        if selectedAspectRatio > (containerSize.width / containerSize.height) {
+            newCroppingSize = CGSize(width: containerSize.width, height: containerSize.width / selectedAspectRatio)
+        } else {
+            newCroppingSize = CGSize(width: containerSize.height * selectedAspectRatio, height: containerSize.height)
+        }
+        let croppingX = (containerSize.width - newCroppingSize.width) / 2
+        let croppingY = (containerSize.height - newCroppingSize.height) / 2
+
+        // Adjust cropping area within topContainer bounds
+        croppingAreaView?.frame = CGRect(x: croppingX, y: max(croppingY, 0), width: newCroppingSize.width, height: min(newCroppingSize.height, containerSize.height))
+
+        // Adjust imageView without removing it from the superview
+        imageView?.translatesAutoresizingMaskIntoConstraints = true // Enable manual frame adjustment
+        var imageViewFrame: CGRect = .zero
+
+        if aspectRatioTag != 1 && aspectRatioTag != 2 { // Non-Freeform, Non-9:16
+            let imageViewHeight = min(containerSize.width / image.size.width * image.size.height, containerSize.height)
+            let adjustedYPosition = max((containerSize.height - imageViewHeight) / 2, 0)
+            imageViewFrame = CGRect(x: 0, y: adjustedYPosition, width: containerSize.width, height: imageViewHeight)
+        } else {
+            // For Freeform and 9:16, ensure it matches the cropping area and stays within topContainer
+            let adjustedFrame = CGRect(x: croppingX, y: max(croppingY, 0), width: newCroppingSize.width, height: min(newCroppingSize.height, containerSize.height))
+            imageViewFrame = adjustedFrame
+        }
+
+        imageView?.frame = imageViewFrame
+        imageView?.contentMode = .scaleAspectFill
+        imageView?.clipsToBounds = false // Consider enabling clipping if you do not want the image to extend beyond its bounds visually
+
+        // Ensure the cropping area and related UI components are correctly updated
+        addCornerHandlesToCroppingArea()
+        addGridLinesToCroppingArea()
+        addOverlayOutsideCroppingArea()
+        view.layoutIfNeeded() // Refresh layout
+    }
+
+    private func setupImageView() {
+        guard let editingImage = editingImage else { return }
+        
+        imageView?.removeFromSuperview() // Remove the existing imageView, if any
+        
+        let imageView = UIImageView(image: editingImage)
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        topContainer.addSubview(imageView)
+        self.imageView = imageView
+        
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Constraints to ensure imageView is centered and fills the available space without exceeding the cropping area
+        NSLayoutConstraint.activate([
+            imageView.centerXAnchor.constraint(equalTo: topContainer.centerXAnchor),
+            imageView.centerYAnchor.constraint(equalTo: topContainer.centerYAnchor),
+            imageView.widthAnchor.constraint(lessThanOrEqualTo: topContainer.widthAnchor),
+            imageView.heightAnchor.constraint(lessThanOrEqualTo: topContainer.heightAnchor),
+            imageView.leadingAnchor.constraint(greaterThanOrEqualTo: topContainer.leadingAnchor),
+            imageView.trailingAnchor.constraint(lessThanOrEqualTo: topContainer.trailingAnchor),
+            imageView.topAnchor.constraint(greaterThanOrEqualTo: topContainer.topAnchor),
+            imageView.bottomAnchor.constraint(lessThanOrEqualTo: topContainer.bottomAnchor)
+        ])
+        
+        // Use aspect ratio constraint to maintain the image's aspect ratio
+        let aspectRatio = editingImage.size.width / editingImage.size.height
+        imageView.addConstraint(NSLayoutConstraint(item: imageView, attribute: .width, relatedBy: .equal, toItem: imageView, attribute: .height, multiplier: aspectRatio, constant: 0).withPriority(UILayoutPriority(rawValue: 999)))
+        
+        // Allow zooming
+        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchImage(_:)))
+        imageView.isUserInteractionEnabled = true
+        imageView.addGestureRecognizer(pinchGesture)
+        topContainer.addGestureRecognizer(pinchGesture)
+    }
+
+    private func updateUIComponentsRelatedToCroppingAndImageView() {
+        // Example: Update overlays, corner handles, and grid lines
+        addCornerHandlesToCroppingArea()
+        addGridLinesToCroppingArea()
+        // Any other UI update logic related to the change in the cropping area or imageView
+    }
+
+    
     @objc private func handleAspectRatioSelection(_ sender: Any) {
-        // Determine whether the sender is a view or a gesture recognizer
+        print("Before handleAspectRatioSelection - topContainer size: \(topContainer.frame.size), controlsContainer size: \(controlsContainer.frame.size)")
         let selectedView: UIView?
+
         if let recognizer = sender as? UITapGestureRecognizer {
             // Sender is a gesture recognizer; use its view
             selectedView = recognizer.view
@@ -70,38 +158,37 @@ class VideoEditorViewController: UIViewController {
             // Unrecognized sender; abort
             return
         }
-        
+
         guard let viewToSelect = selectedView else { return }
-        
-        // Reset previously selected button's icon and label color
+
+        // Reset appearance for all buttons
+        // Assuming you have an array or some way to iterate over all aspect ratio buttons
+        // resetAllButtons() // This is a hypothetical method to reset all buttons
+
         if let previousSelectedButton = selectedAspectRatioButton {
-            let iconView = previousSelectedButton.subviews.compactMap { $0 as? UIImageView }.first
-            let labelView = previousSelectedButton.subviews.compactMap { $0 as? UILabel }.first
-            iconView?.tintColor = .white // Reset icon color
-            labelView?.textColor = .white // Reset label color
+            let previousIconView = previousSelectedButton.subviews.compactMap { $0 as? UIImageView }.first
+            let previousLabelView = previousSelectedButton.subviews.compactMap { $0 as? UILabel }.first
+            previousIconView?.tintColor = .white // Reset icon color
+            previousLabelView?.textColor = .white // Reset label color
         }
-        
+
         // Highlight the newly selected button's icon and label
         let iconView = viewToSelect.subviews.compactMap { $0 as? UIImageView }.first
         let labelView = viewToSelect.subviews.compactMap { $0 as? UILabel }.first
         iconView?.tintColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected icon color
         labelView?.textColor = UIColor(red: 70/255, green: 87/255, blue: 245/255, alpha: 1) // Selected label color
-        
-        selectedAspectRatioButton = viewToSelect // Update the reference to the newly selected button
-        
-        // Adjust cropping area and player layer according to the selected aspect ratio
-        if let aspectRatioTag = viewToSelect.tag as? Int {
-           
-                adjustCroppingAreaAndPlayer(for: aspectRatioTag)
-         
-        }
-    }
 
+        selectedAspectRatioButton = viewToSelect // Update the reference to the newly selected button
+
+        // Now, adjust cropping area and imageView based on the selected aspect ratio
+        adjustCroppingAreaAndImageView(for: viewToSelect.tag)
+        print("After handleAspectRatioSelection - topContainer size: \(topContainer.frame.size), controlsContainer size: \(controlsContainer.frame.size)")
+    }
     
     private func aspectRatio(forTag tag: Int) -> CGFloat {
         switch tag {
         case 1: // Tag for "Freeform" might just maintain the video's original aspect ratio
-            return calculateVideoAspectRatio() ?? 16/9 // Default to 16:9 if calculation fails
+            return calculateImageAspectRatio() ?? 16/9 // Default to 16:9 if calculation fails
         case 2: // Tag for "9:16"
             return 9/16
         case 3: // Tag for "16:9"
@@ -145,31 +232,40 @@ class VideoEditorViewController: UIViewController {
             topContainer.addSubview(overlayView)
         }
     }
+    
+    private func setupImageViewFrame() {
+        guard let imageView = imageView, let image = imageView.image else { return }
 
-
-
-    private func setupPlayerFrame() {
-        guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
+        // Remove previous constraints that might conflict
+        NSLayoutConstraint.deactivate(imageView.constraints.filter {
+            $0.firstItem === imageView || $0.secondItem === imageView
+        })
         
-        // Assuming topContainer has been laid out here
+        let imageAspectRatio = image.size.width / image.size.height
         let containerSize = topContainer.bounds.size
         let containerAspectRatio = containerSize.width / containerSize.height
-        
-        var playerFrame: CGRect = .zero
-        if videoAspectRatio > containerAspectRatio {
-            // Video is wider than the container
-            let height = containerSize.width / videoAspectRatio
-            playerFrame = CGRect(x: 0, y: (containerSize.height - height) / 2, width: containerSize.width, height: height)
+
+        // Re-apply constraints based on the aspect ratio comparison
+        if imageAspectRatio > containerAspectRatio {
+            // Image is wider than the container
+            NSLayoutConstraint.activate([
+                imageView.leadingAnchor.constraint(equalTo: topContainer.leadingAnchor),
+                imageView.trailingAnchor.constraint(equalTo: topContainer.trailingAnchor),
+                imageView.centerYAnchor.constraint(equalTo: topContainer.centerYAnchor),
+                imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: 1/imageAspectRatio)
+            ])
         } else {
-            // Video is taller than the container
-            let width = containerSize.height * videoAspectRatio
-            playerFrame = CGRect(x: (containerSize.width - width) / 2, y: 0, width: width, height: containerSize.height)
+            // Image is taller than the container
+            NSLayoutConstraint.activate([
+                imageView.topAnchor.constraint(equalTo: topContainer.topAnchor),
+                imageView.bottomAnchor.constraint(equalTo: topContainer.bottomAnchor),
+                imageView.centerXAnchor.constraint(equalTo: topContainer.centerXAnchor),
+                imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor, multiplier: imageAspectRatio)
+            ])
         }
         
-        playerLayer?.frame = playerFrame
+        imageView.layoutIfNeeded() // Ensure the layout is immediately updated
     }
-    
-
 
     
     private func setupTopContainer() {
@@ -181,32 +277,11 @@ class VideoEditorViewController: UIViewController {
             topContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             topContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             topContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            topContainer.bottomAnchor.constraint(equalTo: controlsContainer.topAnchor) // Align the bottom of the topContainer with the top of the controlsContainer
+            topContainer.bottomAnchor.constraint(equalTo: controlsContainer.topAnchor)
         ])
-    }
-
-
-    private func setupPlayer() {
-        guard let videoURL = self.videoURL else { return }
-        player = AVPlayer(url: videoURL)
-        playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = topContainer.bounds
-        playerLayer?.videoGravity = .resizeAspect
-        if let layer = playerLayer {
-            topContainer.layer.addSublayer(layer)
-        }
-        player?.play()
         
-        NotificationCenter.default.addObserver(self, selector: #selector(loopVideo), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+       
 
-        // Add Pinch Gesture Recognizer to the topContainer
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
-        topContainer.addGestureRecognizer(pinchGesture)
-    }
-    
-    @objc func loopVideo() {
-        player?.seek(to: CMTime.zero)
-        player?.play()
     }
 
     deinit {
@@ -214,44 +289,80 @@ class VideoEditorViewController: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-
-    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-        guard let playerLayer = self.playerLayer, let croppingAreaView = self.croppingAreaView else { return }
+    @objc private func handlePinchImage(_ gesture: UIPinchGestureRecognizer) {
+        guard let imageView = self.imageView else { return }
 
         if gesture.state == .began {
-            let locationInView = gesture.location(in: gesture.view)
-            // Assuming gesture.view is the view that contains playerLayer, like your topContainer
-            let locationInPlayerLayer = playerLayer.superlayer!.convert(locationInView, to: playerLayer)
-
-            // Convert pinch location to a normalized anchor point for the playerLayer
-            let anchorPointX = locationInPlayerLayer.x / playerLayer.bounds.width
-            let anchorPointY = locationInPlayerLayer.y / playerLayer.bounds.height
-
-            // Adjust playerLayer's anchorPoint without moving it
-            updateAnchorPointWithoutMoving(playerLayer, toPoint: CGPoint(x: anchorPointX, y: anchorPointY))
+            let locationInView = gesture.location(in: imageView)
+            // Normalize the pinch location within the imageView bounds
+            let anchorPointX = locationInView.x / imageView.bounds.width
+            let anchorPointY = locationInView.y / imageView.bounds.height
+            // Adjust imageView's anchor point without moving it
+            updateAnchorPointWithoutMoving2(view: imageView, toPoint: CGPoint(x: anchorPointX, y: anchorPointY))
         }
 
         if gesture.state == .began || gesture.state == .changed {
             let pinchScale = gesture.scale
-            let currentAffineTransform = playerLayer.affineTransform()
-            let currentScale = sqrt(currentAffineTransform.a * currentAffineTransform.d) // Extracting scale from CGAffineTransform
 
-            // Calculating the bounds of the cropping area in terms of the initial video size
-            let minScaleWidth = croppingAreaView.bounds.width / playerLayer.bounds.width
-            let minScaleHeight = croppingAreaView.bounds.height / playerLayer.bounds.height
-            let minScale = max(minScaleWidth, minScaleHeight)
+            // Calculate the scale factor that will be applied if the gesture is recognized
+            let currentScale = sqrt(imageView.transform.a * imageView.transform.d) // Extract current scale from transform
+            let newScale = currentScale * pinchScale
 
-            // Applying the pinch scale to the current scale
-            var newScale = currentScale * pinchScale
-            newScale = max(newScale, minScale) // Ensuring not smaller than the cropping area
-            newScale = min(newScale, 4.0) // Maximum allowed zoom
+            // Define the minimum scale factor
+            let minScale: CGFloat = 1.0 // Adjust this to fit the minimum size constraint you want
 
-            // Apply scaling transform with respect to the current scale
-            let scaleAdjustment = newScale / currentScale
-            playerLayer.setAffineTransform(currentAffineTransform.scaledBy(x: scaleAdjustment, y: scaleAdjustment))
-
-            gesture.scale = 1.0 // Resetting the gesture scale for the next pinch event
+            // Check if the new scale is within the acceptable bounds
+            if newScale >= minScale {
+                imageView.transform = imageView.transform.scaledBy(x: pinchScale, y: pinchScale)
+                gesture.scale = 1.0 // Reset the gesture scale for the next pinch event
+            } else {
+                // Optionally, apply a minor adjustment to align exactly with the minimum scale,
+                // preventing minor scaling below the threshold due to gesture precision.
+                let adjustmentScale = minScale / currentScale
+                imageView.transform = imageView.transform.scaledBy(x: adjustmentScale, y: adjustmentScale)
+            }
         }
+    }
+
+//    @objc private func handlePinchImage(_ gesture: UIPinchGestureRecognizer) {
+//        guard let imageView = self.imageView else { return }
+//
+//        if gesture.state == .began || gesture.state == .changed {
+//            let pinchScale = gesture.scale
+//            
+//            // Apply pinch scale to the imageView's transform for scaling
+//            imageView.transform = imageView.transform.scaledBy(x: pinchScale, y: pinchScale)
+//            
+//            gesture.scale = 1.0 // Resetting the gesture scale for the next pinch event
+//            
+//            // Ensure imageView doesn't shrink smaller than the cropping area
+//            let currentScale = imageView.frame.size.width / imageView.bounds.size.width
+//            let newScale = currentScale * pinchScale
+//            let minScale: CGFloat = 1.0 // Adjust minScale based on your requirements
+//            
+//            // Prevent the imageView from scaling down too much (Optional)
+//            if newScale < minScale {
+//                imageView.transform = CGAffineTransform(scaleX: minScale, y: minScale)
+//            }
+//            
+//            // Update constraints or frame to ensure imageView stays within desired bounds (Optional)
+//            // This step depends on how you want the imageView to behave at its minimum and maximum zoom levels
+//        }
+//    }
+
+    func updateAnchorPointWithoutMoving2(view: UIView, toPoint newAnchorPoint: CGPoint) {
+        let oldAnchorPoint = view.layer.anchorPoint
+        view.layer.anchorPoint = newAnchorPoint
+        let newPoint = CGPoint(x: view.bounds.size.width * newAnchorPoint.x,
+                               y: view.bounds.size.height * newAnchorPoint.y)
+        let oldPoint = CGPoint(x: view.bounds.size.width * oldAnchorPoint.x,
+                               y: view.bounds.size.height * oldAnchorPoint.y)
+
+        var position = view.layer.position
+        position.x -= oldPoint.x - newPoint.x
+        position.y -= oldPoint.y - newPoint.y
+
+        view.layer.position = position
     }
 
 
@@ -267,6 +378,49 @@ class VideoEditorViewController: UIViewController {
  
 
 
+//    private func setupControlsContainer() {
+//        controlsContainer.backgroundColor = UIColor(red: 27.0/255.0, green: 27.0/255.0, blue: 27.0/255.0, alpha: 1.0)
+//        view.addSubview(controlsContainer)
+//
+//        controlsContainer.translatesAutoresizingMaskIntoConstraints = false
+//        NSLayoutConstraint.activate([
+//            controlsContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+//            controlsContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+//            controlsContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+//            // Adjust height constraint as needed including vertical padding
+//        ])
+//        
+//        // Create a vertical stack view to add to controlsContainer
+//        let controlsStackView = UIStackView()
+//        controlsStackView.axis = .vertical
+//        controlsStackView.alignment = .fill
+//        controlsStackView.distribution = .fill
+//        controlsStackView.spacing = 25 // Vertical spacing between elements
+//
+//        // Add the aspect ratio selector and action buttons
+//        let aspectRatioSelectorView = setupAspectRatioSelector()
+//        let actionButtonsView = setupActionButtons()
+//
+//        // Add a spacer view for pushing elements to top and bottom
+//        let spacerView = UIView()
+//        spacerView.setContentHuggingPriority(.defaultLow, for: .vertical)
+//
+//        controlsStackView.addArrangedSubview(aspectRatioSelectorView)
+//        controlsStackView.addArrangedSubview(spacerView) // This acts like a spacer
+//        controlsStackView.addArrangedSubview(actionButtonsView)
+//        
+//        controlsContainer.addSubview(controlsStackView)
+//        controlsStackView.translatesAutoresizingMaskIntoConstraints = false
+//
+//        // Apply constraints including vertical padding
+//        NSLayoutConstraint.activate([
+//            controlsStackView.topAnchor.constraint(equalTo: controlsContainer.topAnchor, constant: 25), // Top padding
+//            controlsStackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor),
+//            controlsStackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor),
+//            controlsStackView.bottomAnchor.constraint(equalTo: controlsContainer.bottomAnchor, constant: -10), // Bottom padding
+//        ])
+//    }
+//
     private func setupControlsContainer() {
         controlsContainer.backgroundColor = UIColor(red: 27.0/255.0, green: 27.0/255.0, blue: 27.0/255.0, alpha: 1.0)
         view.addSubview(controlsContainer)
@@ -276,7 +430,6 @@ class VideoEditorViewController: UIViewController {
             controlsContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             controlsContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             controlsContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            // Adjust height constraint as needed including vertical padding
         ])
         
         // Create a vertical stack view to add to controlsContainer
@@ -289,27 +442,25 @@ class VideoEditorViewController: UIViewController {
         // Add the aspect ratio selector and action buttons
         let aspectRatioSelectorView = setupAspectRatioSelector()
         let actionButtonsView = setupActionButtons()
-
-        // Add a spacer view for pushing elements to top and bottom
         let spacerView = UIView()
         spacerView.setContentHuggingPriority(.defaultLow, for: .vertical)
 
+        // Add arranged subviews to controlsStackView
         controlsStackView.addArrangedSubview(aspectRatioSelectorView)
-        controlsStackView.addArrangedSubview(spacerView) // This acts like a spacer
+        controlsStackView.addArrangedSubview(spacerView)
         controlsStackView.addArrangedSubview(actionButtonsView)
         
         controlsContainer.addSubview(controlsStackView)
         controlsStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Apply constraints including vertical padding
+        // Constraints for controlsStackView
         NSLayoutConstraint.activate([
             controlsStackView.topAnchor.constraint(equalTo: controlsContainer.topAnchor, constant: 25), // Top padding
-            controlsStackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor),
-            controlsStackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor),
-            controlsStackView.bottomAnchor.constraint(equalTo: controlsContainer.bottomAnchor, constant: -10), // Bottom padding
+            controlsStackView.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor, constant: 20), // Leading padding
+            controlsStackView.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor, constant: -20), // Trailing padding
+            controlsStackView.bottomAnchor.constraint(equalTo: controlsContainer.bottomAnchor, constant: -25), // Bottom padding
         ])
     }
-
 
     private func createCustomButton(title: String, imageSystemName: String, action: Selector) -> UIView {
         let buttonIcon = UIImageView(image: UIImage(systemName: imageSystemName))
@@ -364,7 +515,7 @@ class VideoEditorViewController: UIViewController {
         selectorStackView.distribution = .fillEqually
         selectorStackView.spacing = 10 // Consider adjusting the spacing to prevent buttons from being too close
         
-        for (index, aspectRatio) in aspectRatios.enumerated() {
+        for (_, aspectRatio) in aspectRatios.enumerated() {
             let buttonView = createCustomButton(title: aspectRatio.title, imageSystemName: aspectRatio.imageSystemName, action: #selector(handleAspectRatioSelection(_:)))
             buttonView.tag = aspectRatio.tag // Assign unique tag
             selectorStackView.addArrangedSubview(buttonView)
@@ -412,6 +563,7 @@ class VideoEditorViewController: UIViewController {
         // Adjust contentEdgeInsets if needed to position "Cancel" and "Save" closer to edges
         return button
     }
+
     
     private func setupCroppingArea() {
         // Initialize the cropping area view
@@ -479,51 +631,7 @@ class VideoEditorViewController: UIViewController {
             }
         }
     }
-
-    private func adjustCroppingAreaAndPlayer(for aspectRatioTag: Int) {
-        guard let videoAspectRatio = calculateVideoAspectRatio() else { return }
-
-        let containerSize = topContainer.bounds.size
-        var newCroppingSize: CGSize
-        var playerFrame: CGRect
-
-        let selectedAspectRatio: CGFloat = aspectRatio(forTag: aspectRatioTag)
-
-        // Default behavior for other aspect ratios
-        if selectedAspectRatio > (containerSize.width / containerSize.height) {
-            newCroppingSize = CGSize(width: containerSize.width, height: containerSize.width / selectedAspectRatio)
-        } else {
-            newCroppingSize = CGSize(width: containerSize.height * selectedAspectRatio, height: containerSize.height)
-        }
-        
-        let croppingX = (containerSize.width - newCroppingSize.width) / 2
-        let croppingY = (containerSize.height - newCroppingSize.height) / 2
-
-        switch aspectRatioTag {
-        case 2: // 9:16 Aspect Ratio
-            // For 9:16, the player fits within the cropping area without extending
-            playerFrame = CGRect(x: croppingX, y: croppingY, width: newCroppingSize.width, height: newCroppingSize.height)
-            
-        case 1: // Freeform (use video's original aspect ratio)
-            // For Freeform, player size matches the video's original aspect ratio within container bounds
-            playerFrame = CGRect(x: croppingX, y: croppingY, width: newCroppingSize.width, height: newCroppingSize.height)
-            
-        default: // Other aspect ratios
-            // For other aspect ratios, the player fills the width of the container and adjusts height accordingly
-            let playerHeight = containerSize.width / videoAspectRatio
-            playerFrame = CGRect(x: 0, y: (containerSize.height - playerHeight) / 2, width: containerSize.width, height: playerHeight)
-        }
-
-        croppingAreaView?.frame = CGRect(x: croppingX, y: croppingY, width: newCroppingSize.width, height: newCroppingSize.height)
-        playerLayer?.frame = playerFrame
-        
-        playerLayer?.masksToBounds = true
-        addCornerHandlesToCroppingArea()
-        addGridLinesToCroppingArea()
-        addOverlayOutsideCroppingArea()
-    }
-
-
+    
     private func adjustCroppingArea(for aspectRatio: CGFloat, within containerSize: CGSize) {
         var croppingSize = CGSize(width: containerSize.width, height: containerSize.height)
         if aspectRatio > containerSize.width / containerSize.height {
@@ -583,22 +691,67 @@ class VideoEditorViewController: UIViewController {
     }
 
 
-    func calculateVideoAspectRatio() -> CGFloat? {
-        guard let videoURL = self.videoURL else { return nil }
-        let asset = AVAsset(url: videoURL)
-        guard let track = asset.tracks(withMediaType: .video).first else { return nil }
-        let size = track.naturalSize.applying(track.preferredTransform)
-        let aspectRatio = abs(size.width / size.height)
-        return aspectRatio
+    func updateCornerHandlesPosition() {
+        // Assume croppingAreaView and its bounds are correctly set up at this point
+        guard let croppingAreaView = self.croppingAreaView else { return }
+
+        // Remove any existing handles to start fresh
+        croppingAreaView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
+
+        // Define handle characteristics
+        let handleSideLength: CGFloat = 20.0
+        let handleThickness: CGFloat = 4.0
+
+        // Corner positions relative to the croppingAreaView's bounds
+        let positions = [
+            CGPoint(x: 0, y: 0), // Top-left
+            CGPoint(x: croppingAreaView.bounds.maxX - handleSideLength, y: 0), // Top-right
+            CGPoint(x: 0, y: croppingAreaView.bounds.maxY - handleSideLength), // Bottom-left
+            CGPoint(x: croppingAreaView.bounds.maxX - handleSideLength, y: croppingAreaView.bounds.maxY - handleSideLength) // Bottom-right
+        ]
+
+        // Create and add handles
+        positions.enumerated().forEach { index, position in
+            let handle = UIView(frame: CGRect(x: position.x, y: position.y, width: handleSideLength, height: handleSideLength))
+            handle.backgroundColor = .clear
+            handle.tag = 999 // Tag for identification
+
+            // Create L shape
+            let verticalPart = UIView()
+            verticalPart.backgroundColor = .white
+            verticalPart.frame = CGRect(x: (index % 2 == 0) ? 0 : handleSideLength - handleThickness, y: 0, width: handleThickness, height: handleSideLength)
+
+            let horizontalPart = UIView()
+            horizontalPart.backgroundColor = .white
+            horizontalPart.frame = CGRect(x: 0, y: (index < 2) ? 0 : handleSideLength - handleThickness, width: handleSideLength, height: handleThickness)
+
+            handle.addSubview(verticalPart)
+            handle.addSubview(horizontalPart)
+
+            croppingAreaView.addSubview(handle)
+        }
     }
 
     private func createCornerView() -> UIView {
         let corner = UIView()
         corner.backgroundColor = .white
         corner.frame = CGRect(x: 0, y: 0, width: 20, height: 20)
-        corner.layer.cornerRadius = 10 // Optional, for rounded corners
+        corner.layer.cornerRadius = 0 // Optional, for rounded corners
         return corner
     }
+
+
+
+
+
+
+
+    
+    func calculateImageAspectRatio() -> CGFloat? {
+        guard let image = editingImage else { return nil }
+        return image.size.width / image.size.height
+    }
+
 
     private func createButton(title: String, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
@@ -624,3 +777,10 @@ class VideoEditorViewController: UIViewController {
     }
 
 }
+extension NSLayoutConstraint {
+    func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
+        self.priority = priority
+        return self
+    }
+}
+

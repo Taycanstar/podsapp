@@ -17,7 +17,7 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
-    @State private var isAuthenticated = true // Track authentication status
+    @State private var isAuthenticated = true 
     @State private var shouldNavigateToHome = false
     @State private var showingVideoCreationScreen = false
  

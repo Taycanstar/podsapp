@@ -3,17 +3,18 @@ import AVKit
 import PhotosUI
 import Photos
 import UniformTypeIdentifiers
-//
-//
+
+
 struct PhotoPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var cameraViewModel: CameraViewModel
-   
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
         config.selectionLimit = 1
-        config.filter = .videos
+        // Allow both photos and videos
+        config.filter = .any(of: [.images, .videos])
+        
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
         return picker
@@ -40,28 +41,47 @@ struct PhotoPicker: UIViewControllerRepresentable {
             }
 
             if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                self.parent.cameraViewModel.isProcessingVideo = true // Start loading immediately
+                processVideo(provider: provider)
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                processImage(provider: provider)
+            }
+        }
 
-                provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
-                    DispatchQueue.main.async {
-                        if let error = error {
-                            print("Error loading video data: \(error.localizedDescription)")
-                            self.parent.cameraViewModel.isProcessingVideo = false // Stop loading if error
-                            return
-                        }
-                        
-                        guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
-                            print("Unable to write video data to temporary location.")
-                            self.parent.cameraViewModel.isProcessingVideo = false // Stop loading if unable to write data
-                            return
-                        }
+        private func processVideo(provider: NSItemProvider) {
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("Error loading video data: \(error.localizedDescription)")
+                        return
+                    }
 
-                        // Process the selected video
-                        self.parent.cameraViewModel.handleSelectedVideo(url)
+                    guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
+                        print("Unable to write video data to temporary location.")
+                        return
+                    }
+
+                    // Process the selected video
+                    self.parent.cameraViewModel.handleSelectedVideo(url)
+                }
+            }
+        }
+
+        private func processImage(provider: NSItemProvider) {
+            provider.loadObject(ofClass: UIImage.self) { (object, error) in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("Error loading image: \(error.localizedDescription)")
+                    }
+                    if let image = object as? UIImage {
+                        print("Successfully selected image: \(image)")
+                        self.parent.cameraViewModel.handleSelectedImage(image)
+                    } else {
+                        print("No image found in the provider.")
                     }
                 }
             }
         }
+
 
         private func writeDataToTemporaryLocation(data: Data) -> URL? {
             let tempDirectory = FileManager.default.temporaryDirectory
@@ -151,128 +171,7 @@ struct CameraContainerView: View {
             
          
             
-//            if !cameraModel.isRecording {
-//                HStack {
-//
-//                                  Button(action: {
-//                                      isShowingVideoPicker = true
-//                                  }) {
-//                                      Image(systemName: "photo")
-//                                          
-//                                          .font(.system(size: 18))
-//                                          .foregroundColor(.white)
-////                                          .padding(.horizontal, 10)
-////                                          .padding(.vertical, 10)
-////
-//                                          .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5))
-//                                         
-//                                          .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
-//                                          .frame(width: 60, height: 60)
-//                                  }
-////                                  .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
-//                                  .padding(.bottom, 100)
-//                                  .frame(width: 60, height: 60)
-//                                  .sheet(isPresented: $isShowingVideoPicker) {
-//                                      PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
-//                                  }
-//
-//
-//                    Spacer()
-//                    
-//                    
-//                    if !cameraModel.currentPod.items.isEmpty {
-//                        Button(action: {
-//                            // TODO: Trigger the video picker
-//                            if let previewURL = cameraModel.previewURL {
-//                                   print("Preview URL: \(previewURL)")
-//                                   cameraModel.showPreview = true
-//                               } else {
-//                                   print("No preview URL available")
-//                               }
-//                        }) {
-//                            Image(systemName: "chevron.right")
-//                                
-//                                .font(.system(size: 18))
-//                                .foregroundColor(.white)
-//                            
-////                                .padding(.horizontal, 10)
-////                                .padding(.vertical, 10)
-////
-////                                .background(Color(red: 0, green: 0, blue: 0, opacity: 0.5)) // Style as needed
-////                                .clipShape(Circle())
-//                        }
-//                        .background(Circle().fill(Color.black.opacity(0.5))) // Circle background
-//                        .frame(width: 60, height: 60) // Example size, adjust as needed
-//
-//                        .padding(.bottom, 100)
-//                   
-//                      }
-//                    }
-//                  
-//                   .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-//            }
-//          
-//            
-//            if !cameraModel.isRecording {
-//                HStack {
-//                    // "photo" button with circular background
-//                    Button(action: {
-//                        isShowingVideoPicker = true
-//                    }) {
-//                        Image(systemName: "photo")
-//                            .font(.system(size: 18))
-//                            .foregroundColor(.white)
-//                    }
-//                    .frame(width: 40, height: 40) // Ensures the touch area is a 60x60 square
-//                    .background(Circle().fill(Color.black.opacity(0.5))) // Creates the circular background
-//                    .padding(.bottom, 100) // Adjust the position as needed
-//                    .sheet(isPresented: $isShowingVideoPicker) {
-//                        PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
-//                    }
-//
-//                    Spacer()
-//                    
-//                    if !cameraModel.currentPod.items.isEmpty {
-//                        // "chevron.right" button with circular background
-//                        Button(action: {
-//                            // Action for the button
-//                            if let previewURL = cameraModel.previewURL {
-//                                print("Preview URL: \(previewURL)")
-//                                cameraModel.showPreview = true
-//                            } else {
-//                                print("No preview URL available")
-//                            }
-//                        }) {
-//                            Image(systemName: "chevron.right")
-//                                .font(.system(size: 18))
-//                                .foregroundColor(.white)
-//                        }
-//                        .frame(width: 40, height: 40) // Ensures the touch area is a 60x60 square
-//                        .background(Circle().fill(Color.black.opacity(0.5))) // Creates the circular background
-//                        .padding(.bottom, 100) // Adjust the position as needed
-//                    }
-//                }
-//                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-//                .padding(15)
-//            }
 
-        
-//            // Add Thumbnail Carousel
-//                       if !cameraModel.currentPod.items.isEmpty {
-//                           VStack {
-//                               Spacer()
-//                               HStack {
-//                                  
-//                                       ThumbnailCarouselView(items: cameraModel.currentPod.items)
-//                                           .padding(.leading)
-//                                    
-//                                 
-//                                   Spacer()
-//
-//                               }
-//                           }
-////                           .padding(.vertical, 35)
-//                       }
 
             // Floating Camera Control Buttons
             if !cameraModel.isRecording {
@@ -338,29 +237,6 @@ struct CameraContainerView: View {
                }
 
                      
-
-//            // MARK: Controls
-//            ZStack{
-//                Button {
-//                    if cameraModel.isRecording{
-//                        cameraModel.stopRecording()
-//                    } else {
-//                        cameraModel.startRecording()
-//                    }
-//                } label: {
-//                    ZStack {
-//                        Circle()
-//                            .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
-//                            .frame(width: 65, height: 65) // Inner circle size
-//
-//                        Circle()
-//                            .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-//                            .frame(width: 75, height: 75) // Outer circle size (including padding)
-//                    }
-//                }
-//            }
-//            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-
             HStack(spacing: 55) { // This HStack contains all main elements
 
                 
@@ -465,14 +341,29 @@ struct CameraContainerView: View {
         }
         
 
+//        .fullScreenCover(isPresented: $cameraModel.showPreview) {
+//                // Make sure to safely unwrap the `cameraModel.previewURL` or handle nil case appropriately
+//                if let url = cameraModel.previewURL {
+//                    FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
+//                        .background(Color.black.edgesIgnoringSafeArea(.all))
+//                        .environment(\.colorScheme, .dark)
+//                }
+//            }
         .fullScreenCover(isPresented: $cameraModel.showPreview) {
-                // Make sure to safely unwrap the `cameraModel.previewURL` or handle nil case appropriately
-                if let url = cameraModel.previewURL {
-                    FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
-                        .background(Color.black.edgesIgnoringSafeArea(.all))
-                        .environment(\.colorScheme, .dark)
-                }
+            if let url = cameraModel.previewURL {
+                // Present with video URL
+                FinalPreview(url: url, selectedImage: nil, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
+                    .background(Color.black.edgesIgnoringSafeArea(.all))
+                    .environment(\.colorScheme, .dark)
+            } else if let selectedImage = cameraModel.selectedImage {
+                // Present with image
+               
+                FinalPreview(url: nil,  selectedImage: selectedImage, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
+                    .background(Color.black.edgesIgnoringSafeArea(.all))
+                    .environment(\.colorScheme, .dark)
             }
+        }
+
 
         .overlay(
                 fullScreenOverlayView
@@ -621,9 +512,12 @@ struct VoiceCommandPopupView: View {
     }
 }
 
+
+
 struct FinalPreview: View {
     
-    @State var url: URL
+    @State var url: URL?
+    @State var selectedImage: UIImage?
     @Binding var showPreview: Bool
      var player = AVPlayer()
     @ObservedObject var cameraModel = CameraViewModel()
@@ -631,187 +525,204 @@ struct FinalPreview: View {
     @Binding var showCreatePodView: Bool
     @State private var isPresentingEditor = false
     @State private var editParameters = VideoEditParameters()
-
+    private let blackSegmentHeight: CGFloat = 100
+    var videoAspectRatio: CGFloat = 9 / 16
+    
     
     var body: some View {
+
             GeometryReader { proxy in
                 let size = proxy.size
-                ZStack {
-                    VideoPlayer(player: player)
-                        .id(url)
-                        .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
-    //                    .edgesIgnoringSafeArea(.all)
-                        .ignoresSafeArea()
-                        .aspectRatio(CGSize(width: 9, height: 16), contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
- 
-                        .onAppear {
-                            setupPlayer()
-                        }
-                        .onDisappear {
+                let screenWidth = size.width
+                           // Calculate video height based on its aspect ratio
+                let videoHeight = screenWidth * (1 / videoAspectRatio)
+                           // Calculate the remaining height for the bottom segment
+                let bottomSegmentHeight = max(proxy.size.height - videoHeight, 0)
+
+
+                VStack(spacing:0) {
+                    
+                    ZStack{
+                        if let url = cameraModel.previewURL, FileManager.default.fileExists(atPath: url.path) {
+                                  // Video preview
+                                  VideoPlayer(player: player)
+                                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+                                .frame(width: screenWidth, height: videoHeight)
+                                .id(url)
+                                .onAppear {
+                                    setupPlayer()
+                                    
+                                }
+                                .onDisappear {
+                                    cleanUpPlayer()
+                                }
+                                .onChange(of: editParameters) { _ in
+                                    // Apply edit parameters to the video preview
+                                    // This is a placeholder action; actual implementation depends on your video processing approach
+                                    applyEditParametersAndSetupPlayer()
+                                }
+                              } else 
+                        if let image = cameraModel.selectedImage {
+                              
+                                  Image(uiImage: image)
+                                      .resizable()
+                                      .aspectRatio(contentMode: .fill)
+                                      .clipped()
+                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+                                      .frame(width: screenWidth, height: videoHeight)
+                              }
+        
+                    }
+                    .clipped()
+              
+                    VStack {
+                    
+                        Button("Continue") {
                             cleanUpPlayer()
+                            cameraModel.confirmAndNavigateToCreatePod()
+                            showCreatePodView = true
                         }
-
-                        .onChange(of: editParameters) { _ in
-                                                // Apply edit parameters to the video preview
-                                                // This is a placeholder action; actual implementation depends on your video processing approach
-                                                applyEditParametersAndSetupPlayer()
-                                            }
-
-
-
-
-                }
-//
-
-                    .overlay {
-                        VStack {
-                            HStack {
-                                Button(action: {
-                                    if cameraModel.currentPod.items.isEmpty {
-                                        // If it's the first item (Pod is empty), just close the preview
-                                        // This essentially cancels the recording
-                                        showPreview = false
-                                    } else {
-                                        // If Pod has items, prepare to re-record the current item
-                                        // This keeps the Pod items intact but allows for re-recording
-                                        cameraModel.reRecordCurrentItem()
-                                        showPreview = false
-                                    }
-                                }) {
-//                                    Image(systemName: "xmark")
-//                                        .foregroundColor(.white)
-//                                        .font(.system(size: 22))
-//                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                        .padding()
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-                                            .foregroundColor(.black)
-                                            .opacity(0.4)
-                                            .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-
-                                        Text("Cancel")
-                                            .font(.system(size: 17))
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                            .scaleEffect(0.8) // Adjust the scale if needed
-                                    }
-                                }
-                                .padding(.leading, -5)
-                                Spacer()
-                                Button(action: {
-                                    cleanUpPlayer()
-                                    cameraModel.confirmAndNavigateToCreatePod()
-                                    showCreatePodView = true
-                                    print("Forward arrow tapped")
-                                }) {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-                                            .foregroundColor(.black)
-                                            .opacity(0.4)
-                                            .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-
-                                        Text("Next")
-                                            .font(.system(size: 17))
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                            .scaleEffect(0.8) // Adjust the scale if needed
-                                    }
-                                }
-                                .padding(.trailing, -5)
-
-                                
-                            }
-                            
-                            HStack{
-                                Spacer()
-                                Button(action: {
-                                    // Trigger crop and rotate mode
-                                    player.pause()
-                                    isPresentingEditor = true
-                                }) {
-                                    Image(systemName: "crop")
-                                        .iconStyle()
-                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                                        
-                                }
-                            }
-                            .padding(.vertical, 15)
-                            
-                            
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                Button(action: {
-                                    cleanUpPlayer()
-                                    cameraModel.confirmVideo()
-                                }) {
-                                    ZStack {
-                                        Circle()
-                                            .foregroundColor(.white)
-                                            .frame(width: 50, height: 50) // Adjust size as needed
-                                        if cameraModel.isTranscribing {
-                                                        // Show a loading animation or progress view
-                                                        ProgressView()
-                                                            .scaleEffect(1, anchor: .center)
-                                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        } else {
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 22))
-                                                .foregroundColor(.black)
-                                        }
-                                    }
-                                }
-
-                            }
-                            .padding(.vertical, 76)
-                            
-                        }
-                        .padding()
-                    }
-
-                    .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
-                        // Handle what to do when the editor is dismissed
-                        // For example, re-setup the player if needed
-                    }) {
-                        // Update representable to pass and receive edit parameters instead of new URL
-                        VideoEditorRepresentable(videoURL: url, onConfirmEditing: { parameters in
-                            DispatchQueue.main.async {
-                                // Update the edit parameters to reflect the changes made
-                                self.editParameters = parameters
-                                // Potentially re-setup the player or apply edits as needed
-                                applyEditParametersAndSetupPlayer()
-                            }
-                        })
-                        .background(Color(red: 20/255, green: 20/255, blue: 20/255))
-                                   .edgesIgnoringSafeArea(.bottom)
-                        // .ignoresSafeArea() is optional based on your layout needs
-                    }
-
+                        .foregroundColor(.white) // Text color for the Next button
+                        .padding(.vertical, 18)
                        
-  
-            }
-        }
-    
+                        .frame(maxWidth: .infinity) // Make button expand
+                        .fontWeight(.semibold)
+                        .background(Color(red: 70/255, green: 87/255, blue: 245/255)) // Background color
+                        .cornerRadius(8) // Rounded corners
+                            }
+                    .padding(.top, 25)
+                    .padding(.horizontal, 15)
+                    .frame(height: bottomSegmentHeight)
+                    
+                }
+            .overlay {
+                VStack {
+                    HStack {
+                        Button(action: {
+                            if cameraModel.currentPod.items.isEmpty {
+                                // If it's the first item (Pod is empty), just close the preview
+                                // This essentially cancels the recording
+                                showPreview = false
+                            } else {
+                                // If Pod has items, prepare to re-record the current item
+                                // This keeps the Pod items intact but allows for re-recording
+                                cameraModel.reRecordCurrentItem()
+                                showPreview = false
+                            }
+                        }) {
 
-//    private func setupPlayer() {
-//        print("Setting up player with URL: \(url)")
-//        let playerItem = AVPlayerItem(url: url)
-//        self.player.replaceCurrentItem(with: playerItem)
-//        self.player.play()
-//    }
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
+                                    .foregroundColor(.black)
+                                    .opacity(0.4)
+                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+
+                                Text("Cancel")
+                                    .font(.system(size: 17))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .scaleEffect(0.8) // Adjust the scale if needed
+                            }
+                        }
+                        .padding(.leading, -5)
+                        Spacer()
+                        Button(action: {
+
+                            cleanUpPlayer()
+                            cameraModel.confirmVideo()
+                         
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
+                                    .foregroundColor(.black)
+                                    .opacity(0.4)
+                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+
+                                Text("Save")
+                                    .font(.system(size: 17))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .scaleEffect(0.8) // Adjust the scale if needed
+                            }
+                        }
+                        .padding(.trailing, -5)
+
+                        
+                    }
+                    
+                    HStack{
+                        Spacer()
+                        Button(action: {
+                            // Trigger crop and rotate mode
+                            player.pause()
+                            isPresentingEditor = true
+                        }) {
+                            Image(systemName: "crop")
+                                .iconStyle()
+                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                
+                        }
+                    }
+                    .padding(.vertical, 15)
+                    
+                    
+                    Spacer()
+                    
+                }
+                .padding()
+            }
+
+            .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
+            }) {
+                // Update representable to pass and receive edit parameters instead of new URL
+                if let videoURL = self.url {
+                    VideoEditorRepresentable(videoURL: videoURL, onConfirmEditing: { parameters in
+                        // Handle editing confirmation
+                        DispatchQueue.main.async {
+                            // Update the edit parameters to reflect the changes made
+                            self.editParameters = parameters
+                            // Potentially re-setup the player or apply edits as needed
+                            applyEditParametersAndSetupPlayer()
+                        }
+                    })
+                    .background(Color(red: 20/255, green: 20/255, blue: 20/255))
+                    .edgesIgnoringSafeArea(.bottom)
+                } else if let editingImage = self.selectedImage {
+                    PhotoEditorRepresentable(editingImage: editingImage, onConfirmEditing: { parameters in
+                        // Handle editing confirmation
+                        DispatchQueue.main.async {
+                            self.editParameters = parameters
+                            // Additional actions as needed
+                        }
+                    })
+                    .background(Color(red: 20/255, green: 20/255, blue: 20/255))
+                    .edgesIgnoringSafeArea(.bottom)
+                }
+            }
+
+               
+    }
+}
+
     private func setupPlayer() {
         DispatchQueue.main.async {
-            print("Setting up player with URL: \(self.url)")
-            let playerItem = AVPlayerItem(url: self.url)
-            self.player.replaceCurrentItem(with: playerItem)
-            self.player.play()
-            
-            // Additional step: Ensure the observer for loop playback is correctly set up
-            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.player.currentItem, queue: .main) { [self] _ in
-                self.player.seek(to: .zero)
+           
+            if let videoURL = self.url {
+                let playerItem = AVPlayerItem(url: videoURL)
+                self.player.replaceCurrentItem(with: playerItem)
                 self.player.play()
+                // Setup the loop playback observer if needed...
+                self.player.replaceCurrentItem(with: playerItem)
+                self.player.play()
+                
+                // Additional step: Ensure the observer for loop playback is correctly set up
+                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.player.currentItem, queue: .main) { [self] _ in
+                    self.player.seek(to: .zero)
+                    self.player.play()
+                }
+
             }
+
         }
     }
 
@@ -821,33 +732,35 @@ struct FinalPreview: View {
            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
        }
     
+
+    
     // Assuming editParameters is already part of your FinalPreview and set appropriately
     private func applyEditParametersAndSetupPlayer() {
         // Since url is not optional, you can use it directly
-        let videoURL = self.url
-
-        // Create an AVAsset and AVPlayerItem from your video URL
-        let asset = AVAsset(url: videoURL)
-        let playerItem = AVPlayerItem(asset: asset)
-
-        // Apply your edit parameters to the playerItem if needed
-        // Note: This placeholder for applying rotation and scaling is conceptual.
-        // You might need to adjust this approach based on your app's specific requirements.
         
-        let videoComposition = AVVideoComposition(asset: asset) { request in
-            let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
-            let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
-            let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
-            request.finish(with: image, context: nil)
-        }
+        if let videoURL = self.url {
+            let asset = AVAsset(url: videoURL)
+            let playerItem = AVPlayerItem(asset: asset)
 
-        playerItem.videoComposition = videoComposition
-        
-        DispatchQueue.main.async {
-            self.player.replaceCurrentItem(with: playerItem)
-            self.player.play()
+            // Apply your edit parameters to the playerItem if needed
+            // Note: This placeholder for applying rotation and scaling is conceptual.
+            // You might need to adjust this approach based on your app's specific requirements.
+            
+            let videoComposition = AVVideoComposition(asset: asset) { request in
+                let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
+                let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
+                let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
+                request.finish(with: image, context: nil)
+            }
+
+            playerItem.videoComposition = videoComposition
+            
+            DispatchQueue.main.async {
+                self.player.replaceCurrentItem(with: playerItem)
+                self.player.play()
+            }
         }
-    }
+        }
 
 
 }
