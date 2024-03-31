@@ -99,6 +99,41 @@ struct PhotoPicker: UIViewControllerRepresentable {
 }
 
 
+enum CameraMode: String, CaseIterable {
+    case photo = "Photo"
+    case video = "Video"
+}
+
+
+
+// Create the WheelPicker view
+struct WheelPicker: View {
+    @Binding var selectedMode: CameraMode
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                ForEach(CameraMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 10)
+                        .background(self.selectedMode == mode ? Color.white : Color.clear)
+                        .foregroundColor(self.selectedMode == mode ? .black : .white)
+                        .clipShape(Capsule())
+                        .onTapGesture {
+                            self.selectedMode = mode
+                        }
+                        .animation(.easeInOut, value: selectedMode)
+                }
+            }
+            .padding(.horizontal, 5)
+        }
+    }
+}
+
+
+
+
 
 struct CameraContainerView: View {
     @StateObject var cameraModel = CameraViewModel()
@@ -111,11 +146,10 @@ struct CameraContainerView: View {
     @State private var voiceCommandPopupMessage: String? = nil
     @Binding var showingVideoCreationScreen: Bool
     @State private var latestPhoto: UIImage? = nil
-
-
-
-
-
+    @State private var selectedCameraMode: CameraMode = .video
+    
+    
+    
     
     var body: some View {
         ZStack {
@@ -125,31 +159,8 @@ struct CameraContainerView: View {
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
                     CreatePodView(pod: $cameraModel.currentPod, shouldNavigateToHome: $shouldNavigateToHome)
-                                  // Pass any required environment objects or parameters
-                          }
-     
-            // Add a button to reset the current pod
-//                      if !cameraModel.currentPod.items.isEmpty {
-//                          Button(action: {
-//                              // Reset the current pod and any other necessary states
-//                              print("xxx")
-//                              cameraModel.currentPod = Pod(id: -1, items:[],title: "")
-//                              cameraModel.recordedDuration = 0
-//                              cameraModel.previewURL = nil
-//                          }) {
-//                              Image(systemName: "xmark")
-//                                  
-//                                  .foregroundColor(.white)
-//                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                  .font(.system(size: 22))
-//                                  .padding()
-//                          }
-//                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-//                       
-//                          .padding(.top, 15)
-//                          .padding(.leading, 0)
-//                        
-//                      }
+                    // Pass any required environment objects or parameters
+                }
             
             if !cameraModel.isRecording {
                 Button(action: {
@@ -166,13 +177,13 @@ struct CameraContainerView: View {
                 .padding(.top, 15)
                 .padding(.leading, 5)
                 .padding(.leading, 0)
-
+                
             }
             
-         
             
-
-
+            
+            
+            
             // Floating Camera Control Buttons
             if !cameraModel.isRecording {
                 VStack(spacing: 0) {  // Adjust spacing as needed
@@ -195,22 +206,22 @@ struct CameraContainerView: View {
                     
                     Button(action: {
                         cameraModel.toggleWaveform()
-                           // Set the message based on the waveform state
-                           voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Voice commands enabled: Say 'start recording' or 'stop recording'" : "Voice commands disabled"
-
-                           // Show the message
-                           withAnimation {
-                               showingVoiceCommandPopup = true
-                           }
-
+                        // Set the message based on the waveform state
+                        voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Voice commands enabled" : "Voice commands disabled"
+                        
+                        // Show the message
+                        withAnimation {
+                            showingVoiceCommandPopup = true
+                        }
+                        
                         // Hide the popup after a few seconds and reset the message
-                          DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                              showingVoiceCommandPopup = false
-                              // Reset the message after the animation completes to ensure it's ready for the next toggle
-                              DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                  voiceCommandPopupMessage = nil
-                              }
-                          }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                            showingVoiceCommandPopup = false
+                            // Reset the message after the animation completes to ensure it's ready for the next toggle
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                voiceCommandPopupMessage = nil
+                            }
+                        }
                     }) {
                         Image(systemName: "waveform")
                             .font(.title)
@@ -219,136 +230,145 @@ struct CameraContainerView: View {
                             .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                             .padding()
                     }
-
+                    
                 }
                 .position(x: UIScreen.main.bounds.width - 33, y: 100)
             }
             
             if let message = voiceCommandPopupMessage {
-                   VStack {
-                       VoiceCommandPopupView(message: message)
-                           .padding(.top, 20) // Adjust this value to ensure it doesn't overlap with the notch or status bar
-                           .transition(.move(edge: .top).combined(with: .opacity))
-                           .animation(.easeInOut, value: UUID())
-
-                       Spacer() // Pushes the popup to the top
-                   }
-                   .zIndex(1) // Ensure it's above other content
-               }
-
-                     
-            HStack(spacing: 55) { // This HStack contains all main elements
-
-                
-                if !cameraModel.currentPod.items.isEmpty {
-                        // Thumbnail Carousel
-                        ThumbnailCarouselView(items: cameraModel.currentPod.items)
-//                            .frame(width: 40, height: 40) 
-                        .frame(width: 40, height: 40)
-                        .padding(.top, -5)
-                   
-                               
-                    } else {
-                        // Invisible Placeholder when there are no items
-                        VStack {
-                            Color.clear
-                                .frame(width: 40, height: 40)
-                            Text(" ")
-                                .font(.footnote)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.clear)
-                        }
-                    }
-                
-                Button(action: {
-                    if cameraModel.isRecording{
-                        cameraModel.stopRecording()
-                    } else {
-                        cameraModel.startRecording()
-                    }
-                }) {
-                    ZStack {
-                        Circle()
-                            .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
-                            .frame(width: 65, height: 65) // Inner circle size
-
-                        Circle()
-                            .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-                            .frame(width: 75, height: 75) // Outer circle size (including padding)
-                    }
-                }
-                
-                if !cameraModel.isRecording {
+                VStack {
+                    VoiceCommandPopupView(message: message)
+                        .padding(.top, 20) // Adjust this value to ensure it doesn't overlap with the notch or status bar
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .animation(.easeInOut, value: UUID())
+                        .padding(.horizontal, 10)
                     
-                    VStack {
-                        if let latestPhoto = latestPhoto {
-                            Button(action: {
-                                // Trigger upload functionality
-                                isShowingVideoPicker = true
-                                print("xy")
-                            }) {
-                                Image(uiImage: latestPhoto)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40) // Adjust size as needed
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                    Spacer() // Pushes the popup to the top
+                }
+                .zIndex(1) // Ensure it's above other content
+            }
+            
+  
+            
+                VStack(spacing: 10){
+                    Spacer()
+                    HStack{
+                        Spacer()
+                        WheelPicker(selectedMode: $selectedCameraMode)
+                                   .background(Color.clear) // Just to highlight the ScrollView area
+                                   .frame(width: 150)
+//                                   .frame(maxWidth: .infinity)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                   
+                    
+                    HStack(spacing: 55) { // This HStack contains all main elements
+
+                   
+                        if !cameraModel.currentPod.items.isEmpty {
+                                // Thumbnail Carousel
+                                ThumbnailCarouselView(items: cameraModel.currentPod.items)
+        //                            .frame(width: 40, height: 40)
+                                .frame(width: 40, height: 40)
+                                .padding(.top, -5)
+                           
+                                       
+                            } else {
+                                // Invisible Placeholder when there are no items
+                                VStack {
+                                    Color.clear
+                                        .frame(width: 40, height: 40)
+                                    Text(" ")
+                                        .font(.footnote)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.clear)
+                                }
+                            }
+                        
+                        Button(action: {
+                            if cameraModel.isRecording{
+                                cameraModel.stopRecording()
+                            } else {
+                                cameraModel.startRecording()
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
+                                    .frame(width: 65, height: 65) // Inner circle size
+
+                                Circle()
+                                    .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
+                                    .frame(width: 75, height: 75) // Outer circle size (including padding)
+                            }
+                        }
+                        
+                        if !cameraModel.isRecording {
+                            
+                            VStack {
+                                if let latestPhoto = latestPhoto {
+                                    Button(action: {
+                                        // Trigger upload functionality
+                                        isShowingVideoPicker = true
+                                      
+                                    }) {
+                                        Image(uiImage: latestPhoto)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 40, height: 40) // Adjust size as needed
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                                    }
+                                } else {
+                                    Button(action: {
+                                        // Placeholder or action for when no photo is available
+                                    }) {
+                                        Image("ms")
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 40, height: 40) // Adjust size as needed
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                                    }
+                                }
+                                Text("Upload") // This ensures the text is below the button
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                            }
+                            .sheet(isPresented: $isShowingVideoPicker) {
+                                PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
                             }
                         } else {
-                            Button(action: {
-                                // Placeholder or action for when no photo is available
-                            }) {
-                                Image("ms")
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40) // Adjust size as needed
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                            VStack {
+                                Color.clear
+                                    .frame(width: 40, height: 40)
+                                Text(" ")
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.clear)
                             }
+                            
                         }
-                        Text("Upload") // This ensures the text is below the button
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
+
+                       
+                        
+                        
                     }
-                    .sheet(isPresented: $isShowingVideoPicker) {
-                        PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
-                    }
-                } else {
-                    VStack {
-                        Color.clear
-                            .frame(width: 40, height: 40)
-                        Text(" ")
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.clear)
-                    }
+//                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+//                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    
+                    .padding(.bottom,15)
+                    .padding()
+//                    .padding(.top)
                     
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-               
-                
-                
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-
-            .padding(.bottom,15)
-
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
-            .padding(.top)
-
-        }
-        
-
-//        .fullScreenCover(isPresented: $cameraModel.showPreview) {
-//                // Make sure to safely unwrap the `cameraModel.previewURL` or handle nil case appropriately
-//                if let url = cameraModel.previewURL {
-//                    FinalPreview(url: url, showPreview: $cameraModel.showPreview, cameraModel: cameraModel, isFrontCameraUsed: cameraModel.isFrontCameraUsed, showCreatePodView: $showCreatePodView)
-//                        .background(Color.black.edgesIgnoringSafeArea(.all))
-//                        .environment(\.colorScheme, .dark)
-//                }
-//            }
+   
         .fullScreenCover(isPresented: $cameraModel.showPreview) {
             if let url = cameraModel.previewURL {
                 // Present with video URL
@@ -556,12 +576,14 @@ struct FinalPreview: View {
                                 .onDisappear {
                                     cleanUpPlayer()
                                 }
+                            
                                 .onChange(of: editParameters) { _ in
                                     // Apply edit parameters to the video preview
                                     // This is a placeholder action; actual implementation depends on your video processing approach
                                     applyEditParametersAndSetupPlayer()
                                 }
-                              } else 
+                            
+                              } else
                         if let image = cameraModel.selectedImage {
                               
                                   Image(uiImage: image)
@@ -673,6 +695,7 @@ struct FinalPreview: View {
             }
 
             .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
+                applyEditParametersAndSetupPlayer()
             }) {
                 // Update representable to pass and receive edit parameters instead of new URL
                 if let videoURL = self.url {
@@ -685,6 +708,7 @@ struct FinalPreview: View {
                             applyEditParametersAndSetupPlayer()
                         }
                     })
+                    
                     .background(Color(red: 20/255, green: 20/255, blue: 20/255))
                     .edgesIgnoringSafeArea(.bottom)
                 } else if let editingImage = self.selectedImage {
@@ -734,33 +758,87 @@ struct FinalPreview: View {
     
 
     
-    // Assuming editParameters is already part of your FinalPreview and set appropriately
+//    // Assuming editParameters is already part of your FinalPreview and set appropriately
+//    private func applyEditParametersAndSetupPlayer() {
+//        // Since url is not optional, you can use it directly
+//        
+//        if let videoURL = self.url {
+//            let asset = AVAsset(url: videoURL)
+//            let playerItem = AVPlayerItem(asset: asset)
+//
+//            // Apply your edit parameters to the playerItem if needed
+//            // Note: This placeholder for applying rotation and scaling is conceptual.
+//            // You might need to adjust this approach based on your app's specific requirements.
+//            
+//            let videoComposition = AVVideoComposition(asset: asset) { request in
+//                let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
+//                let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
+//                let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
+//                request.finish(with: image, context: nil)
+//            }
+//
+//            playerItem.videoComposition = videoComposition
+//            
+//            DispatchQueue.main.async {
+//                self.player.replaceCurrentItem(with: playerItem)
+//                self.player.play()
+//            }
+//        }
+//        }
+    
     private func applyEditParametersAndSetupPlayer() {
-        // Since url is not optional, you can use it directly
+        guard let videoURL = self.url,
+              let cropRect = self.editParameters.cropRect,
+              let scale = self.editParameters.scale else { return }
+
+        let asset = AVAsset(url: videoURL)
+        let composition = AVMutableComposition()
+        guard let compositionTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+              let assetTrack = asset.tracks(withMediaType: .video).first else { return }
         
-        if let videoURL = self.url {
-            let asset = AVAsset(url: videoURL)
-            let playerItem = AVPlayerItem(asset: asset)
-
-            // Apply your edit parameters to the playerItem if needed
-            // Note: This placeholder for applying rotation and scaling is conceptual.
-            // You might need to adjust this approach based on your app's specific requirements.
-            
-            let videoComposition = AVVideoComposition(asset: asset) { request in
-                let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
-                let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
-                let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
-                request.finish(with: image, context: nil)
-            }
-
-            playerItem.videoComposition = videoComposition
-            
-            DispatchQueue.main.async {
-                self.player.replaceCurrentItem(with: playerItem)
-                self.player.play()
-            }
+        do {
+            try compositionTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: asset.duration), of: assetTrack, at: .zero)
+        } catch {
+            print("Failed to insert time range: \(error)")
+            return
         }
+        
+        compositionTrack.preferredTransform = assetTrack.preferredTransform
+        
+        let videoComposition = AVMutableVideoComposition(propertiesOf: asset)
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30) // Adjust based on your requirements
+        
+        // Calculate the transformation needed to apply the crop and scale
+        let videoSize = assetTrack.naturalSize
+        let scaleFactor = CGAffineTransform(scaleX: scale, y: scale)
+        let cropX = videoSize.width * cropRect.origin.x
+        let cropY = videoSize.height * cropRect.origin.y
+        let translationFactor = CGAffineTransform(translationX: -cropX, y: -cropY)
+        let transform = scaleFactor.concatenating(translationFactor)
+        
+        videoComposition.renderSize = CGSize(width: videoSize.width * scale - cropX, height: videoSize.height * scale - cropY) // Adjusted render size based on crop
+        
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRangeMake(start: .zero, duration: asset.duration)
+        
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionTrack)
+        layerInstruction.setTransform(transform, at: .zero)
+        instruction.layerInstructions = [layerInstruction]
+        videoComposition.instructions = [instruction]
+        
+        let playerItem = AVPlayerItem(asset: composition)
+        playerItem.videoComposition = videoComposition
+        
+        DispatchQueue.main.async {
+            self.player.replaceCurrentItem(with: playerItem)
+            self.player.play()
         }
+    }
+
+
+
+
+
 
 
 }
@@ -773,8 +851,9 @@ extension Image {
     }
 }
 
-
-
 //#Preview {
 //    CameraContainerView()
 //}
+
+
+

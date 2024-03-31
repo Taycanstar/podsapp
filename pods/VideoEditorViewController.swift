@@ -214,7 +214,7 @@ class VideoEditorViewController: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-
+//
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         guard let playerLayer = self.playerLayer, let croppingAreaView = self.croppingAreaView else { return }
 
@@ -253,6 +253,7 @@ class VideoEditorViewController: UIViewController {
             gesture.scale = 1.0 // Resetting the gesture scale for the next pinch event
         }
     }
+    
 
 
     func updateAnchorPointWithoutMoving(_ layer: CALayer, toPoint newAnchorPoint: CGPoint) {
@@ -615,12 +616,72 @@ class VideoEditorViewController: UIViewController {
     @objc private func cropAction() {
         // Placeholder for crop functionality
     }
-    
+//    @objc private func saveAction() {
+//        // Assuming cropRect needs to be calculated based on the user's final cropping area
+//        let cropRect = calculateCropRect()
+//
+//        // Update parameters with the latest scale and cropRect
+//        let parameters = VideoEditParameters(rotationAngle: cumulativeRotation, scale: cumulativeScale, cropRect: cropRect)
+//        
+//        // Call onConfirmEditing with updated parameters
+//        onConfirmEditing?(parameters)
+//        
+//        // Dismiss the editor
+//        dismiss(animated: true, completion: nil)
+//    }
     @objc private func saveAction() {
-        // Assuming you have code here to determine the final rotation angle and scale
-        let parameters = VideoEditParameters(rotationAngle: cumulativeRotation, scale: cumulativeScale)
-        // Call the onConfirmEditing closure to notify about the completion
+        
+        guard let playerLayer = self.playerLayer else {
+               print("Player layer is nil")
+               return
+           }
+        // Extract scale from the current playerLayer's affineTransform
+        let affineTransform = playerLayer.affineTransform()
+        let scaleX = sqrt(affineTransform.a * affineTransform.d) // Extracting scale from CGAffineTransform
+        
+        let cropRect = calculateCropRect()
+        let parameters = VideoEditParameters(rotationAngle: cumulativeRotation, scale: scaleX, cropRect: cropRect)
+        
         onConfirmEditing?(parameters)
+        
+        dismiss(animated: true, completion: nil)
     }
+
+
+    private func calculateCropRect() -> CGRect {
+        guard let playerItem = player?.currentItem,
+              let videoTrack = playerItem.asset.tracks(withMediaType: .video).first,
+              let playerLayer = self.playerLayer, // Safely unwrapped playerLayer
+              let superView = croppingAreaView?.superview else {
+            print("Failed to get video track or playerLayer is not available")
+            return .zero
+        }
+
+        // Use preferredTransform to consider video orientation.
+        let videoSize = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
+        let absoluteVideoSize = CGSize(width: abs(videoSize.width), height: abs(videoSize.height))
+
+        guard let croppingAreaView = croppingAreaView else {
+            print("Cropping area view is not set")
+            return .zero
+        }
+
+        // Convert the cropping area's frame to match the video's dimensions, relative to the playerLayer's superlayer or containing view
+        let cropFrameInView = superView.convert(croppingAreaView.frame, to: topContainer)
+
+        // Calculate the effective video frame within the playerLayer's bounds
+        let playerLayerFrame = playerLayer.videoRect
+
+        // Convert cropFrameInView's origin to the video's coordinate system
+        let cropOriginX = (cropFrameInView.origin.x - playerLayerFrame.origin.x) / playerLayerFrame.width
+        let cropOriginY = (cropFrameInView.origin.y - playerLayerFrame.origin.y) / playerLayerFrame.height
+        let cropWidth = cropFrameInView.width / playerLayerFrame.width
+        let cropHeight = cropFrameInView.height / playerLayerFrame.height
+
+        // The resulting cropRect is normalized to [0,1] range for both axes
+        return CGRect(x: cropOriginX, y: cropOriginY, width: cropWidth, height: cropHeight)
+    }
+
+
 
 }

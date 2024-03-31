@@ -20,6 +20,8 @@ struct ContentView: View {
     @State private var isAuthenticated = true 
     @State private var shouldNavigateToHome = false
     @State private var showingVideoCreationScreen = false
+    @State private var selectedCameraMode = CameraMode.video
+    
  
 
 
@@ -58,7 +60,7 @@ struct ContentView: View {
                     CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
                                        .fullScreenCover(isPresented: $showingVideoCreationScreen, content: {
                                      
-                                           CameraContainerView(shouldNavigateToHome: .constant(false), showingVideoCreationScreen: $showingVideoCreationScreen) 
+                                           CameraContainerView(shouldNavigateToHome: .constant(false), showingVideoCreationScreen: $showingVideoCreationScreen)
                                                .background(Color.black.edgesIgnoringSafeArea(.all))
 //                                                                             .environment(\.colorScheme, .dark)
                                        })
