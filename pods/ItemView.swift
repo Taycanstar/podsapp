@@ -42,13 +42,13 @@ struct ItemView: View {
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(leading: backButton)
         .preferredColorScheme(.dark)
-        .onAppear {
-                   sharedViewModel.isItemViewActive = true
-               }
-               .onDisappear {
-                   sharedViewModel.isItemViewActive = false
-               }
-        
+//        .onAppear {
+//                   sharedViewModel.isItemViewActive = true
+//               }
+//               .onDisappear {
+//                   sharedViewModel.isItemViewActive = false
+//               }
+//        
     }
 
     private func getYOffsetFor(index: Int, in height: CGFloat) -> CGFloat {

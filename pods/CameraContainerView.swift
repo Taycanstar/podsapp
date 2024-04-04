@@ -99,10 +99,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
 }
 
 
-enum CameraMode: String, CaseIterable {
-    case photo = "Photo"
-    case video = "Video"
-}
+
 
 
 
@@ -146,7 +143,7 @@ struct CameraContainerView: View {
     @State private var voiceCommandPopupMessage: String? = nil
     @Binding var showingVideoCreationScreen: Bool
     @State private var latestPhoto: UIImage? = nil
-    @State private var selectedCameraMode: CameraMode = .video
+   
     
     
     
@@ -195,14 +192,32 @@ struct CameraContainerView: View {
                             .font(.system(size: 16))
                             .padding()
                     }
-                    Button(action: cameraModel.toggleFlash) {
-                        Image(systemName: cameraModel.isFlashOn ? "bolt" : "bolt.slash")
-                            .font(.title)
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                            .font(.system(size: 16))
-                            .padding()
+                    if cameraModel.selectedCameraMode == .photo {
+                        Button(action: {
+                         
+                                   cameraModel.toggleFlashForPhotoMode()
+                            
+                               
+                        }) {
+                            Image(systemName: getFlashIcon())
+                                .font(.title)
+                                .font(.system(size: 16))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                .padding()
+                        }
+                    } else {
+                        Button(action: cameraModel.toggleFlash) {
+                                               Image(systemName: cameraModel.isFlashOn ? "bolt" : "bolt.slash")
+                                                   .font(.title)
+                                                   .foregroundColor(.white)
+                                                   .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                                   .font(.system(size: 16))
+                                                   .padding()
+                                        }
                     }
+                   
+
                     
                     Button(action: {
                         cameraModel.toggleWaveform()
@@ -254,9 +269,9 @@ struct CameraContainerView: View {
                     Spacer()
                     HStack{
                         Spacer()
-                        WheelPicker(selectedMode: $selectedCameraMode)
+                        WheelPicker(selectedMode: $cameraModel.selectedCameraMode)
                                    .background(Color.clear) // Just to highlight the ScrollView area
-                                   .frame(width: 150)
+                                   .frame(width: 200)
 //                                   .frame(maxWidth: .infinity)
                         Spacer()
                     }
@@ -287,20 +302,49 @@ struct CameraContainerView: View {
                             }
                         
                         Button(action: {
-                            if cameraModel.isRecording{
+                            if cameraModel.selectedCameraMode == .photo {
+                                cameraModel.configureSessionFor(mode: .photo)
+                                cameraModel.takePhoto()
+                            } else if cameraModel.isRecording {
                                 cameraModel.stopRecording()
                             } else {
-                                cameraModel.startRecording()
+                                // Initialize `maxDuration` with a default value or determine it before usage.
+                                var maxDuration: Double = 0 // Default value or logic to determine it.
+                                
+                                switch cameraModel.selectedCameraMode {
+                                case .fifteen:
+                                    maxDuration = 15
+                                case .thirty:
+                                    maxDuration = 30
+                                // Assuming there are no other cases, but you should handle all cases or add a default case.
+                                default:
+                                    break // Handle unexpected cases or assign a default value to `maxDuration`.
+                                }
+                                
+                                cameraModel.startVideoRecording(maxDuration: maxDuration)
                             }
                         }) {
-                            ZStack {
-                                Circle()
-                                    .fill(cameraModel.isRecording ? Color.red : Color.white) // Inner circle color
-                                    .frame(width: 65, height: 65) // Inner circle size
 
-                                Circle()
-                                    .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-                                    .frame(width: 75, height: 75) // Outer circle size (including padding)
+                            ZStack {
+                                if cameraModel.selectedCameraMode == .photo {
+                                    Circle()
+                                        .fill(Color.white) // Inner circle color
+                                        .frame(width: 65, height: 65) // Inner circle size
+
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: 4) // Outer circle border
+                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
+                                } else {
+                                    Circle()
+                                        .fill(Color.red) // Inner circle color
+                                        .frame(width: 65, height: 65) // Inner circle size
+
+                                    Circle()
+                                        .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
+                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
+                                }
+                                
+                               
                             }
                         }
                         
@@ -451,7 +495,16 @@ struct CameraContainerView: View {
         
     }
     
-    
+    private func getFlashIcon() -> String {
+        if cameraModel.selectedCameraMode == .photo {
+            // For photo mode, you might want to check a different property or condition
+            // This assumes `isFlashIntendedForPhoto` exists and is managed accordingly
+            return cameraModel.isFlashIntendedForPhoto ? "bolt" : "bolt.slash"
+        } else {
+            // For video mode, you can use the existing `isFlashOn` state
+            return cameraModel.isFlashOn ? "bolt" : "bolt.slash"
+        }
+    }
     
     private func handleSelectedVideoURL() async {
          if let url = selectedVideoURL {
@@ -590,7 +643,7 @@ struct FinalPreview: View {
                                       .resizable()
                                       .aspectRatio(contentMode: .fill)
                                       .clipped()
-                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+//                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                       .frame(width: screenWidth, height: videoHeight)
                               }
         
@@ -755,36 +808,7 @@ struct FinalPreview: View {
            player.replaceCurrentItem(with: nil) // Reset the player
            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
        }
-    
 
-    
-//    // Assuming editParameters is already part of your FinalPreview and set appropriately
-//    private func applyEditParametersAndSetupPlayer() {
-//        // Since url is not optional, you can use it directly
-//        
-//        if let videoURL = self.url {
-//            let asset = AVAsset(url: videoURL)
-//            let playerItem = AVPlayerItem(asset: asset)
-//
-//            // Apply your edit parameters to the playerItem if needed
-//            // Note: This placeholder for applying rotation and scaling is conceptual.
-//            // You might need to adjust this approach based on your app's specific requirements.
-//            
-//            let videoComposition = AVVideoComposition(asset: asset) { request in
-//                let rotation = CGAffineTransform(rotationAngle: self.editParameters.rotationAngle)
-//                let scaledAndRotatedTransform = rotation.scaledBy(x: self.editParameters.scale ?? 1.0, y: self.editParameters.scale ?? 1.0)
-//                let image = request.sourceImage.transformed(by: scaledAndRotatedTransform)
-//                request.finish(with: image, context: nil)
-//            }
-//
-//            playerItem.videoComposition = videoComposition
-//            
-//            DispatchQueue.main.async {
-//                self.player.replaceCurrentItem(with: playerItem)
-//                self.player.play()
-//            }
-//        }
-//        }
     
     private func applyEditParametersAndSetupPlayer() {
         guard let videoURL = self.url,

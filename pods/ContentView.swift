@@ -20,7 +20,7 @@ struct ContentView: View {
     @State private var isAuthenticated = true 
     @State private var shouldNavigateToHome = false
     @State private var showingVideoCreationScreen = false
-    @State private var selectedCameraMode = CameraMode.video
+    @State private var selectedCameraMode = CameraMode.fifteen
     
  
 
@@ -28,7 +28,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if isAuthenticated {
-                // User is authenticated, show main content
+//                 User is authenticated, show main content
                 ZStack(alignment: .bottom) {
                     // Content views
                     Group {
@@ -65,11 +65,9 @@ struct ContentView: View {
 //                                                                             .environment(\.colorScheme, .dark)
                                        })
                 }
+             
             } else {
-                // User is not authenticated, show the landing/authentication view
                 MainOnboardingView(isAuthenticated:$isAuthenticated)
-//                EmptyView()
-
             }
         }
     }

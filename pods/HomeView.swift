@@ -40,7 +40,9 @@ struct HomeView: View {
                     if(expandedPods.contains(homeViewModel.pods[index].title)) {
                         ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
                             if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
-                                NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items, initialIndex: initialIndex)) {
+//                                NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items, initialIndex: initialIndex))
+                                NavigationLink(destination: PodItemView(items: homeViewModel.pods[index].items,  initialIndex: initialIndex))
+                                {
                                     ItemRow(item: item)
                                         .listRowInsets(EdgeInsets())
                                 }

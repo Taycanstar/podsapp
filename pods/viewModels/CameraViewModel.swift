@@ -1,6 +1,7 @@
 
 import SwiftUI
 import AVFoundation
+import CoreMedia
 
 import MicrosoftCognitiveServicesSpeech
 
@@ -58,19 +59,26 @@ extension PodItem {
     }
 }
 
+enum CameraMode: String, CaseIterable {
+    case fifteen = "15s"
+    case thirty = "30s"
+    case photo = "Photo"
+}
 
 
 
 
 // MARK: Camera View Model
-class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate{
+class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     
     // Custom initializer
         override init() {
             super.init()
             configureSpeechService()
             checkPermission()
-          
+            configureSessionFor(mode: selectedCameraMode)
+
+
 //            setupAudioRecorder()
         }
     
@@ -85,6 +93,11 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isTranscribing: Bool = false
     static let shared = CameraViewModel()
     var savedAudioURL: URL?
+    @Published var photoOutput = AVCapturePhotoOutput()
+    // Define the selected mode property
+    @Published var selectedCameraMode: CameraMode = .fifteen
+    @Published var isFlashIntendedForPhoto: Bool = false
+
 
     let voiceCommands = ["start recording", "stop recording"]
     
@@ -178,43 +191,379 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
        }
 
 
+//    func setUp() {
+//        do {
+//            
+//            if session.canAddOutput(photoOutput) {
+//                    session.addOutput(photoOutput)
+//                    // Set photo settings for high resolution if needed
+//                    photoOutput.isHighResolutionCaptureEnabled = true
+//                }
+////            // Set up the audio session for recording
+//            let audioSession = AVAudioSession.sharedInstance()
+////            try audioSession.setCategory(.playAndRecord, mode: .default)
+//            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
+//            try audioSession.setActive(true)
+//
+//            session.beginConfiguration()
+//
+//            // Video Input Setup
+//            if let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+//               let videoInput = try? AVCaptureDeviceInput(device: cameraDevice),
+//               session.canAddInput(videoInput) {
+//                session.addInput(videoInput)
+//            }
+//
+//            // Audio Input Setup
+//            if let audioDevice = AVCaptureDevice.default(for: .audio),
+//               let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
+//               session.canAddInput(audioInput) {
+//                session.addInput(audioInput)
+//            }
+//
+//            if session.canAddOutput(output) {
+//                session.addOutput(output)
+//            }
+//            
+//            
+//
+//            session.commitConfiguration()
+//            
+//        
+//        } catch {
+//            print("Error setting up video/audio input: \(error)")
+//        }
+//    }
+    
     func setUp() {
         do {
-//            // Set up the audio session for recording
+            // Set up the audio session for recording
             let audioSession = AVAudioSession.sharedInstance()
-//            try audioSession.setCategory(.playAndRecord, mode: .default)
             try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
             try audioSession.setActive(true)
 
-            session.beginConfiguration()
-
-            // Video Input Setup
-            if let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-               let videoInput = try? AVCaptureDeviceInput(device: cameraDevice),
-               session.canAddInput(videoInput) {
-                session.addInput(videoInput)
-            }
-
-            // Audio Input Setup
-            if let audioDevice = AVCaptureDevice.default(for: .audio),
-               let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
-               session.canAddInput(audioInput) {
-                session.addInput(audioInput)
-            }
-
-            if session.canAddOutput(output) {
-                session.addOutput(output)
-            }
-            
-            
-
-            session.commitConfiguration()
-            
-        
+            // Call configureSessionFor with the initial mode
+            configureSessionFor(mode: selectedCameraMode)
         } catch {
-            print("Error setting up video/audio input: \(error)")
+            print("Error setting up video/audio input or audio session: \(error)")
         }
     }
+    
+//    func configureSessionFor(mode: CameraMode) {
+//        // Ensure the session is not running before reconfiguring
+//        if session.isRunning {
+//            session.stopRunning()
+//        }
+//
+//        session.beginConfiguration()
+//
+//        // Clear existing inputs and outputs to reconfigure
+//        session.inputs.forEach(session.removeInput)
+//        session.outputs.forEach(session.removeOutput)
+//
+//        switch mode {
+//        case .photo:
+//            configureForPhotoMode()
+//        case .fifteen, .thirty:
+//            let maxDuration = mode == .fifteen ? 15 : 30
+//            configureForVideoMode(maxDuration: maxDuration)
+//        }
+//
+//        session.commitConfiguration()
+//
+//        // Restart the session with the new configuration
+//        session.startRunning()
+//    }
+    
+    func configureSessionFor(mode: CameraMode) {
+        if session.isRunning {
+            session.stopRunning()
+        }
+
+        session.beginConfiguration()
+
+        session.inputs.forEach(session.removeInput)
+        session.outputs.forEach(session.removeOutput)
+
+        switch mode {
+        case .photo:
+            configureForPhotoMode()
+        case .fifteen, .thirty:
+            let maxDuration = mode == .fifteen ? 15 : 30
+            configureForVideoMode(maxDuration: maxDuration)
+        }
+
+        session.commitConfiguration()
+
+        session.startRunning()
+    }
+
+    
+
+//
+//    func configureForPhotoMode() {
+//        // Ensure there's a camera input
+//        let currentCameraPosition: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
+//
+//            // Ensure there's a camera input for the current position
+//            addCameraInput(position: currentCameraPosition)
+//        
+//        // Add photo output if not already added
+//        if !session.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
+//            if session.canAddOutput(photoOutput) {
+//                session.addOutput(photoOutput)
+//                
+//                // Configure for the maximum supported photo resolution
+//                if let activeDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+//                   let maxSupportedDimensions = activeDevice.activeFormat.supportedMaxPhotoDimensions.first {
+//                    
+//                    photoOutput.maxPhotoDimensions = CMVideoDimensions(width: maxSupportedDimensions.width, height: maxSupportedDimensions.height)
+//                }
+//            }
+//        }
+//    }
+    func configureForPhotoMode() {
+        // Ensure there's a camera input for the current position
+        let currentCameraPosition: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
+        addCameraInput(position: currentCameraPosition)
+        
+        if !session.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
+             if session.canAddOutput(photoOutput) {
+                 session.addOutput(photoOutput)
+                 photoOutput.isHighResolutionCaptureEnabled = true // Enable high-resolution capture
+             }
+         }
+        // No need to set maxPhotoDimensions here as it's not a standard API.
+        // Just make sure to enable high resolution photos in your photo settings during capture.
+    }
+
+
+
+    
+    private func configureForVideoMode(maxDuration: Int) {
+        // Add camera and audio inputs
+        addCameraInput(position: .back)
+        addAudioInput()
+        
+        // Add video output
+        if session.canAddOutput(output) {
+            session.addOutput(output)
+        }
+        
+        // No additional settings are directly applied here for maxDuration
+        // maxDuration is used in the recording logic instead
+    }
+    
+    private func addCameraInput(position: AVCaptureDevice.Position) {
+        guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
+              let videoInput = try? AVCaptureDeviceInput(device: cameraDevice) else {
+            print("Error setting up camera input.")
+            return
+        }
+
+        // Clear existing video inputs before adding a new one
+        let existingVideoInputs = session.inputs.filter { input in
+            guard let input = input as? AVCaptureDeviceInput else { return false }
+            return input.device.hasMediaType(.video)
+        }
+        existingVideoInputs.forEach(session.removeInput)
+
+        if session.canAddInput(videoInput) {
+            session.addInput(videoInput)
+        } else {
+            print("Cannot add video input.")
+        }
+    }
+
+
+    private func addAudioInput() {
+        guard let audioDevice = AVCaptureDevice.default(for: .audio),
+              let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
+              session.canAddInput(audioInput) else {
+            print("Error setting up audio input.")
+            return
+        }
+        session.addInput(audioInput)
+    }
+
+
+    
+    func startRecordingBasedOnMode() {
+        switch selectedCameraMode {
+        case .fifteen:
+            startVideoRecording(maxDuration: 15.0)
+        case .thirty:
+            startVideoRecording(maxDuration: 30.0)
+        case .photo:
+            takePhoto() // Make sure to implement this method
+        }
+    }
+
+    
+    func startVideoRecording(maxDuration: Double) {
+        if !isRecording {
+            let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
+            let outputFileURL = URL(fileURLWithPath: outputPath)
+            output.startRecording(to: outputFileURL, recordingDelegate: self)
+            isRecording = true
+
+            // Schedule to stop recording after maxDuration seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
+                if self.isRecording {
+                    self.stopRecording()
+                }
+            }
+        }
+    }
+
+//    func takePhoto() {
+//        if !session.isRunning {
+//            session.startRunning()
+//        }
+//        
+//        DispatchQueue.main.async {
+//            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
+//                print("No active video connection for photo capture.")
+//                return
+//            }
+//
+//            // Lock exposure and white balance based on the current preview settings
+//            self.lockExposureAndWhiteBalance()
+//
+//            // Ensure correct orientation and mirroring for the front camera
+//            if self.isFrontCameraUsed {
+//                connection.isVideoMirrored = true
+//                connection.videoOrientation = .portrait
+//            }
+//
+//            let photoSettings = AVCapturePhotoSettings()
+//            assert(self.photoOutput.isHighResolutionCaptureEnabled, "High-resolution capture is not enabled.")
+//            photoSettings.isHighResolutionPhotoEnabled = true // Enable high resolution for this capture
+//
+//
+//            if self.isFlashIntendedForPhoto {
+//                photoSettings.flashMode = .on
+//            } else {
+//                photoSettings.flashMode = .off
+//            }
+//
+//            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+//        }
+//    }
+    func takePhoto() {
+        if !session.isRunning {
+            session.startRunning()
+        }
+        
+        DispatchQueue.main.async {
+            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
+                print("No active video connection for photo capture.")
+                return
+            }
+
+            // Ensure correct orientation and mirroring for the front camera
+            if self.isFrontCameraUsed {
+                connection.isVideoMirrored = true
+                connection.videoOrientation = .portrait
+            }
+            
+            // Lock exposure and white balance based on the current preview settings
+            self.lockExposureAndWhiteBalanceForPhoto()
+
+            let photoSettings = AVCapturePhotoSettings()
+            assert(self.photoOutput.isHighResolutionCaptureEnabled, "High-resolution capture is not enabled.")
+            photoSettings.isHighResolutionPhotoEnabled = true // Enable high resolution for this capture
+
+
+            if self.isFlashIntendedForPhoto {
+                photoSettings.flashMode = .on
+            } else {
+                photoSettings.flashMode = .off
+            }
+            
+            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+        }
+    }
+    func lockExposureAndWhiteBalanceForPhoto() {
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else { return }
+
+        do {
+            try device.lockForConfiguration()
+            
+            let currentExposureTargetBias = device.exposureTargetBias
+            device.setExposureTargetBias(currentExposureTargetBias, completionHandler: nil)
+            
+            if device.isExposureModeSupported(.locked) {
+                device.exposureMode = .locked
+            }
+            
+            if device.isWhiteBalanceModeSupported(.locked) {
+                device.whiteBalanceMode = .locked
+            }
+
+            device.unlockForConfiguration()
+        } catch {
+            print("Unable to lock device for configuration: \(error)")
+        }
+    }
+
+//        func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+//            if let error = error {
+//                print("Error capturing photo: \(error)")
+//                return
+//            }
+//            
+//            guard let imageData = photo.fileDataRepresentation(), let image = UIImage(data: imageData) else {
+//                print("Failed to convert photo to image.")
+//                return
+//            }
+//            
+//            DispatchQueue.main.async {
+//                self.selectedImage = image
+//                self.showPreview = true // Indicate to show preview
+//                self.isProcessingVideo = false // Update processing state if needed
+//                self.previewURL = nil
+//                print("Captured image set. Size: \(image.size)")
+//                // Trigger any UI updates to show the captured image
+//            }
+//        }
+
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            print("Error capturing photo: \(error.localizedDescription)")
+            return
+        }
+
+        guard let imageData = photo.fileDataRepresentation(), let capturedImage = UIImage(data: imageData) else {
+            print("Failed to convert photo to image.")
+            return
+        }
+
+        // If the front camera was used, mirror the image
+        let imageToDisplay: UIImage
+        if isFrontCameraUsed {
+            // Flip the image for the front camera
+            if let cgImg = capturedImage.cgImage {
+                imageToDisplay = UIImage(cgImage: cgImg, scale: capturedImage.scale, orientation: .leftMirrored)
+            } else {
+                imageToDisplay = capturedImage
+            }
+        } else {
+            imageToDisplay = capturedImage
+        }
+
+        // Handle the image (similar to handling selected image from picker)
+        DispatchQueue.main.async {
+            self.selectedImage = imageToDisplay
+            self.showPreview = true // Indicate to show preview
+            self.isProcessingVideo = false // Update processing state if needed
+            self.previewURL = nil
+            print("Captured image set. Size: \(imageToDisplay.size)")
+            // Trigger any UI updates to show the captured image
+        }
+    }
+
 
     // Speech Service Configuration
         func configureSpeechService() {
@@ -279,38 +628,38 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
         
+    
 //    private func handleRecognizedText(_ text: String) {
-//        let command = text.lowercased()
-//        if command.contains("start recording") {
-//            if !self.isRecording {
-//                DispatchQueue.main.async {
+//        let command = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+//        
+//        // Using a switch statement can prepare the structure for easier extension with new commands
+//        switch command {
+//        case let cmd where cmd.contains("start recording"):
+//            DispatchQueue.main.async {
+//                if !self.isRecording {
 //                    self.startRecording()
 //                }
 //            }
-//        } else if command.contains("stop recording") {
-//            if self.isRecording {
-//                DispatchQueue.main.async {
+//        case let cmd where cmd.contains("stop recording"):
+//            DispatchQueue.main.async {
+//                if self.isRecording {
 //                    self.stopRecording()
 //                }
 //            }
-//        } else {
-//            DispatchQueue.main.async {
-//                if !self.voiceCommands.contains(where: { command.contains($0) }) {
-//                    self.transcription += text + " "
-//                }
-//            }
+//        default:
+//            break
 //        }
 //    }
     
     private func handleRecognizedText(_ text: String) {
         let command = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         // Using a switch statement can prepare the structure for easier extension with new commands
         switch command {
         case let cmd where cmd.contains("start recording"):
             DispatchQueue.main.async {
                 if !self.isRecording {
-                    self.startRecording()
+                    self.startRecordingBasedOnMode() // Ensure this starts recording based on the selected mode
                 }
             }
         case let cmd where cmd.contains("stop recording"):
@@ -319,17 +668,18 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                     self.stopRecording()
                 }
             }
+        case let cmd where cmd.contains("take photo"):
+            DispatchQueue.main.async {
+                // Ensure this is called only when in Photo mode to prevent it from interrupting video recording
+                if !self.isRecording && self.selectedCameraMode == .photo {
+                    self.takePhoto()
+                }
+            }
         default:
             break
-//            // Handle transcription updates outside the main thread if not necessary,
-//            // then update the UI or state on the main thread if needed.
-//            if !self.voiceCommands.contains(where: { command.contains($0) }) {
-//                // Consider adding a mechanism to update transcription less frequently
-//                // if updates are very frequent. This is just an example, adjust as needed.
-//                self.appendTranscription(text)
-//            }
         }
     }
+
 
     // Helper function to append text to the transcription safely
     private func appendTranscription(_ text: String) {
@@ -340,22 +690,19 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     
 
-    func startRecording() {
-          let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
-          let videoFileURL = URL(fileURLWithPath: videoFilename)
-          output.startRecording(to: videoFileURL, recordingDelegate: self)
-        print(transcription, "transcription before")
-
-        // Start audio recording
-           setupAudioRecorder()
-           audioRecorder?.record()
-        
-          isRecording = true
-      }
-
-
-
-
+//    func startRecording() {
+//          let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
+//          let videoFileURL = URL(fileURLWithPath: videoFilename)
+//          output.startRecording(to: videoFileURL, recordingDelegate: self)
+//        print(transcription, "transcription before")
+//
+//        // Start audio recording
+//           setupAudioRecorder()
+//           audioRecorder?.record()
+//        
+//          isRecording = true
+//      }
+    
 
       func stopRecording() {
           output.stopRecording()
@@ -452,6 +799,12 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             isPodFinalized = true
         }
     
+    func toggleFlashForPhotoMode() {
+           isFlashIntendedForPhoto.toggle()
+       }
+
+  
+    
     func toggleFlash() {
         guard let currentCameraInput = session.inputs.first as? AVCaptureDeviceInput else {
             print("Unable to identify current camera input")
@@ -483,32 +836,78 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             currentCamera.unlockForConfiguration()
         }
     }
-
+//
+//    func switchCamera() {
+//        guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {
+//            return
+//        }
+//
+//        session.beginConfiguration()
+//        session.removeInput(currentVideoInput)
+//
+//        let newCameraPosition: AVCaptureDevice.Position = currentVideoInput.device.position == .back ? .front : .back
+//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
+//              let newVideoInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+//            session.commitConfiguration()
+//            return
+//        }
+//
+//        if session.canAddInput(newVideoInput) {
+//            session.addInput(newVideoInput)
+//            isFrontCameraUsed = (newCameraPosition == .front)
+//        }
+//
+//        // Reconfigure audio input as needed
+//        reconfigureAudioInput()
+//
+//        session.commitConfiguration()
+//    }
+    
     func switchCamera() {
-        guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {
+        guard let currentCameraInput = session.inputs.first(where: { input in
+            guard let input = input as? AVCaptureDeviceInput else { return false }
+            return input.device.hasMediaType(.video)
+        }) as? AVCaptureDeviceInput else {
+            print("Failed to get current camera input")
             return
         }
 
         session.beginConfiguration()
-        session.removeInput(currentVideoInput)
+        session.removeInput(currentCameraInput)
 
-        let newCameraPosition: AVCaptureDevice.Position = currentVideoInput.device.position == .back ? .front : .back
+        let newCameraPosition: AVCaptureDevice.Position = currentCameraInput.device.position == .front ? .back : .front
         guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-              let newVideoInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+              let newCameraInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+            print("Failed to create new camera input")
             session.commitConfiguration()
             return
         }
 
-        if session.canAddInput(newVideoInput) {
-            session.addInput(newVideoInput)
-            isFrontCameraUsed = (newCameraPosition == .front)
+        if session.canAddInput(newCameraInput) {
+            session.addInput(newCameraInput)
+            isFrontCameraUsed.toggle() // Update the flag indicating which camera is being used
+        } else {
+            print("Cannot add new camera input")
         }
 
-        // Reconfigure audio input as needed
-        reconfigureAudioInput()
+        // After switching the camera, ensure the photo output is correctly configured.
+        // This may involve adjusting the connection settings for the photo output.
+        if let photoConnection = photoOutput.connection(with: .video) {
+            // Check and adjust the photoConnection settings as needed, for example:
+            if photoConnection.isVideoOrientationSupported {
+                photoConnection.videoOrientation = AVCaptureVideoOrientation.portrait
+            }
+        }
 
         session.commitConfiguration()
+        
+        // If the session was stopped, start it again.
+        if !session.isRunning {
+            session.startRunning()
+        }
     }
+
+
 
     private func reconfigureAudioInput() {
         if let currentAudioInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.audio) }) {
@@ -878,5 +1277,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
 }
+
+
+
 
 
