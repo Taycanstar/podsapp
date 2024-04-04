@@ -416,6 +416,37 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
+
+    
+    func takePhoto() {
+        if !session.isRunning {
+            session.startRunning()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Delay for 0.5 seconds
+            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
+                print("No active video connection for photo capture.")
+                return
+            }
+
+            if self.isFrontCameraUsed {
+                connection.isVideoMirrored = true
+                connection.videoOrientation = .portrait
+            }
+
+            let photoSettings = AVCapturePhotoSettings()
+            photoSettings.isHighResolutionPhotoEnabled = true
+
+            if self.isFlashIntendedForPhoto {
+                photoSettings.flashMode = .on
+            } else {
+                photoSettings.flashMode = .off
+            }
+
+            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+        }
+    }
+
 //    func takePhoto() {
 //        if !session.isRunning {
 //            session.startRunning()
@@ -427,14 +458,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //                return
 //            }
 //
-//            // Lock exposure and white balance based on the current preview settings
-//            self.lockExposureAndWhiteBalance()
-//
 //            // Ensure correct orientation and mirroring for the front camera
 //            if self.isFrontCameraUsed {
 //                connection.isVideoMirrored = true
 //                connection.videoOrientation = .portrait
 //            }
+//            
+//            // Lock exposure and white balance based on the current preview settings
+//            self.lockExposureAndWhiteBalanceForPhoto()
 //
 //            let photoSettings = AVCapturePhotoSettings()
 //            assert(self.photoOutput.isHighResolutionCaptureEnabled, "High-resolution capture is not enabled.")
@@ -446,44 +477,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //            } else {
 //                photoSettings.flashMode = .off
 //            }
-//
+//            
 //            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
 //        }
 //    }
-    func takePhoto() {
-        if !session.isRunning {
-            session.startRunning()
-        }
-        
-        DispatchQueue.main.async {
-            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
-                print("No active video connection for photo capture.")
-                return
-            }
-
-            // Ensure correct orientation and mirroring for the front camera
-            if self.isFrontCameraUsed {
-                connection.isVideoMirrored = true
-                connection.videoOrientation = .portrait
-            }
-            
-            // Lock exposure and white balance based on the current preview settings
-            self.lockExposureAndWhiteBalanceForPhoto()
-
-            let photoSettings = AVCapturePhotoSettings()
-            assert(self.photoOutput.isHighResolutionCaptureEnabled, "High-resolution capture is not enabled.")
-            photoSettings.isHighResolutionPhotoEnabled = true // Enable high resolution for this capture
-
-
-            if self.isFlashIntendedForPhoto {
-                photoSettings.flashMode = .on
-            } else {
-                photoSettings.flashMode = .off
-            }
-            
-            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
-        }
-    }
     func lockExposureAndWhiteBalanceForPhoto() {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else { return }
 
