@@ -264,18 +264,21 @@ struct CameraContainerView: View {
             }
             
   
-            
                 VStack(spacing: 10){
                     Spacer()
-                    HStack{
-                        Spacer()
-                        WheelPicker(selectedMode: $cameraModel.selectedCameraMode)
-                                   .background(Color.clear) // Just to highlight the ScrollView area
-                                   .frame(width: 200)
-//                                   .frame(maxWidth: .infinity)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
+                    
+                              if !cameraModel.isRecording {
+                                  HStack{
+                                      Spacer()
+                                      WheelPicker(selectedMode: $cameraModel.selectedCameraMode)
+                                                 .background(Color.clear) // Just to highlight the ScrollView area
+                                                 .frame(width: 200)
+              //                                   .frame(maxWidth: .infinity)
+                                      Spacer()
+                                  }
+                                  .frame(maxWidth: .infinity)
+                              }
+                
                    
                     
                     HStack(spacing: 55) { // This HStack contains all main elements
@@ -347,6 +350,7 @@ struct CameraContainerView: View {
                                
                             }
                         }
+                      
                         
                         if !cameraModel.isRecording {
                             
@@ -646,106 +650,186 @@ struct FinalPreview: View {
 //                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                       .frame(width: screenWidth, height: videoHeight)
                               }
+                        VStack {
+                                         Spacer()
+                                         HStack(spacing: 40) {
+                                             // Chevron left with label "Back"
+                                             VStack {
+                                                 Button(action: {
+                                                     // Action for back
+                                                     if cameraModel.currentPod.items.isEmpty {
+                                                         // If it's the first item (Pod is empty), just close the preview
+                                                         // This essentially cancels the recording
+                                                         showPreview = false
+                                                     } else {
+                                                         // If Pod has items, prepare to re-record the current item
+                                                         // This keeps the Pod items intact but allows for re-recording
+                                                         cameraModel.reRecordCurrentItem()
+                                                         showPreview = false
+                                                     }
+                                                 }) {
+                                                     Image(systemName: "chevron.left")
+                                                         .foregroundColor(.white)
+                                                         .font(.system(size: 18))
+                                                         .frame(width: 44, height: 44)
+                                                         .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.4))
+                                                         .clipShape(Circle())
+                                                         
+                                                 }
+                                                 Text("Back")
+                                                     .foregroundColor(.white)
+                                                     .font(.system(size: 12))
+                                                     .fontWeight(.medium)
+                                             }
+                                             
+                                          
+                                                 Button(action: {
+                                                     // Action for checkmark/save
+                                                     cleanUpPlayer()
+                                                     if let _ = cameraModel.previewURL {
+                                                             // It's a video
+                                                             cameraModel.confirmVideo()
+                                                         } else if cameraModel.selectedImage != nil {
+                                                             // It's a photo
+                                                             cameraModel.confirmPhoto()
+                                                         }
+                                                 }) {
+                                                     
+                                                     Image(systemName: "checkmark")
+                                                         .foregroundColor(.black)
+                                                         .font(.system(size: 34))
+                                                         .frame(width: 75, height: 75) // Making this larger as specified
+                                                         .background(Color.white)
+                                                         .clipShape(Circle())
+                                                   
+                                                 }
+                                                 .padding(.bottom, 15)
+                                               
+                                             
+                                           
+
+                                             // Chevron right with label "Continue"
+                                             VStack {
+                                                 Button(action: {
+                                                     // Action for continue
+                                                     cleanUpPlayer()
+                                                     cameraModel.confirmAndNavigateToCreatePod()
+                                                     showCreatePodView = true
+                                                 }) {
+                                                     Image(systemName: "chevron.right")
+                                                         .foregroundColor(.white)
+                                                         .font(.system(size: 18))
+                                                         .frame(width: 44, height: 44)
+                                                         .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.4))
+                                                         .clipShape(Circle())
+                                                      
+                                                 }
+                                                 Text("Continue")
+                                                     .foregroundColor(.white)
+                                                     .font(.system(size: 12))
+                                                     .fontWeight(.medium)
+                                             }
+                                         }
+                                         .padding(.bottom, 15) // Adjust this value to position the buttons closer to the bottom edge
+                                     }
         
                     }
                     .clipped()
+                    
+               
               
                     VStack {
                     
-                        Button("Continue") {
-                            cleanUpPlayer()
-                            cameraModel.confirmAndNavigateToCreatePod()
-                            showCreatePodView = true
-                        }
-                        .foregroundColor(.white) // Text color for the Next button
-                        .padding(.vertical, 18)
-                       
-                        .frame(maxWidth: .infinity) // Make button expand
-                        .fontWeight(.semibold)
-                        .background(Color(red: 70/255, green: 87/255, blue: 245/255)) // Background color
-                        .cornerRadius(8) // Rounded corners
+//                        Button("Continue") {
+//                            cleanUpPlayer()
+//                            cameraModel.confirmAndNavigateToCreatePod()
+//                            showCreatePodView = true
+//                        }
+                        Spacer()
                             }
                     .padding(.top, 25)
                     .padding(.horizontal, 15)
                     .frame(height: bottomSegmentHeight)
                     
                 }
-            .overlay {
-                VStack {
-                    HStack {
-                        Button(action: {
-                            if cameraModel.currentPod.items.isEmpty {
-                                // If it's the first item (Pod is empty), just close the preview
-                                // This essentially cancels the recording
-                                showPreview = false
-                            } else {
-                                // If Pod has items, prepare to re-record the current item
-                                // This keeps the Pod items intact but allows for re-recording
-                                cameraModel.reRecordCurrentItem()
-                                showPreview = false
-                            }
-                        }) {
-
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-                                    .foregroundColor(.black)
-                                    .opacity(0.4)
-                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-
-                                Text("Cancel")
-                                    .font(.system(size: 17))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .scaleEffect(0.8) // Adjust the scale if needed
-                            }
-                        }
-                        .padding(.leading, -5)
-                        Spacer()
-                        Button(action: {
-
-                            cleanUpPlayer()
-                            cameraModel.confirmVideo()
-                         
-                        }) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-                                    .foregroundColor(.black)
-                                    .opacity(0.4)
-                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-
-                                Text("Save")
-                                    .font(.system(size: 17))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .scaleEffect(0.8) // Adjust the scale if needed
-                            }
-                        }
-                        .padding(.trailing, -5)
-
-                        
-                    }
+//            .overlay {
+//                VStack {
+//                    HStack {
+//                        Button(action: {
+//                            if cameraModel.currentPod.items.isEmpty {
+//                                // If it's the first item (Pod is empty), just close the preview
+//                                // This essentially cancels the recording
+//                                showPreview = false
+//                            } else {
+//                                // If Pod has items, prepare to re-record the current item
+//                                // This keeps the Pod items intact but allows for re-recording
+//                                cameraModel.reRecordCurrentItem()
+//                                showPreview = false
+//                            }
+//                        }) {
+//
+//                            ZStack {
+//                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
+//                                    .foregroundColor(.black)
+//                                    .opacity(0.4)
+//                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+//
+//                                Text("Cancel")
+//                                    .font(.system(size: 17))
+//                                    .fontWeight(.bold)
+//                                    .foregroundColor(.white)
+//                                    .scaleEffect(0.8) // Adjust the scale if needed
+//                            }
+//                        }
+//                        .padding(.leading, -5)
+//                        Spacer()
+//                        Button(action: {
+//
+//                            cleanUpPlayer()
+//                            cameraModel.confirmVideo()
+//                         
+//                        }) {
+//                            ZStack {
+//                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
+//                                    .foregroundColor(.black)
+//                                    .opacity(0.4)
+//                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
+//
+//                                Text("Save")
+//                                    .font(.system(size: 17))
+//                                    .fontWeight(.bold)
+//                                    .foregroundColor(.white)
+//                                    .scaleEffect(0.8) // Adjust the scale if needed
+//                            }
+//                        }
+//                        .padding(.trailing, -5)
+//
+//                        
+//                    }
                     
-                    HStack{
-                        Spacer()
-                        Button(action: {
-                            // Trigger crop and rotate mode
-                            player.pause()
-                            isPresentingEditor = true
-                        }) {
-                            Image(systemName: "crop")
-                                .iconStyle()
-                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                                
-                        }
-                    }
-                    .padding(.vertical, 15)
+//                    HStack{
+//                        Spacer()
+//                        Button(action: {
+//                            // Trigger crop and rotate mode
+//                            player.pause()
+//                            isPresentingEditor = true
+//                        }) {
+//                            Image(systemName: "crop")
+//                                .iconStyle()
+//                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                
+//                        }
+//                    }
+//                    .padding(.vertical, 15)
                     
                     
-                    Spacer()
                     
-                }
-                .padding()
-            }
+                    
+//                    Spacer()
+//                    
+//                }
+//                .padding()
+//            }
 
             .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
                 applyEditParametersAndSetupPlayer()

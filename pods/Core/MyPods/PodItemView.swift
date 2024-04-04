@@ -80,30 +80,60 @@ struct PodItemView: View {
         guard let initialIndex = initialIndex, initialIndex < items.count else { return }
 
         let item = items[initialIndex]
-        let item_ = AVPlayerItem(url: item.videoURL)
-        player.replaceCurrentItem(with: item_)
+        
+        // Safely unwrap the `videoURL`
+        if let videoURL = item.videoURL {
+            let item_ = AVPlayerItem(url: videoURL)
+            player.replaceCurrentItem(with: item_)
+        } else {
+            // Handle the case where there's no video URL
+            // This might involve showing a placeholder, logging an error, or simply doing nothing
+            print("No video URL available for initial item.")
+        }
     }
 
+
     
+//    func playVideoOnChangeOfScrollPosition(itemId: Int) {
+//        guard let currentItem = items.first(where: { $0.id == itemId }) else {
+//            print("Item with ID \(itemId) not found.")
+//            return
+//        }
+//
+//        print("Playing item with ID \(itemId) and URL \(currentItem.videoURL)")
+//        let playerItem = AVPlayerItem(url: currentItem.videoURL)
+//        player.replaceCurrentItem(with: playerItem)
+//
+//        // Remove any existing observers to avoid duplicates
+//        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+//        
+//        // Add observer to loop video
+//        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [ self] _ in
+//            self.player.seek(to: .zero)
+//            self.player.play()
+//        }
+//    }
     func playVideoOnChangeOfScrollPosition(itemId: Int) {
-        guard let currentItem = items.first(where: { $0.id == itemId }) else {
-            print("Item with ID \(itemId) not found.")
+        guard let currentItem = items.first(where: { $0.id == itemId }), let videoURL = currentItem.videoURL else {
+            print("Item with ID \(itemId) not found or doesn't have a video URL.")
             return
         }
 
-        print("Playing item with ID \(itemId) and URL \(currentItem.videoURL)")
-        let playerItem = AVPlayerItem(url: currentItem.videoURL)
+        print("Playing item with ID \(itemId) and URL \(videoURL)")
+        let playerItem = AVPlayerItem(url: videoURL)
         player.replaceCurrentItem(with: playerItem)
 
         // Remove any existing observers to avoid duplicates
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-        
+
         // Add observer to loop video
-        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [ self] _ in
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { _ in
             self.player.seek(to: .zero)
             self.player.play()
         }
     }
+
+
 
     private var backButton: some View {
         Button(action: {

@@ -224,7 +224,6 @@ class NetworkManager {
              }
          }.resume()
      }
-
     func createPod(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
         print("Starting createPod...")
         let dispatchGroup = DispatchGroup()
@@ -238,45 +237,62 @@ class NetworkManager {
 
         items.forEach { item in
             dispatchGroup.enter()
-            let videoBlobName = UUID().uuidString + ".mp4"
-            guard let videoData = try? Data(contentsOf: item.videoURL) else {
-                print("Failed to load video data for URL: \(item.videoURL)")
-                uploadErrors.append("Failed to load video data for URL: \(item.videoURL)")
-                dispatchGroup.leave()
-                return
-            }
-
-            print("Uploading video for item \(item.id)...")
-            uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
-                guard success, let videoUrl = videoUrlString else {
-                    print("Failed to upload video for item \(item.id)")
-                    uploadErrors.append("Failed to upload video for item \(item.id)")
-                    dispatchGroup.leave()
-                    return
-                }
-
-                print("Video uploaded successfully for item \(item.id)")
-                if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
-                    let thumbnailBlobName = UUID().uuidString + ".jpg"
-                    print("Uploading thumbnail for item \(item.id)...")
-                    self.uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
-                        guard success, let thumbnailUrl = thumbnailUrlString else {
-                            print("Failed to upload thumbnail for item \(item.id)")
-                            uploadErrors.append("Failed to upload thumbnail for item \(item.id)")
+            if let videoURL = item.videoURL {
+                let videoBlobName = UUID().uuidString + ".mp4"
+                do {
+                    let videoData = try Data(contentsOf: videoURL)
+                    print("Uploading video for item \(item.id)...")
+                    uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
+                        if success, let videoUrl = videoUrlString {
+                            print("Video uploaded successfully for item \(item.id)")
+                            var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil)
+                            if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
+                                let thumbnailBlobName = UUID().uuidString + ".jpg"
+                                print("Uploading thumbnail for item \(item.id)...")
+                                self.uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
+                                    if success, let thumbnailUrl = thumbnailUrlString {
+                                        print("Thumbnail uploaded successfully for item \(item.id)")
+                                        updatedItem.thumbnailURL = URL(string: thumbnailUrl)
+                                    } else {
+                                        print("Failed to upload thumbnail for item \(item.id)")
+                                        uploadErrors.append("Failed to upload thumbnail for item \(item.id)")
+                                    }
+                                    updatedItems.append(updatedItem)
+                                    dispatchGroup.leave()
+                                }
+                            } else {
+                                updatedItems.append(updatedItem)
+                                dispatchGroup.leave()
+                            }
+                        } else {
+                            print("Failed to upload video for item \(item.id)")
+                            uploadErrors.append("Failed to upload video for item \(item.id)")
                             dispatchGroup.leave()
-                            return
                         }
-
-                        print("Thumbnail uploaded successfully for item \(item.id)")
-                        let updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl)!, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: thumbnailUrl))
-                        updatedItems.append(updatedItem)
-                        dispatchGroup.leave()
                     }
-                } else {
-                    let updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl)!, metadata: item.metadata, thumbnail: nil, thumbnailURL: nil)
-                    updatedItems.append(updatedItem)
+                } catch {
+                    print("Failed to load video data for URL: \(videoURL)")
+                    uploadErrors.append("Failed to load video data for URL: \(videoURL)")
                     dispatchGroup.leave()
                 }
+            } else if let image = item.image, let imageData = image.jpegData(compressionQuality: 0.8) {
+                let imageBlobName = UUID().uuidString + ".jpg"
+                print("Uploading image for item \(item.id)...")
+                uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
+                    if success, let imageUrl = imageUrlString {
+                        print("Image uploaded successfully for item \(item.id)")
+                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl))
+                        updatedItems.append(updatedItem)
+                    } else {
+                        print("Failed to upload image for item \(item.id)")
+                        uploadErrors.append("Failed to upload image for item \(item.id)")
+                    }
+                    dispatchGroup.leave()
+                }
+            } else {
+                print("No video or image to upload for item \(item.id)")
+                uploadErrors.append("No video or image to upload for item \(item.id)")
+                dispatchGroup.leave()
             }
         }
 
@@ -295,38 +311,147 @@ class NetworkManager {
         }
     }
 
+
+//    func createPod(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
+//        print("Starting createPod...")
+//        let dispatchGroup = DispatchGroup()
+//        var updatedItems = [PodItem]()
+//        var uploadErrors = [String]()
+//        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
+//            print("No container name found in environment variables.")
+//            completion(false, "No container name found.")
+//            return
+//        }
+//
+//        items.forEach { item in
+//            dispatchGroup.enter()
+//            let videoBlobName = UUID().uuidString + ".mp4"
+//            guard let videoData = try? Data(contentsOf: item.videoURL) else {
+//                print("Failed to load video data for URL: \(item.videoURL)")
+//                uploadErrors.append("Failed to load video data for URL: \(item.videoURL)")
+//                dispatchGroup.leave()
+//                return
+//            }
+//
+//            print("Uploading video for item \(item.id)...")
+//            uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
+//                guard success, let videoUrl = videoUrlString else {
+//                    print("Failed to upload video for item \(item.id)")
+//                    uploadErrors.append("Failed to upload video for item \(item.id)")
+//                    dispatchGroup.leave()
+//                    return
+//                }
+//
+//                print("Video uploaded successfully for item \(item.id)")
+//                if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
+//                    let thumbnailBlobName = UUID().uuidString + ".jpg"
+//                    print("Uploading thumbnail for item \(item.id)...")
+//                    self.uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
+//                        guard success, let thumbnailUrl = thumbnailUrlString else {
+//                            print("Failed to upload thumbnail for item \(item.id)")
+//                            uploadErrors.append("Failed to upload thumbnail for item \(item.id)")
+//                            dispatchGroup.leave()
+//                            return
+//                        }
+//
+//                        print("Thumbnail uploaded successfully for item \(item.id)")
+//                        let updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl)!, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: thumbnailUrl))
+//                        updatedItems.append(updatedItem)
+//                        dispatchGroup.leave()
+//                    }
+//                } else {
+//                    let updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl)!, metadata: item.metadata, thumbnail: nil, thumbnailURL: nil)
+//                    updatedItems.append(updatedItem)
+//                    dispatchGroup.leave()
+//                }
+//            }
+//        }
+//
+//        dispatchGroup.notify(queue: .main) {
+//            if !uploadErrors.isEmpty {
+//                print("Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
+//                completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
+//                return
+//            }
+//
+//            print("Sending pod creation request...")
+//            self.sendPodCreationRequest(podTitle: podTitle, items: updatedItems, email: email) { success, message in
+//                print("Pod creation request result: \(success), message: \(String(describing: message))")
+//                completion(success, message)
+//            }
+//        }
+//    }
+
     func sendPodCreationRequest(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-pod/") else {
+//            print("Invalid URL for pod creation")
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        print("Sending pod creation request to \(url)")
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        let itemsForBody = items.map { item -> [String: Any] in
+//            var itemDict: [String: Any] = ["videoURL": item.videoURL.absoluteString, "label": item.metadata]
+//            if let thumbnailURL = item.thumbnailURL {
+//                itemDict["thumbnail"] = thumbnailURL.absoluteString
+//            }
+//            return itemDict
+//        }
+//
+//        let body: [String: Any] = ["title": podTitle, "items": itemsForBody, "email": email]
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+//            if let requestBody = request.httpBody, let requestBodyString = String(data: requestBody, encoding: .utf8) {
+//                print("Request Body: \(requestBodyString)")
+//            }
+//        } catch {
+//            print("Failed to encode request body, error: \(error)")
+//            completion(false, "Failed to encode request body")
+//            return
+//        }
         guard let url = URL(string: "\(baseUrl)/create-pod/") else {
-            print("Invalid URL for pod creation")
-            completion(false, "Invalid URL")
-            return
-        }
+              print("Invalid URL for pod creation")
+              completion(false, "Invalid URL")
+              return
+          }
 
-        print("Sending pod creation request to \(url)")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let itemsForBody = items.map { item -> [String: Any] in
-            var itemDict: [String: Any] = ["videoURL": item.videoURL.absoluteString, "label": item.metadata]
-            if let thumbnailURL = item.thumbnailURL {
-                itemDict["thumbnail"] = thumbnailURL.absoluteString
-            }
-            return itemDict
-        }
+          let itemsForBody = items.map { item -> [String: Any] in
+              var itemDict: [String: Any] = ["label": item.metadata]
 
-        let body: [String: Any] = ["title": podTitle, "items": itemsForBody, "email": email]
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-            if let requestBody = request.httpBody, let requestBodyString = String(data: requestBody, encoding: .utf8) {
-                print("Request Body: \(requestBodyString)")
-            }
-        } catch {
-            print("Failed to encode request body, error: \(error)")
-            completion(false, "Failed to encode request body")
-            return
-        }
+              // Include videoURL if it exists
+              if let videoURL = item.videoURL?.absoluteString {
+                  itemDict["videoURL"] = videoURL
+              }
 
+              // Include imageURL if it exists
+              if let imageURL = item.imageURL?.absoluteString {
+                  itemDict["imageURL"] = imageURL
+              }
+
+              // Include thumbnailURL if it exists
+              if let thumbnailURL = item.thumbnailURL?.absoluteString {
+                  itemDict["thumbnail"] = thumbnailURL
+              }
+
+              return itemDict
+          }
+
+          let body: [String: Any] = ["title": podTitle, "items": itemsForBody, "email": email]
+          do {
+              request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+          } catch {
+              print("Failed to encode request body, error: \(error)")
+              completion(false, "Failed to encode request body")
+              return
+          }
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Network error on pod creation request: \(error.localizedDescription)")

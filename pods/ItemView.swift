@@ -19,11 +19,17 @@ struct ItemView: View {
         GeometryReader { geometry in
             ZStack {
                 ForEach(items.indices, id: \.self) { index in
-                    VideoContentView(url: items[index].videoURL, isActive: index == currentIndex)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .offset(x: 0, y: getYOffsetFor(index: index, in: geometry.size.height))
-                        .animation(.easeInOut(duration: 0.3), value: dragOffset)
-                        .animation(.easeInOut(duration: 0.3), value: currentIndex)
+                    if let videoURL = items[index].videoURL {
+                        VideoContentView(url: videoURL, isActive: index == currentIndex)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .offset(x: 0, y: getYOffsetFor(index: index, in: geometry.size.height))
+                            .animation(.easeInOut(duration: 0.3), value: dragOffset)
+                            .animation(.easeInOut(duration: 0.3), value: currentIndex)
+                    } else {
+                        // Handle the case where there's no video URL, perhaps showing a placeholder
+                        Text("Image goes here then")                    }
+                  
+                       
                 }
             }
             .gesture(

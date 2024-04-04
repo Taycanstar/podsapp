@@ -7,11 +7,12 @@ import MicrosoftCognitiveServicesSpeech
 
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
-    var videoURL: URL
+    var videoURL: URL?
     var image: UIImage?
     var metadata: String
     var thumbnail: UIImage? // For local UI usage
     var thumbnailURL: URL?  // For networking and referencing the image's location
+    var imageURL: URL?
 }
 
 struct Pod: Identifiable {
@@ -19,7 +20,6 @@ struct Pod: Identifiable {
     var items: [PodItem] = []
     var title: String
 }
-
 
 
 
@@ -35,6 +35,7 @@ struct PodItemJSON: Codable {
     let videoURL: String
     let label: String
     let thumbnail: String
+    let image: String
 }
 
 
@@ -56,6 +57,7 @@ extension PodItem {
         self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
         self.metadata = itemJSON.label
         self.thumbnailURL = URL(string: itemJSON.thumbnail) // Consider safer unwrapping
+        self.imageURL = URL(string: itemJSON.image)
     }
 }
 
@@ -341,8 +343,11 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     
     private func configureForVideoMode(maxDuration: Int) {
+        // Determine the correct camera position
+        let position: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
+        
         // Add camera and audio inputs
-        addCameraInput(position: .back)
+        addCameraInput(position: position) // Use the dynamically determined position
         addAudioInput()
         
         // Add video output
@@ -353,6 +358,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // No additional settings are directly applied here for maxDuration
         // maxDuration is used in the recording logic instead
     }
+
     
     private func addCameraInput(position: AVCaptureDevice.Position) {
         guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
@@ -401,13 +407,27 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     
     func startVideoRecording(maxDuration: Double) {
-        if !isRecording {
+        guard !isRecording else { return }
+
+        // Ensure the session is configured for video recording.
+        configureSessionFor(mode: selectedCameraMode)
+
+        DispatchQueue.main.async {
+            self.session.startRunning() // Ensure the session is running.
+
             let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
             let outputFileURL = URL(fileURLWithPath: outputPath)
-            output.startRecording(to: outputFileURL, recordingDelegate: self)
-            isRecording = true
 
-            // Schedule to stop recording after maxDuration seconds
+            // Check for active connections just before starting to record.
+            guard self.output.connection(with: .video) != nil else {
+                print("No active video connection.")
+                return
+            }
+
+            self.output.startRecording(to: outputFileURL, recordingDelegate: self)
+            self.isRecording = true
+
+            // Schedule to stop recording after maxDuration seconds.
             DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
                 if self.isRecording {
                     self.stopRecording()
@@ -447,40 +467,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-//    func takePhoto() {
-//        if !session.isRunning {
-//            session.startRunning()
-//        }
-//        
-//        DispatchQueue.main.async {
-//            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
-//                print("No active video connection for photo capture.")
-//                return
-//            }
-//
-//            // Ensure correct orientation and mirroring for the front camera
-//            if self.isFrontCameraUsed {
-//                connection.isVideoMirrored = true
-//                connection.videoOrientation = .portrait
-//            }
-//            
-//            // Lock exposure and white balance based on the current preview settings
-//            self.lockExposureAndWhiteBalanceForPhoto()
-//
-//            let photoSettings = AVCapturePhotoSettings()
-//            assert(self.photoOutput.isHighResolutionCaptureEnabled, "High-resolution capture is not enabled.")
-//            photoSettings.isHighResolutionPhotoEnabled = true // Enable high resolution for this capture
-//
-//
-//            if self.isFlashIntendedForPhoto {
-//                photoSettings.flashMode = .on
-//            } else {
-//                photoSettings.flashMode = .off
-//            }
-//            
-//            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
-//        }
-//    }
     func lockExposureAndWhiteBalanceForPhoto() {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else { return }
 
@@ -503,27 +489,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             print("Unable to lock device for configuration: \(error)")
         }
     }
-
-//        func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-//            if let error = error {
-//                print("Error capturing photo: \(error)")
-//                return
-//            }
-//            
-//            guard let imageData = photo.fileDataRepresentation(), let image = UIImage(data: imageData) else {
-//                print("Failed to convert photo to image.")
-//                return
-//            }
-//            
-//            DispatchQueue.main.async {
-//                self.selectedImage = image
-//                self.showPreview = true // Indicate to show preview
-//                self.isProcessingVideo = false // Update processing state if needed
-//                self.previewURL = nil
-//                print("Captured image set. Size: \(image.size)")
-//                // Trigger any UI updates to show the captured image
-//            }
-//        }
 
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
@@ -984,7 +949,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         } else {
             print("Audio file found, proceeding with transcription.")
         }
-
+        let nextId = currentPod.items.count + 1
         // Transcribe the audio and then confirm the video
         transcribeAudio(from: audioFilename) { [weak self] transcribedText in
             guard let self = self else { return }
@@ -996,7 +961,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 // Check if the last item in the Pod is the same as the current preview URL
                 if self.currentPod.items.last?.videoURL != videoURL {
                     let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-                    let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                    let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
                     self.currentPod.items.append(newItem)
 //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
                 } else {
@@ -1014,6 +979,24 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
+    
+    func confirmPhoto() {
+        guard let selectedImage = selectedImage else {
+            print("No photo to confirm.")
+            return
+        }
+        let nextId = currentPod.items.count + 1
+        let thumbnail = selectedImage // Directly use the image or resize as needed
+        let newItem = PodItem(id:nextId, videoURL: nil, image: selectedImage, metadata: "Some metadata", thumbnail: thumbnail, thumbnailURL: nil)
+
+        DispatchQueue.main.async {
+            self.currentPod.items.append(newItem)
+            self.selectedImage = nil // Reset after confirming
+            self.showPreview = false // Hide preview
+        }
+    }
+
+
 //
 //    func confirmVideo() {
 //        guard let videoURL = previewURL else {
