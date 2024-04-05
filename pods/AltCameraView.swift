@@ -47,18 +47,35 @@ struct CameraPreview: UIViewRepresentable {
     var size: CGSize
     
     func makeUIView(context: Context) ->  UIView {
-     
+//     
         let view = UIView()
+//        
+//        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
+//        cameraModel.preview.frame.size = size
+//        
+//        cameraModel.preview.videoGravity = .resizeAspectFill
+//        view.layer.addSublayer(cameraModel.preview)
         
-        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
-        cameraModel.preview.frame.size = size
+//        cameraModel.session.startRunning()
         
-        cameraModel.preview.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(cameraModel.preview)
-        
-        cameraModel.session.startRunning()
-        
-        return view
+//        return view
+        DispatchQueue.global(qos: .userInitiated).async {
+                    cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
+                    cameraModel.preview.frame.size = size
+            
+                    cameraModel.preview.videoGravity = .resizeAspectFill
+                    view.layer.addSublayer(cameraModel.preview)
+//             DispatchQueue.main.async {
+//                 self.cameraModel.preview.frame = view.bounds
+//                 self.cameraModel.preview.videoGravity = .resizeAspectFill
+//                 view.layer.addSublayer(self.cameraModel.preview)
+//             }
+             
+             // Start the session in the background to avoid UI freeze
+             cameraModel.session.startRunning()
+         }
+         
+         return view
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {

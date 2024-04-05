@@ -32,10 +32,10 @@ struct PodJSON: Codable {
 
 struct PodItemJSON: Codable {
     let id: Int
-    let videoURL: String
+    let videoURL: String?
     let label: String
     let thumbnail: String
-    let image: String
+    let image: String?
 }
 
 
@@ -54,10 +54,18 @@ extension Pod {
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
         self.id = itemJSON.id
-        self.videoURL = URL(string: itemJSON.videoURL)! // Consider safer unwrapping
+        if let videoURLString = itemJSON.videoURL {
+                    self.videoURL = URL(string: videoURLString)
+                } else {
+                    self.videoURL = nil // Assign nil if the string is nil
+                } // Consider safer unwrapping
         self.metadata = itemJSON.label
         self.thumbnailURL = URL(string: itemJSON.thumbnail) // Consider safer unwrapping
-        self.imageURL = URL(string: itemJSON.image)
+        if let imageString = itemJSON.image {
+                   self.imageURL = URL(string: imageString)
+               } else {
+                   self.imageURL = nil // Assign nil if the string is nil
+               }
     }
 }
 
@@ -78,7 +86,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             super.init()
             configureSpeechService()
             checkPermission()
-            configureSessionFor(mode: selectedCameraMode)
+//            configureSessionFor(mode: selectedCameraMode)
 
 
 //            setupAudioRecorder()
@@ -250,33 +258,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             print("Error setting up video/audio input or audio session: \(error)")
         }
     }
-    
-//    func configureSessionFor(mode: CameraMode) {
-//        // Ensure the session is not running before reconfiguring
-//        if session.isRunning {
-//            session.stopRunning()
-//        }
-//
-//        session.beginConfiguration()
-//
-//        // Clear existing inputs and outputs to reconfigure
-//        session.inputs.forEach(session.removeInput)
-//        session.outputs.forEach(session.removeOutput)
-//
-//        switch mode {
-//        case .photo:
-//            configureForPhotoMode()
-//        case .fifteen, .thirty:
-//            let maxDuration = mode == .fifteen ? 15 : 30
-//            configureForVideoMode(maxDuration: maxDuration)
-//        }
-//
-//        session.commitConfiguration()
-//
-//        // Restart the session with the new configuration
-//        session.startRunning()
-//    }
-    
+
+ 
     func configureSessionFor(mode: CameraMode) {
         if session.isRunning {
             session.stopRunning()
@@ -300,30 +283,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         session.startRunning()
     }
 
+
+
     
 
-//
-//    func configureForPhotoMode() {
-//        // Ensure there's a camera input
-//        let currentCameraPosition: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
-//
-//            // Ensure there's a camera input for the current position
-//            addCameraInput(position: currentCameraPosition)
-//        
-//        // Add photo output if not already added
-//        if !session.outputs.contains(where: { $0 is AVCapturePhotoOutput }) {
-//            if session.canAddOutput(photoOutput) {
-//                session.addOutput(photoOutput)
-//                
-//                // Configure for the maximum supported photo resolution
-//                if let activeDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-//                   let maxSupportedDimensions = activeDevice.activeFormat.supportedMaxPhotoDimensions.first {
-//                    
-//                    photoOutput.maxPhotoDimensions = CMVideoDimensions(width: maxSupportedDimensions.width, height: maxSupportedDimensions.height)
-//                }
-//            }
-//        }
-//    }
     func configureForPhotoMode() {
         // Ensure there's a camera input for the current position
         let currentCameraPosition: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
@@ -405,32 +368,37 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-    
+
     func startVideoRecording(maxDuration: Double) {
         guard !isRecording else { return }
 
-        // Ensure the session is configured for video recording.
-        configureSessionFor(mode: selectedCameraMode)
+        // Configure the session for video recording.
+//        configureSessionFor(mode: selectedCameraMode)
+        
+        // Move session management to a background thread to avoid blocking the UI.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            self.session.startRunning()
 
-        DispatchQueue.main.async {
-            self.session.startRunning() // Ensure the session is running.
+            DispatchQueue.main.async {
+                let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
+                let outputFileURL = URL(fileURLWithPath: outputPath)
 
-            let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
-            let outputFileURL = URL(fileURLWithPath: outputPath)
+                // Check for active connections just before starting to record.
+                guard self.output.connection(with: .video) != nil else {
+                    print("No active video connection.")
+                    return
+                }
 
-            // Check for active connections just before starting to record.
-            guard self.output.connection(with: .video) != nil else {
-                print("No active video connection.")
-                return
-            }
+                self.output.startRecording(to: outputFileURL, recordingDelegate: self)
+                self.isRecording = true
 
-            self.output.startRecording(to: outputFileURL, recordingDelegate: self)
-            self.isRecording = true
-
-            // Schedule to stop recording after maxDuration seconds.
-            DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
-                if self.isRecording {
-                    self.stopRecording()
+                // Schedule to stop recording after maxDuration seconds.
+                DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
+                    if self.isRecording {
+                        self.stopRecording()
+                    }
                 }
             }
         }
@@ -650,21 +618,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-    
-
-//    func startRecording() {
-//          let videoFilename = NSTemporaryDirectory() + "\(Date()).mov"
-//          let videoFileURL = URL(fileURLWithPath: videoFilename)
-//          output.startRecording(to: videoFileURL, recordingDelegate: self)
-//        print(transcription, "transcription before")
-//
-//        // Start audio recording
-//           setupAudioRecorder()
-//           audioRecorder?.record()
-//        
-//          isRecording = true
-//      }
-    
 
       func stopRecording() {
           output.stopRecording()
@@ -766,38 +719,56 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
        }
 
   
-    
     func toggleFlash() {
-        guard let currentCameraInput = session.inputs.first as? AVCaptureDeviceInput else {
-            print("Unable to identify current camera input")
+        guard !isFrontCameraUsed, // Add this check
+              let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back), // Force back camera
+              device.hasTorch else {
             return
         }
-
-        let currentCamera = currentCameraInput.device
-
-        guard currentCamera.hasTorch else {
-            print("Current camera does not have a torch")
-            return
-        }
-
+        
         do {
-            try currentCamera.lockForConfiguration()
-
-            if currentCamera.torchMode == .on {
-                currentCamera.torchMode = .off
-            } else {
-                try currentCamera.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
-            }
-
-            // Update the isFlashOn state based on the current torch mode
-            isFlashOn = currentCamera.torchMode == .on
-
-            currentCamera.unlockForConfiguration()
+            try device.lockForConfiguration()
+            
+            device.torchMode = device.torchMode == .on ? .off : .on
+            isFlashOn = device.torchMode == .on
+            
+            device.unlockForConfiguration()
         } catch {
-            print("Error toggling flash: \(error)")
-            currentCamera.unlockForConfiguration()
+            print("Torch could not be used: \(error)")
         }
     }
+
+//    func toggleFlash() {
+//        guard let currentCameraInput = session.inputs.first as? AVCaptureDeviceInput else {
+//            print("Unable to identify current camera input")
+//            return
+//        }
+//
+//        let currentCamera = currentCameraInput.device
+//
+//        guard currentCamera.hasTorch else {
+//            print("Current camera does not have a torch")
+//            return
+//        }
+//
+//        do {
+//            try currentCamera.lockForConfiguration()
+//
+//            if currentCamera.torchMode == .on {
+//                currentCamera.torchMode = .off
+//            } else {
+//                try currentCamera.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+//            }
+//
+//            // Update the isFlashOn state based on the current torch mode
+//            isFlashOn = currentCamera.torchMode == .on
+//
+//            currentCamera.unlockForConfiguration()
+//        } catch {
+//            print("Error toggling flash: \(error)")
+//            currentCamera.unlockForConfiguration()
+//        }
+//    }
 //
 //    func switchCamera() {
 //        guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {

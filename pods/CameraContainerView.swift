@@ -106,6 +106,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
 // Create the WheelPicker view
 struct WheelPicker: View {
     @Binding var selectedMode: CameraMode
+    @ObservedObject var cameraViewModel: CameraViewModel
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -119,6 +120,8 @@ struct WheelPicker: View {
                         .clipShape(Capsule())
                         .onTapGesture {
                             self.selectedMode = mode
+                            self.cameraViewModel.configureSessionFor(mode: mode)
+                            
                         }
                         .animation(.easeInOut, value: selectedMode)
                 }
@@ -270,7 +273,7 @@ struct CameraContainerView: View {
                               if !cameraModel.isRecording {
                                   HStack{
                                       Spacer()
-                                      WheelPicker(selectedMode: $cameraModel.selectedCameraMode)
+                                      WheelPicker(selectedMode: $cameraModel.selectedCameraMode, cameraViewModel: cameraModel)
                                                  .background(Color.clear) // Just to highlight the ScrollView area
                                                  .frame(width: 200)
               //                                   .frame(maxWidth: .infinity)
@@ -306,7 +309,7 @@ struct CameraContainerView: View {
                         
                         Button(action: {
                             if cameraModel.selectedCameraMode == .photo {
-                                cameraModel.configureSessionFor(mode: .photo)
+//                                cameraModel.configureSessionFor(mode: .photo)
                                 cameraModel.takePhoto()
                             } else if cameraModel.isRecording {
                                 cameraModel.stopRecording()
@@ -339,7 +342,7 @@ struct CameraContainerView: View {
                                         .frame(width: 75, height: 75) // Outer circle size (including padding)
                                 } else {
                                     Circle()
-                                        .fill(Color.red) // Inner circle color
+                                        .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
                                         .frame(width: 65, height: 65) // Inner circle size
 
                                     Circle()
@@ -471,7 +474,7 @@ struct CameraContainerView: View {
                 .padding(.vertical, 15) // Padding for thickness
                 .frame(maxWidth: .infinity) // Make button expand
                 .fontWeight(.semibold)
-                .background(Color(red: 70/255, green: 87/255, blue: 245/255)) // Background color
+                .background(Color(red: 57/255, green: 106/255, blue: 247/255)) // Background color
                 .cornerRadius(8) // Rounded corners
             } else{
                 Rectangle()
