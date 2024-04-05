@@ -89,7 +89,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //            configureSessionFor(mode: selectedCameraMode)
 
 
-//            setupAudioRecorder()
+            setupAudioRecorder()
         }
     
     @Published var session = AVCaptureSession()
@@ -374,7 +374,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
         // Configure the session for video recording.
 //        configureSessionFor(mode: selectedCameraMode)
-        
+            setupAudioRecorder()
+
+            // Start audio recording
+            audioRecorder?.record()
         // Move session management to a background thread to avoid blocking the UI.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -980,11 +983,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     }
 
-    func areImagesDuplicate(image1: UIImage, image2: UIImage) -> Bool {
-        // Example check based on image size
-        return image1.size == image2.size && image1.scale == image2.scale
-        // Consider a more thorough comparison if needed, potentially involving image data
-    }
 
 //    func confirmPhoto() {
 //        guard let selectedImage = selectedImage else {
@@ -1067,35 +1065,74 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
 
 
+//    func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
+//        guard let speechConfig = speechConfig else {
+//            print("Speech configuration not set up.")
+//            completion(nil)
+//            return
+//        }
+//        
+//        do {
+//            let audioConfig =  SPXAudioConfiguration(wavFileInput: url.path)
+//            guard let audioConfigUnwrapped = audioConfig else {
+//                print("Audio configuration could not be created.")
+//                completion(nil)
+//                return
+//            }
+//
+//            let speechRecognizer = try SPXSpeechRecognizer(speechConfiguration: speechConfig, audioConfiguration: audioConfigUnwrapped)
+//
+//            try speechRecognizer.recognizeOnceAsync { result in
+//                if let text = result.text, !text.isEmpty {
+//                    completion(text)
+//                } else {
+//                    completion(nil)
+//                }
+//            }
+//        } catch {
+//            print("Error setting up speech recognizer: \(error)")
+//            completion(nil)
+//        }
+//    }
     func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
-        guard let speechConfig = speechConfig else {
+        guard let speechConfig = self.speechConfig else {
             print("Speech configuration not set up.")
-            completion(nil)
+            DispatchQueue.main.async {
+                completion(nil)
+            }
+            return
+        }
+        
+        guard let audioConfig = SPXAudioConfiguration(wavFileInput: url.path) else {
+            print("Audio configuration could not be created.")
+            DispatchQueue.main.async {
+                completion(nil)
+            }
             return
         }
         
         do {
-            let audioConfig =  SPXAudioConfiguration(wavFileInput: url.path)
-            guard let audioConfigUnwrapped = audioConfig else {
-                print("Audio configuration could not be created.")
-                completion(nil)
-                return
-            }
-
-            let speechRecognizer = try SPXSpeechRecognizer(speechConfiguration: speechConfig, audioConfiguration: audioConfigUnwrapped)
-
+            let speechRecognizer = try SPXSpeechRecognizer(speechConfiguration: speechConfig, audioConfiguration: audioConfig)
             try speechRecognizer.recognizeOnceAsync { result in
-                if let text = result.text, !text.isEmpty {
-                    completion(text)
-                } else {
-                    completion(nil)
+                DispatchQueue.main.async {
+                    if let text = result.text, !text.isEmpty {
+                        completion(text)
+                    } else {
+                        print("Transcription failed or was empty.")
+                        completion(nil)
+                    }
                 }
             }
         } catch {
             print("Error setting up speech recognizer: \(error)")
-            completion(nil)
+            DispatchQueue.main.async {
+                completion(nil)
+            }
         }
     }
+
+
+
 
 //
 //    func handleSelectedVideo(_ url: URL) {

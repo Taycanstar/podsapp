@@ -49,22 +49,22 @@ struct CameraPreview: UIViewRepresentable {
     func makeUIView(context: Context) ->  UIView {
 //     
         let view = UIView()
-//        
-//        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
-//        cameraModel.preview.frame.size = size
-//        
-//        cameraModel.preview.videoGravity = .resizeAspectFill
-//        view.layer.addSublayer(cameraModel.preview)
         
-//        cameraModel.session.startRunning()
+        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
+        cameraModel.preview.frame.size = size
         
-//        return view
-        DispatchQueue.global(qos: .userInitiated).async {
-                    cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
-                    cameraModel.preview.frame.size = size
-            
-                    cameraModel.preview.videoGravity = .resizeAspectFill
-                    view.layer.addSublayer(cameraModel.preview)
+        cameraModel.preview.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(cameraModel.preview)
+        
+        cameraModel.session.startRunning()
+        
+        return view
+//        DispatchQueue.global(qos: .userInitiated).async {
+//                    cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
+//                    cameraModel.preview.frame.size = size
+//            
+//                    cameraModel.preview.videoGravity = .resizeAspectFill
+//                    view.layer.addSublayer(cameraModel.preview)
 //             DispatchQueue.main.async {
 //                 self.cameraModel.preview.frame = view.bounds
 //                 self.cameraModel.preview.videoGravity = .resizeAspectFill
@@ -72,10 +72,10 @@ struct CameraPreview: UIViewRepresentable {
 //             }
              
              // Start the session in the background to avoid UI freeze
-             cameraModel.session.startRunning()
-         }
+//             cameraModel.session.startRunning()
+//         }
          
-         return view
+//         return view
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
