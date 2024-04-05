@@ -488,7 +488,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.selectedImage = imageToDisplay
             self.showPreview = true // Indicate to show preview
             self.isProcessingVideo = false // Update processing state if needed
-            self.previewURL = nil
+//            self.previewURL = nil
             print("Captured image set. Size: \(imageToDisplay.size)")
             // Trigger any UI updates to show the captured image
         }
@@ -882,9 +882,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
         // Indicate that we are not currently recording
         isRecording = false
-        
-        print("Preparing to re-record. Current Pod: \(currentPod.items)")
-
         // Depending on your app's flow, you might need to reset other states as well,
         // such as any flags or timers related to the recording process
 
@@ -925,7 +922,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         transcribeAudio(from: audioFilename) { [weak self] transcribedText in
             guard let self = self else { return }
             DispatchQueue.main.async {
-                var metadata = transcribedText ?? ""
+                var metadata = transcribedText ?? "Item \(nextId)"
                 metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
                 print("Transcription result: \(metadata)")
 
@@ -950,22 +947,60 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-    
     func confirmPhoto() {
         guard let selectedImage = selectedImage else {
             print("No photo to confirm.")
             return
         }
         let nextId = currentPod.items.count + 1
-        let thumbnail = selectedImage // Directly use the image or resize as needed
-        let newItem = PodItem(id:nextId, videoURL: nil, image: selectedImage, metadata: "Some metadata", thumbnail: thumbnail, thumbnailURL: nil)
 
-        DispatchQueue.main.async {
-            self.currentPod.items.append(newItem)
-            self.selectedImage = nil // Reset after confirming
-            self.showPreview = false // Hide preview
+        // Thumbnail generation or direct usage
+        let thumbnail = selectedImage
+
+        // Check for duplicate image
+        if let lastItem = currentPod.items.last,
+           let lastImage = lastItem.image,
+           lastImage === selectedImage {
+            print("Duplicate image detected. Skipping addition.")
+            DispatchQueue.main.async {
+               
+                self.showPreview = false // Adjust as needed for consistent UI flow
+            }
+        } else {
+            // No duplicate detected, proceed to append the new item
+            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "Item \(nextId)", thumbnail: selectedImage, thumbnailURL: nil)
+
+            DispatchQueue.main.async {
+                self.currentPod.items.append(newItem)
+                // Consider when and how `selectedImage` should be reset
+                // self.selectedImage might be reset here or elsewhere depending on your app's flow
+                self.showPreview = false // Adjust as needed for consistent UI flow
+            }
         }
+
     }
+
+    func areImagesDuplicate(image1: UIImage, image2: UIImage) -> Bool {
+        // Example check based on image size
+        return image1.size == image2.size && image1.scale == image2.scale
+        // Consider a more thorough comparison if needed, potentially involving image data
+    }
+
+//    func confirmPhoto() {
+//        guard let selectedImage = selectedImage else {
+//            print("No photo to confirm.")
+//            return
+//        }
+//        let nextId = currentPod.items.count + 1
+//        let thumbnail = selectedImage // Directly use the image or resize as needed
+//        let newItem = PodItem(id:nextId, videoURL: nil, image: selectedImage, metadata: "Some metadata", thumbnail: thumbnail, thumbnailURL: nil)
+//
+//        DispatchQueue.main.async {
+//            self.currentPod.items.append(newItem)
+////            self.selectedImage = nil 
+//            self.showPreview = false // Hide preview
+//        }
+//    }
 
 
 //

@@ -8,7 +8,7 @@ struct ThumbnailCarouselView: View {
         VStack{
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 5) { // Adjust spacing between thumbnails
-                    ForEach(items, id: \.videoURL) { item in
+                    ForEach(items, id: \.id) { item in
                         Image(uiImage: item.thumbnail ?? UIImage())
                             .resizable()
                             .aspectRatio(contentMode: .fill)

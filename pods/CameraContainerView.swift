@@ -460,14 +460,24 @@ struct CameraContainerView: View {
                 .cornerRadius(8) // Rounded corners
                 .fontWeight(.semibold)
 
-                // Next Button
+//                // Next Button
+//                Button("Next") {
+//                    // Action for Next
+//                    if let previewURL = cameraModel.previewURL {
+//                        print("Preview URL: \(previewURL)")
+//                        cameraModel.showPreview = true
+//                    } else {
+//                        print("No preview URL available")
+//                    }
+//                }
                 Button("Next") {
-                    // Action for Next
-                    if let previewURL = cameraModel.previewURL {
-                        print("Preview URL: \(previewURL)")
+                    // Check if there's either a video URL or a selected image available for preview
+                    if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
                         cameraModel.showPreview = true
                     } else {
-                        print("No preview URL available")
+                        print("No preview content available")
+                        print(cameraModel.previewURL, "url")
+                        print(cameraModel.selectedImage, "img")
                     }
                 }
                 .foregroundColor(.white) // Text color for the Next button
