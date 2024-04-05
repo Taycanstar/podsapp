@@ -488,7 +488,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.selectedImage = imageToDisplay
             self.showPreview = true // Indicate to show preview
             self.isProcessingVideo = false // Update processing state if needed
-//            self.previewURL = nil
+            self.previewURL = nil
             print("Captured image set. Size: \(imageToDisplay.size)")
             // Trigger any UI updates to show the captured image
         }

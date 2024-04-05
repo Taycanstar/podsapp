@@ -477,7 +477,7 @@ struct CameraContainerView: View {
                     } else {
                         print("No preview content available")
                         print(cameraModel.previewURL, "url")
-                        print(cameraModel.selectedImage, "img")
+                 
                     }
                 }
                 .foregroundColor(.white) // Text color for the Next button
