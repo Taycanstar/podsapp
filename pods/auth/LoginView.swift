@@ -8,6 +8,7 @@ struct LoginView: View {
     @State private var showPassword: Bool = false
     @State private var errorMessage: String? = nil
     @Binding var isAuthenticated: Bool
+    @State private var isLoading = false
 
     var body: some View {
         NavigationView {
@@ -78,18 +79,27 @@ struct LoginView: View {
 
     private var continueButton: some View {
         Button(action: loginAction) {
-            Text("Continue")
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color(red: 70/255, green: 87/255, blue: 245/255))
-                .cornerRadius(10)
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Continue")
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .cornerRadius(10)
         }
         .padding(.horizontal)
         .padding(.bottom, 50)
     }
 
     private func loginAction() {
+        isLoading = true
+            
         if email.isEmpty || !email.contains("@") {
             self.errorMessage = "Please enter a valid email address."
             return
@@ -101,15 +111,18 @@ struct LoginView: View {
         }
 
         authenticateUser()
+        
     }
 
     private func authenticateUser() {
+        
         // Assuming you have a function to authenticate the user
-        NetworkManager().login(email: email, password: password) { success, error in
+        NetworkManager().login(username: email, password: password) { success, error in
             if success {
                 DispatchQueue.main.async {
                     self.isAuthenticated = true
                     viewModel.email = email
+                    isLoading = false
                 }
             } else {
                 DispatchQueue.main.async {

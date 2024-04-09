@@ -3,10 +3,12 @@ import SwiftUI
 struct InfoView: View {
     @State private var firstName: String = ""
     @State private var lastName: String = ""
+    @State private var username: String = ""
     @State private var birthday: Date? = nil
     @State private var showingDatePicker = false
     @State private var showError: Bool = false // State to control error message visibility
     @State private var errorMessage: String = ""
+    @State private var isLoading = false
     
     // DateFormatter to display the date
     private let dateFormatter: DateFormatter = {
@@ -46,8 +48,10 @@ struct InfoView: View {
                 TextField("First name", text: $firstName)
                     .textFieldStyle(CustomTextFieldStyle())
                    
-
                 TextField("Last name", text: $lastName)
+                    .textFieldStyle(CustomTextFieldStyle())
+                
+                TextField("Username", text: $username)
                     .textFieldStyle(CustomTextFieldStyle())
                 
 //                TextField("Birthday", text: $birthday)
@@ -123,7 +127,7 @@ struct InfoView: View {
                 Button(action: {
                     // Handle continue action here
                     // Check for required fields before proceeding
-                                 guard !firstName.isEmpty, !lastName.isEmpty, let birthdayDate = birthday else {
+                                 guard !firstName.isEmpty, !lastName.isEmpty, !username.isEmpty, let birthdayDate = birthday else {
                                      self.errorMessage = "First name, last name, and birthday are required."
                                      self.showError = true
                                      return
@@ -138,12 +142,15 @@ struct InfoView: View {
 
                                  
                                  // Example function call, replace with actual implementation
-                    networkManager.updateUserInformation(email: viewModel.email, firstName: firstName, lastName: lastName, birthday: formattedBirthday) { success, message in
+                    networkManager.updateUserInformation(email: viewModel.email, firstName: firstName, lastName: lastName, username: username, birthday: formattedBirthday) { success, message in
                                      DispatchQueue.main.async {
+                                         isLoading = true
                                          if success {
                                              // Handle success
+                                             self.viewModel.username = self.username
                                              
                                 viewModel.currentStep = .welcome
+                                             isLoading = false
                                          } else {
                                              // Handle error, optionally update errorMessage and showError to inform the user
                                              print("Error updating user information: \(message)")
@@ -155,12 +162,13 @@ struct InfoView: View {
                                  self.showError = false
                
                 }) {
-                    Text("Continue")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(red: 70/255, green: 87/255, blue: 245/255))
-                        .cornerRadius(10)
+                        Text("Continue")
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .cornerRadius(10)
+                            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+                
                 }
                 .padding(.horizontal)
             }

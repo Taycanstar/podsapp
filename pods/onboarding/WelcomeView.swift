@@ -8,6 +8,7 @@ struct WelcomeView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.presentationMode) var presentationMode
     @Binding var isAuthenticated: Bool
+    @State private var isLoading = false
 
     var body: some View {
         NavigationView {
@@ -99,34 +100,80 @@ struct WelcomeView: View {
             .padding(.horizontal, 30)
             .padding(.vertical, 20)
         }
-
+    
+    
     private var continueButton: some View {
         Button(action: {
-            let networkManager = NetworkManager()
-                     networkManager.login(email: viewModel.email, password: viewModel.password) { success, _ in
-                         if success {
-                             // If login is successful, update the authenticated state
-                             DispatchQueue.main.async {
-                                 self.isAuthenticated = true
-                                 self.viewModel.password = ""
-                             }
-                         } else {
-                             // Handle login failure, e.g., by showing an error message
-                             self.errorMessage = "Login failed. Please check your credentials and try again."
-                         }
-                     }
+            isLoading = true // Start loading animation
+            authenticateUser() // Call your authentication function
         }) {
-            Text("Continue")
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color(red: 70/255, green: 87/255, blue: 245/255))
-                .cornerRadius(10)
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1, anchor: .center) // Scale your progress view as needed
+                } else {
+                    Text("Continue")
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .cornerRadius(10)
         }
+        .disabled(isLoading) // Disable the button while loading
         .padding(.horizontal)
-        
-        .frame(height: 50) // Specify the height of the button area to ensure it's always visible
+        .frame(height: 50) // Keep your button area height as is
     }
+    
+    private func authenticateUser() {
+        let networkManager = NetworkManager()
+        networkManager.login(username: viewModel.username, password: viewModel.password) { success, _ in
+            DispatchQueue.main.async {
+                isLoading = false // Stop loading animation
+                if success {
+                    self.isAuthenticated = true
+                    self.viewModel.password = ""
+                } else {
+                    // Handle login failure
+                    self.errorMessage = "Login failed. Please check your credentials and try again."
+                }
+            }
+        }
+    }
+
+//    private var continueButton: some View {
+//        Button(action: {
+//            isLoading = true
+//            let networkManager = NetworkManager()
+//                     networkManager.login(username: viewModel.username, password: viewModel.password) { success, _ in
+//                         if success {
+//                             // If login is successful, update the authenticated state
+//                             DispatchQueue.main.async {
+//                                 self.isAuthenticated = true
+//                                 self.viewModel.password = ""
+//                                 isLoading = false
+//                             }
+//                         } else {
+//                             // Handle login failure, e.g., by showing an error message
+//                             self.errorMessage = "Login failed. Please check your credentials and try again."
+//                         }
+//                     }
+//        }) {
+//        
+//                Text("Continue")
+//                    .foregroundColor(.white)
+//                    .frame(maxWidth: .infinity)
+//                    .padding()
+//                    .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+//                    .cornerRadius(10)
+//        
+//        }
+//        .padding(.horizontal)
+//        
+//        .frame(height: 50) // Specify the height of the button area to ensure it's always visible
+//    }
     
     // Sample data structure for the info section
     private let infoData = [

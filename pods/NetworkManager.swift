@@ -139,14 +139,73 @@ class NetworkManager {
             }
         }.resume()
     }
-    func login(email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+//    func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/login/") else {
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//        
+//        let body: [String: Any] = ["username": username, "password": password]
+//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = finalBody
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                DispatchQueue.main.async {
+//                    completion(false, "Login failed: \(error.localizedDescription)")
+//                }
+//                return
+//            }
+//            
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                DispatchQueue.main.async {
+//                    completion(false, "No response from server")
+//                }
+//                return
+//            }
+//            
+//            if httpResponse.statusCode == 200 {
+//                // Login successful
+//                DispatchQueue.main.async {
+//                    completion(true, nil)
+//                }
+//            } else {
+//                // Extract error message if available
+//                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let errorMessage = json["error"] as? String {
+//                    DispatchQueue.main.async {
+//                        completion(false, errorMessage)
+//                    }
+//                } else {
+//                    DispatchQueue.main.async {
+//                        completion(false, "Login failed with statusCode: \(httpResponse.statusCode)")
+//                    }
+//                }
+//            }
+//        }.resume()
+//    }
+//    
+    
+    func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
+            print("Invalid URL for login endpoint")
             completion(false, "Invalid URL")
             return
         }
-        
-        let body: [String: Any] = ["email": email, "password": password]
-        let finalBody = try? JSONSerialization.data(withJSONObject: body)
+
+        let body: [String: Any] = ["username": username, "password": password]
+        var finalBody: Data? = nil
+        do {
+            finalBody = try JSONSerialization.data(withJSONObject: body)
+            print("Sending login request with body: \(String(data: finalBody!, encoding: .utf8) ?? "")")
+        } catch {
+            print("Error serializing login request body: \(error)")
+            completion(false, "Error creating request body")
+            return
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -155,40 +214,39 @@ class NetworkManager {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("Login request failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(false, "Login failed: \(error.localizedDescription)")
                 }
                 return
             }
             
-            guard let httpResponse = response as? HTTPURLResponse else {
+            guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
+                print("No response or data received from login request")
                 DispatchQueue.main.async {
                     completion(false, "No response from server")
                 }
                 return
             }
             
+            print("Received HTTP response status code: \(httpResponse.statusCode)")
+            let responseString = String(data: responseData, encoding: .utf8)
+            print("Response data string: \(String(describing: responseString))")
+            
             if httpResponse.statusCode == 200 {
-                // Login successful
                 DispatchQueue.main.async {
                     completion(true, nil)
                 }
             } else {
-                // Extract error message if available
-                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let errorMessage = json["error"] as? String {
-                    DispatchQueue.main.async {
-                        completion(false, errorMessage)
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        completion(false, "Login failed with statusCode: \(httpResponse.statusCode)")
-                    }
+                let errorMessage = responseString ?? "Login failed with statusCode: \(httpResponse.statusCode)"
+                DispatchQueue.main.async {
+                    completion(false, errorMessage)
                 }
             }
         }.resume()
     }
-    
-    func updateUserInformation(email: String, firstName: String, lastName: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
+
+    func updateUserInformation(email: String, firstName: String, lastName: String, username: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
          let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
          var request = URLRequest(url: url)
          request.httpMethod = "PUT"
@@ -198,6 +256,7 @@ class NetworkManager {
              "email": email,
              "firstName": firstName,
              "lastName": lastName,
+             "username": username,
              "birthday": birthday, // ISO 8601 format
             
          ]
