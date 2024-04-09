@@ -73,9 +73,22 @@ enum CameraMode: String, CaseIterable {
     case fifteen = "15s"
     case thirty = "30s"
     case photo = "Photo"
+
+    var label: String {
+        return self.rawValue
+    }
+
+    var duration: Double {
+        switch self {
+        case .fifteen:
+            return 15.0
+        case .thirty:
+            return 30.0
+        case .photo:
+            return 0.0 // Photo mode might not need a duration, but adjust as needed
+        }
+    }
 }
-
-
 
 
 // MARK: Camera View Model
@@ -109,6 +122,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isFlashIntendedForPhoto: Bool = false
 
 
+
     let voiceCommands = ["start recording", "stop recording"]
     
     private var commandRecognizer: SPXSpeechRecognizer?
@@ -131,9 +145,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     
     // Top Progress Bar
     @Published var recordedDuration: CGFloat = 0
-    @Published var maxDuration: CGFloat = 20
-    
+    @Published var maxDuration: CGFloat = 15.0
     @Published var isProcessingVideo = false
+    var recordingTimer: Timer?
+
     
     var isWaveformEnabled = false
      var transcription = ""
@@ -141,20 +156,20 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     var speechRecognizer: SPXSpeechRecognizer?
 
 
-    func toggleWaveform() {
-        self.objectWillChange.send()
-        print("Toggling waveform...")
-        print("Current state before toggle: \(isWaveformEnabled)")
-        isWaveformEnabled.toggle()
-        if isWaveformEnabled {
-            print("Waveform enabled. Starting speech recognition.")
-            startSpeechRecognition()
-        } else {
-            print("Waveform disabled. Stopping speech recognition.")
-            stopSpeechRecognition()
-        }
-        print("Current state after toggle: \(isWaveformEnabled)")
-    }
+//    func toggleWaveform() {
+//        self.objectWillChange.send()
+//        print("Toggling waveform...")
+//        print("Current state before toggle: \(isWaveformEnabled)")
+//        isWaveformEnabled.toggle()
+//        if isWaveformEnabled {
+//            print("Waveform enabled. Starting speech recognition.")
+//            startSpeechRecognition()
+//        } else {
+//            print("Waveform disabled. Stopping speech recognition.")
+//            stopSpeechRecognition()
+//        }
+//        print("Current state after toggle: \(isWaveformEnabled)")
+//    }
 
     
     func checkPermission(){
@@ -274,8 +289,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         case .photo:
             configureForPhotoMode()
         case .fifteen, .thirty:
-            let maxDuration = mode == .fifteen ? 15 : 30
-            configureForVideoMode(maxDuration: maxDuration)
+            // Use the maxDuration property to configure the session if necessary
+            configureForVideoMode()
+            print("maxDuration is", maxDuration)
         }
 
         session.commitConfiguration()
@@ -305,7 +321,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
     
-    private func configureForVideoMode(maxDuration: Int) {
+    private func configureForVideoMode() {
         // Determine the correct camera position
         let position: AVCaptureDevice.Position = isFrontCameraUsed ? .front : .back
         
@@ -358,53 +374,50 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     
     func startRecordingBasedOnMode() {
+      
+        
         switch selectedCameraMode {
-        case .fifteen:
-            startVideoRecording(maxDuration: 15.0)
-        case .thirty:
-            startVideoRecording(maxDuration: 30.0)
+        case .fifteen, .thirty:
+            startVideoRecording()
         case .photo:
-            takePhoto() // Make sure to implement this method
+            takePhoto() // Handle photo taking
         }
     }
 
-
-    func startVideoRecording(maxDuration: Double) {
+    func startVideoRecording() {
         guard !isRecording else { return }
 
-        // Configure the session for video recording.
-//        configureSessionFor(mode: selectedCameraMode)
-            setupAudioRecorder()
+        // Consider removing session stop and start logic if not needed every time
+        // Ensure the session is correctly configured before starting a new recording
+        
+        setupAudioRecorder()
+        audioRecorder?.record()
 
-            // Start audio recording
-            audioRecorder?.record()
-        // Move session management to a background thread to avoid blocking the UI.
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            
-            self.session.startRunning()
+        let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
+        let outputFileURL = URL(fileURLWithPath: outputPath)
 
-            DispatchQueue.main.async {
-                let outputPath = NSTemporaryDirectory() + UUID().uuidString + ".mov"
-                let outputFileURL = URL(fileURLWithPath: outputPath)
-
-                // Check for active connections just before starting to record.
-                guard self.output.connection(with: .video) != nil else {
-                    print("No active video connection.")
-                    return
-                }
-
-                self.output.startRecording(to: outputFileURL, recordingDelegate: self)
-                self.isRecording = true
-
-                // Schedule to stop recording after maxDuration seconds.
-                DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
-                    if self.isRecording {
-                        self.stopRecording()
-                    }
-                }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.output.connection(with: .video) != nil else {
+                print("Failed to start video recording: No active video connection.")
+                return
             }
+
+            self.output.startRecording(to: outputFileURL, recordingDelegate: self)
+            self.isRecording = true
         }
+        
+        recordedDuration = 0
+
+         // Start or restart the timer
+         recordingTimer?.invalidate() // Invalidate any existing timer
+         recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+             guard let self = self else { return }
+             self.recordedDuration += 1
+             if self.recordedDuration >= maxDuration {
+                 self.stopRecording()
+                 timer.invalidate() // Stop the timer
+             }
+         }
     }
 
 
@@ -513,16 +526,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
         
-        // Toggle waveform recognition
-        func toggleWaveformRecognition() {
-            isWaveformEnabled.toggle()
-            if isWaveformEnabled {
-                startSpeechRecognition()
-            } else {
-                stopSpeechRecognition()
-            }
-        }
-
+    
         // Start speech recognition for commands
     // Start speech recognition for commands
     func startSpeechRecognition() {
@@ -556,6 +560,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             do {
                 try self.speechRecognizer?.stopContinuousRecognition()
                 // Additional cleanup if needed
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                 try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .videoRecording, options: [.defaultToSpeaker, .allowBluetooth])
+                 try? AVAudioSession.sharedInstance().setActive(true)
             } catch {
                 print("Failed to stop speech recognition: \(error)")
             }
@@ -626,9 +633,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           output.stopRecording()
           audioRecorder?.stop()
           isRecording = false
-          if self.isWaveformEnabled {
-              self.toggleWaveformRecognition() // Assuming this method toggles the state and stops recognition
-              }
+          recordedDuration = 0
+          recordingTimer?.invalidate() // Stop the timer
+        recordingTimer = nil
           print(transcription, "transcription after")
       }
 //
@@ -707,6 +714,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
        func reRecordVideo() {
            previewURL = nil
            showPreview = false
+           
 
            if currentPod.items.isEmpty {
                isPodRecording = false
@@ -741,64 +749,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-//    func toggleFlash() {
-//        guard let currentCameraInput = session.inputs.first as? AVCaptureDeviceInput else {
-//            print("Unable to identify current camera input")
-//            return
-//        }
-//
-//        let currentCamera = currentCameraInput.device
-//
-//        guard currentCamera.hasTorch else {
-//            print("Current camera does not have a torch")
-//            return
-//        }
-//
-//        do {
-//            try currentCamera.lockForConfiguration()
-//
-//            if currentCamera.torchMode == .on {
-//                currentCamera.torchMode = .off
-//            } else {
-//                try currentCamera.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
-//            }
-//
-//            // Update the isFlashOn state based on the current torch mode
-//            isFlashOn = currentCamera.torchMode == .on
-//
-//            currentCamera.unlockForConfiguration()
-//        } catch {
-//            print("Error toggling flash: \(error)")
-//            currentCamera.unlockForConfiguration()
-//        }
-//    }
-//
-//    func switchCamera() {
-//        guard let currentVideoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput && ($0 as! AVCaptureDeviceInput).device.hasMediaType(.video) }) as? AVCaptureDeviceInput else {
-//            return
-//        }
-//
-//        session.beginConfiguration()
-//        session.removeInput(currentVideoInput)
-//
-//        let newCameraPosition: AVCaptureDevice.Position = currentVideoInput.device.position == .back ? .front : .back
-//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-//              let newVideoInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
-//            session.commitConfiguration()
-//            return
-//        }
-//
-//        if session.canAddInput(newVideoInput) {
-//            session.addInput(newVideoInput)
-//            isFrontCameraUsed = (newCameraPosition == .front)
-//        }
-//
-//        // Reconfigure audio input as needed
-//        reconfigureAudioInput()
-//
-//        session.commitConfiguration()
-//    }
-    
+
     func switchCamera() {
         guard let currentCameraInput = session.inputs.first(where: { input in
             guard let input = input as? AVCaptureDeviceInput else { return false }
@@ -856,23 +807,23 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             session.addInput(audioInput)
         }
     }
-    func startRecordingNextItem() {
-        // Reset the preview URL for the new recording
-        self.previewURL = nil
-
-        // Check if the session is already running; if not, start it
-        if !session.isRunning {
-            session.startRunning()
-        }
-
-        // Generate a unique URL for the new recording
-        let tempURL = NSTemporaryDirectory() + "item_\(Date().timeIntervalSince1970).mov"
-        let outputFileURL = URL(fileURLWithPath: tempURL)
-
-        // Start recording to the new file URL
-        output.startRecording(to: outputFileURL, recordingDelegate: self)
-
-    }
+//    func startRecordingNextItem() {
+//        // Reset the preview URL for the new recording
+//        self.previewURL = nil
+//
+//        // Check if the session is already running; if not, start it
+//        if !session.isRunning {
+//            session.startRunning()
+//        }
+//
+//        // Generate a unique URL for the new recording
+//        let tempURL = NSTemporaryDirectory() + "item_\(Date().timeIntervalSince1970).mov"
+//        let outputFileURL = URL(fileURLWithPath: tempURL)
+//
+//        // Start recording to the new file URL
+//        output.startRecording(to: outputFileURL, recordingDelegate: self)
+//
+//    }
 
    
     
@@ -888,9 +839,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // Depending on your app's flow, you might need to reset other states as well,
         // such as any flags or timers related to the recording process
 
-        // Optionally, if you want to start the camera for a new recording immediately,
-        // you can call a function to start the camera.
-        // For instance, if you have a function to setup the camera for recording:
         // setupCameraForRecording()
     }
     
@@ -902,7 +850,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
         return filteredTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-
+    
+    
     func confirmVideo() {
         guard let videoURL = previewURL else {
             print("No video to confirm.")
@@ -920,36 +869,111 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         } else {
             print("Audio file found, proceeding with transcription.")
         }
-        let nextId = currentPod.items.count + 1
-        // Transcribe the audio and then confirm the video
-        transcribeAudio(from: audioFilename) { [weak self] transcribedText in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                var metadata = transcribedText ?? "Item \(nextId)"
-                metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
-                print("Transcription result: \(metadata)")
+        
+        DispatchQueue.main.async {
+            // Transcribe the audio and then confirm the video
+            self.transcribeAudio(from: audioFilename) { [weak self] transcribedText in
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    var metadata = transcribedText ?? ""
+                    metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
+                    print("Transcription result: \(metadata)")
 
-                // Check if the last item in the Pod is the same as the current preview URL
-                if self.currentPod.items.last?.videoURL != videoURL {
-                    let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-                    let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-                    self.currentPod.items.append(newItem)
-//                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
-                } else {
-                    print("The item is already in the Pod.")
+                    // Check if the last item in the Pod is the same as the current preview URL
+                    if self.currentPod.items.last?.videoURL != videoURL {
+                        let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+                        let newItem = PodItem(id: -1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+                        self.currentPod.items.append(newItem)
+    //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+                    } else {
+                        print("The item is already in the Pod.")
+                    }
+
+                    // Reset the preview URL and hide the preview
+                    self.isTranscribing = false
+                    self.showPreview = false
+                    self.recordedDuration = 0
+                    // Update the recording state
+                    self.isRecording = false
+
+
                 }
-
-                // Reset the preview URL and hide the preview
-                self.isTranscribing = false
-                self.showPreview = false
-                self.recordedDuration = 0
-                // Update the recording state
-                self.isRecording = false
-
-
             }
         }
+
+
     }
+//    func confirmVideo() {
+//        guard let videoURL = previewURL else {
+//            print("No video to confirm.")
+//            return
+//        }
+//        isTranscribing = true
+//
+//        // Get the URL of the recorded audio
+//        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+//        print("Audio file path: \(audioFilename.path)")
+//
+//        // Check if audio file exists
+//        if !FileManager.default.fileExists(atPath: audioFilename.path) {
+//            print("Audio file does not exist.")
+//        } else {
+//            print("Audio file found, proceeding with transcription.")
+//        }
+//        let nextId = currentPod.items.count + 1
+//        if isWaveformEnabled {
+//            print("hi")
+//            transcribeAudio(from: audioFilename) { [weak self] transcribedText in
+//                guard let self = self else { return }
+//                DispatchQueue.main.async {
+//                    var metadata = transcribedText ?? "Item \(nextId)"
+//                    metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
+//                    print("Transcription result: \(metadata)")
+//
+//                    // Check if the last item in the Pod is the same as the current preview URL
+//                    if self.currentPod.items.last?.videoURL != videoURL {
+//                        let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+//                        let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
+//                        self.currentPod.items.append(newItem)
+//    //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+//                    } else {
+//                        print("The item is already in the Pod.")
+//                    }
+//
+//                    // Reset the preview URL and hide the preview
+//                    self.isTranscribing = false
+//                    self.showPreview = false
+//                    self.recordedDuration = 0
+//                    // Update the recording state
+//                    self.isRecording = false
+//
+//                    self.setUp()
+//                }
+//            }
+//        } else {
+//            if self.currentPod.items.last?.videoURL != videoURL {
+//                let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
+//                let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: "Item \(nextId)", thumbnail: thumbnail)
+//                self.currentPod.items.append(newItem)
+////                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
+//            } else {
+//                print("The item is already in the Pod.")
+//            }
+//
+//            // Reset the preview URL and hide the preview
+//            self.isTranscribing = false
+//            self.showPreview = false
+//            self.recordedDuration = 0
+//            // Update the recording state
+//            self.isRecording = false
+//
+//        }
+//       
+//       
+// 
+//    }
+    
+    
     func confirmPhoto() {
         guard let selectedImage = selectedImage else {
             print("No photo to confirm.")
@@ -1064,36 +1088,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             showCreatePodView = true
         }
 
-
-//    func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
-//        guard let speechConfig = speechConfig else {
-//            print("Speech configuration not set up.")
-//            completion(nil)
-//            return
-//        }
-//        
-//        do {
-//            let audioConfig =  SPXAudioConfiguration(wavFileInput: url.path)
-//            guard let audioConfigUnwrapped = audioConfig else {
-//                print("Audio configuration could not be created.")
-//                completion(nil)
-//                return
-//            }
-//
-//            let speechRecognizer = try SPXSpeechRecognizer(speechConfiguration: speechConfig, audioConfiguration: audioConfigUnwrapped)
-//
-//            try speechRecognizer.recognizeOnceAsync { result in
-//                if let text = result.text, !text.isEmpty {
-//                    completion(text)
-//                } else {
-//                    completion(nil)
-//                }
-//            }
-//        } catch {
-//            print("Error setting up speech recognizer: \(error)")
-//            completion(nil)
-//        }
-//    }
     func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
         guard let speechConfig = self.speechConfig else {
             print("Speech configuration not set up.")
@@ -1130,7 +1124,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-
 
 
 

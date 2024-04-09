@@ -120,8 +120,11 @@ struct WheelPicker: View {
                         .clipShape(Capsule())
                         .onTapGesture {
                             self.selectedMode = mode
-                            self.cameraViewModel.configureSessionFor(mode: mode)
-                            
+                           self.cameraViewModel.selectedCameraMode = mode
+                           // Ensure session is configured for the new mode
+                           self.cameraViewModel.configureSessionFor(mode: mode)
+                           // Directly use the duration property
+                            self.cameraViewModel.maxDuration = CGFloat(mode.duration)
                         }
                         .animation(.easeInOut, value: selectedMode)
                 }
@@ -223,9 +226,9 @@ struct CameraContainerView: View {
 
                     
                     Button(action: {
-                        cameraModel.toggleWaveform()
+                        cameraModel.isWaveformEnabled.toggle()
                         // Set the message based on the waveform state
-                        voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Voice commands enabled" : "Voice commands disabled"
+                        voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Video transcription on" : "Video transcription off"
                         
                         // Show the message
                         withAnimation {
@@ -309,26 +312,12 @@ struct CameraContainerView: View {
                         
                         Button(action: {
                             if cameraModel.selectedCameraMode == .photo {
-//                                cameraModel.configureSessionFor(mode: .photo)
-                                cameraModel.takePhoto()
-                            } else if cameraModel.isRecording {
-                                cameraModel.stopRecording()
-                            } else {
-                                // Initialize `maxDuration` with a default value or determine it before usage.
-                                var maxDuration: Double = 0 // Default value or logic to determine it.
-                                
-                                switch cameraModel.selectedCameraMode {
-                                case .fifteen:
-                                    maxDuration = 15
-                                case .thirty:
-                                    maxDuration = 30
-                                // Assuming there are no other cases, but you should handle all cases or add a default case.
-                                default:
-                                    break // Handle unexpected cases or assign a default value to `maxDuration`.
-                                }
-                                
-                                cameraModel.startVideoRecording(maxDuration: maxDuration)
-                            }
+                                   cameraModel.takePhoto()
+                               } else if cameraModel.isRecording {
+                                   cameraModel.stopRecording()
+                               } else {
+                                   cameraModel.startRecordingBasedOnMode()
+                               }
                         }) {
 
                             ZStack {
@@ -500,6 +489,13 @@ struct CameraContainerView: View {
 
 
         .onAppear {
+            let initialMode: CameraMode = .fifteen
+                
+                // Ensure session is configured for the initial mode
+                cameraModel.configureSessionFor(mode: initialMode)
+                
+                // Update maxDuration based on the initial mode
+                cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0 
                   // Request authorization and fetch latest photo
                   PHPhotoLibrary.requestAuthorization { status in
                       if status == .authorized {
