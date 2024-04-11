@@ -18,7 +18,7 @@ struct ThumbnailCarouselView: View {
                             
                     }
                 }
-//                .padding(.leading, -10)
+
             }
             .frame(height: 60) 
             .frame(minWidth: 40, idealWidth: CGFloat(min(items.count, 3)) * 45, maxWidth: 110)

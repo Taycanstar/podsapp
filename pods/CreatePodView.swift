@@ -93,7 +93,7 @@ struct CreatePodView: View {
         }
         isLoading = true // Start loading
 
-        let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, metadata: $0.metadata, thumbnail: $0.thumbnail) }
+        let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
         
         networkManager.createPod(podTitle: podName, items: items, email: viewModel.email) { success, message in
             DispatchQueue.main.async {

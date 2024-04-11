@@ -223,7 +223,7 @@ struct CameraContainerView: View {
                                         }
                     }
                    
-
+                    
                     
                     Button(action: {
                         cameraModel.isWaveformEnabled.toggle()
@@ -252,8 +252,36 @@ struct CameraContainerView: View {
                             .padding()
                     }
                     
+                    //Mic
+                    Button(action: {
+                        cameraModel.toggleVoiceCommands()
+                        // Set the message based on the waveform state
+                        voiceCommandPopupMessage = cameraModel.isVcEnabled ? "Voice commands on" : "Voice commands off"
+                        
+                        // Show the message
+                        withAnimation {
+                            showingVoiceCommandPopup = true
+                        }
+                        
+                        // Hide the popup after a few seconds and reset the message
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                            showingVoiceCommandPopup = false
+                            // Reset the message after the animation completes to ensure it's ready for the next toggle
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                voiceCommandPopupMessage = nil
+                            }
+                        }
+                    }) {
+                        Image(systemName: cameraModel.isVcEnabled ? "mic.fill" : "mic")
+                            .font(.title)
+                            .foregroundColor(cameraModel.isVcEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
+                            .font(.system(size: 16))
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                            .padding()
+                    }
+                    
                 }
-                .position(x: UIScreen.main.bounds.width - 33, y: 100)
+                .position(x: UIScreen.main.bounds.width - 33, y: 130)
             }
             
             if let message = voiceCommandPopupMessage {
@@ -289,26 +317,41 @@ struct CameraContainerView: View {
                     
                     HStack(spacing: 55) { // This HStack contains all main elements
 
-                   
-                        if !cameraModel.currentPod.items.isEmpty {
-                                // Thumbnail Carousel
-                                ThumbnailCarouselView(items: cameraModel.currentPod.items)
-        //                            .frame(width: 40, height: 40)
-                                .frame(width: 40, height: 40)
-                                .padding(.top, -5)
-                           
-                                       
-                            } else {
-                                // Invisible Placeholder when there are no items
-                                VStack {
-                                    Color.clear
-                                        .frame(width: 40, height: 40)
-                                    Text(" ")
-                                        .font(.footnote)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.clear)
+                        if !cameraModel.isRecording {
+                            if !cameraModel.currentPod.items.isEmpty {
+                                    // Thumbnail Carousel
+                                    ThumbnailCarouselView(items: cameraModel.currentPod.items)
+            //                            .frame(width: 40, height: 40)
+                                    .frame(width: 40, height: 40)
+                                    .padding(.top, -5)
+                               
+                                           
+                                } else {
+                                    // Invisible Placeholder when there are no items
+                                    VStack {
+                                        Color.clear
+                                            .frame(width: 40, height: 40)
+                                        Text(" ")
+                                            .font(.footnote)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.clear)
+                                    }
                                 }
+                        } else {
+                        
+                            VStack {
+                                Color.clear
+                                    .frame(width: 40, height: 40)
+                                Text(" ")
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.clear)
                             }
+                            
+                       
+                        }
+                   
+                      
                         
                         Button(action: {
                             if cameraModel.selectedCameraMode == .photo {
@@ -445,7 +488,7 @@ struct CameraContainerView: View {
                 .foregroundColor(.black) // Text color
                 .padding(.vertical, 15) // Padding for thickness
                 .frame(maxWidth: .infinity) // Make button expand
-                .background(Color.white) // Background color of the button
+                .background(Color.white)
                 .cornerRadius(8) // Rounded corners
                 .fontWeight(.semibold)
 
@@ -473,7 +516,7 @@ struct CameraContainerView: View {
                 .padding(.vertical, 15) // Padding for thickness
                 .frame(maxWidth: .infinity) // Make button expand
                 .fontWeight(.semibold)
-                .background(Color(red: 57/255, green: 106/255, blue: 247/255)) // Background color
+                .background(Color(red: 57/255, green: 106/255, blue: 247/255))
                 .cornerRadius(8) // Rounded corners
             } else{
                 Rectangle()
@@ -722,7 +765,15 @@ struct FinalPreview: View {
                                                  Button(action: {
                                                      // Action for continue
                                                      cleanUpPlayer()
-                                                     cameraModel.confirmAndNavigateToCreatePod()
+                                                     if let _ = cameraModel.previewURL {
+                                                             // It's a video
+                                                             
+                                                         cameraModel.confirmVideoAndNavigateToCreatePod()
+                                                         } else if cameraModel.selectedImage != nil {
+                                                             // It's a photo
+                                                        cameraModel.confirmPhotoAndNavigateToCreatePod()
+                                                         }
+                                                     
                                                      showCreatePodView = true
                                                  }) {
                                                      Image(systemName: "chevron.right")
@@ -749,11 +800,7 @@ struct FinalPreview: View {
               
                     VStack {
                     
-//                        Button("Continue") {
-//                            cleanUpPlayer()
-//                            cameraModel.confirmAndNavigateToCreatePod()
-//                            showCreatePodView = true
-//                        }
+
                         Spacer()
                             }
                     .padding(.top, 25)
@@ -761,84 +808,6 @@ struct FinalPreview: View {
                     .frame(height: bottomSegmentHeight)
                     
                 }
-//            .overlay {
-//                VStack {
-//                    HStack {
-//                        Button(action: {
-//                            if cameraModel.currentPod.items.isEmpty {
-//                                // If it's the first item (Pod is empty), just close the preview
-//                                // This essentially cancels the recording
-//                                showPreview = false
-//                            } else {
-//                                // If Pod has items, prepare to re-record the current item
-//                                // This keeps the Pod items intact but allows for re-recording
-//                                cameraModel.reRecordCurrentItem()
-//                                showPreview = false
-//                            }
-//                        }) {
-//
-//                            ZStack {
-//                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-//                                    .foregroundColor(.black)
-//                                    .opacity(0.4)
-//                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-//
-//                                Text("Cancel")
-//                                    .font(.system(size: 17))
-//                                    .fontWeight(.bold)
-//                                    .foregroundColor(.white)
-//                                    .scaleEffect(0.8) // Adjust the scale if needed
-//                            }
-//                        }
-//                        .padding(.leading, -5)
-//                        Spacer()
-//                        Button(action: {
-//
-//                            cleanUpPlayer()
-//                            cameraModel.confirmVideo()
-//                         
-//                        }) {
-//                            ZStack {
-//                                RoundedRectangle(cornerRadius: 22) // Half of height for full curvature
-//                                    .foregroundColor(.black)
-//                                    .opacity(0.4)
-//                                    .frame(width: 75, height: 38) // Adjust the size as needed, ensuring the cornerRadius is half of height
-//
-//                                Text("Save")
-//                                    .font(.system(size: 17))
-//                                    .fontWeight(.bold)
-//                                    .foregroundColor(.white)
-//                                    .scaleEffect(0.8) // Adjust the scale if needed
-//                            }
-//                        }
-//                        .padding(.trailing, -5)
-//
-//                        
-//                    }
-                    
-//                    HStack{
-//                        Spacer()
-//                        Button(action: {
-//                            // Trigger crop and rotate mode
-//                            player.pause()
-//                            isPresentingEditor = true
-//                        }) {
-//                            Image(systemName: "crop")
-//                                .iconStyle()
-//                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                
-//                        }
-//                    }
-//                    .padding(.vertical, 15)
-                    
-                    
-                    
-                    
-//                    Spacer()
-//                    
-//                }
-//                .padding()
-//            }
 
             .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
                 applyEditParametersAndSetupPlayer()
