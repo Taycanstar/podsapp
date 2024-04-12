@@ -144,7 +144,6 @@ struct CameraContainerView: View {
     @State private var isShowingVideoPicker = false
     @State private var selectedVideoURL: URL?
     @State private var isProcessingVideo = false
-    @Binding var shouldNavigateToHome: Bool
     @State private var showingVoiceCommandPopup = false
     @State private var voiceCommandPopupMessage: String? = nil
     @Binding var showingVideoCreationScreen: Bool
@@ -161,9 +160,18 @@ struct CameraContainerView: View {
                 .environmentObject(cameraModel)
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
-                    CreatePodView(pod: $cameraModel.currentPod, shouldNavigateToHome: $shouldNavigateToHome)
+                    CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen)
                     // Pass any required environment objects or parameters
                 }
+//                .fullScreenCover(isPresented: $showCreatePodView) {
+//                    CreatePodView(pod: $cameraModel.currentPod, onComplete: { success in
+//                        if success {
+//                            self.shouldNavigateToHome = true
+//                        }
+//                        showCreatePodView = false
+//                    })
+//                }
+
             
             if !cameraModel.isRecording {
                 Button(action: {

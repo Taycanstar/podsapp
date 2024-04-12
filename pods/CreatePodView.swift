@@ -8,7 +8,7 @@ struct CreatePodView: View {
     @State private var isLoading = false
     @EnvironmentObject var viewModel: OnboardingViewModel
     @StateObject var cameraModel = CameraViewModel()
-    @Binding var shouldNavigateToHome: Bool
+    @Binding var showingVideoCreationScreen: Bool
 
 
     var body: some View {
@@ -99,8 +99,7 @@ struct CreatePodView: View {
             DispatchQueue.main.async {
                 isLoading = false // Stop loading
                 if success {
-                    self.presentationMode.wrappedValue.dismiss()
-                    self.shouldNavigateToHome = true
+                    self.showingVideoCreationScreen = false 
                     
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")

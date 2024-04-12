@@ -18,7 +18,6 @@ struct ContentView: View {
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
     @State private var isAuthenticated = true
-    @State private var shouldNavigateToHome = false
     @State private var showingVideoCreationScreen = false
     @State private var selectedCameraMode = CameraMode.fifteen
     
@@ -50,20 +49,15 @@ struct ContentView: View {
                                                showingVideoCreationScreen = true
                                            }
                                        }
-                    .onChange(of: shouldNavigateToHome) { [shouldNavigateToHome] in
-                        if shouldNavigateToHome {
-                            selectedTab = 0 // Assuming HomeView is at index 0
-                            self.shouldNavigateToHome = false // Reset the flag
-                        }
-                    }
-
                     CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
-                                       .fullScreenCover(isPresented: $showingVideoCreationScreen, content: {
-                                     
-                                           CameraContainerView(shouldNavigateToHome: .constant(false), showingVideoCreationScreen: $showingVideoCreationScreen)
-                                               .background(Color.black.edgesIgnoringSafeArea(.all))
-//                                                                             .environment(\.colorScheme, .dark)
-                                       })
+
+                        .fullScreenCover(isPresented: $showingVideoCreationScreen) {
+                            CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen)
+                                .background(Color.black.edgesIgnoringSafeArea(.all))
+                        }
+
+                    
+                    
                 }
              
             } else {
