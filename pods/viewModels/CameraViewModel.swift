@@ -13,7 +13,7 @@ struct PodItem: Identifiable {
     var thumbnail: UIImage? // For local UI usage
     var thumbnailURL: URL?  // For networking and referencing the image's location
     var imageURL: URL?
-    var itemType: String
+    var itemType: String?
 }
 
 struct Pod: Identifiable {
@@ -37,7 +37,7 @@ struct PodItemJSON: Codable {
     let label: String
     let thumbnail: String
     let image: String?
-    let itemType: String
+    let itemType: String?
    
 }
 
