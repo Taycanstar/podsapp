@@ -92,14 +92,18 @@ struct CreatePodView: View {
             return
         }
         isLoading = true // Start loading
+        let startTime = Date()
 
         let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
         
         networkManager.createPod(podTitle: podName, items: items, email: viewModel.email) { success, message in
+            let endTime = Date() // End time
+            let duration = endTime.timeIntervalSince(startTime)
             DispatchQueue.main.async {
                 isLoading = false // Stop loading
                 if success {
                     self.showingVideoCreationScreen = false 
+                    print("Pod created successfully in \(duration) seconds.")
                     
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")

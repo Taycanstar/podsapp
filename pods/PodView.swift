@@ -1,4 +1,22 @@
 import SwiftUI
+import AVFoundation
+
+extension URL {
+    func generateThumbnail() -> UIImage? {
+        let asset = AVAsset(url: self)
+        let assetImageGenerator = AVAssetImageGenerator(asset: asset)
+        assetImageGenerator.appliesPreferredTrackTransform = true
+        let timestamp = CMTime(seconds: 1, preferredTimescale: 60)
+
+        do {
+            let imageRef = try assetImageGenerator.copyCGImage(at: timestamp, actualTime: nil)
+            return UIImage(cgImage: imageRef)
+        } catch {
+            print("Error generating thumbnail: \(error.localizedDescription)")
+            return nil
+        }
+    }
+}
 
 
 struct PodView: View {
