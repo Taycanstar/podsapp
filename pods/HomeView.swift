@@ -60,7 +60,7 @@ struct HomeView: View {
             }
             
             .onAppear {
-                print(homeViewModel.pods, "pods")
+             
                 homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
                        }
             

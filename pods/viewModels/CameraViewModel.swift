@@ -3,6 +3,7 @@ import SwiftUI
 import AVFoundation
 import CoreMedia
 import MicrosoftCognitiveServicesSpeech
+import CommonCrypto
 
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
@@ -13,6 +14,7 @@ struct PodItem: Identifiable {
     var thumbnailURL: URL?  // For networking and referencing the image's location
     var imageURL: URL?
     var itemType: String?
+    var uuid: String?
 }
 
 struct Pod: Identifiable {
@@ -123,6 +125,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     // Define the selected mode property
     @Published var selectedCameraMode: CameraMode = .fifteen
     @Published var isFlashIntendedForPhoto: Bool = false
+    var itemConfirmed: Bool = false
+    @Published var currentRecordingUUID: String?
+
 
 
 
@@ -525,6 +530,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.isProcessingVideo = false // Update processing state if needed
             self.previewURL = nil
             print("Captured image set. Size: \(imageToDisplay.size)")
+            self.itemConfirmed = false
             // Trigger any UI updates to show the captured image
         }
     }
@@ -654,14 +660,15 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           isRecording = false
           recordedDuration = 0
           recordingTimer?.invalidate() // Stop the timer
-        recordingTimer = nil
-          
+          recordingTimer = nil
+          itemConfirmed = false
           if isVcEnabled {
               toggleVoiceCommands()
           }
           if isWaveformEnabled {
               isWaveformEnabled = false
           }
+          currentRecordingUUID = UUID().uuidString
           print(transcription, "transcription after")
       }
 //
@@ -676,7 +683,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
              self.showPreview = true
          }
      }
-    
     
 //    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
 //        if let error = error {
@@ -918,18 +924,33 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
     func confirmVideo() {
-        guard let videoURL = previewURL else {
-            print("No video to confirm.")
+
+//        
+        guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
+              print("No video to confirm or UUID is missing.")
+              return
+          }
+        resetPreviewState()
+        
+//         // Check for duplicate video using UUID
+        let isDuplicate = currentPod.items.contains { item in
+            return item.uuid == recordingUUID
+        }
+
+        if isDuplicate {
+            print("Duplicate video detected. Skipping addition.")
+            DispatchQueue.main.async {
+                self.showPreview = false
+            }
             return
         }
-        
-        resetPreviewState()
+
 
         let nextId = currentPod.items.count + 1
         let defaultMetadata = "Item \(nextId)"
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
-        
-        
+    
+
 
         // Compress the video first
         compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
@@ -954,10 +975,13 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                     } else {
                         print("Audio file does not exist, proceeding without transcription.")
                         self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+                        self.itemConfirmed = true
                     }
                 } else {
                     // If waveform is not enabled, skip transcription
                     self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+                    self.itemConfirmed = true
+                    
                 }
             case .failure(let error):
                 print("Video compression failed with error: \(error.localizedDescription)")
@@ -978,7 +1002,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     func compressVideo(inputURL: URL, outputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
         let urlAsset = AVURLAsset(url: inputURL, options: nil)
-        guard let exportSession = AVAssetExportSession(asset: urlAsset, presetName: AVAssetExportPreset960x540) else {
+        guard let exportSession = AVAssetExportSession(asset: urlAsset, presetName: AVAssetExportPreset640x480) else {
             completion(.failure(NSError(domain: "VideoCompressionError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Could not create export session"])))
             return
         }
@@ -1004,10 +1028,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
     private func completeVideoConfirmation(with videoURL: URL, metadata: String) {
+        guard let recordingUUID = currentRecordingUUID else {
+              print("No video to confirm or UUID is missing.")
+              return
+          }
         // Check if the last item in the Pod is the same as the current preview URL
         if currentPod.items.last?.videoURL != videoURL {
             let thumbnail = generateThumbnail(for: videoURL, usingFrontCamera: isFrontCameraUsed)
-            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video")
+            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video",  uuid: recordingUUID)
             print(newItem, "new item")
             currentPod.items.append(newItem)
               print("Item confirmed and added to Pod. Current Pod count: \(currentPod.items), Item Type: \(currentPod.items.last?.itemType ?? "nil")")
@@ -1024,77 +1052,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //        isRecording = false
     }
 
-//    func confirmVideo() {
-//        guard let videoURL = previewURL else {
-//            print("No video to confirm.")
-//            return
-//        }
-//        isTranscribing = true
-//
-//        // Get the URL of the recorded audio
-//        let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-//        print("Audio file path: \(audioFilename.path)")
-//
-//        // Check if audio file exists
-//        if !FileManager.default.fileExists(atPath: audioFilename.path) {
-//            print("Audio file does not exist.")
-//        } else {
-//            print("Audio file found, proceeding with transcription.")
-//        }
-//        let nextId = currentPod.items.count + 1
-//        if isWaveformEnabled {
-//            print("hi")
-//            transcribeAudio(from: audioFilename) { [weak self] transcribedText in
-//                guard let self = self else { return }
-//                DispatchQueue.main.async {
-//                    var metadata = transcribedText ?? "Item \(nextId)"
-//                    metadata = metadata.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive)
-//                    print("Transcription result: \(metadata)")
-//
-//                    // Check if the last item in the Pod is the same as the current preview URL
-//                    if self.currentPod.items.last?.videoURL != videoURL {
-//                        let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-//                        let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-//                        self.currentPod.items.append(newItem)
-//    //                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
-//                    } else {
-//                        print("The item is already in the Pod.")
-//                    }
-//
-//                    // Reset the preview URL and hide the preview
-//                    self.isTranscribing = false
-//                    self.showPreview = false
-//                    self.recordedDuration = 0
-//                    // Update the recording state
-//                    self.isRecording = false
-//
-//                    self.setUp()
-//                }
-//            }
-//        } else {
-//            if self.currentPod.items.last?.videoURL != videoURL {
-//                let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-//                let newItem = PodItem(id: nextId, videoURL: videoURL, metadata: "Item \(nextId)", thumbnail: thumbnail)
-//                self.currentPod.items.append(newItem)
-////                    print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count)")
-//            } else {
-//                print("The item is already in the Pod.")
-//            }
-//
-//            // Reset the preview URL and hide the preview
-//            self.isTranscribing = false
-//            self.showPreview = false
-//            self.recordedDuration = 0
-//            // Update the recording state
-//            self.isRecording = false
-//
-//        }
-//       
-//       
-// 
-//    }
-//    
-    
     func confirmPhoto() {
         guard let selectedImage = selectedImage else {
             print("No photo to confirm.")
@@ -1120,63 +1077,12 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 // Consider when and how `selectedImage` should be reset
                 // self.selectedImage might be reset here or elsewhere depending on your app's flow
                 self.showPreview = false // Adjust as needed for consistent UI flow
+                self.itemConfirmed = true
             }
         }
 
     }
 
-
-//    func confirmPhoto() {
-//        guard let selectedImage = selectedImage else {
-//            print("No photo to confirm.")
-//            return
-//        }
-//        let nextId = currentPod.items.count + 1
-//        let thumbnail = selectedImage // Directly use the image or resize as needed
-//        let newItem = PodItem(id:nextId, videoURL: nil, image: selectedImage, metadata: "Some metadata", thumbnail: thumbnail, thumbnailURL: nil)
-//
-//        DispatchQueue.main.async {
-//            self.currentPod.items.append(newItem)
-////            self.selectedImage = nil 
-//            self.showPreview = false // Hide preview
-//        }
-//    }
-
-
-//
-//    func confirmVideo() {
-//        guard let videoURL = previewURL else {
-//            print("No video to confirm.")
-//            return
-//        }
-//
-//        DispatchQueue.main.async {
-//            // Here, create and append a new PodItem with the metadata
-//            let metadata = self.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
-//            let thumbnail = self.generateThumbnail(for: videoURL, usingFrontCamera: self.isFrontCameraUsed)
-//           
-//            let newItem = PodItem(id: UUID().hashValue, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail)
-//            self.currentPod.items.append(newItem)
-//            
-//            
-//            print("Metadata added to new item and appended to Pod.")
-//            
-//
-//              // Prepare the session for the next recording
-//            self.recordedDuration = 0
-//          
-////            self.recordedURLs.removeAll()
-//            // Reset states as necessary
-////            self.previewURL = nil
-//            self.showPreview = false
-//            self.isRecording = false
-//            self.transcription = ""
-//
-//        }
-//    }
-
-
-    
     func generateThumbnail(for url: URL, usingFrontCamera: Bool) -> UIImage? {
         let asset = AVAsset(url: url)
         let assetImgGenerate = AVAssetImageGenerator(asset: asset)
@@ -1283,6 +1189,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.previewURL = url
             self.showPreview = true
             self.isProcessingVideo = false // Notify that processing ends
+            self.itemConfirmed = true
         }
     }
     
@@ -1293,6 +1200,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.showPreview = true // Triggering preview
             self.isProcessingVideo = false
             self.previewURL = nil
+            self.itemConfirmed = true
         }
     }
 

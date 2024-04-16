@@ -340,7 +340,7 @@ class NetworkManager {
                 uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
                     if success, let imageUrl = imageUrlString {
                         print("Image uploaded successfully for item \(item.id)")
-                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), itemType: item.itemType)
+                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType)
                         updatedItems.append(updatedItem)
                     } else {
                         print("Failed to upload image for item \(item.id)")

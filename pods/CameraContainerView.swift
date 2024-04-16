@@ -773,16 +773,28 @@ struct FinalPreview: View {
                                                  Button(action: {
                                                      // Action for continue
                                                      cleanUpPlayer()
-                                                     if let _ = cameraModel.previewURL {
-                                                             // It's a video
-                                                             
-                                                         cameraModel.confirmVideoAndNavigateToCreatePod()
-                                                         } else if cameraModel.selectedImage != nil {
-                                                             // It's a photo
-                                                        cameraModel.confirmPhotoAndNavigateToCreatePod()
-                                                         }
-                                                     
-                                                     showCreatePodView = true
+//                                                     if let _ = cameraModel.previewURL {
+//                                                             // It's a video
+//                                                             
+//                                                         cameraModel.confirmVideoAndNavigateToCreatePod()
+//                                                         } else if cameraModel.selectedImage != nil {
+//                                                             // It's a photo
+//                                                        cameraModel.confirmPhotoAndNavigateToCreatePod()
+//                                                         }
+//                                                     
+//                                                     showCreatePodView = true
+                                                     if cameraModel.itemConfirmed {
+                                                           // If the item is already confirmed, just navigate
+                                                           showCreatePodView = true
+                                                       } else {
+                                                           // Confirm before navigating if not already done
+                                                           if let _ = cameraModel.previewURL {
+                                                               cameraModel.confirmVideoAndNavigateToCreatePod()
+                                                           } else if cameraModel.selectedImage != nil {
+                                                               cameraModel.confirmPhotoAndNavigateToCreatePod()
+                                                           }
+                                                           showCreatePodView = true
+                                                       }
                                                  }) {
                                                      Image(systemName: "chevron.right")
                                                          .foregroundColor(.white)
