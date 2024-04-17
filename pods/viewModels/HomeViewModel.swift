@@ -15,6 +15,7 @@ class HomeViewModel: ObservableObject {
                 } else {
                     print("Error fetching pods: \(errorMessage ?? "Unknown error")")
                 }
+                self?.pods = pods ?? []
             }
         }
     }

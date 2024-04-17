@@ -9,7 +9,9 @@ struct CreatePodView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @StateObject var cameraModel = CameraViewModel()
     @Binding var showingVideoCreationScreen: Bool
-
+    
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+    @EnvironmentObject var homeViewModel: HomeViewModel
 
     var body: some View {
         VStack {
@@ -91,7 +93,12 @@ struct CreatePodView: View {
             print("Pod name is required.")
             return
         }
+        self.showingVideoCreationScreen = false 
         isLoading = true // Start loading
+        if let thumbnail = pod.items.last?.thumbnail {
+               uploadViewModel.startUpload(withThumbnail: thumbnail)
+           }
+        
         let startTime = Date()
 
         let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
@@ -102,8 +109,11 @@ struct CreatePodView: View {
             DispatchQueue.main.async {
                 isLoading = false // Stop loading
                 if success {
-                    self.showingVideoCreationScreen = false 
+                   
                     print("Pod created successfully in \(duration) seconds.")
+                    uploadViewModel.uploadCompleted()
+          
+//                    self.homeViewModel.fetchPodsForUser(email: self.viewModel.email)
                     
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")

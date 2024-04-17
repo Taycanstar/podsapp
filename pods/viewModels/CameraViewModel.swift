@@ -883,45 +883,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         return filteredTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    
-//    func confirmVideo() {
-//        guard let videoURL = previewURL else {
-//            print("No video to confirm.")
-//            return
-//        }
-//
-//        let nextId = currentPod.items.count + 1
-//        let defaultMetadata = "Item \(nextId)"
-//        
-//        if isWaveformEnabled {
-//            isTranscribing = true
-//
-//            // Get the URL of the recorded audio
-//            let audioFilename = getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-//            print("Audio file path: \(audioFilename.path)")
-//
-//            // Check if audio file exists
-//            if FileManager.default.fileExists(atPath: audioFilename.path) {
-//                print("Audio file found, proceeding with transcription.")
-//                // Transcribe the audio and then confirm the video
-//                transcribeAudio(from: audioFilename) { [weak self] transcribedText in
-//                    guard let self = self else { return }
-//                    DispatchQueue.main.async {
-//                        let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
-//                        self.completeVideoConfirmation(with: videoURL, metadata: metadata)
-//                    }
-//                }
-//            } else {
-//                print("Audio file does not exist, proceeding without transcription.")
-//                completeVideoConfirmation(with: videoURL, metadata: defaultMetadata)
-//            }
-//        } else {
-//            // If isWaveformEnabled is false, skip transcription and use default metadata
-//            completeVideoConfirmation(with: videoURL, metadata: defaultMetadata)
-//        }
-//    }
-    
-
 
     func confirmVideo() {
 
@@ -1108,13 +1069,21 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
     func confirmVideoAndNavigateToCreatePod() {
-            confirmVideo()
-            showCreatePodView = true
+        self.showCreatePodView = true
+//            confirmVideo()
+        DispatchQueue.global(qos: .background).async {
+                self.confirmVideo()
+            }
+            
         }
     
     func confirmPhotoAndNavigateToCreatePod() {
-            confirmPhoto()
-            showCreatePodView = true
+        self.showCreatePodView = true
+//            confirmPhoto()
+        DispatchQueue.global(qos: .background).async {
+                self.confirmPhoto()
+            }
+           
         }
 
     func transcribeAudio(from url: URL, completion: @escaping (String?) -> Void) {
@@ -1154,30 +1123,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-
-
-//
-//    func handleSelectedVideo(_ url: URL) {
-////        self.isProcessingVideo = true // Notify that processing starts
-//        print("Selected video URL: \(url)")
-//
-//        // Your video processing logic here...
-//        extractAudioFromVideo(videoURL: url) { [weak self] success in
-//            guard let self = self else { return }
-//
-//            DispatchQueue.main.async {
-//                if success {
-//                    // Processing succeeded, update accordingly
-//                    self.previewURL = url
-//                    self.showPreview = true
-//                } else {
-//                    // Processing failed, log or handle error
-//                    print("Failed to extract and convert audio from the selected video.")
-//                }
-//             self.isProcessingVideo = false // Notify that processing ends
-//            }
-//        }
-//    }
     
     func handleSelectedVideo(_ url: URL) {
         print("Selected video URL: \(url)")
@@ -1188,8 +1133,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             // you can directly set the preview and show it.
             self.previewURL = url
             self.showPreview = true
-            self.isProcessingVideo = false // Notify that processing ends
-            self.itemConfirmed = true
+            self.isProcessingVideo = false
+            self.itemConfirmed = false
+            self.currentRecordingUUID = UUID().uuidString
         }
     }
     
@@ -1200,7 +1146,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.showPreview = true // Triggering preview
             self.isProcessingVideo = false
             self.previewURL = nil
-            self.itemConfirmed = true
+            self.itemConfirmed = false
+            self.currentRecordingUUID = UUID().uuidString
         }
     }
 

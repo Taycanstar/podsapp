@@ -1,10 +1,51 @@
 import SwiftUI
 
+struct UploadProgressView: View {
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+
+    var body: some View {
+        ZStack {
+            if let thumbnail = uploadViewModel.thumbnailImage {
+                thumbnail
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 50, height: 70)
+                    .clipped()
+                    .cornerRadius(8) // Increased corner radius
+                    .overlay(
+                        Rectangle()
+                            .foregroundColor(Color.black.opacity(0.4))
+                    )
+                
+                Circle()
+                    .stroke(lineWidth: 3) // Thicker background circle
+                    .opacity(0.2)  // Background circle for progress
+                    .foregroundColor(Color.white)
+                    .frame(width: 35, height: 35) // Smaller circle to match the thumbnail size closely
+
+                Circle()
+                    .trim(from: 0, to: CGFloat(uploadViewModel.uploadProgress))
+                    .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round)) // Thicker progress circle
+                    .foregroundColor(Color.white)
+                    .rotationEffect(Angle(degrees: -90)) // Start the progress from the top
+                    .frame(width: 35, height: 35) // Smaller circle to match the thumbnail size closely
+            }
+        }
+        .cornerRadius(8)
+        .frame(width: 50, height: 70) // Fixed frame for alignment
+        .padding(.leading, 20) // Ensure left alignment by padding from the leading edge
+    }
+}
+
+
+
+
 struct HomeView: View {
 
     @ObservedObject var cameraModel = CameraViewModel()
-    @ObservedObject var homeViewModel = HomeViewModel()
+    @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var uploadViewModel: UploadViewModel
     var networkManager: NetworkManager = NetworkManager()
     
     @Environment(\.colorScheme) var colorScheme
@@ -13,63 +54,102 @@ struct HomeView: View {
     @State private var expandedPods = Set<String>()
     @State private var currentItemIndex = 0
     @State private var editMode: EditMode = .inactive
-    
+  
     var body: some View {
       
         NavigationView {
-            List {
-                ForEach(homeViewModel.pods.indices, id: \.self) { index in
-                   
-                    VStack {
-                     
-                        PodTitleRow(pod: homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
-                            if editMode == .inactive {
-                                                                       withAnimation {
-                                                                           togglePodExpansion(for: homeViewModel.pods[index].title)
+            ZStack(alignment: .top){
+//                if uploadViewModel.isUploading {
+//                                  UploadProgressView()
+//                        .frame(height: 60)
+//                                              .background(Color.black.opacity(0.3))
+//                                              .cornerRadius(10)
+//                                              .transition(.move(edge: .top).combined(with: .opacity))
+//                                              .animation(.easeInOut, value: uploadViewModel.isUploading)
+//                              }
+                List {
+                    ForEach(homeViewModel.pods.indices, id: \.self) { index in
+                        VStack {
+                         
+                            PodTitleRow(pod: homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
+                                if editMode == .inactive {
+                                                                           withAnimation {
+                                                                               togglePodExpansion(for: homeViewModel.pods[index].title)
+                                                                           }
                                                                        }
-                                                                   }
-                                })
-                        
-                                    .listRowInsets(EdgeInsets())
-                                    .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    .listRowInsets(EdgeInsets())
-//                    .animation(nil)
-                    
-                    if(expandedPods.contains(homeViewModel.pods[index].title)) {
-                        ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
-                            if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
-//                                NavigationLink(destination: ItemView(items: homeViewModel.pods[index].items, initialIndex: initialIndex))
-                                NavigationLink(destination: PodItemView(items: homeViewModel.pods[index].items,  initialIndex: initialIndex))
-                                {
-                                    ItemRow(item: item)
+                                    })
                                         .listRowInsets(EdgeInsets())
+                                        .buttonStyle(PlainButtonStyle())
+                        }
+                        .listRowInsets(EdgeInsets())
+     
+                        if(expandedPods.contains(homeViewModel.pods[index].title)) {
+                            ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
+                                if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
+                                    NavigationLink(destination: PodItemView(items: homeViewModel.pods[index].items,  initialIndex: initialIndex))
+                                    {
+                                        ItemRow(item: item)
+                                            .listRowInsets(EdgeInsets())
+                                    }
                                 }
                             }
+                                .listRowInsets(EdgeInsets())
+                                .padding(.trailing, 15)
+                            }
+                        
+                        
                         }
-                            .listRowInsets(EdgeInsets())
-                            .padding(.trailing, 15)
-                        }
                     
-                    
-                    }
-                .onMove(perform: movePod)
-                .onDelete(perform: deletePod)
-                    
+                    .onMove(perform: movePod)
+                    .onDelete(perform: deletePod)
+                  
+                        
+                }
+                .scrollIndicators(.hidden)  // This hides the vertical scroll indicators
+                                .padding(.bottom, 50)
+                .refreshable {
+                       homeViewModel.fetchPodsForUser(email: viewModel.email)
+                   }
+                
+                .onAppear {
+                 
+                    homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
+                           }
+                
+                .listStyle(InsetGroupedListStyle())
+                               .navigationTitle("Pods")
+                               .navigationBarTitleDisplayMode(.inline)
+                               .navigationBarItems(trailing: editButton)
+                               .environment(\.editMode, $editMode)
+                               .preferredColorScheme(.light)
+                
+                if uploadViewModel.postSuccess {
+                                 Text("Your pod was posted")
+                        .fontWeight(.semibold)
+                                     .padding()
+                                     .background(Color.black.opacity(0.75))
+                                     .foregroundColor(.white)
+                                     .cornerRadius(8)
+//                                     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                                     .transition(.move(edge: .top).combined(with: .opacity))
+                                     .animation(.easeInOut,  value: uploadViewModel.postSuccess)
+                                     .onAppear {
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
+                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
+                                                        }
+                                     }
+                                     .zIndex(1)  // Ensure the popup is above other content
+                             }
+                
+                // Overlay the UploadProgressView
+                               if uploadViewModel.isUploading {
+                                   UploadProgressView()
+                                       .environmentObject(uploadViewModel) // Make sure to pass the environment object
+                                       .position(x: UIScreen.main.bounds.width * 0.1, y: 30)// Adjust position as necessary
+                               }
             }
-            
-            .onAppear {
-             
-                homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
-                       }
-            
-            .listStyle(InsetGroupedListStyle())
-                           .navigationTitle("Pods")
-                           .navigationBarTitleDisplayMode(.inline)
-                           .navigationBarItems(trailing: editButton)
-                           .environment(\.editMode, $editMode)
-                           .preferredColorScheme(.light)
+       
+    
         }
 //        .background(backgroundColor.edgesIgnoringSafeArea(.all))
     }

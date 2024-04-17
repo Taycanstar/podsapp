@@ -150,7 +150,7 @@ struct CameraContainerView: View {
     @State private var latestPhoto: UIImage? = nil
    
     
-    
+    @EnvironmentObject var uploadViewModel: UploadViewModel
     
     
     var body: some View {
@@ -500,16 +500,7 @@ struct CameraContainerView: View {
                 .cornerRadius(8) // Rounded corners
                 .fontWeight(.semibold)
 
-//                // Next Button
-//                Button("Next") {
-//                    // Action for Next
-//                    if let previewURL = cameraModel.previewURL {
-//                        print("Preview URL: \(previewURL)")
-//                        cameraModel.showPreview = true
-//                    } else {
-//                        print("No preview URL available")
-//                    }
-//                }
+
                 Button("Next") {
                     // Check if there's either a video URL or a selected image available for preview
                     if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
@@ -772,29 +763,31 @@ struct FinalPreview: View {
                                              VStack {
                                                  Button(action: {
                                                      // Action for continue
+//                                                     cleanUpPlayer()
+//
+//                                                     if cameraModel.itemConfirmed {
+//                                                           // If the item is already confirmed, just navigate
+//                                                           showCreatePodView = true
+//                                                       } else {
+//                                                           // Confirm before navigating if not already done
+//                                                           if let _ = cameraModel.previewURL {
+//                                                               cameraModel.confirmVideoAndNavigateToCreatePod()
+//                                                           } else if cameraModel.selectedImage != nil {
+//                                                               cameraModel.confirmPhotoAndNavigateToCreatePod()
+//                                                           }
+//                                                           showCreatePodView = true
+//                                                       }
                                                      cleanUpPlayer()
-//                                                     if let _ = cameraModel.previewURL {
-//                                                             // It's a video
-//                                                             
-//                                                         cameraModel.confirmVideoAndNavigateToCreatePod()
-//                                                         } else if cameraModel.selectedImage != nil {
-//                                                             // It's a photo
-//                                                        cameraModel.confirmPhotoAndNavigateToCreatePod()
-//                                                         }
-//                                                     
-//                                                     showCreatePodView = true
-                                                     if cameraModel.itemConfirmed {
-                                                           // If the item is already confirmed, just navigate
-                                                           showCreatePodView = true
-                                                       } else {
-                                                           // Confirm before navigating if not already done
-                                                           if let _ = cameraModel.previewURL {
-                                                               cameraModel.confirmVideoAndNavigateToCreatePod()
-                                                           } else if cameraModel.selectedImage != nil {
-                                                               cameraModel.confirmPhotoAndNavigateToCreatePod()
-                                                           }
-                                                           showCreatePodView = true
-                                                       }
+                                                          if cameraModel.itemConfirmed {
+                                                              showCreatePodView = true
+                                                          } else {
+                                                              // Start the confirmation and handle navigation in its completion
+                                                              if let _ = cameraModel.previewURL {
+                                                                  cameraModel.confirmVideoAndNavigateToCreatePod()
+                                                              } else if let _ = cameraModel.selectedImage {
+                                                                  cameraModel.confirmPhotoAndNavigateToCreatePod()
+                                                              }
+                                                          }
                                                  }) {
                                                      Image(systemName: "chevron.right")
                                                          .foregroundColor(.white)

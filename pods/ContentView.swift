@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var isAuthenticated = true
     @State private var showingVideoCreationScreen = false
     @State private var selectedCameraMode = CameraMode.fifteen
+    @EnvironmentObject var uploadViewModel: UploadViewModel
     
  
 
