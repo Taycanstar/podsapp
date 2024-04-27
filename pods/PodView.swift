@@ -78,6 +78,9 @@ struct PodView: View {
             .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
             .onAppear {
                         self.reorderedItems = self.pod.items // Initialize reorderedItems with the current items
+                for item in self.reorderedItems {
+                             print(item)
+                            }
                     }
         }
     

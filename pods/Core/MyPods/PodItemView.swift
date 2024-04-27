@@ -26,16 +26,33 @@ struct PodItemView: View {
             ScrollView {
                 LazyVStack(spacing: 0){
                     ForEach(items) { item in
-                        PodItemCell(item: item, player: player)
-                            .id(item.id)
-                            .onAppear{
-                                playInitialVideoIfNecessary()
-                                sharedViewModel.isItemViewActive = true
+//                        PodItemCell(item: item, player: player)
+//                            .id(item.id)
+//                            .onAppear{
+//                                playInitialVideoIfNecessary()
+//                                sharedViewModel.isItemViewActive = true
+//
+//                            }
+//                            .onDisappear {
+//                                sharedViewModel.isItemViewActive = false
+//                            }
+                        if item.videoURL != nil {
+                                                  PodItemCell(item: item, player: player)
+                                                      .id(item.id)
+                                                      .onAppear{
+                                                  if item.videoURL != nil {
+                                                      playInitialVideoIfNecessary()
+                                                  }
+                                                  sharedViewModel.isItemViewActive = true
+                                              }
+                                              .onDisappear {
+                                                  sharedViewModel.isItemViewActive = false
+                                              }
+                                              } else {
+                                                  PodItemCellImage(item: item)
+                                                      .id(item.id)
+                                              }
 
-                            }
-                            .onDisappear {
-                                sharedViewModel.isItemViewActive = false
-                            }
                             
                     }
                 }
@@ -94,25 +111,7 @@ struct PodItemView: View {
 
 
     
-//    func playVideoOnChangeOfScrollPosition(itemId: Int) {
-//        guard let currentItem = items.first(where: { $0.id == itemId }) else {
-//            print("Item with ID \(itemId) not found.")
-//            return
-//        }
-//
-//        print("Playing item with ID \(itemId) and URL \(currentItem.videoURL)")
-//        let playerItem = AVPlayerItem(url: currentItem.videoURL)
-//        player.replaceCurrentItem(with: playerItem)
-//
-//        // Remove any existing observers to avoid duplicates
-//        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-//        
-//        // Add observer to loop video
-//        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [ self] _ in
-//            self.player.seek(to: .zero)
-//            self.player.play()
-//        }
-//    }
+
     func playVideoOnChangeOfScrollPosition(itemId: Int) {
         guard let currentItem = items.first(where: { $0.id == itemId }), let videoURL = currentItem.videoURL else {
             print("Item with ID \(itemId) not found or doesn't have a video URL.")

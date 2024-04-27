@@ -736,7 +736,7 @@ struct FinalPreview: View {
                                           
                                                  Button(action: {
                                                      // Action for checkmark/save
-                                                     cleanUpPlayer()
+                                                    
                                                      if let _ = cameraModel.previewURL {
                                                              // It's a video
                                                              cameraModel.confirmVideo()
@@ -744,6 +744,7 @@ struct FinalPreview: View {
                                                              // It's a photo
                                                              cameraModel.confirmPhoto()
                                                          }
+                                                     cleanUpPlayer()
                                                  }) {
                                                      
                                                      Image(systemName: "checkmark")
@@ -762,32 +763,19 @@ struct FinalPreview: View {
                                              // Chevron right with label "Continue"
                                              VStack {
                                                  Button(action: {
-                                                     // Action for continue
-//                                                     cleanUpPlayer()
-//
-//                                                     if cameraModel.itemConfirmed {
-//                                                           // If the item is already confirmed, just navigate
-//                                                           showCreatePodView = true
-//                                                       } else {
-//                                                           // Confirm before navigating if not already done
-//                                                           if let _ = cameraModel.previewURL {
-//                                                               cameraModel.confirmVideoAndNavigateToCreatePod()
-//                                                           } else if cameraModel.selectedImage != nil {
-//                                                               cameraModel.confirmPhotoAndNavigateToCreatePod()
-//                                                           }
-//                                                           showCreatePodView = true
-//                                                       }
-                                                     cleanUpPlayer()
-                                                          if cameraModel.itemConfirmed {
-                                                              showCreatePodView = true
-                                                          } else {
+                                                     showCreatePodView = true
+     
                                                               // Start the confirmation and handle navigation in its completion
                                                               if let _ = cameraModel.previewURL {
+                                                                  
                                                                   cameraModel.confirmVideoAndNavigateToCreatePod()
+                                                                  
                                                               } else if let _ = cameraModel.selectedImage {
                                                                   cameraModel.confirmPhotoAndNavigateToCreatePod()
+                                                                 
                                                               }
-                                                          }
+                                                          
+                                                     cleanUpPlayer()
                                                  }) {
                                                      Image(systemName: "chevron.right")
                                                          .foregroundColor(.white)

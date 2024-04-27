@@ -130,7 +130,3 @@ struct PodItemCell: View {
         }
     }
 }
-
-//#Preview {
-//    PodItemCell(item:2)
-//}
