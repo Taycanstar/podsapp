@@ -7,7 +7,19 @@ import CommonCrypto
 
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
-    var videoURL: URL?
+    var videoURL: URL? {
+        didSet {
+            print("videoURL didSet called with URL: \(String(describing: videoURL))")
+            if let url = videoURL {
+                player = AVPlayer(url: url)
+                print("Player re-initialized with new URL: \(url)")
+            } else {
+                player = nil
+                print("Player de-initialized as videoURL is nil")
+            }
+        }
+    }
+
     var image: UIImage?
     var metadata: String
     var thumbnail: UIImage? // For local UI usage
@@ -15,6 +27,7 @@ struct PodItem: Identifiable {
     var imageURL: URL?
     var itemType: String?
     var uuid: String?
+    var player: AVPlayer?
 }
 
 struct Pod: Identifiable {
@@ -70,6 +83,14 @@ extension PodItem {
                    self.imageURL = URL(string: imageString)
                } else {
                    self.imageURL = nil // Assign nil if the string is nil
+               }
+        // Immediately initialize player if URL is available
+               if let url = self.videoURL {
+                   player = AVPlayer(url: url)
+                   print("AVPlayer initialized with URL: \(url)")
+               } else {
+                   player = nil
+                   print("AVPlayer not initialized due to missing URL")
                }
     }
 }

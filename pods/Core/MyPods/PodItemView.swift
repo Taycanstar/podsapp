@@ -17,8 +17,6 @@ struct PodItemView: View {
     @EnvironmentObject var sharedViewModel: SharedViewModel
     var initialIndex: Int?
     @Environment(\.presentationMode) var presentationMode
-    
-    
 
     var body: some View {
         
@@ -26,24 +24,17 @@ struct PodItemView: View {
             ScrollView {
                 LazyVStack(spacing: 0){
                     ForEach(items) { item in
-//                        PodItemCell(item: item, player: player)
-//                            .id(item.id)
-//                            .onAppear{
-//                                playInitialVideoIfNecessary()
-//                                sharedViewModel.isItemViewActive = true
-//
-//                            }
-//                            .onDisappear {
-//                                sharedViewModel.isItemViewActive = false
-//                            }
+
                         if item.videoURL != nil {
                                                   PodItemCell(item: item, player: player)
                                                       .id(item.id)
                                                       .onAppear{
                                                   if item.videoURL != nil {
                                                       playInitialVideoIfNecessary()
+                                                      
+                                                   
                                                   }
-                                                  sharedViewModel.isItemViewActive = true
+                                            sharedViewModel.isItemViewActive = true
                                               }
                                               .onDisappear {
                                                   sharedViewModel.isItemViewActive = false
@@ -63,24 +54,34 @@ struct PodItemView: View {
             .navigationBarItems(leading: backButton)
             .scrollIndicators(.hidden)
             .onAppear {
+                player.play()
                 if let initialIndex = initialIndex, initialIndex < items.count {
                     scrollPosition = items[initialIndex].id
                     playVideoOnChangeOfScrollPosition(itemId: items[initialIndex].id)
                 }
-                player.play()
+                
+            
                 sharedViewModel.isItemViewActive = true
             }
 
             .onDisappear{
             player.pause()
                 sharedViewModel.isItemViewActive = false
+            
             }
             .scrollPosition(id: $scrollPosition)
             .scrollTargetBehavior(.paging)
             .ignoresSafeArea()
-            .onChange(of: scrollPosition ?? 2) { oldValue, newValue in
+//            .onChange(of: scrollPosition ?? 2) { oldValue, newValue in
+//                playVideoOnChangeOfScrollPosition(itemId: newValue)
+//            }
+            .onChange(of: scrollPosition) { oldValue, newValue in
+                guard let newValue = newValue else { return }
                 playVideoOnChangeOfScrollPosition(itemId: newValue)
             }
+  
+       
+
             
             backButton
                           .padding(.top, 10) // Adjusted to account for the status bar height
@@ -88,10 +89,9 @@ struct PodItemView: View {
                           .foregroundColor(.white)
                        
         }
+
  
         }
-        
-   
     
     func playInitialVideoIfNecessary() {
         guard let initialIndex = initialIndex, initialIndex < items.count else { return }
@@ -133,6 +133,7 @@ struct PodItemView: View {
     }
 
 
+ 
 
     private var backButton: some View {
         Button(action: {

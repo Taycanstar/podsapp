@@ -32,7 +32,8 @@ struct PodView: View {
             List {
                 ForEach(reorderedItems.indices, id: \.self) { index in
 //                    NavigationLink(destination: ItemView(items: reorderedItems , initialIndex: index)) {
-                    NavigationLink(destination: PodItemView(items: reorderedItems,  initialIndex: index)) {
+//                    NavigationLink(destination: PodItemView(items: reorderedItems,  initialIndex: index)) {
+                    NavigationLink(destination: PlayerContainerView(items: reorderedItems)) { 
                         HStack {
                             Text(reorderedItems[index].metadata)
                             Spacer()
@@ -68,6 +69,7 @@ struct PodView: View {
                         }
                         .padding(.vertical, 1)
                     }
+                  
                 }
                 .onMove(perform: moveItem)
                 .onDelete(perform: deleteItem)

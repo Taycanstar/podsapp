@@ -26,10 +26,13 @@
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
 		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
+		3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */; };
+		3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */; };
 		368A27332B9597CE0001BBCA /* pods-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 368A27322B9597CE0001BBCA /* pods-logo.png */; };
 		368A27372B977F5A0001BBCA /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27362B977F5A0001BBCA /* LandingView.swift */; };
 		368A27392B9818330001BBCA /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27382B9818330001BBCA /* InfoView.swift */; };
 		368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67172BDCC454000434E0 /* PodItemCellImage.swift */; };
+		368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67192BDD421B000434E0 /* MediaManager.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
 		3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */; };
 		3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9602B99939600D211D7 /* OnboardingViewModel.swift */; };
@@ -95,10 +98,13 @@
 		3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomVideoPlayer.swift; sourceTree = "<group>"; };
 		3682F09C2B8403D400ABF344 /* CameraContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContainerView.swift; sourceTree = "<group>"; };
 		3682F0A22B84173100ABF344 /* Podfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Podfile; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPageView.swift; sourceTree = "<group>"; };
+		3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerContainerView.swift; sourceTree = "<group>"; };
 		368A27322B9597CE0001BBCA /* pods-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "pods-logo.png"; path = "../../../../../Downloads/pods-logo.png"; sourceTree = "<group>"; };
 		368A27362B977F5A0001BBCA /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
 		368A27382B9818330001BBCA /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
 		368D67172BDCC454000434E0 /* PodItemCellImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCellImage.swift; sourceTree = "<group>"; };
+		368D67192BDD421B000434E0 /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
 		3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerificationView.swift; sourceTree = "<group>"; };
 		3696B9602B99939600D211D7 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
@@ -172,6 +178,7 @@
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				3688DBF62BDEAE54001E244C /* Views */,
 				3682C86A2BBAED5B00B350E2 /* Components */,
 				3682C8652BBAE41400B350E2 /* MyPods */,
 				3682C8622BBADF5600B350E2 /* TabBar */,
@@ -201,8 +208,18 @@
 			isa = PBXGroup;
 			children = (
 				3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */,
+				368D67192BDD421B000434E0 /* MediaManager.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		3688DBF62BDEAE54001E244C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */,
+				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		368A27352B977F320001BBCA /* onboarding */ = {
@@ -582,6 +599,7 @@
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
+				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
 				3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */,
 				364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */,
@@ -591,6 +609,7 @@
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
@@ -603,6 +622,7 @@
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
+				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,

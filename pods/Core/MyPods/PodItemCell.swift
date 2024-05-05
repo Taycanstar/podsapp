@@ -15,13 +15,13 @@ struct PodItemCell: View {
     init(item: PodItem, player: AVPlayer) {
         self.item = item
         self.player = player
+      
     }
     
     var body: some View {
         ZStack {
-            CustomVideoPlayer(player: player)
-                .containerRelativeFrame([.horizontal, .vertical])
-            
+   CustomVideoPlayer(player: player)
+                               .containerRelativeFrame([.horizontal, .vertical])
             VStack{
                 Spacer()
                 
@@ -29,9 +29,7 @@ struct PodItemCell: View {
                     VStack(alignment: .leading) {
                         Text("Lewis Hamilton")
                             .fontWeight(.semibold)
-                        Text("Still we raise")
-                        
-                    }
+                        Text("Still we raise")}
                     .foregroundStyle(.white)
                     .font(.subheadline)
                     
@@ -42,7 +40,6 @@ struct PodItemCell: View {
                             .frame(width: 48, height: 48)
                             .foregroundStyle(.gray)
                         Button{
-                            
                         } label:{
                             VStack{
                                 Image(systemName: "heart.fill")
@@ -52,14 +49,8 @@ struct PodItemCell: View {
                                 Text("27")
                                     .font(.caption)
                                     .foregroundStyle(.white)
-                                    .bold()
-                            }
-                           
-                            
-                        }
-                        
-                        Button{
-                            
+                                    .bold()}}
+            Button{
                         } label:{
                             VStack{
                                 Image(systemName: "ellipsis.bubble.fill")
@@ -69,13 +60,8 @@ struct PodItemCell: View {
                                 Text("27")
                                     .font(.caption)
                                     .foregroundStyle(.white)
-                                    .bold()
-                            }
-                           
-                        }
-                        
+                                    .bold()}}
                         Button{
-                            
                         } label:{
                             VStack{
                                 Image(systemName: "bookmark.fill")
@@ -85,13 +71,8 @@ struct PodItemCell: View {
                                 Text("27")
                                     .font(.caption)
                                     .foregroundStyle(.white)
-                                    .bold()
-                            }
-                           
-                        }
-                        
+                                    .bold()}}
                         Button{
-                            
                         } label:{
                             VStack{
                                 Image(systemName: "arrowshape.turn.up.right.fill")
@@ -102,20 +83,9 @@ struct PodItemCell: View {
                                 Text("27")
                                     .font(.caption)
                                     .foregroundStyle(.white)
-                                    .bold()
-                            }
-                            
-                        }
-                        
-                    }
-                    
-                    
-                }
-                .padding(.bottom,80)
-                
-            }
-            .padding()
-        }
+                                    .bold()}}}}
+                .padding(.bottom,80)}
+            .padding()}
         .onTapGesture {
             switch player.timeControlStatus {
             case .paused:
