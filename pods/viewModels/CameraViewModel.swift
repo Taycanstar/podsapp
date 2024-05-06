@@ -215,6 +215,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
         print("Current state after toggle: \(isVcEnabled)")
     }
+    
+    func toggleWaveform(){
+        if isWaveformEnabled{
+            isWaveformEnabled = false
+        } else {
+            isWaveformEnabled = true
+        }
+    }
 
     
     func checkPermission(){
@@ -686,9 +694,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           if isVcEnabled {
               toggleVoiceCommands()
           }
-          if isWaveformEnabled {
-              isWaveformEnabled = false
-          }
+        
           currentRecordingUUID = UUID().uuidString
           print(transcription, "transcription after")
       }
@@ -906,7 +912,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
     func confirmVideo() {
-
+print(isWaveformEnabled, "is waveform enabed?")
 //        
         guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
               print("No video to confirm or UUID is missing.")
@@ -942,6 +948,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 print("Video compression succeeded, proceeding with confirmation.")
                 // Proceed with checking the waveform and handling audio transcription if enabled
                 if self.isWaveformEnabled {
+                    print("Waveform enabled all good")
                     self.isTranscribing = true
                     let audioFilename = self.getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
                     print("Audio file path: \(audioFilename.path)")
@@ -958,11 +965,18 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                         print("Audio file does not exist, proceeding without transcription.")
                         self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
                         self.itemConfirmed = true
+                        if self.isWaveformEnabled {
+                            self.isWaveformEnabled = false
+                        }
                     }
                 } else {
                     // If waveform is not enabled, skip transcription
+                    print("Waveform not enabled, skipping transcription.")
                     self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
                     self.itemConfirmed = true
+                    if self.isWaveformEnabled {
+                        self.isWaveformEnabled = false
+                    }
                     
                 }
             case .failure(let error):

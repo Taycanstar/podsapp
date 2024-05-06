@@ -163,14 +163,6 @@ struct CameraContainerView: View {
                     CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen)
                     // Pass any required environment objects or parameters
                 }
-//                .fullScreenCover(isPresented: $showCreatePodView) {
-//                    CreatePodView(pod: $cameraModel.currentPod, onComplete: { success in
-//                        if success {
-//                            self.shouldNavigateToHome = true
-//                        }
-//                        showCreatePodView = false
-//                    })
-//                }
 
             
             if !cameraModel.isRecording {
@@ -234,8 +226,12 @@ struct CameraContainerView: View {
                     
                     
                     Button(action: {
-                        cameraModel.isWaveformEnabled.toggle()
+                  
+                            cameraModel.isWaveformEnabled.toggle()
+                    
+//                        cameraModel.toggleWaveform()
                         // Set the message based on the waveform state
+                        print("Waveform Enabled State: \(cameraModel.isWaveformEnabled)")
                         voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Video transcription on" : "Video transcription off"
                         
                         // Show the message
@@ -674,6 +670,7 @@ struct FinalPreview: View {
                         if let url = cameraModel.previewURL, FileManager.default.fileExists(atPath: url.path) {
                                   // Video preview
                                   VideoPlayer(player: player)
+//                            CustomVideoPlayer(player: player)
                                 .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                 .frame(width: screenWidth, height: videoHeight)
                                 .id(url)
