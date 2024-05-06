@@ -46,7 +46,9 @@ struct PlayerView : View {
                 ForEach(items) { item in  // Direct iteration over items
                     
                     ZStack {
-                        if let player = item.player {
+                  
+                            if item.videoURL != nil {
+                                if let player = item.player {
                             CustomVideoPlayer(player: player)
                                 .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
                                 .offset(y: -30)
@@ -58,14 +60,19 @@ struct PlayerView : View {
                                         player.play()
                                     }
                                 }
+                                              } else {
+                                                  Text("Video unavailable")
+                                                      .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                                                      .background(Color.gray)
+                                              }
                           
-                        } else {
-                            Text("Video unavailable")
-                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                                .background(Color.gray)
+                    }else {
+                        PodItemCellImage(item: item)
+                            .id(item.id)
+                            
                         }
-                        
-                    //Vstack oes here
+      
+                    //Vstack goes here
 
                         
                         

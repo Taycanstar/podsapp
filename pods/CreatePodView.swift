@@ -43,11 +43,13 @@ struct CreatePodView: View {
 
     private var itemList: some View {
         List {
-            ForEach($pod.items, id: \.videoURL) { $item in
+            ForEach($pod.items, id: \.id) { $item in
                 HStack {
-                    ColoredPlaceholderTextField(placeholder: "Element name", text: $item.metadata, placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
-                        .foregroundColor(.black)
-                        .background(Color.white)
+//                    ColoredPlaceholderTextField(placeholder: "Element name", text: $item.metadata, placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
+//                        .foregroundColor(.black)
+//                        .background(Color.white)
+                    DynamicTextField(text: $item.metadata)
+                
                     Spacer()
                     Image(uiImage: item.thumbnail ?? UIImage())
                         .resizable()
@@ -166,3 +168,19 @@ struct ColoredPlaceholderTextField: View {
         }
     }
 }
+
+struct DynamicTextField: View {
+    @Binding var text: String
+
+    var body: some View {
+        TextEditor(text: $text)
+            .frame(minHeight: 10, maxHeight: .infinity) // Adjust the minimum height as needed
+//            .padding(.horizontal, 10)
+            .background(.white) // Use system background color
+            .cornerRadius(5) // Rounded corners for the text editor
+            /*.padding()*/ // Padding around the TextEditor
+    }
+}
+
+
+
