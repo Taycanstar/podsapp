@@ -227,7 +227,8 @@ struct CameraContainerView: View {
                     
                     Button(action: {
                   
-                            cameraModel.isWaveformEnabled.toggle()
+//                            cameraModel.isWaveformEnabled.toggle()
+                        cameraModel.toggleWaveform()
                     
 //                        cameraModel.toggleWaveform()
                         // Set the message based on the waveform state

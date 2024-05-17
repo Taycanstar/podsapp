@@ -695,5 +695,65 @@ class NetworkManager {
     }
 
 
+    func transcribeAudio(from url: URL, completion: @escaping (Bool, String?) -> Void) {
+        guard let apiUrl = URL(string: "\(baseUrl)/transcribe-audio/") else {
+            completion(false, "Invalid URL")
+            return
+        }
 
+        var request = URLRequest(url: apiUrl)
+        request.httpMethod = "POST"
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(url.lastPathComponent)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: video/mp4\r\n\r\n".data(using: .utf8)!)
+
+        do {
+            let videoData = try Data(contentsOf: url)
+            print("Appending video data to request body.")
+            body.append(videoData)
+        } catch {
+            print("Error reading video file data: \(error.localizedDescription)")
+            completion(false, "Error reading video file data: \(error.localizedDescription)")
+            return
+        }
+
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Network error: \(error.localizedDescription)")
+                completion(false, "Error: \(String(describing: error))")
+                return
+            }
+
+            guard let data = data else {
+                print("No data received.")
+                completion(false, "No data received")
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any], let text = json["text"] as? String {
+                    print("Received transcription: \(text)")
+                    completion(true, text)
+                } else {
+                    let responseString = String(data: data, encoding: .utf8)
+                    print("Unable to parse response. Response: \(String(describing: responseString))")
+                    completion(false, "Error: Unable to parse response. Response: \(String(describing: responseString))")
+                }
+            } catch {
+                print("Error parsing JSON: \(error)")
+                completion(false, "Error parsing JSON: \(error)")
+            }
+        }
+
+        print("Starting transcription request to backend.")
+        task.resume()
+    }
 }

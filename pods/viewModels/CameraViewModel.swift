@@ -911,16 +911,102 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
 
-    func confirmVideo() {
-print(isWaveformEnabled, "is waveform enabed?")
+//    func confirmVideo() {
+//print(isWaveformEnabled, "is waveform enabed?")
+////        
+//        guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
+//              print("No video to confirm or UUID is missing.")
+//              return
+//          }
+//        resetPreviewState()
 //        
+////         // Check for duplicate video using UUID
+//        let isDuplicate = currentPod.items.contains { item in
+//            return item.uuid == recordingUUID
+//        }
+//
+//        if isDuplicate {
+//            print("Duplicate video detected. Skipping addition.")
+//            DispatchQueue.main.async {
+//                self.showPreview = false
+//            }
+//            return
+//        }
+//
+//
+//        let nextId = currentPod.items.count + 1
+//        let defaultMetadata = "Item \(nextId)"
+//        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+//    
+//
+//
+//        // Compress the video first
+//        compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
+//            guard let self = self else { return }
+//            switch result {
+//            case .success(let compressedUrl):
+//                print("Video compression succeeded, proceeding with confirmation.")
+//                // Proceed with checking the waveform and handling audio transcription if enabled
+//                if self.isWaveformEnabled {
+//                    print("Waveform enabled all good")
+//                    self.isTranscribing = true
+//                    let audioFilename = self.getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
+//                    print("Audio file path: \(audioFilename.path)")
+//
+//                    if FileManager.default.fileExists(atPath: audioFilename.path) {
+//                        print("Audio file found, proceeding with transcription.")
+//                        self.transcribeAudio(from: audioFilename) { transcribedText in
+//                            DispatchQueue.main.async {
+//                                let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
+//                                self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
+//                            }
+//                        }
+//                    } else {
+//                        print("Audio file does not exist, proceeding without transcription.")
+//                        self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+//                        self.itemConfirmed = true
+//                        if self.isWaveformEnabled {
+//                            self.isWaveformEnabled = false
+//                        }
+//                    }
+//                } else {
+//                    // If waveform is not enabled, skip transcription
+//                    print("Waveform not enabled, skipping transcription.")
+//                    self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+//                    self.itemConfirmed = true
+//                    if self.isWaveformEnabled {
+//                        self.isWaveformEnabled = false
+//                    }
+//                    
+//                }
+//            case .failure(let error):
+//                print("Video compression failed with error: \(error.localizedDescription)")
+//            }
+//        }
+//      
+//    }
+    
+    func transcribeAudioUsingBackend(from url: URL, completion: @escaping (String?) -> Void) {
+        NetworkManager().transcribeAudio(from: url) { success, transcription in
+            if success, let text = transcription {
+                completion(text)
+                print("Transcription successful: \(text)")
+            } else {
+                completion(nil)
+                print("Transcription failed.")
+            }
+        }
+    }
+
+    func confirmVideo() {
+        print(isWaveformEnabled, "is waveform enabled?")
+        
         guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
-              print("No video to confirm or UUID is missing.")
-              return
-          }
+            print("No video to confirm or UUID is missing.")
+            return
+        }
         resetPreviewState()
         
-//         // Check for duplicate video using UUID
         let isDuplicate = currentPod.items.contains { item in
             return item.uuid == recordingUUID
         }
@@ -933,51 +1019,34 @@ print(isWaveformEnabled, "is waveform enabed?")
             return
         }
 
-
         let nextId = currentPod.items.count + 1
         let defaultMetadata = "Item \(nextId)"
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
-    
-
-
-        // Compress the video first
+        
         compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let compressedUrl):
                 print("Video compression succeeded, proceeding with confirmation.")
-                // Proceed with checking the waveform and handling audio transcription if enabled
+                
                 if self.isWaveformEnabled {
-                    print("Waveform enabled all good")
+                    print("Waveform enabled, proceeding with transcription.")
                     self.isTranscribing = true
-                    let audioFilename = self.getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-                    print("Audio file path: \(audioFilename.path)")
 
-                    if FileManager.default.fileExists(atPath: audioFilename.path) {
-                        print("Audio file found, proceeding with transcription.")
-                        self.transcribeAudio(from: audioFilename) { transcribedText in
-                            DispatchQueue.main.async {
-                                let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
-                                self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
-                            }
-                        }
-                    } else {
-                        print("Audio file does not exist, proceeding without transcription.")
-                        self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
-                        self.itemConfirmed = true
-                        if self.isWaveformEnabled {
-                            self.isWaveformEnabled = false
+                    self.transcribeAudioUsingBackend(from: compressedUrl) { transcribedText in
+                        DispatchQueue.main.async {
+                            let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
+                            print("Completing video confirmation with metadata: \(metadata)")
+                            self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
                         }
                     }
                 } else {
-                    // If waveform is not enabled, skip transcription
                     print("Waveform not enabled, skipping transcription.")
                     self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
                     self.itemConfirmed = true
                     if self.isWaveformEnabled {
                         self.isWaveformEnabled = false
                     }
-                    
                 }
             case .failure(let error):
                 print("Video compression failed with error: \(error.localizedDescription)")
@@ -1303,8 +1372,8 @@ print(isWaveformEnabled, "is waveform enabed?")
             }
         }
     }
-
-
+    
+ 
 }
 
 
