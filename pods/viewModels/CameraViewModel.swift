@@ -120,17 +120,17 @@ enum CameraMode: String, CaseIterable {
 // MARK: Camera View Model
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     
-    // Custom initializer
-        override init() {
-            super.init()
-            configureSpeechService()
-            checkPermission()
-//            configureSessionFor(mode: selectedCameraMode)
-
-
-            setupAudioRecorder()
-        }
-    
+//     Custom initializer
+//        override init() {
+//            super.init()
+//            configureSpeechService()
+//            checkPermission()
+////            configureSessionFor(mode: selectedCameraMode)
+//
+//
+//            setupAudioRecorder()
+//        }
+////    
     @Published var session = AVCaptureSession()
     @Published var alert = false
     @Published var output = AVCaptureMovieFileOutput()
@@ -326,6 +326,11 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             print("Error setting up video/audio input or audio session: \(error)")
         }
     }
+    
+//    func setUp() {
+//           // Only configure the session here, not the audio session
+//           configureSessionFor(mode: selectedCameraMode)
+//       }
 
  
     func configureSessionFor(mode: CameraMode) {
@@ -1373,7 +1378,24 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
     
- 
+    func deactivateAudioSession() {
+          do {
+              let audioSession = AVAudioSession.sharedInstance()
+              try audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
+          } catch {
+              print("Error deactivating audio session: \(error)")
+          }
+      }
+    func deactivateSpeechService() {
+          speechRecognizer = nil
+          speechConfig = nil
+      }
+    
+    func stopAudioRecorder() {
+           audioRecorder?.stop()
+           audioRecorder = nil
+       }
+
 }
 
 

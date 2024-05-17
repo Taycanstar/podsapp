@@ -157,6 +157,17 @@ struct CameraContainerView: View {
         ZStack {
             // MARK: Camera View
             AltCameraView()
+                .onAppear {
+                                
+                                 cameraModel.checkPermission()
+                                cameraModel.setUp()
+                                cameraModel.configureSpeechService()
+                             }
+                .onDisappear {
+                                    cameraModel.deactivateAudioSession()
+                                    cameraModel.deactivateSpeechService()
+                                    cameraModel.stopAudioRecorder()
+                                }
                 .environmentObject(cameraModel)
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
@@ -611,6 +622,19 @@ struct CameraContainerView: View {
              }
          }
      }
+    
+        func setUpAudio() {
+            do {
+                // Set up the audio session for recording
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
+                try audioSession.setActive(true)
+    
+            
+            } catch {
+                print("Error setting up video/audio input or audio session: \(error)")
+            }
+        }
        
 }
 
