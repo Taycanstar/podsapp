@@ -62,6 +62,7 @@
 		0CD4C8D743E826921AE6344A4B196FD9 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
 		25CDAE2167D026C1A2158D421A5FCF8C /* Pods-pods-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-pods-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		28DF9173DF44E832A8EE6BBDA95DF5F9 /* Pods-pods */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-pods"; path = Pods_pods.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		36C848162BFB0037008EA74B /* ColorThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorThemeView.swift; sourceTree = "<group>"; };
 		39FBE976A9C1738D26ED6213D769FD41 /* Pods-pods-podsUITests */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-pods-podsUITests"; path = Pods_pods_podsUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C2C15235C8D86720C315F8150511E63 /* MicrosoftCognitiveServicesSpeech-iOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "MicrosoftCognitiveServicesSpeech-iOS.release.xcconfig"; sourceTree = "<group>"; };
 		3F2A52F2C89461859F547297743A6C80 /* Pods-pods-podsUITests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-pods-podsUITests-acknowledgements.markdown"; sourceTree = "<group>"; };
@@ -221,6 +222,7 @@
 		CF1408CF629C7361332E53B88F7BD30C = {
 			isa = PBXGroup;
 			children = (
+				36C848162BFB0037008EA74B /* ColorThemeView.swift */,
 				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
 				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
 				B8F1FB067BFDF2A33E3DE018084E87A9 /* Pods */,

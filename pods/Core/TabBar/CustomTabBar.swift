@@ -43,32 +43,59 @@ struct CustomTabBar: View {
 
     }
 
+//    var tabBarBackgroundColor: Color {
+//        if sharedViewModel.isItemViewActive { // Check if ItemView is active
+//                   return .black
+//        } else if selectedTab == 1  { // Camera tab is selected
+//            return .black
+//        } else if selectedTab == 4  { // Saved for when tab is like for u page
+//            return .black
+//        }
+//        else {
+////            return colorScheme == .dark ? .black : .white
+//            return .white
+//        }
+//    }
+    // Updated the background color to adapt to light/dark mode
     var tabBarBackgroundColor: Color {
         if sharedViewModel.isItemViewActive { // Check if ItemView is active
-                   return .black
-        } else if selectedTab == 1  { // Camera tab is selected
             return .black
-        } else if selectedTab == 4  { // Saved for when tab is like for u page
+        } else if selectedTab == 1 { // Camera tab is selected
             return .black
-        }
-        else {
-//            return colorScheme == .dark ? .black : .white
-            return .white
+        } else if selectedTab == 4 { // Saved for when tab is like for u page
+            return .black
+        } else {
+            // Modified to adapt to the color scheme
+            return colorScheme == .dark ? Color(uiColor: UIColor.systemBackground) : .white
         }
     }
 
+//    var selectedIconColor: Color {
+//        // When the camera tab is selected, ensure icon visibility against the black background
+//        if sharedViewModel.isItemViewActive { // Check if ItemView is active
+//                   return .white
+//        } else if selectedTab == 1  { // Camera tab is selected
+//            return .white
+//        }  else if selectedTab == 4  { // Saved for when tab is like for u page
+//            return .white
+//        }
+//        else {
+////            return colorScheme == .dark ? .black : .white
+//            return .black
+//        }
+//    }
+    // Updated the icon color to adapt to light/dark mode
     var selectedIconColor: Color {
         // When the camera tab is selected, ensure icon visibility against the black background
         if sharedViewModel.isItemViewActive { // Check if ItemView is active
-                   return .white
-        } else if selectedTab == 1  { // Camera tab is selected
             return .white
-        }  else if selectedTab == 4  { // Saved for when tab is like for u page
+        } else if selectedTab == 1 { // Camera tab is selected
             return .white
-        }
-        else {
-//            return colorScheme == .dark ? .black : .white
-            return .black
+        } else if selectedTab == 4 { // Saved for when tab is like for u page
+            return .white
+        } else {
+            // Modified to adapt to the color scheme
+            return colorScheme == .dark ? .white : .black
         }
     }
 }

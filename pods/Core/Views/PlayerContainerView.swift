@@ -13,6 +13,8 @@ struct PlayerContainerView: View {
     @State var items: [PodItem]
     @Environment(\.presentationMode) var presentationMode
     @State private var currentIndex = 0
+    @EnvironmentObject var sharedViewModel: SharedViewModel
+
     
   
     
@@ -38,7 +40,13 @@ struct PlayerContainerView: View {
                                      .font(.headline)
                              }
                          }
-                     
+                         .onAppear {
+                                    sharedViewModel.isItemViewActive = true
+                                }
+                                .onDisappear {
+                                    sharedViewModel.isItemViewActive = false
+                                }
+                      
                 .navigationBarBackButtonHidden(true)
         
                }
@@ -46,6 +54,7 @@ struct PlayerContainerView: View {
 
         }
     
+
     private var backButton: some View {
         
         Button(action: {

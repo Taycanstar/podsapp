@@ -26,6 +26,7 @@
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
 		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
+		3686EB1D2BF9558500F501C6 /* VideoCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */; };
 		3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */; };
 		3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */; };
 		368A27332B9597CE0001BBCA /* pods-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 368A27322B9597CE0001BBCA /* pods-logo.png */; };
@@ -49,6 +50,7 @@
 		36C458E62B7458720060355F /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E52B7458720060355F /* CameraView.swift */; };
 		36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E72B746B7C0060355F /* CustomTabBar.swift */; };
 		36C458EA2B746D650060355F /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E92B746D650060355F /* ProfileView.swift */; };
+		36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C848172BFB0065008EA74B /* ColorThemeView.swift */; };
 		36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */; };
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
 		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
@@ -98,6 +100,7 @@
 		3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomVideoPlayer.swift; sourceTree = "<group>"; };
 		3682F09C2B8403D400ABF344 /* CameraContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContainerView.swift; sourceTree = "<group>"; };
 		3682F0A22B84173100ABF344 /* Podfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Podfile; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCacheManager.swift; sourceTree = "<group>"; };
 		3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPageView.swift; sourceTree = "<group>"; };
 		3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerContainerView.swift; sourceTree = "<group>"; };
 		368A27322B9597CE0001BBCA /* pods-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "pods-logo.png"; path = "../../../../../Downloads/pods-logo.png"; sourceTree = "<group>"; };
@@ -124,6 +127,7 @@
 		36C458E52B7458720060355F /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		36C458E72B746B7C0060355F /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		36C458E92B746D650060355F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		36C848172BFB0065008EA74B /* ColorThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorThemeView.swift; sourceTree = "<group>"; };
 		36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorViewController.swift; sourceTree = "<group>"; };
 		36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditorRepresentable.swift; sourceTree = "<group>"; };
 		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -217,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */,
+				3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */,
 				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
 			);
 			path = Views;
@@ -288,6 +293,7 @@
 				3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */,
 				36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */,
 				36C458E32B7457580060355F /* HomeView.swift */,
+				36C848172BFB0065008EA74B /* ColorThemeView.swift */,
 				36C458E52B7458720060355F /* CameraView.swift */,
 				36C458E92B746D650060355F /* ProfileView.swift */,
 				36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */,
@@ -607,10 +613,12 @@
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
+				3686EB1D2BF9558500F501C6 /* VideoCacheManager.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
+				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,

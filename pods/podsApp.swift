@@ -13,6 +13,7 @@ struct podsApp: App {
     @StateObject var onboardingViewModel = OnboardingViewModel()
     @StateObject var uploadViewModel = UploadViewModel()
     @StateObject var homeViewModel = HomeViewModel()
+    @StateObject private var themeManager = ThemeManager()
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -20,6 +21,8 @@ struct podsApp: App {
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
                 .environmentObject(homeViewModel)
+                .environmentObject(themeManager) 
+                .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
         }
     }
 }

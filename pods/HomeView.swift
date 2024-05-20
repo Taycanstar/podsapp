@@ -122,7 +122,8 @@ struct HomeView: View {
                                .navigationBarTitleDisplayMode(.inline)
                                .navigationBarItems(trailing: editButton)
                                .environment(\.editMode, $editMode)
-                               .preferredColorScheme(.light)
+//                               .preferredColorScheme(.light)
+                               .background(colorScheme == .dark ? Color.black : Color.white)
                 
                 if uploadViewModel.postSuccess {
                                  Text("Your pod was posted")
@@ -152,6 +153,8 @@ struct HomeView: View {
        
     
         }
+        .background(colorScheme == .dark ? Color.black.edgesIgnoringSafeArea(.all) : Color.white.edgesIgnoringSafeArea(.all))
+
 //        .background(backgroundColor.edgesIgnoringSafeArea(.all))
     }
 
@@ -250,6 +253,8 @@ struct PodTitleRow: View {
                 Text(pod.title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .padding(.leading, 0) // Apply padding to the text element itself
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+
             }
             
             Spacer()
@@ -258,6 +263,7 @@ struct PodTitleRow: View {
                     Text("\(pod.items.count)")
                         .foregroundColor(.gray)
                         .padding(.trailing, 4) // Adjust as necessary for alignment
+                      
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
 
                         .foregroundColor(.gray)
@@ -269,6 +275,8 @@ struct PodTitleRow: View {
           
         }
 //        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
+        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
+
         .cornerRadius(10)
         .padding(.vertical, 17)
         .padding(.horizontal, 15)
@@ -285,6 +293,8 @@ struct ItemRow: View {
     var body: some View {
         HStack {
             Text(item.metadata)
+           
+
             Spacer()
 
             if let thumbnailURL = item.thumbnailURL {
