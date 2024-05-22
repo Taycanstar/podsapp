@@ -121,15 +121,15 @@ enum CameraMode: String, CaseIterable {
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     
 //     Custom initializer
-//        override init() {
-//            super.init()
-//            configureSpeechService()
-//            checkPermission()
-////            configureSessionFor(mode: selectedCameraMode)
-//
-//
+        override init() {
+            super.init()
+            configureSpeechService()
+            checkPermission()
+//            configureSessionFor(mode: selectedCameraMode)
+
+
 //            setupAudioRecorder()
-//        }
+        }
 ////    
     @Published var session = AVCaptureSession()
     @Published var alert = false

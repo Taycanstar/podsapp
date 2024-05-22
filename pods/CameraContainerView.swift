@@ -148,6 +148,9 @@ struct CameraContainerView: View {
     @State private var voiceCommandPopupMessage: String? = nil
     @Binding var showingVideoCreationScreen: Bool
     @State private var latestPhoto: UIImage? = nil
+    @State private var showTranscribeLabel = true
+    @State private var showCommandLabel = true
+
    
     
     @EnvironmentObject var uploadViewModel: UploadViewModel
@@ -159,13 +162,19 @@ struct CameraContainerView: View {
             AltCameraView()
                 .onAppear {
                                 
-                                 cameraModel.checkPermission()
+//                                 cameraModel.checkPermission()
                                 cameraModel.setUp()
-                                cameraModel.configureSpeechService()
+//                                cameraModel.configureSpeechService()
+                    
+                    // Set labels to disappear after 4 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                        showTranscribeLabel = false
+                        showCommandLabel = false
+                    }
                              }
                 .onDisappear {
                                     cameraModel.deactivateAudioSession()
-                                    cameraModel.deactivateSpeechService()
+//                                    cameraModel.deactivateSpeechService()
                                     cameraModel.stopAudioRecorder()
                                 }
                 .environmentObject(cameraModel)
@@ -265,14 +274,25 @@ struct CameraContainerView: View {
                             .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
                             .font(.system(size: 16))
                             .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                            .overlay(
+                                           Text("Transcribe video")
+                                            .font(.system(size: 14))
+                                            .fontWeight(.semibold)
+                                               .foregroundColor(.white)
+                                               .opacity(showTranscribeLabel ? 1.0 : 0.0) // Control opacity of the label only
+                                            .fixedSize()
+                                               .offset(x: -120) // Adjust position relative to the icon
+                                           , alignment: .leading
+                                       )
                             .padding()
+
                     }
                     
                     //Mic
                     Button(action: {
                         cameraModel.toggleVoiceCommands()
                         // Set the message based on the waveform state
-                        voiceCommandPopupMessage = cameraModel.isVcEnabled ? "Voice commands on" : "Voice commands off"
+                        voiceCommandPopupMessage = cameraModel.isVcEnabled ? "Voice control on" : "Voice control off"
                         
                         // Show the message
                         withAnimation {
@@ -293,7 +313,19 @@ struct CameraContainerView: View {
                             .foregroundColor(cameraModel.isVcEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
                             .font(.system(size: 16))
                             .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                            .overlay(
+                                           Text("Voice control")
+                                            .font(.system(size: 14))
+                                            .fontWeight(.semibold)
+                                               .foregroundColor(.white)
+                                               .opacity(showCommandLabel ? 1.0 : 0.0) // Control opacity of the label only
+                                            .fixedSize()
+                                               .offset(x: -100) // Adjust position relative to the icon
+                                           , alignment: .leading
+                                       )
                             .padding()
+        
+                            
                     }
                     
                 }
@@ -755,7 +787,7 @@ struct FinalPreview: View {
                                     isMuted.toggle()
                                     player.isMuted = isMuted
                                 }) {
-                                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                    Image(systemName: isMuted ? "speaker.slash" : "speaker.wave.2")
                                         .font(.title)
                                         .foregroundColor(.white)
                                         .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
