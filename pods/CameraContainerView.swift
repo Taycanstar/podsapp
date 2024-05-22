@@ -297,7 +297,7 @@ struct CameraContainerView: View {
                     }
                     
                 }
-                .position(x: UIScreen.main.bounds.width - 33, y: 130)
+                .position(x: UIScreen.main.bounds.width - 28, y: 130)
             }
             
             if let message = voiceCommandPopupMessage {
@@ -676,7 +676,8 @@ struct FinalPreview: View {
     @State private var editParameters = VideoEditParameters()
     private let blackSegmentHeight: CGFloat = 100
     var videoAspectRatio: CGFloat = 9 / 16
-    
+    @State private var isMuted: Bool = false
+
     
     var body: some View {
 
@@ -732,10 +733,10 @@ struct FinalPreview: View {
                                         .onDisappear {
                                             cleanUpPlayer()
                                         }
-                                        .onChange(of: editParameters) { _ in
-                                            // Apply edit parameters to the video preview
-                                            applyEditParametersAndSetupPlayer()
-                                        }
+//                                        .onChange(of: editParameters) { _ in
+//                                            // Apply edit parameters to the video preview
+//                                            applyEditParametersAndSetupPlayer()
+//                                        }
                               } else
                         if let image = cameraModel.selectedImage {
                               
@@ -746,6 +747,30 @@ struct FinalPreview: View {
 //                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                       .frame(width: screenWidth, height: videoHeight)
                               }
+                        
+                        VStack {
+                            HStack {
+                                Spacer() // Pushes the button to the right
+                                Button(action: {
+                                    isMuted.toggle()
+                                    player.isMuted = isMuted
+                                }) {
+                                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                        .font(.title)
+                                        .foregroundColor(.white)
+                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                        .font(.system(size: 16))
+//                                        .padding()
+                                }
+                                .padding(.top, 44) // Adjust for safe area and desired spacing
+                                .padding(.trailing, 15) // Right padding
+                            }
+                            Spacer() // Pushes everything up
+                        }
+                    
+                    .clipped()
+
+                    Spacer()
                         VStack {
                                          Spacer()
                                          HStack(spacing: 40) {
