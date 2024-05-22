@@ -8,7 +8,8 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
         let controller =  AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = false
-        controller.exitsFullScreenWhenPlaybackEnds = true
+//        controller.exitsFullScreenWhenPlaybackEnds = true
+        controller.exitsFullScreenWhenPlaybackEnds = false
         controller.allowsPictureInPicturePlayback = true
         controller.videoGravity = .resizeAspectFill
         return controller

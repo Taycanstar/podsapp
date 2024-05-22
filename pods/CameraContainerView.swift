@@ -694,25 +694,48 @@ struct FinalPreview: View {
                     ZStack{
                         if let url = cameraModel.previewURL, FileManager.default.fileExists(atPath: url.path) {
                                   // Video preview
-                                  VideoPlayer(player: player)
-//                            CustomVideoPlayer(player: player)
-                                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
-                                .frame(width: screenWidth, height: videoHeight)
-                                .id(url)
-                                .onAppear {
-                                    setupPlayer()
-                                    
-                                }
-                                .onDisappear {
-                                    cleanUpPlayer()
-                                }
-                            
-                                .onChange(of: editParameters) { _ in
-                                    // Apply edit parameters to the video preview
-                                    // This is a placeholder action; actual implementation depends on your video processing approach
-                                    applyEditParametersAndSetupPlayer()
-                                }
-                            
+//                                  VideoPlayer(player: player)
+//
+//                                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+//                                .frame(width: screenWidth, height: videoHeight)
+//                                .id(url)
+//                                .onAppear {
+//                                    setupPlayer()
+//                                    
+//                                }
+//                                .onDisappear {
+//                                    cleanUpPlayer()
+//                                }
+//                            
+//                                .onChange(of: editParameters) { _ in
+//                                    // Apply edit parameters to the video preview
+//                                    // This is a placeholder action; actual implementation depends on your video processing approach
+//                                    applyEditParametersAndSetupPlayer()
+//                                }
+//                            
+                            CustomVideoPlayer(player: player)
+                                        .frame(width: screenWidth, height: videoHeight)
+//                                        .offset(y: -30)
+                                        .onTapGesture {
+                                            // Toggle play/pause directly on the player
+                                            if player.timeControlStatus == .playing {
+                                                player.pause()
+                                            } else {
+                                                player.play()
+                                            }
+                                        }
+                                        .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
+                                        .id(url)
+                                        .onAppear {
+                                            setupPlayer()
+                                        }
+                                        .onDisappear {
+                                            cleanUpPlayer()
+                                        }
+                                        .onChange(of: editParameters) { _ in
+                                            // Apply edit parameters to the video preview
+                                            applyEditParametersAndSetupPlayer()
+                                        }
                               } else
                         if let image = cameraModel.selectedImage {
                               
