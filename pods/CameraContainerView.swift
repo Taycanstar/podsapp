@@ -234,7 +234,7 @@ struct CameraContainerView: View {
                         }
                     } else {
                         Button(action: cameraModel.toggleFlash) {
-                                               Image(systemName: cameraModel.isFlashOn ? "bolt" : "bolt.slash")
+                                               Image(systemName: cameraModel.isFlashOn ? "bolt.fill" : "bolt.slash.fill")
                                                    .font(.title)
                                                    .foregroundColor(.white)
                                                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
@@ -308,7 +308,7 @@ struct CameraContainerView: View {
                             }
                         }
                     }) {
-                        Image(systemName: cameraModel.isVcEnabled ? "mic.fill" : "mic")
+                        Image(systemName: "sparkles")
                             .font(.title)
                             .foregroundColor(cameraModel.isVcEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
                             .font(.system(size: 16))
@@ -787,7 +787,7 @@ struct FinalPreview: View {
                                     isMuted.toggle()
                                     player.isMuted = isMuted
                                 }) {
-                                    Image(systemName: isMuted ? "speaker.slash" : "speaker.wave.2")
+                                    Image(systemName: isMuted ? "speaker.minus.fill" : "speaker.wave.2.fill")
                                         .font(.title)
                                         .foregroundColor(.white)
                                         .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
