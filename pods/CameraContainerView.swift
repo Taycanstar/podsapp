@@ -709,6 +709,7 @@ struct FinalPreview: View {
     private let blackSegmentHeight: CGFloat = 100
     var videoAspectRatio: CGFloat = 9 / 16
     @State private var isMuted: Bool = false
+    @State private var showAddLabel: Bool = true
 
     
     var body: some View {
@@ -780,27 +781,67 @@ struct FinalPreview: View {
                                       .frame(width: screenWidth, height: videoHeight)
                               }
                         
-                        VStack {
-                            HStack {
-                                Spacer() // Pushes the button to the right
-                                Button(action: {
-                                    isMuted.toggle()
-                                    player.isMuted = isMuted
-                                }) {
-                                    Image(systemName: isMuted ? "speaker.minus.fill" : "speaker.wave.2.fill")
-                                        .font(.title)
-                                        .foregroundColor(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                                        .font(.system(size: 16))
+//                        VStack {
+//                            HStack {
+//                                Spacer() // Pushes the button to the right
+//                                Button(action: {
+//                                    isMuted.toggle()
+//                                    player.isMuted = isMuted
+//                                }) {
+//                                    Image(systemName: isMuted ? "speaker.minus.fill" : "speaker.wave.2.fill")
+//                                        .font(.title)
+//                                        .foregroundColor(.white)
+//                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                        .font(.system(size: 16))
 //                                        .padding()
-                                }
-                                .padding(.top, 44) // Adjust for safe area and desired spacing
-                                .padding(.trailing, 15) // Right padding
-                            }
+//                                }
+//                                .padding(.top, 44) // Adjust for safe area and desired spacing
+//                                .padding(.trailing, 15) // Right padding
+//                            }
+                            
+                            // start
+                            
+//                                                      Button(action: {
+//                                                          //action here
+//                                                          cameraModel.toggleRecordingAudio()
+//                                                          if cameraModel.isRecordingAudio {
+//                                                              cameraModel.recordingTimeElapsed = 0 // Reset the timer when starting
+//                                                          }
+//                                                      }) {
+//                                                        
+//                                                          HStack {
+//                                                              Spacer() // Pushes the button to the right
+//                                                              Image(systemName: "mic.fill")
+//                                                                  .font(.title)
+//                                                                  .foregroundColor(cameraModel.isRecordingAudio ? Color(red: 230/255, green: 55/255, blue: 67/255) : Color.white)
+//                                                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                                                  .overlay(
+//                                                                      Text(cameraModel.isRecordingAudio ? cameraModel.formatTime(seconds: Int(cameraModel.recordingTimeElapsed)) : "Add label")
+//                                                                          .font(.system(size: 14))
+//                                                                          .fontWeight(.semibold)
+//                                                                          .foregroundColor(.white)
+//                                                                          .opacity(showAddLabel ? 1.0 : 0.0) // Control opacity of the label only
+//                                                                          .fixedSize()
+//                                                                          .offset(x: cameraModel.isRecordingAudio ? -50 : -68)
+//                                                                      , alignment: .leading
+//                                                                  )
+//                                                                  .font(.system(size: 16))
+//                                                          }
+//                                                          .background(.blue)
+//                                                          .padding(.top, 44) // Adjust for safe area and desired spacing
+//                                                          .padding(.trailing, 15) // Right padding
+//                                                          
+//                                                      }
+//                                                      .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+//                                                          if cameraModel.isRecordingAudio {
+//                                                              cameraModel.recordingTimeElapsed += 1
+//                                                          }
+//                                                      }
+                            //end
                             Spacer() // Pushes everything up
-                        }
-                    
-                    .clipped()
+//                        }
+//                    
+//                    .clipped()
 
                     Spacer()
                         VStack {

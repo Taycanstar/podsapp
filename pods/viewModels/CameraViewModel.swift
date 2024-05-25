@@ -148,6 +148,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isFlashIntendedForPhoto: Bool = false
     var itemConfirmed: Bool = false
     @Published var currentRecordingUUID: String?
+    @Published var isMuted: Bool = true
+
 
 
 
@@ -184,6 +186,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
      var transcription = ""
     
     var speechRecognizer: SPXSpeechRecognizer?
+    
+    @Published var isRecordingAudio = false
+    @Published var recordingTimeElapsed = 0.0
 
 
 //    func toggleWaveform() {
@@ -269,50 +274,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
        }
 
 
-//    func setUp() {
-//        do {
-//            
-//            if session.canAddOutput(photoOutput) {
-//                    session.addOutput(photoOutput)
-//                    // Set photo settings for high resolution if needed
-//                    photoOutput.isHighResolutionCaptureEnabled = true
-//                }
-////            // Set up the audio session for recording
-//            let audioSession = AVAudioSession.sharedInstance()
-////            try audioSession.setCategory(.playAndRecord, mode: .default)
-//            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
-//            try audioSession.setActive(true)
-//
-//            session.beginConfiguration()
-//
-//            // Video Input Setup
-//            if let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-//               let videoInput = try? AVCaptureDeviceInput(device: cameraDevice),
-//               session.canAddInput(videoInput) {
-//                session.addInput(videoInput)
-//            }
-//
-//            // Audio Input Setup
-//            if let audioDevice = AVCaptureDevice.default(for: .audio),
-//               let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
-//               session.canAddInput(audioInput) {
-//                session.addInput(audioInput)
-//            }
-//
-//            if session.canAddOutput(output) {
-//                session.addOutput(output)
-//            }
-//            
-//            
-//
-//            session.commitConfiguration()
-//            
-//        
-//        } catch {
-//            print("Error setting up video/audio input: \(error)")
-//        }
-//    }
-    
+
     func setUp() {
         do {
             // Set up the audio session for recording
@@ -331,6 +293,65 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //           // Only configure the session here, not the audio session
 //           configureSessionFor(mode: selectedCameraMode)
 //       }
+    
+    // Function to format seconds into minutes:seconds (00:00) format
+    func formatTime(seconds: Int) -> String {
+        let minutes = seconds / 60
+        let seconds = seconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    // Call this method to toggle audio recording
+    func toggleRecordingAudio() {
+        if isRecordingAudio {
+            // Stop recording
+            stopAudioRecording()
+        } else {
+            // Start recording
+            startAudioRecording()
+        }
+        isRecordingAudio.toggle()
+    }
+
+    func startAudioRecording() {
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("newLabel.wav")
+        let settings = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ] as [String: Any]
+
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
+            audioRecorder?.prepareToRecord()
+            audioRecorder?.record()
+            recordingTimeElapsed = 0 // Reset the timer
+        } catch {
+            print("Failed to start audio recording: \(error)")
+        }
+    }
+
+    func stopAudioRecording() {
+        audioRecorder?.stop()
+        audioRecorder = nil // Optionally reset the recorder
+        do {
+            try AVAudioSession.sharedInstance().setActive(false)
+        } catch {
+            print("Failed to deactivate audio session after recording: \(error)")
+        }
+        // Handle the recorded audio file URL
+        if let url = audioRecorder?.url {
+            print("Recorded audio saved at: \(url)")
+        }
+    }
+
+
 
  
     func configureSessionFor(mode: CameraMode) {
@@ -477,6 +498,52 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
              }
          }
     }
+
+    func muteVideo(inputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
+        let asset = AVURLAsset(url: inputURL)
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
+            completion(.failure(NSError(domain: "VideoMutingError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Could not create export session"])))
+            return
+        }
+
+        let composition = AVMutableComposition()
+        guard let videoTrack = asset.tracks(withMediaType: .video).first else {
+            completion(.failure(NSError(domain: "VideoMutingError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No video track found"])))
+            return
+        }
+
+        if let compositionVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
+            do {
+                try compositionVideoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: videoTrack, at: .zero)
+            } catch {
+                completion(.failure(error))
+                return
+            }
+        }
+
+        exportSession.outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
+        exportSession.outputFileType = .mov
+        exportSession.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+        exportSession.exportAsynchronously {
+            DispatchQueue.main.async {
+                switch exportSession.status {
+                case .completed:
+                    if let outputURL = exportSession.outputURL {
+                        print("Mute video export completed successfully.")
+                        completion(.success(outputURL))
+                    } else {
+                        completion(.failure(NSError(domain: "VideoMutingError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Exported file URL is nil"])))
+                    }
+                case .failed:
+                    print("Mute video export failed with error: \(String(describing: exportSession.error))")
+                    completion(.failure(exportSession.error ?? NSError(domain: "VideoMutingError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unknown export error"])))
+                default:
+                    break
+                }
+            }
+        }
+    }
+
 
 
     
@@ -1002,7 +1069,65 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-
+//working
+//    
+//    func confirmVideo() {
+//        print(isWaveformEnabled, "is waveform enabled?")
+//        
+//        guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
+//            print("No video to confirm or UUID is missing.")
+//            return
+//        }
+//        resetPreviewState()
+//        
+//        let isDuplicate = currentPod.items.contains { item in
+//            return item.uuid == recordingUUID
+//        }
+//
+//        if isDuplicate {
+//            print("Duplicate video detected. Skipping addition.")
+//            DispatchQueue.main.async {
+//                self.showPreview = false
+//            }
+//            return
+//        }
+//
+//        let nextId = currentPod.items.count + 1
+//        let defaultMetadata = "Item \(nextId)"
+//        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+//        
+//        compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
+//            guard let self = self else { return }
+//            switch result {
+//            case .success(let compressedUrl):
+//                print("Video compression succeeded, proceeding with confirmation.")
+//                
+//                if self.isWaveformEnabled {
+//                    print("Waveform enabled, proceeding with transcription.")
+//                    self.isTranscribing = true
+//
+//                    self.transcribeAudioUsingBackend(from: compressedUrl) { transcribedText in
+//                        DispatchQueue.main.async {
+//                            let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
+//                            print("Completing video confirmation with metadata: \(metadata)")
+//                            self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
+//                        }
+//                    }
+//                } else {
+//                    print("Waveform not enabled, skipping transcription.")
+//                    self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+//                    self.itemConfirmed = true
+//                    if self.isWaveformEnabled {
+//                        self.isWaveformEnabled = false
+//                    }
+//                }
+//            case .failure(let error):
+//                print("Video compression failed with error: \(error.localizedDescription)")
+//            }
+//        }
+//    }
+    
+    // end working
     func confirmVideo() {
         print(isWaveformEnabled, "is waveform enabled?")
         
@@ -1028,7 +1153,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         let defaultMetadata = "Item \(nextId)"
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
         
-        compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
+        // Decide if muting is needed and process accordingly
+        let processURL = isMuted ? muteVideo(videoURL) : videoURL
+
+        compressVideo(inputURL: processURL, outputURL: outputURL) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let compressedUrl):
@@ -1058,7 +1186,14 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-    
+
+    private func muteVideo(_ inputURL: URL) -> URL {
+        // Assume muting functionality is implemented here.
+        // This should return either the original URL or a new URL to a muted video.
+        // For now, return the input URL as a placeholder.
+        return inputURL // Replace with actual muting logic
+    }
+
     func resetPreviewState() {
         // Update UI immediately to indicate that processing has started
         DispatchQueue.main.async { [weak self] in
