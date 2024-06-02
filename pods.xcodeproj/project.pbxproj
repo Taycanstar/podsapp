@@ -51,6 +51,8 @@
 		36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E72B746B7C0060355F /* CustomTabBar.swift */; };
 		36C458EA2B746D650060355F /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E92B746D650060355F /* ProfileView.swift */; };
 		36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C848172BFB0065008EA74B /* ColorThemeView.swift */; };
+		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
+		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
 		36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */; };
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
 		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
@@ -128,6 +130,8 @@
 		36C458E72B746B7C0060355F /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		36C458E92B746D650060355F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		36C848172BFB0065008EA74B /* ColorThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorThemeView.swift; sourceTree = "<group>"; };
+		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorViewController.swift; sourceTree = "<group>"; };
 		36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditorRepresentable.swift; sourceTree = "<group>"; };
 		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -222,6 +226,7 @@
 			children = (
 				3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */,
 				3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */,
+				36D647D02C092A1C002F1047 /* SplashScreenView.swift */,
 				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
 			);
 			path = Views;
@@ -299,6 +304,7 @@
 				36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */,
 				36C458BB2B7421100060355F /* ContentView.swift */,
 				36C458BD2B7421110060355F /* Assets.xcassets */,
+				36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */,
 				368A27322B9597CE0001BBCA /* pods-logo.png */,
 				36C458BF2B7421110060355F /* Preview Content */,
 			);
@@ -466,6 +472,7 @@
 				362170B22B90F91700DA93EE /* vid.mp4 in Resources */,
 				368A27332B9597CE0001BBCA /* pods-logo.png in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
+				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
 				36C458BE2B7421110060355F /* Assets.xcassets in Resources */,
 			);
@@ -602,6 +609,7 @@
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
+				36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */,
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
@@ -795,6 +803,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
@@ -812,6 +821,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen.storyboard;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -833,6 +843,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
@@ -850,6 +861,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen.storyboard;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
