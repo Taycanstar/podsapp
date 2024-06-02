@@ -14,13 +14,10 @@ struct podsApp: App {
     @StateObject var uploadViewModel = UploadViewModel()
     @StateObject var homeViewModel = HomeViewModel()
     @StateObject private var themeManager = ThemeManager()
-    @State private var isAuthenticated = false
    
-    
     var body: some Scene {
         WindowGroup {
-//            ContentView()
-            WelcomeView(isAuthenticated: $isAuthenticated)
+            ContentView()
                 .environmentObject(onboardingViewModel)
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
