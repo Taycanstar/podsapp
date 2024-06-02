@@ -91,6 +91,7 @@ struct WelcomeView: View {
                             Text(item.subtitle)
                                 .font(.system(size: 16))
                                 .foregroundColor(.gray)
+                                
                         }
                         Spacer() // Push content to the left
                     }
@@ -123,7 +124,7 @@ struct WelcomeView: View {
             .cornerRadius(10)
         }
         .disabled(isLoading) // Disable the button while loading
-        .padding(.horizontal)
+        .padding()
         .frame(height: 50) // Keep your button area height as is
     }
     
@@ -177,9 +178,10 @@ struct WelcomeView: View {
     
     // Sample data structure for the info section
     private let infoData = [
-        InfoItem(icon: "record.circle", title: "Create video-based intuitive collections", subtitle: "Begin by recording a video, choosing one from your camera roll, or capturing your screen.", color: .red),
-        InfoItem(icon: "film.stack.fill", title: "Stack Pods", subtitle: "Organize your collection into Pods that contain your videos", color:.green),
-        InfoItem(icon: "sparkles", title: "Automate", subtitle: "Each video inside a pod uses AI to trancribe the audio into readable text", color: Color(red: 70/255, green: 87/255, blue: 245/255))
+        InfoItem(icon: "record.circle", title: "Organize with video", subtitle: "Create video-integrated ordered collections", color: .red),
+        InfoItem(icon: "film.stack.fill", title: "Stack Pods", subtitle: "Stack collections called pods, each containing video items", color:.green),
+        InfoItem(icon: "waveform", title: "Transcribe videos", subtitle: "Automate item labeling by converting audio within the video into text", color: Color(red: 70/255, green: 86/255, blue: 246/255)),
+        InfoItem(icon: "mic.fill", title: "Hands-free controls", subtitle: "Use voice commands: Say 'Start recording' and 'Stop recording'", color: Color(red: 70/255, green: 86/255, blue: 246/255))
     ]
         
 }
