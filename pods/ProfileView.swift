@@ -7,15 +7,19 @@
 
 import SwiftUI
 import MessageUI
+import GoogleSignIn
 
 struct ProfileView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingMail = false
+    @Binding var isAuthenticated: Bool
     
     var body: some View {
+        
         NavigationView {
+            
             Form {
                 Section(header: Text("Account")) {
                     HStack {
@@ -55,17 +59,40 @@ struct ProfileView: View {
                                               .foregroundColor(iconColor)
                                       }
                 }
+              
+                Section() {
+                   
+                    Button(action: {
+                        logOut()
+                                      }) {
+                                          Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                                              .foregroundColor(iconColor)
+                                      }
+                   
+                }
             }
             .navigationBarTitle("Settings and privacy")
             .sheet(isPresented: $showingMail) {
                          MailView()
                      }
         }
+     
     }
     
     private var iconColor: Color {
         colorScheme == .dark ? .white : .black
     }
+    
+    private func logOut() {
+          // Clear the authentication state and email from UserDefaults
+          UserDefaults.standard.set(false, forKey: "isAuthenticated")
+          UserDefaults.standard.set("", forKey: "userEmail")
+        // Sign out from Google
+                GIDSignIn.sharedInstance.signOut()
+          // Update the state variables
+        isAuthenticated = false
+          viewModel.email = ""
+      }
 }
 
 struct AccountView: View {

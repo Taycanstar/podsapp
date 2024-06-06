@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct InfoView: View {
-    @State private var firstName: String = ""
-    @State private var lastName: String = ""
     @State private var username: String = ""
+    @State private var name: String = ""
     @State private var birthday: Date? = nil
     @State private var showingDatePicker = false
     @State private var showError: Bool = false // State to control error message visibility
@@ -40,19 +39,25 @@ struct InfoView: View {
                 Text("Finish creating your Humuli account")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(.black)
                 
                 Text("Tell us about you.")
                     .font(.headline)
                     .foregroundColor(.gray)
                 
-                TextField("First name", text: $firstName)
-                    .textFieldStyle(CustomTextFieldStyle())
-                   
-                TextField("Last name", text: $lastName)
-                    .textFieldStyle(CustomTextFieldStyle())
+//                TextField("Name", text: $name)
+//                    .textFieldStyle(CustomTextFieldStyle())
                 
-                TextField("Username", text: $username)
-                    .textFieldStyle(CustomTextFieldStyle())
+                CustomTextField(placeholder: "Name", text: $name)
+                                .autocapitalization(.none)
+                                .keyboardType(.default)
+                   
+//                
+//                TextField("Username", text: $username)
+//                    .textFieldStyle(CustomTextFieldStyle())
+                CustomTextField(placeholder: "Username", text: $username)
+                                .autocapitalization(.none)
+                                .keyboardType(.default)
                 
 //                TextField("Birthday", text: $birthday)
 //                    .textFieldStyle(CustomTextFieldStyle())
@@ -62,7 +67,7 @@ struct InfoView: View {
                            }) {
                                HStack {
                                    Text(birthday == nil ? "Birthday" : dateFormatter.string(from: birthday!)) // Use the birthday date if selected, otherwise show placeholder
-                                       .foregroundColor(birthday == nil ? Color(red: 0.75, green: 0.75, blue: 0.75) : .primary)
+                                       .foregroundColor(birthday == nil ? Color(red: 0.75, green: 0.75, blue: 0.75) : .black)
                                        .font(.system(size: 16))
 
                                    Spacer()
@@ -127,8 +132,8 @@ struct InfoView: View {
                 Button(action: {
                     // Handle continue action here
                     // Check for required fields before proceeding
-                                 guard !firstName.isEmpty, !lastName.isEmpty, !username.isEmpty, let birthdayDate = birthday else {
-                                     self.errorMessage = "First name, last name, and birthday are required."
+                                 guard !name.isEmpty, !username.isEmpty, let birthdayDate = birthday else {
+                                     self.errorMessage = "Name, and birthday are required."
                                      self.showError = true
                                      return
                                  }
@@ -142,7 +147,7 @@ struct InfoView: View {
 
                                  
                                  // Example function call, replace with actual implementation
-                    networkManager.updateUserInformation(email: viewModel.email, firstName: firstName, lastName: lastName, username: username, birthday: formattedBirthday) { success, message in
+                    networkManager.updateUserInformation(email: viewModel.email, name: name, username: username, birthday: formattedBirthday) { success, message in
                                      DispatchQueue.main.async {
                                          isLoading = true
                                          if success {
@@ -166,16 +171,19 @@ struct InfoView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .cornerRadius(10)
                             .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+                            .cornerRadius(10)
                 
                 }
+                .cornerRadius(10)
                 .padding(.horizontal)
             }
             .padding(.bottom, 50)
+            .background(Color.white)
         }
         .navigationBarBackButtonHidden(true)
-        .preferredColorScheme(.light)
+        .background(Color.white)
+//        .preferredColorScheme(.light)
     }
     
 }
@@ -194,7 +202,8 @@ struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .padding() // This adds padding around the text
-            .background(Color.white) // Background color of the TextField
+//            .background(Color.white)
+            .foregroundColor(.black)
             .cornerRadius(10) // Rounded corners for the background
             .overlay(
                 RoundedRectangle(cornerRadius: 10)

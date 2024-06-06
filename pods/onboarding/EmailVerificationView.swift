@@ -42,6 +42,7 @@ struct EmailVerificationView: View {
                 Text("Finish creating your Humuli account")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(.black)
                 
                 Text("An email to \(viewModel.email) has been sent. Click on the link to get started.")
                     .font(.headline)
@@ -55,6 +56,7 @@ struct EmailVerificationView: View {
 
                     
                    }
+            .background(Color.white)
             .alert(isPresented: $showingAlert) {
                        Alert(title: Text("Email Verification"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
                    
@@ -84,7 +86,8 @@ struct EmailVerificationView: View {
             .padding(.bottom, 50)
         }
         .navigationBarBackButtonHidden(true)
-        .preferredColorScheme(.light)
+//        .preferredColorScheme(.light)
+        .background(Color.white)
     }
     private func checkEmailVerification() {
         networkManager.checkEmailVerified(email: viewModel.email) { success, message in

@@ -23,19 +23,26 @@ struct WelcomeView: View {
                             Spacer(minLength: 0) // Use a spacer to push everything up
                         }
                     }
-                   
+                    .background(Color.white)
                     .frame(minHeight: geometry.size.height - 50) // Reserve space for the button
 
                     continueButton
                        
+                       
                 }
+              
+                .background(Color.white)
             }
-            .padding(.bottom, 25)
+            .background(Color.white)
+//            .padding(.bottom, 25)
             .navigationBarHidden(true)
         }
+        
         .navigationBarBackButtonHidden(true)
-        .preferredColorScheme(.light)
+        .background(Color.white)
+//        .preferredColorScheme(.light)
     }
+    
 
     private var topBar: some View {
         HStack {
@@ -46,6 +53,7 @@ struct WelcomeView: View {
             .padding()
             Spacer()
         }
+        .background(Color.white)
     }
 
     private var logo: some View {
@@ -57,6 +65,7 @@ struct WelcomeView: View {
                 .frame(width: 50, height: 50)
             Spacer()
         }
+        .background(Color.white)
     }
 
     private var formSection: some View {
@@ -64,11 +73,13 @@ struct WelcomeView: View {
             Text("Welcome to Podstack")
                 .font(.title)
                 .fontWeight(.semibold)
+                .foregroundColor(.black)
             
             Text("Improve your daily life by becoming more organized and creative")
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
         }
+        .background(Color.white)
         .padding(.horizontal)
     }
     
@@ -88,6 +99,7 @@ struct WelcomeView: View {
                             Text(item.title)
                                 .fontWeight(.semibold)
                                 .font(.system(size: 17))
+                                .foregroundColor(.black)
                             Text(item.subtitle)
                                 .font(.system(size: 16))
                                 .foregroundColor(.gray)
@@ -95,9 +107,12 @@ struct WelcomeView: View {
                         }
                         Spacer() // Push content to the left
                     }
+                    .background(Color.white)
                     .padding(.vertical, 5) // Optional padding for each row
                 }
+                .background(Color.white)
             }
+            .background(Color.white)
             .padding(.horizontal, 30)
             .padding(.vertical, 20)
         }
@@ -124,57 +139,42 @@ struct WelcomeView: View {
             .cornerRadius(10)
         }
         .disabled(isLoading) // Disable the button while loading
-        .padding()
+//        .padding()
+        .padding(.bottom, 35)
+        .padding(.horizontal)
         .frame(height: 50) // Keep your button area height as is
+        
     }
     
     private func authenticateUser() {
+        let authenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
         let networkManager = NetworkManager()
-        networkManager.login(username: viewModel.username, password: viewModel.password) { success, _ in
-            DispatchQueue.main.async {
-                isLoading = false // Stop loading animation
-                if success {
-                    self.isAuthenticated = true
-                    self.viewModel.password = ""
-                } else {
-                    // Handle login failure
-                    self.errorMessage = "Login failed. Please check your credentials and try again."
+        if authenticated {
+            viewModel.currentStep = .landing
+            self.isAuthenticated = true
+        } else {
+           
+            networkManager.login(username: viewModel.username, password: viewModel.password) { success, _ in
+                DispatchQueue.main.async {
+                    isLoading = false // Stop loading animation
+                    if success {
+                        self.isAuthenticated = true
+                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        viewModel.email = email
+                        self.viewModel.password = ""
+                        viewModel.currentStep = .landing
+                    } else {
+                        // Handle login failure
+                        self.errorMessage = "Login failed. Please check your credentials and try again."
+                    }
                 }
             }
         }
+
+       
     }
 
-//    private var continueButton: some View {
-//        Button(action: {
-//            isLoading = true
-//            let networkManager = NetworkManager()
-//                     networkManager.login(username: viewModel.username, password: viewModel.password) { success, _ in
-//                         if success {
-//                             // If login is successful, update the authenticated state
-//                             DispatchQueue.main.async {
-//                                 self.isAuthenticated = true
-//                                 self.viewModel.password = ""
-//                                 isLoading = false
-//                             }
-//                         } else {
-//                             // Handle login failure, e.g., by showing an error message
-//                             self.errorMessage = "Login failed. Please check your credentials and try again."
-//                         }
-//                     }
-//        }) {
-//        
-//                Text("Continue")
-//                    .foregroundColor(.white)
-//                    .frame(maxWidth: .infinity)
-//                    .padding()
-//                    .background(Color(red: 70/255, green: 87/255, blue: 245/255))
-//                    .cornerRadius(10)
-//        
-//        }
-//        .padding(.horizontal)
-//        
-//        .frame(height: 50) // Specify the height of the button area to ensure it's always visible
-//    }
     
     // Sample data structure for the info section
     private let infoData = [

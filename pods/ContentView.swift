@@ -17,10 +17,13 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
-    @State private var isAuthenticated = true
+//    @State private var isAuthenticated = false
+    @State private var isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
     @State private var showingVideoCreationScreen = false
     @State private var selectedCameraMode = CameraMode.fifteen
     @EnvironmentObject var uploadViewModel: UploadViewModel
+    @EnvironmentObject var viewModel: OnboardingViewModel
+   
     
  
 
@@ -36,7 +39,8 @@ struct ContentView: View {
                         case 0:
                             HomeView()
                         case 2:
-                            ProfileView() // Assuming you have a ProfileView
+//                            ProfileView() // Assuming you have a ProfileView
+                            ProfileView(isAuthenticated: $isAuthenticated)
                         default:
                                                     EmptyView() // Removed placeholder text to avoid showing incorrect content
                                                 }
@@ -49,6 +53,9 @@ struct ContentView: View {
                                            if selectedTab == 1 {
                                                showingVideoCreationScreen = true
                                            }
+                                       }
+                                       .onDisappear {
+                                           selectedTab = 0
                                        }
                     CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
 
@@ -63,8 +70,21 @@ struct ContentView: View {
              
             } else {
                 MainOnboardingView(isAuthenticated:$isAuthenticated)
+                   
+                    
             }
         }
+        .onAppear {
+                              // Update the authentication state on appearance
+                              self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+            if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
+                                       viewModel.email = storedEmail
+                                   }
+                          }
+                          .onChange(of: isAuthenticated) { newValue in
+                              // Persist the authentication state
+                              UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
+                          }
     }
 }
 

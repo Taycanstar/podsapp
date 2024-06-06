@@ -11,21 +11,29 @@ struct LoginView: View {
     @State private var isLoading = false
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack {
-                    topBar
-                    formSection
-                    Spacer(minLength: 20)
-                    continueButton
-                    Spacer()
+        
+            NavigationView {
+                ScrollView {
+                    VStack {
+                        topBar
+                        formSection
+                        Spacer(minLength: 20)
+                        continueButton
+                        Spacer()
+                    }
+                    
+                    .padding(.bottom, 50)
+                    .background(Color.white)
                 }
-                .padding(.bottom, 50)
+                .navigationBarHidden(true)
+                .background(Color.white)
+               
             }
-            .navigationBarHidden(true)
-        }
-        .navigationBarBackButtonHidden(true)
-        .preferredColorScheme(.light)
+            .navigationBarBackButtonHidden(true)
+            .background(Color.white)
+       
+      
+//        .preferredColorScheme(.light)
     }
 
     private var topBar: some View {
@@ -44,20 +52,26 @@ struct LoginView: View {
             Text("Welcome back")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(.black)
 
-            TextField("Email", text: $email)
-                .textFieldStyle(CustomTextFieldStyle())
-                .autocapitalization(.none)
-                .keyboardType(.emailAddress)
+//            TextField("Email", text: $email)
+//                .textFieldStyle(CustomTextFieldStyle())
+//                .autocapitalization(.none)
+//                .keyboardType(.emailAddress)
+            CustomTextField(placeholder: "Email", text: $email)
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
+                
 
             ZStack(alignment: .trailing) {
-                if showPassword {
-                    TextField("Password", text: $password)
-                        .textFieldStyle(CustomTextFieldStyle())
-                } else {
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(CustomTextFieldStyle())
-                }
+//                if showPassword {
+//                    TextField("Password", text: $password)
+//                        .textFieldStyle(CustomTextFieldStyle())
+//                } else {
+//                    SecureField("Password", text: $password)
+//                        .textFieldStyle(CustomTextFieldStyle())
+//                }
+                CustomTextField(placeholder: "Password", text: $password, isSecure: true, showPassword: showPassword)
 
                 Button(action: {
                     self.showPassword.toggle()
@@ -74,6 +88,7 @@ struct LoginView: View {
                     .foregroundColor(.red)
             }
         }
+      
         .padding(.horizontal)
     }
 
@@ -121,6 +136,8 @@ struct LoginView: View {
             if success {
                 DispatchQueue.main.async {
                     self.isAuthenticated = true
+                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                    UserDefaults.standard.set(email, forKey: "userEmail")
                     viewModel.email = email
                     isLoading = false
                 }
@@ -142,3 +159,39 @@ struct LoginView: View {
 //        LoginView()
 //    }
 //}
+
+
+
+
+struct CustomTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    var isSecure: Bool = false
+    var showPassword: Bool = false
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(Color.gray.opacity(0.7)) // Adjust opacity for better visibility
+//                    .padding(.leading, 10)
+                    .padding()
+            }
+            if isSecure && !showPassword {
+                SecureField("", text: $text)
+                    .foregroundColor(.black)
+                    .padding()
+            } else {
+                TextField("", text: $text)
+                    .foregroundColor(.black)
+                    .padding()
+            }
+        }
+        .background(Color.white)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray, lineWidth: 0.2)
+        )
+    }
+}

@@ -1,5 +1,7 @@
 import SwiftUI
 import AuthenticationServices  // For Apple Sign In
+import GoogleSignIn
+
 
 struct LandingView: View {
     // Background color as specified
@@ -40,6 +42,7 @@ struct LandingView: View {
                         
                         Button(action: {
                             // Handle Google sign-in
+                            handleGoogleSignIn()
                         }) {
                             HStack {
                                 Image("gg") // Make sure this image is in your assets
@@ -80,16 +83,80 @@ struct LandingView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 20) // Vertical padding inside the card
+                    .padding(.vertical, 40) // Vertical padding inside the card
                     .background(Color.white.cornerRadius(25, corners: [.topLeft, .topRight]))
                     //                .shadow(radius: 10)
                 }
-                .edgesIgnoringSafeArea(.bottom)
+                .edgesIgnoringSafeArea(.all)
+                
             }
             .padding(.bottom, 1)
             .preferredColorScheme(.light)
+            .ignoresSafeArea()
         }
     }
+    func handleGoogleSignIn() {
+//            guard let clientID = Bundle.main.object(forInfoDictionaryKey: ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"]) as String else {
+//                fatalError("Missing CLIENT_ID in Info.plist")
+//            }
+        
+        guard let clientID = ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"] else {
+            print("Environment variables for GOOGLE_CLIENT_ID are not set.")
+            return
+        }
+            
+            let signInConfig = GIDConfiguration(clientID: clientID)
+            
+            guard let presentingViewController = getRootViewController() else {
+                fatalError("Failed to retrieve root view controller.")
+            }
+            
+            GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController,  hint: nil,  additionalScopes: ["profile", "https://www.googleapis.com/auth/user.birthday.read"]) { signInResult, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+                
+                guard let result = signInResult else { return }
+                
+                guard let idToken = result.user.idToken?.tokenString else {
+                    print("Error: No ID token found")
+                    return
+                }
+                
+                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser in
+                             if success {
+                                 print("Token sent successfully")
+                                 if isNewUser {
+                                     // Update view model and navigate to welcome view
+                                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                                     UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
+                                    viewModel.email = result.user.profile?.email ?? ""
+                                    viewModel.currentStep = .welcome
+                                                   } else {
+                                                       viewModel.currentStep = .landing
+                                                       UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                                                       UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
+                                                      viewModel.email = result.user.profile?.email ?? ""
+                                                       self.isAuthenticated = true
+                                                   }
+                                 
+                             } else {
+                                 print("Failed to send token: \(message ?? "Unknown error")")
+                             }
+                         }
+            }
+        }
+        
+        func getRootViewController() -> UIViewController? {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let rootViewController = windowScene.windows.first?.rootViewController else {
+                return nil
+            }
+            return rootViewController
+        }
+        
+    
 }
 
 // Button style modifier for uniform styling

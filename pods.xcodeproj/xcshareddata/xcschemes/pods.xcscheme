@@ -129,6 +129,11 @@
             value = "YES"
             isEnabled = "YES">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "GOOGLE_CLIENT_ID"
+            value = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

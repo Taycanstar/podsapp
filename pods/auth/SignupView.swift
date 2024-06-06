@@ -27,12 +27,14 @@ struct SignupView: View {
                     continueButton
                     Spacer()
                 }
+                .background(Color.white)
                 .padding(.bottom, 50)
             }
+            .background(Color.white)
             .navigationBarHidden(true)
         }
         .navigationBarBackButtonHidden(true)
-        .preferredColorScheme(.light)
+        .background(Color.white)
     }
 
     private var topBar: some View {
@@ -62,41 +64,46 @@ struct SignupView: View {
             Text("Create your Humuli account")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(.black)
             
-            TextField("Email", text: Binding<String>(
-                get: { self.email },
-                set: { newValue in
-                    emailDebouncer.run(action: {
-                        self.email = newValue
-                    })
-                }
-            ))
-            .textFieldStyle(CustomTextFieldStyle())
-            .autocapitalization(.none)
-            .keyboardType(.emailAddress)
+//            TextField("Email", text: Binding<String>(
+//                get: { self.email },
+//                set: { newValue in
+//                    emailDebouncer.run(action: {
+//                        self.email = newValue
+//                    })
+//                }
+//            ))
+//            .textFieldStyle(CustomTextFieldStyle())
+//            .autocapitalization(.none)
+//            .keyboardType(.emailAddress)
+            CustomTextField(placeholder: "Email", text: $email)
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
             
             ZStack(alignment: .trailing) {
-                if showPassword {
-                    TextField("Password", text: Binding<String>(
-                        get: { self.password },
-                        set: { newValue in
-                            passwordDebouncer.run(action: {
-                                self.password = newValue
-                            })
-                        }
-                    ))
-                    .textFieldStyle(CustomTextFieldStyle())
-                } else {
-                    SecureField("Password", text: Binding<String>(
-                        get: { self.password },
-                        set: { newValue in
-                            passwordDebouncer.run(action: {
-                                self.password = newValue
-                            })
-                        }
-                    ))
-                    .textFieldStyle(CustomTextFieldStyle())
-                }
+//                if showPassword {
+//                    TextField("Password", text: Binding<String>(
+//                        get: { self.password },
+//                        set: { newValue in
+//                            passwordDebouncer.run(action: {
+//                                self.password = newValue
+//                            })
+//                        }
+//                    ))
+//                    .textFieldStyle(CustomTextFieldStyle())
+//                } else {
+//                    SecureField("Password", text: Binding<String>(
+//                        get: { self.password },
+//                        set: { newValue in
+//                            passwordDebouncer.run(action: {
+//                                self.password = newValue
+//                            })
+//                        }
+//                    ))
+//                    .textFieldStyle(CustomTextFieldStyle())
+//                }
+                CustomTextField(placeholder: "Password", text: $password, isSecure: true, showPassword: showPassword)
                 
                 Button(action: {
                     self.showPassword.toggle()

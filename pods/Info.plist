@@ -2,8 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen.storyboard</string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h</string>
+			</array>
+		</dict>
+	</array>
+	<key>ClientID</key>
+	<string>com.googleusercontent.apps.499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h</string>
+	<key>GIDClientID</key>
+	<string>499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

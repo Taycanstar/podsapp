@@ -270,12 +270,13 @@ struct PodTitleRow: View {
                         .padding(.trailing, 0)
                     
                 }
+             
         
             }
           
         }
 //        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
-        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
+//        .background(colorScheme == .dark ? Color(red: 30/255, green: 30/255, blue: 30/255) : Color.white)
 
         .cornerRadius(10)
         .padding(.vertical, 17)
