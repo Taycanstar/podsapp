@@ -21,21 +21,21 @@ struct CreatePodView: View {
             createButton
             Spacer()
         }
-        .background(Color.white)
+//        .background(Color.white)
     }
 
     private var header: some View {
         HStack {
             Button(action: { presentationMode.wrappedValue.dismiss() }) {
                 Image(systemName: "chevron.backward")
-                    .foregroundColor(.black)
+//                    .foregroundColor(.black)
                     .font(.system(size: 20))
             }
             Spacer()
             Text("Create Pod")
                 .font(.system(size: 18))
                 .fontWeight(.bold)
-                .foregroundColor(.black)
+//                .foregroundColor(.black)
             Spacer()
         }
         .padding()
@@ -57,7 +57,7 @@ struct CreatePodView: View {
                         .frame(width: 40, height: 40)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .listRowBackground(Color.white)
+//                .listRowBackground(Color.white)
             }
         }
         .listStyle(PlainListStyle())
@@ -80,7 +80,8 @@ struct CreatePodView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 15)
             .foregroundColor(.white)
-            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .background(Color(rgb: 71, 98, 246
+                                ))
             .cornerRadius(8)
 
         }
@@ -141,7 +142,9 @@ struct PlaceholderTextView: View {
             TextField("", text: $text)
                 .font(.system(size: 28, design: .rounded).bold())
                 .padding(.horizontal, 15)
-                .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                .foregroundColor(Color(rgb: 71, 98, 246
+                                         ))
+         
         }
         .frame(maxWidth: .infinity, maxHeight: 30) // Set a fixed height
     }
@@ -176,7 +179,7 @@ struct DynamicTextField: View {
         TextEditor(text: $text)
             .frame(minHeight: 10, maxHeight: .infinity) // Adjust the minimum height as needed
 //            .padding(.horizontal, 10)
-            .background(.white) // Use system background color
+//            .background(.white) 
             .cornerRadius(5) // Rounded corners for the text editor
             /*.padding()*/ // Padding around the TextEditor
     }

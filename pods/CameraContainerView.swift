@@ -289,44 +289,44 @@ struct CameraContainerView: View {
                     }
                     
                     //Mic
-                    Button(action: {
-                        cameraModel.toggleVoiceCommands()
-                        // Set the message based on the waveform state
-                        voiceCommandPopupMessage = cameraModel.isVcEnabled ? "Voice control on" : "Voice control off"
-                        
-                        // Show the message
-                        withAnimation {
-                            showingVoiceCommandPopup = true
-                        }
-                        
-                        // Hide the popup after a few seconds and reset the message
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                            showingVoiceCommandPopup = false
-                            // Reset the message after the animation completes to ensure it's ready for the next toggle
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                voiceCommandPopupMessage = nil
-                            }
-                        }
-                    }) {
-                        Image(systemName: "sparkles")
-                            .font(.title)
-                            .foregroundColor(cameraModel.isVcEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
-                            .font(.system(size: 16))
-                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                            .overlay(
-                                           Text("Voice control")
-                                            .font(.system(size: 14))
-                                            .fontWeight(.semibold)
-                                               .foregroundColor(.white)
-                                               .opacity(showCommandLabel ? 1.0 : 0.0) // Control opacity of the label only
-                                            .fixedSize()
-                                               .offset(x: -100) // Adjust position relative to the icon
-                                           , alignment: .leading
-                                       )
-                            .padding()
-        
-                            
-                    }
+//                    Button(action: {
+//                        cameraModel.toggleVoiceCommands()
+//                        // Set the message based on the waveform state
+//                        voiceCommandPopupMessage = cameraModel.isVcEnabled ? "Voice control on" : "Voice control off"
+//                        
+//                        // Show the message
+//                        withAnimation {
+//                            showingVoiceCommandPopup = true
+//                        }
+//                        
+//                        // Hide the popup after a few seconds and reset the message
+//                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+//                            showingVoiceCommandPopup = false
+//                            // Reset the message after the animation completes to ensure it's ready for the next toggle
+//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                                voiceCommandPopupMessage = nil
+//                            }
+//                        }
+//                    }) {
+//                        Image(systemName: "sparkles")
+//                            .font(.title)
+//                            .foregroundColor(cameraModel.isVcEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
+//                            .font(.system(size: 16))
+//                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                            .overlay(
+//                                           Text("Voice control")
+//                                            .font(.system(size: 14))
+//                                            .fontWeight(.semibold)
+//                                               .foregroundColor(.white)
+//                                               .opacity(showCommandLabel ? 1.0 : 0.0) // Control opacity of the label only
+//                                            .fixedSize()
+//                                               .offset(x: -100) // Adjust position relative to the icon
+//                                           , alignment: .leading
+//                                       )
+//                            .padding()
+//        
+//                            
+//                    }
                     
                 }
                 .position(x: UIScreen.main.bounds.width - 28, y: 130)
