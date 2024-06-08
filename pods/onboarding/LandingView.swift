@@ -1,7 +1,7 @@
 import SwiftUI
 import AuthenticationServices  // For Apple Sign In
 import GoogleSignIn
-
+import CryptoKit
 
 struct LandingView: View {
     // Background color as specified
@@ -9,6 +9,8 @@ struct LandingView: View {
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var currentNonce: String?
+    @State private var idTokenString: String?
 
     var body: some View {
         NavigationStack {
@@ -27,19 +29,14 @@ struct LandingView: View {
                     
                     // Bottom card with buttons, corrected for padding and edge issues
                     VStack(spacing: 10) { // Increased spacing for visual appeal
-                        SignInWithAppleButton(
-                            .signIn,
-                            onRequest: { request in
-                                // Configure the request here.
-                            },
-                            onCompletion: { result in
-                                // Handle the authorization result.
-                                // Update isAuthenticated as needed
-                            }
-                        )
-                        .frame(height: 44)
-                        .cornerRadius(10)
-                        
+//                        SignInWithAppleButton(
+//                                                    .signIn,
+//                                                    onRequest: configureAppleSignIn,
+//                                                    onCompletion: handleAppleSignIn
+//                                                )
+//                        .frame(height: 44)
+//                        .cornerRadius(10)
+//                        
                         Button(action: {
                             // Handle Google sign-in
                             handleGoogleSignIn()
@@ -147,6 +144,162 @@ struct LandingView: View {
                          }
             }
         }
+    
+    func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
+          let nonce = randomNonceString()
+          currentNonce = nonce
+          request.requestedScopes = [.fullName, .email]
+          request.nonce = sha256(nonce)
+      }
+
+    
+//    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+//        switch result {
+//        case .success(let authResults):
+//            guard let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential else { return }
+//            guard currentNonce != nil else {
+//                fatalError("Invalid state: a login callback was received, but no login request was sent.")
+//            }
+//            guard let appleIDToken = appleIDCredential.identityToken else {
+//                print("Unable to fetch identity token")
+//                return
+//            }
+//            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+//                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+//                return
+//            }
+//
+//            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString) { success, message, isNewUser in
+//                if success {
+//                    DispatchQueue.main.async {
+//                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                        UserDefaults.standard.set(appleIDCredential.email ?? "", forKey: "userEmail")
+//                        viewModel.email = appleIDCredential.email ?? ""
+//                        viewModel.currentStep = isNewUser ? .welcome : .landing
+//                        self.isAuthenticated = true
+//                    }
+//                } else {
+//                    print("Failed to send token: \(message ?? "Unknown error")")
+//                }
+//            }
+//
+//        case .failure(let error):
+//            print("Authorization failed: \(error.localizedDescription)")
+//        }
+//    }
+    
+    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authResults):
+            guard let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential else { return }
+            guard let nonce = currentNonce else {
+                fatalError("Invalid state: a login callback was received, but no login request was sent.")
+            }
+            guard let appleIDToken = appleIDCredential.identityToken else {
+                print("Unable to fetch identity token")
+                return
+            }
+            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+                return
+            }
+
+            sendAppleTokenToBackend(idToken: idTokenString)
+        case .failure(let error):
+            print("Authorization failed: \(error.localizedDescription)")
+        }
+    }
+    
+    func sendAppleTokenToBackend(idToken: String) {
+        guard let url = URL(string: "https://humuli-2b3070583cda.herokuapp.com/apple-login/") else {
+            print("Invalid URL")
+            return
+        }
+
+        let body: [String: Any] = ["token": idToken]
+        let finalBody = try? JSONSerialization.data(withJSONObject: body)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = finalBody
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    print("Request failed with error: \(error.localizedDescription)")
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    print("No response from server")
+                }
+                return
+            }
+
+            if let data = data, let responseBody = String(data: data, encoding: .utf8) {
+                print("Response body: \(responseBody)")
+            }
+
+            if httpResponse.statusCode == 200 {
+                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let token = json["token"] as? String, let isNewUser = json["is_new_user"] as? Bool {
+                    DispatchQueue.main.async {
+                        print("Token sent successfully: \(token)")
+                        // Handle success
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        print("Invalid data from server")
+                    }
+                }
+            } else {
+                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let errorMessage = json["error"] as? String ?? "Unknown error"
+                    let errorDescription = json["error_description"] as? String ?? "No description"
+                    DispatchQueue.main.async {
+                        print("Request failed with statusCode: \(httpResponse.statusCode), error: \(errorMessage), description: \(errorDescription)")
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        print("Request failed with statusCode: \(httpResponse.statusCode)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+//    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+//          switch result {
+//          case .success(let authResults):
+//              guard let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential else { return }
+//              guard currentNonce != nil else {
+//                  fatalError("Invalid state: a login callback was received, but no login request was sent.")
+//              }
+//              guard let appleIDToken = appleIDCredential.identityToken else {
+//                  print("Unable to fetch identity token")
+//                  return
+//              }
+//              guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+//                  print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+//                  return
+//              }
+//
+//              // Store the token for verification
+//              self.idTokenString = idTokenString
+//              print(idTokenString, "token received")
+//
+//          case .failure(let error):
+//              print("Authorization failed: \(error.localizedDescription)")
+//          }
+//      }
+    
+    
+
+
+
         
         func getRootViewController() -> UIViewController? {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -154,6 +307,47 @@ struct LandingView: View {
                 return nil
             }
             return rootViewController
+        }
+    
+    // Helper functions for nonce and SHA256
+      
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        let hashString = hashedData.compactMap { String(format: "%02x", $0) }.joined()
+
+        return hashString
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+            precondition(length > 0)
+            let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+            var result = ""
+            var remainingLength = length
+
+            while remainingLength > 0 {
+                let randoms: [UInt8] = (0..<16).map { _ in
+                    var random: UInt8 = 0
+                    let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                    if errorCode != errSecSuccess {
+                        fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                    }
+                    return random
+                }
+
+                randoms.forEach { random in
+                    if remainingLength == 0 {
+                        return
+                    }
+
+                    if random < charset.count {
+                        result.append(charset[Int(random)])
+                        remainingLength -= 1
+                    }
+                }
+            }
+
+            return result
         }
         
     
@@ -194,3 +388,4 @@ struct LandingView_Previews: PreviewProvider {
         LandingView(isAuthenticated: .constant(false))
     }
 }
+
