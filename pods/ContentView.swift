@@ -17,8 +17,8 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
-//    @State private var isAuthenticated = false
-    @State private var isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+    @State private var isAuthenticated = true
+//    @State private var isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
     @State private var showingVideoCreationScreen = false
     @State private var selectedCameraMode = CameraMode.fifteen
     @EnvironmentObject var uploadViewModel: UploadViewModel
