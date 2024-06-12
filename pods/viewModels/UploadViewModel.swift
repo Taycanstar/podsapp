@@ -97,3 +97,51 @@ struct UploadProgressView: View {
 }
 
 
+struct UploadingSection: View {
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                if let thumbnail = uploadViewModel.thumbnailImage {
+                    thumbnail
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 35, height: 35)
+                        .clipped()
+                        .opacity(0.5)
+                        .overlay(
+                            Image(systemName: "play.circle.fill")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundColor(.white)
+                        )
+                        .padding(.leading, 10)
+                } else {
+                    Rectangle()
+                        .fill(Color.gray)
+                        .frame(width: 50, height: 50)
+                        .cornerRadius(8)
+                        .opacity(0.5)
+                        .overlay(
+                            Image(systemName: "play.circle.fill")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundColor(.white)
+                        )
+                }
+                Text("Keep Podstack open to finish posting...")
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .font(.system(size: 14))
+                Spacer()
+            }
+            
+            ProgressView(value: uploadViewModel.uploadProgress)
+                .progressViewStyle(LinearProgressViewStyle())
+//                .padding(.horizontal)
+        }
+        .padding(.vertical, 0)
+        .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+}

@@ -21,7 +21,7 @@ struct HomeView: View {
     var body: some View {
       
         NavigationView {
-            ZStack(alignment: .top){
+            VStack(spacing: 0){
 //                if uploadViewModel.isUploading {
 //                                  UploadProgressView()
 //                        .frame(height: 60)
@@ -30,6 +30,9 @@ struct HomeView: View {
 //                                              .transition(.move(edge: .top).combined(with: .opacity))
 //                                              .animation(.easeInOut, value: uploadViewModel.isUploading)
 //                              }
+                if uploadViewModel.isUploading {
+                                   UploadingSection()
+                               }
                 List {
                     ForEach(homeViewModel.pods.indices, id: \.self) { index in
                         VStack {
@@ -88,34 +91,34 @@ struct HomeView: View {
 //                               .preferredColorScheme(.light)
                                .background(colorScheme == .dark ? Color.black : Color.white)
                 
-                if uploadViewModel.postSuccess {
-                                 Text("Your pod was posted")
-                        .fontWeight(.semibold)
-                                     .padding()
-                                     .background(Color.black.opacity(0.75))
-                                     .foregroundColor(.white)
-                                     .cornerRadius(8)
-//                                     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
-                                     .transition(.move(edge: .top).combined(with: .opacity))
-                                     .animation(.easeInOut,  value: uploadViewModel.postSuccess)
-//                                     .onAppear {
-//                                         print("Post success message appeared")
-//                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
-//                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
-//                                            
-//                                                        print("Post success message dismissed")
-//                                                        }
-//                                     }
-                               
-                                     .zIndex(1)  // Ensure the popup is above other content
-                             }
+//                if uploadViewModel.postSuccess {
+//                                 Text("Your pod was posted")
+//                        .fontWeight(.semibold)
+//                                     .padding()
+//                                     .background(Color.black.opacity(0.75))
+//                                     .foregroundColor(.white)
+//                                     .cornerRadius(8)
+////                                     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+//                                     .transition(.move(edge: .top).combined(with: .opacity))
+//                                     .animation(.easeInOut,  value: uploadViewModel.postSuccess)
+////                                     .onAppear {
+////                                         print("Post success message appeared")
+////                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
+////                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
+////                                            
+////                                                        print("Post success message dismissed")
+////                                                        }
+////                                     }
+//                               
+//                                     .zIndex(1)  // Ensure the popup is above other content
+//                             }
                 
                 // Overlay the UploadProgressView
-                               if uploadViewModel.isUploading {
-                                   UploadProgressView()
-                                       .environmentObject(uploadViewModel) // Make sure to pass the environment object
-                                       .position(x: UIScreen.main.bounds.width * 0.1, y: 30)// Adjust position as necessary
-                               }
+//                               if uploadViewModel.isUploading {
+//                                   UploadProgressView()
+//                                       .environmentObject(uploadViewModel) // Make sure to pass the environment object
+//                                       .position(x: UIScreen.main.bounds.width * 0.1, y: 30)// Adjust position as necessary
+//                               }
             }
        
     
@@ -283,3 +286,4 @@ struct ItemRow: View {
 
     }
 }
+
