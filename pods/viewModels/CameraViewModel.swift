@@ -121,22 +121,22 @@ enum CameraMode: String, CaseIterable {
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     
 //     Custom initializer
-        override init() {
-            super.init()
-            configureSpeechService()
-            checkPermission()
+//        override init() {
+//            super.init()
+//            configureSpeechService()
+//            checkPermission()
 //            configureSessionFor(mode: selectedCameraMode)
 
 
 //            setupAudioRecorder()
-        }
+//        }
 ////    
     @Published var session = AVCaptureSession()
     @Published var alert = false
     @Published var output = AVCaptureMovieFileOutput()
     @Published var preview : AVCaptureVideoPreviewLayer!
     @Published var isFrontCameraUsed: Bool = false
-    @Published var showCreatePodView = false
+//    @Published var showCreatePodView = false
     @Published var isFlashOn: Bool = false
     var audioRecorder: AVAudioRecorder?
     @Published var isTranscribing: Bool = false
@@ -370,7 +370,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         case .fifteen, .thirty:
             // Use the maxDuration property to configure the session if necessary
             configureForVideoMode()
-            print("maxDuration is", maxDuration)
+        
         }
 
         session.commitConfiguration()
@@ -1069,8 +1069,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
-//working
-//    
+
 //    func confirmVideo() {
 //        print(isWaveformEnabled, "is waveform enabled?")
 //        
@@ -1096,7 +1095,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //        let defaultMetadata = "Item \(nextId)"
 //        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
 //        
-//        compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
+//        // Decide if muting is needed and process accordingly
+//        let processURL = isMuted ? muteVideo(videoURL) : videoURL
+//
+//        compressVideo(inputURL: processURL, outputURL: outputURL) { [weak self] result in
 //            guard let self = self else { return }
 //            switch result {
 //            case .success(let compressedUrl):
@@ -1126,8 +1128,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //            }
 //        }
 //    }
-    
-    // end working
+
     func confirmVideo() {
         print(isWaveformEnabled, "is waveform enabled?")
         
@@ -1171,6 +1172,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                             let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
                             print("Completing video confirmation with metadata: \(metadata)")
                             self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
+                            self.itemConfirmed = true
+                            if self.isWaveformEnabled {
+                                self.isWaveformEnabled = false
+                            }
                         }
                     }
                 } else {
@@ -1186,6 +1191,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
+
+
 
     private func muteVideo(_ inputURL: URL) -> URL {
         // Assume muting functionality is implemented here.
@@ -1313,7 +1320,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
     func confirmVideoAndNavigateToCreatePod() {
-        self.showCreatePodView = true
+//        self.showCreatePodView = true
 //            confirmVideo()
         DispatchQueue.global(qos: .background).async {
                 self.confirmVideo()
@@ -1321,8 +1328,11 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             
         }
     
+ 
+
+    
     func confirmPhotoAndNavigateToCreatePod() {
-        self.showCreatePodView = true
+//        self.showCreatePodView = true
 //            confirmPhoto()
         DispatchQueue.global(qos: .background).async {
                 self.confirmPhoto()

@@ -181,7 +181,7 @@ struct WelcomeView: View {
         InfoItem(icon: "record.circle", title: "Organize with video", subtitle: "Create video-integrated ordered collections", color: .red),
         InfoItem(icon: "film.stack.fill", title: "Stack Pods", subtitle: "Stack collections called pods, each containing video items", color:.green),
         InfoItem(icon: "waveform", title: "Transcribe videos", subtitle: "Automate item labeling by converting audio within the video into text", color: Color(red: 70/255, green: 86/255, blue: 246/255)),
-        InfoItem(icon: "mic.fill", title: "Hands-free controls", subtitle: "Use voice commands: Say 'Start recording' and 'Stop recording'", color: Color(red: 70/255, green: 86/255, blue: 246/255))
+//        InfoItem(icon: "mic.fill", title: "Hands-free controls", subtitle: "Use voice commands: Say 'Start recording' and 'Stop recording'", color: Color(red: 70/255, green: 86/255, blue: 246/255))
     ]
         
 }

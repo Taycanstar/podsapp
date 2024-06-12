@@ -32,42 +32,45 @@ struct ContentView: View {
         Group {
             if isAuthenticated {
 //                 User is authenticated, show main content
-                ZStack(alignment: .bottom) {
-                    // Content views
-                    Group {
-                        switch selectedTab {
-                        case 0:
-                            HomeView()
-                        case 2:
-//                            ProfileView() // Assuming you have a ProfileView
-                            ProfileView(isAuthenticated: $isAuthenticated)
-                        default:
-                                                    EmptyView() // Removed placeholder text to avoid showing incorrect content
-                                                }
-
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
-                    // Detect tab selection changes
-                                       .onChange(of: selectedTab) { _ in
-                                           if selectedTab == 1 {
-                                               showingVideoCreationScreen = true
-                                           }
-                                       }
-                                       .onDisappear {
-                                           selectedTab = 0
-                                       }
-                    CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
-
-                        .fullScreenCover(isPresented: $showingVideoCreationScreen) {
-                            CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen)
-                                .background(Color.black.edgesIgnoringSafeArea(.all))
+               
+                    ZStack(alignment: .bottom) {
+                        // Content views
+                        VStack {
+                            Group {
+                                switch selectedTab {
+                                case 0:
+                                    HomeView()
+                                case 2:
+                                    //                            ProfileView() // Assuming you have a ProfileView
+                                    ProfileView(isAuthenticated: $isAuthenticated)
+                                default:
+                                    EmptyView() // Removed placeholder text to avoid showing incorrect content
+                                }
+                                
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            
+                            // Detect tab selection changes
+                            .onChange(of: selectedTab) { _ in
+                                if selectedTab == 1 {
+                                    showingVideoCreationScreen = true
+                                }
+                            }
+                            .onDisappear {
+                                selectedTab = 0
+                            }
                         }
-
-                    
-                    
-                }
-             
+                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
+                        
+                            .fullScreenCover(isPresented: $showingVideoCreationScreen) {
+                                CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen)
+                                    .background(Color.black.edgesIgnoringSafeArea(.all))
+                            }
+                        
+                        
+                        
+                    }
+                
             } else {
                 MainOnboardingView(isAuthenticated:$isAuthenticated)
                    

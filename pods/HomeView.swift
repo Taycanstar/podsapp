@@ -1,42 +1,5 @@
 import SwiftUI
 
-struct UploadProgressView: View {
-    @EnvironmentObject var uploadViewModel: UploadViewModel
-
-    var body: some View {
-        ZStack {
-            if let thumbnail = uploadViewModel.thumbnailImage {
-                thumbnail
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 70)
-                    .clipped()
-                    .cornerRadius(8) // Increased corner radius
-                    .overlay(
-                        Rectangle()
-                            .foregroundColor(Color.black.opacity(0.4))
-                    )
-                
-                Circle()
-                    .stroke(lineWidth: 3) // Thicker background circle
-                    .opacity(0.2)  // Background circle for progress
-                    .foregroundColor(Color.white)
-                    .frame(width: 35, height: 35) // Smaller circle to match the thumbnail size closely
-
-                Circle()
-                    .trim(from: 0, to: CGFloat(uploadViewModel.uploadProgress))
-                    .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round)) // Thicker progress circle
-                    .foregroundColor(Color.white)
-                    .rotationEffect(Angle(degrees: -90)) // Start the progress from the top
-                    .frame(width: 35, height: 35) // Smaller circle to match the thumbnail size closely
-            }
-        }
-        .cornerRadius(8)
-        .frame(width: 50, height: 70) // Fixed frame for alignment
-        .padding(.leading, 20) // Ensure left alignment by padding from the leading edge
-    }
-}
-
 
 
 
@@ -135,11 +98,15 @@ struct HomeView: View {
 //                                     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                                      .transition(.move(edge: .top).combined(with: .opacity))
                                      .animation(.easeInOut,  value: uploadViewModel.postSuccess)
-                                     .onAppear {
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
-                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
-                                                        }
-                                     }
+//                                     .onAppear {
+//                                         print("Post success message appeared")
+//                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
+//                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
+//                                            
+//                                                        print("Post success message dismissed")
+//                                                        }
+//                                     }
+                               
                                      .zIndex(1)  // Ensure the popup is above other content
                              }
                 

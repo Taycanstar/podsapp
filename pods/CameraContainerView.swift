@@ -162,8 +162,8 @@ struct CameraContainerView: View {
             AltCameraView()
                 .onAppear {
                                 
-//                                 cameraModel.checkPermission()
-                                cameraModel.setUp()
+                                 cameraModel.checkPermission()
+//                                cameraModel.setUp()
 //                                cameraModel.configureSpeechService()
                     
                     // Set labels to disappear after 4 seconds
@@ -880,14 +880,23 @@ struct FinalPreview: View {
                                                  Button(action: {
                                                      // Action for checkmark/save
                                                     
-                                                     if let _ = cameraModel.previewURL {
-                                                             // It's a video
-                                                             cameraModel.confirmVideo()
-                                                         } else if cameraModel.selectedImage != nil {
-                                                             // It's a photo
-                                                             cameraModel.confirmPhoto()
-                                                         }
-                                                     cleanUpPlayer()
+//                                                     if let _ = cameraModel.previewURL {
+//                                                             // It's a video
+//                                                             cameraModel.confirmVideo()
+//                                                         } else if cameraModel.selectedImage != nil {
+//                                                             // It's a photo
+//                                                             cameraModel.confirmPhoto()
+//                                                         }
+//                                                     cleanUpPlayer()
+                                                     cleanUpPlayer {
+                                                         if let _ = cameraModel.previewURL {
+                                                                 // It's a video
+                                                                 cameraModel.confirmVideo()
+                                                             } else if cameraModel.selectedImage != nil {
+                                                                 // It's a photo
+                                                                 cameraModel.confirmPhoto()
+                                                             }
+                                                                                 }
                                                  }) {
                                                      
                                                      Image(systemName: "checkmark")
@@ -904,21 +913,26 @@ struct FinalPreview: View {
                                            
 
                                              // Chevron right with label "Continue"
+                                             
+                                             
                                              VStack {
                                                  Button(action: {
-                                                     showCreatePodView = true
-     
-                                                              // Start the confirmation and handle navigation in its completion
-                                                              if let _ = cameraModel.previewURL {
-                                                                  
-                                                                  cameraModel.confirmVideoAndNavigateToCreatePod()
-                                                                  
-                                                              } else if let _ = cameraModel.selectedImage {
-                                                                  cameraModel.confirmPhotoAndNavigateToCreatePod()
-                                                                 
-                                                              }
-                                                          
-                                                     cleanUpPlayer()
+                                                     cleanUpPlayer {
+                                                         showCreatePodView = true
+         
+                                                                  // Start the confirmation and handle navigation in its completion
+                                                                  if let _ = cameraModel.previewURL {
+                                                                      
+                                                                      cameraModel.confirmVideoAndNavigateToCreatePod()
+                                                                      
+                                                                  } else if let _ = cameraModel.selectedImage {
+                                                                      cameraModel.confirmPhotoAndNavigateToCreatePod()
+                                                                     
+                                                                  }
+                                                     }
+                                                
+//                                                          
+//                                                     cleanUpPlayer()
                                                  }) {
                                                      Image(systemName: "chevron.right")
                                                          .foregroundColor(.white)
@@ -953,36 +967,6 @@ struct FinalPreview: View {
                     
                 }
 
-            .fullScreenCover(isPresented: $isPresentingEditor, onDismiss: {
-                applyEditParametersAndSetupPlayer()
-            }) {
-                // Update representable to pass and receive edit parameters instead of new URL
-                if let videoURL = self.url {
-                    VideoEditorRepresentable(videoURL: videoURL, onConfirmEditing: { parameters in
-                        // Handle editing confirmation
-                        DispatchQueue.main.async {
-                            // Update the edit parameters to reflect the changes made
-                            self.editParameters = parameters
-                            // Potentially re-setup the player or apply edits as needed
-                            applyEditParametersAndSetupPlayer()
-                        }
-                    })
-                    
-                    .background(Color(red: 20/255, green: 20/255, blue: 20/255))
-                    .edgesIgnoringSafeArea(.bottom)
-                } else if let editingImage = self.selectedImage {
-                    PhotoEditorRepresentable(editingImage: editingImage, onConfirmEditing: { parameters in
-                        // Handle editing confirmation
-                        DispatchQueue.main.async {
-                            self.editParameters = parameters
-                            // Additional actions as needed
-                        }
-                    })
-                    .background(Color(red: 20/255, green: 20/255, blue: 20/255))
-                    .edgesIgnoringSafeArea(.bottom)
-                }
-            }
-
                
     }
 }
@@ -1009,64 +993,21 @@ struct FinalPreview: View {
         }
     }
 
-    private func cleanUpPlayer() {
-           player.pause()
-           player.replaceCurrentItem(with: nil) // Reset the player
-           NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-       }
-
-    
-    private func applyEditParametersAndSetupPlayer() {
-        guard let videoURL = self.url,
-              let cropRect = self.editParameters.cropRect,
-              let scale = self.editParameters.scale else { return }
-
-        let asset = AVAsset(url: videoURL)
-        let composition = AVMutableComposition()
-        guard let compositionTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-              let assetTrack = asset.tracks(withMediaType: .video).first else { return }
-        
-        do {
-            try compositionTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: asset.duration), of: assetTrack, at: .zero)
-        } catch {
-            print("Failed to insert time range: \(error)")
-            return
-        }
-        
-        compositionTrack.preferredTransform = assetTrack.preferredTransform
-        
-        let videoComposition = AVMutableVideoComposition(propertiesOf: asset)
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30) // Adjust based on your requirements
-        
-        // Calculate the transformation needed to apply the crop and scale
-        let videoSize = assetTrack.naturalSize
-        let scaleFactor = CGAffineTransform(scaleX: scale, y: scale)
-        let cropX = videoSize.width * cropRect.origin.x
-        let cropY = videoSize.height * cropRect.origin.y
-        let translationFactor = CGAffineTransform(translationX: -cropX, y: -cropY)
-        let transform = scaleFactor.concatenating(translationFactor)
-        
-        videoComposition.renderSize = CGSize(width: videoSize.width * scale - cropX, height: videoSize.height * scale - cropY) // Adjusted render size based on crop
-        
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRangeMake(start: .zero, duration: asset.duration)
-        
-        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionTrack)
-        layerInstruction.setTransform(transform, at: .zero)
-        instruction.layerInstructions = [layerInstruction]
-        videoComposition.instructions = [instruction]
-        
-        let playerItem = AVPlayerItem(asset: composition)
-        playerItem.videoComposition = videoComposition
-        
+//    private func cleanUpPlayer() {
+//           player.pause()
+//           player.replaceCurrentItem(with: nil) // Reset the player
+//           NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+//       }
+    private func cleanUpPlayer(completion: @escaping () -> Void = {}) {
+        print("Attempting to clean up player")
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
         DispatchQueue.main.async {
-            self.player.replaceCurrentItem(with: playerItem)
-            self.player.play()
+            print("Player cleaned up")
+            completion()
         }
     }
-
-
-
 
 
 

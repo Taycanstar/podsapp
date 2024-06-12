@@ -115,6 +115,7 @@ struct CreatePodView: View {
                    
                     print("Pod created successfully in \(duration) seconds.")
                     uploadViewModel.uploadCompleted()
+        
           
 //                    self.homeViewModel.fetchPodsForUser(email: self.viewModel.email)
                     
