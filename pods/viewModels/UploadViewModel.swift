@@ -6,6 +6,7 @@ class UploadViewModel: ObservableObject {
     @Published var uploadProgress: Float = 0.0
     @Published var thumbnailImage: Image? // Store the thumbnail as an Image
     @Published var postSuccess = false
+    @Published var uploadCompletion: (() -> Void)?
 
 
     func updateProgress(_ progress: Float) {
@@ -26,6 +27,7 @@ class UploadViewModel: ObservableObject {
             self.isUploading = false
             self.postSuccess = true
             self.resetPostSuccessAfterDelay()
+            self.uploadCompletion?()
         }
     }
     

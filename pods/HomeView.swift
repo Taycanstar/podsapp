@@ -81,6 +81,9 @@ struct HomeView: View {
                 .onAppear {
                  
                     homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
+                    uploadViewModel.uploadCompletion = {
+                                           homeViewModel.fetchPodsForUser(email: viewModel.email)
+                                       }
                            }
                 
                 .listStyle(InsetGroupedListStyle())
