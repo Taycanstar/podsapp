@@ -1208,6 +1208,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             self.showPreview = false
             self.recordedDuration = 0
             self.isRecording = false
+            
         }
     }
     

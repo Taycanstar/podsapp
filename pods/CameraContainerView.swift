@@ -880,23 +880,19 @@ struct FinalPreview: View {
                                                  Button(action: {
                                                      // Action for checkmark/save
                                                     
-//                                                     if let _ = cameraModel.previewURL {
-//                                                             // It's a video
-//                                                             cameraModel.confirmVideo()
-//                                                         } else if cameraModel.selectedImage != nil {
-//                                                             // It's a photo
-//                                                             cameraModel.confirmPhoto()
-//                                                         }
-//                                                     cleanUpPlayer()
-                                                     cleanUpPlayer {
-                                                         if let _ = cameraModel.previewURL {
-                                                                 // It's a video
-                                                                 cameraModel.confirmVideo()
-                                                             } else if cameraModel.selectedImage != nil {
-                                                                 // It's a photo
-                                                                 cameraModel.confirmPhoto()
-                                                             }
-                                                                                 }
+                                                     if let _ = cameraModel.previewURL {
+                                                             // It's a video
+                                                             cameraModel.confirmVideo()
+                                                 
+                                                         } else if cameraModel.selectedImage != nil {
+                                                             // It's a photo
+                                                             cameraModel.confirmPhoto()
+                                                           
+                                                         }
+                                                     
+                                                cleanUpPlayer()
+                                                     cameraModel.configureSessionFor(mode: .fifteen)
+                                                    
                                                  }) {
                                                      
                                                      Image(systemName: "checkmark")
@@ -917,7 +913,7 @@ struct FinalPreview: View {
                                              
                                              VStack {
                                                  Button(action: {
-                                                     cleanUpPlayer {
+                                             
                                                          showCreatePodView = true
          
                                                                   // Start the confirmation and handle navigation in its completion
@@ -925,14 +921,16 @@ struct FinalPreview: View {
                                                                       
                                                                       cameraModel.confirmVideoAndNavigateToCreatePod()
                                                                       
+                                                          
                                                                   } else if let _ = cameraModel.selectedImage {
                                                                       cameraModel.confirmPhotoAndNavigateToCreatePod()
-                                                                     
+                                                          
                                                                   }
-                                                     }
+                                                     
+                                                cleanUpPlayer()
+                                                     cameraModel.configureSessionFor(mode: .fifteen)
                                                 
-//                                                          
-//                                                     cleanUpPlayer()
+
                                                  }) {
                                                      Image(systemName: "chevron.right")
                                                          .foregroundColor(.white)
@@ -993,23 +991,11 @@ struct FinalPreview: View {
         }
     }
 
-//    private func cleanUpPlayer() {
-//           player.pause()
-//           player.replaceCurrentItem(with: nil) // Reset the player
-//           NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-//       }
-    private func cleanUpPlayer(completion: @escaping () -> Void = {}) {
-        print("Attempting to clean up player")
-        player.pause()
-        player.replaceCurrentItem(with: nil)
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
-        DispatchQueue.main.async {
-            print("Player cleaned up")
-            completion()
-        }
-    }
-
-
+    private func cleanUpPlayer() {
+           player.pause()
+           player.replaceCurrentItem(with: nil) // Reset the player
+           NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+       }
 
 
 }
