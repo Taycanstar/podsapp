@@ -1155,7 +1155,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
         
         // Decide if muting is needed and process accordingly
-        let processURL = isMuted ? muteVideo(videoURL) : videoURL
+        let processURL = videoURL
 
         compressVideo(inputURL: processURL, outputURL: outputURL) { [weak self] result in
             guard let self = self else { return }
@@ -1541,6 +1541,44 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
            audioRecorder?.stop()
            audioRecorder = nil
        }
+    
+    func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+          guard let previewURL = previewURL else {
+              completion(false, "No preview URL available.")
+              return
+          }
+
+          let thumbnail = generateThumbnail(for: previewURL, usingFrontCamera: isFrontCameraUsed)
+          let metadata = "New item" // Replace with actual metadata if available
+
+          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, imageURL: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+              if success {
+                  print("Video item added to pod successfully.")
+              } else {
+                  print("Failed to add video item to pod: \(message ?? "Unknown error")")
+              }
+              completion(success, message)
+          }
+      }
+
+      func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+          guard let selectedImage = selectedImage else {
+              completion(false, "No image selected.")
+              return
+          }
+
+          let metadata = "New item" // Replace with actual metadata if available
+          let thumbnail = selectedImage
+
+          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, imageURL: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+              if success {
+                  print("Photo item added to pod successfully.")
+              } else {
+                  print("Failed to add photo item to pod: \(message ?? "Unknown error")")
+              }
+              completion(success, message)
+          }
+      }
 
 }
 

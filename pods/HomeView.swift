@@ -22,14 +22,7 @@ struct HomeView: View {
       
         NavigationView {
             VStack(spacing: 0){
-//                if uploadViewModel.isUploading {
-//                                  UploadProgressView()
-//                        .frame(height: 60)
-//                                              .background(Color.black.opacity(0.3))
-//                                              .cornerRadius(10)
-//                                              .transition(.move(edge: .top).combined(with: .opacity))
-//                                              .animation(.easeInOut, value: uploadViewModel.isUploading)
-//                              }
+
                 if uploadViewModel.isUploading {
                                    UploadingSection()
                                }

@@ -172,6 +172,7 @@ struct PodView: View {
     @State private var deletedItemIDs: [Int] = []
     @State private var showMenu = false
     var networkManager: NetworkManager = NetworkManager()
+    @State private var showAddItemView = false
     
     var body: some View {
         List {
@@ -236,9 +237,14 @@ struct PodView: View {
                 .default(Text("Add Item")) {
                     // Add new item action
                     // Implement the functionality to add a new item
+                    showAddItemView.toggle()
                 },
                 .cancel()
             ])
+        }
+        .fullScreenCover(isPresented: $showAddItemView) {
+                AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id) // Pass the podId
+                
         }
     }
     
