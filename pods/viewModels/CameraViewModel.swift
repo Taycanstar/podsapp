@@ -1542,24 +1542,75 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
            audioRecorder = nil
        }
     
+//    func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+//          guard let previewURL = previewURL else {
+//              completion(false, "No preview URL available.")
+//              return
+//          }
+//
+//          let thumbnail = generateThumbnail(for: previewURL, usingFrontCamera: isFrontCameraUsed)
+//          let metadata = "New item" // Replace with actual metadata if available
+//
+//          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+//              if success {
+//                  print("Video item added to pod successfully.")
+//              } else {
+//                  print("Failed to add video item to pod: \(message ?? "Unknown error")")
+//              }
+//              completion(success, message)
+//          }
+//      }
     func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
-          guard let previewURL = previewURL else {
-              completion(false, "No preview URL available.")
-              return
-          }
+        guard let previewURL = previewURL else {
+            completion(false, "No preview URL available.")
+            return
+        }
 
-          let thumbnail = generateThumbnail(for: previewURL, usingFrontCamera: isFrontCameraUsed)
-          let metadata = "New item" // Replace with actual metadata if available
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        
+        compressVideo(inputURL: previewURL, outputURL: outputURL) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let compressedUrl):
+                print("Video compression succeeded, proceeding with confirmation.")
+                
+                let handleCompletion: (String) -> Void = { metadata in
+                    let thumbnail = self.generateThumbnail(for: compressedUrl, usingFrontCamera: self.isFrontCameraUsed)
+                    NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: compressedUrl, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+                        if success {
+                            print("Video item added to pod successfully.")
+                        } else {
+                            print("Failed to add video item to pod: \(message ?? "Unknown error")")
+                        }
+                        completion(success, message)
+                    }
+                }
 
-          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
-              if success {
-                  print("Video item added to pod successfully.")
-              } else {
-                  print("Failed to add video item to pod: \(message ?? "Unknown error")")
-              }
-              completion(success, message)
-          }
-      }
+                if self.isWaveformEnabled {
+                    print("Waveform enabled, proceeding with transcription.")
+                    self.isTranscribing = true
+
+                    self.transcribeAudioUsingBackend(from: compressedUrl) { transcribedText in
+                        DispatchQueue.main.async {
+                            let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
+                            print("Completing video addition with metadata: \(metadata)")
+                            handleCompletion(metadata)
+                            if self.isWaveformEnabled {
+                                self.isWaveformEnabled = false
+                            }
+                        }
+                    }
+                } else {
+                    print("Waveform not enabled, skipping transcription.")
+                    handleCompletion("New item")
+                }
+            case .failure(let error):
+                print("Video compression failed with error: \(error.localizedDescription)")
+                completion(false, "Video compression failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
 
       func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
           guard let selectedImage = selectedImage else {

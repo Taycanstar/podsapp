@@ -77,6 +77,8 @@ struct PodView: View {
             .onMove(perform: moveItem)
             .onDelete(perform: deleteItem)
         }
+        .scrollIndicators(.hidden)
+        .padding(.bottom, 45)
         .navigationTitle(pod.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(trailing: trailingNavigationBarItem)
