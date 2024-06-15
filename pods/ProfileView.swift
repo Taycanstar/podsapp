@@ -29,6 +29,10 @@ struct ProfileView: View {
                         Text(viewModel.email)
                             .foregroundColor(iconColor)
                     }
+                    NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                        Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
+                            .foregroundColor(iconColor)
+                    }
 
                 }
                 

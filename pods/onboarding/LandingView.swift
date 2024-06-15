@@ -80,7 +80,8 @@ struct LandingView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 40) // Vertical padding inside the card
+                    .padding(.bottom, 40)
+                    .padding(.top, 25)
                     .background(Color.white.cornerRadius(25, corners: [.topLeft, .topRight]))
                     //                .shadow(radius: 10)
                 }

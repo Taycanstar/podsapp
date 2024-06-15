@@ -35,6 +35,7 @@
 		368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67172BDCC454000434E0 /* PodItemCellImage.swift */; };
 		368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67192BDD421B000434E0 /* MediaManager.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
+		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
 		3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */; };
 		3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9602B99939600D211D7 /* OnboardingViewModel.swift */; };
@@ -112,6 +113,7 @@
 		368D67172BDCC454000434E0 /* PodItemCellImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCellImage.swift; sourceTree = "<group>"; };
 		368D67192BDD421B000434E0 /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
+		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
 		3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerificationView.swift; sourceTree = "<group>"; };
 		3696B9602B99939600D211D7 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
@@ -232,6 +234,7 @@
 				36D647D02C092A1C002F1047 /* SplashScreenView.swift */,
 				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
 				36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */,
+				36963A222C1E17D800E53EF5 /* DataControlsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -643,6 +646,7 @@
 				36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
+				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,

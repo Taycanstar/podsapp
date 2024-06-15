@@ -1268,5 +1268,96 @@ class NetworkManager {
                }
            }.resume()
        }
+    
+    func deleteAllPods(email: String, completion: @escaping (Bool, String?) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/delete-all-pods/") else {
+                completion(false, "Invalid URL")
+                return
+            }
 
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let body: [String: Any] = ["email": email]
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            } catch {
+                completion(false, "Failed to encode request body")
+                return
+            }
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        completion(false, "Network error: \(error.localizedDescription)")
+                    }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        completion(false, "No response from server")
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 200 {
+                    DispatchQueue.main.async {
+                        completion(true, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let errorMessage = "Server returned status code: \(httpResponse.statusCode)"
+                        completion(false, errorMessage)
+                    }
+                }
+            }.resume()
+        }
+
+        func deleteUserAndData(email: String, completion: @escaping (Bool, String?) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/delete-user-and-data/") else {
+                completion(false, "Invalid URL")
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let body: [String: Any] = ["email": email]
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            } catch {
+                completion(false, "Failed to encode request body")
+                return
+            }
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        completion(false, "Network error: \(error.localizedDescription)")
+                    }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        completion(false, "No response from server")
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 200 {
+                    DispatchQueue.main.async {
+                        completion(true, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let errorMessage = "Server returned status code: \(httpResponse.statusCode)"
+                        completion(false, errorMessage)
+                    }
+                }
+            }.resume()
+        }
 }
