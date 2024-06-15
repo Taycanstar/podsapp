@@ -671,6 +671,7 @@ struct ItemPreview: View {
         }
     }
    
+    
 
     private func cleanUpPlayer() {
            player.pause()

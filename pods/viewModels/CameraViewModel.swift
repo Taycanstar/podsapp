@@ -12,10 +12,10 @@ struct PodItem: Identifiable {
             print("videoURL didSet called with URL: \(String(describing: videoURL))")
             if let url = videoURL {
                 player = AVPlayer(url: url)
-                print("Player re-initialized with new URL: \(url)")
+      
             } else {
                 player = nil
-                print("Player de-initialized as videoURL is nil")
+              
             }
         }
     }
@@ -1551,7 +1551,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           let thumbnail = generateThumbnail(for: previewURL, usingFrontCamera: isFrontCameraUsed)
           let metadata = "New item" // Replace with actual metadata if available
 
-          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, imageURL: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
               if success {
                   print("Video item added to pod successfully.")
               } else {
@@ -1568,9 +1568,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           }
 
           let metadata = "New item" // Replace with actual metadata if available
-          let thumbnail = selectedImage
 
-          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, imageURL: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, image: selectedImage, label: metadata, thumbnail: selectedImage, email: email) { success, message in
               if success {
                   print("Photo item added to pod successfully.")
               } else {

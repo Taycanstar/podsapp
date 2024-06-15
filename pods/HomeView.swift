@@ -43,7 +43,7 @@ struct HomeView: View {
                         .listRowInsets(EdgeInsets())
      
                         if(expandedPods.contains(homeViewModel.pods[index].title)) {
-                            ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
+                            ForEach(homeViewModel.pods[index].items, id: \.id) { item in
                                 if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
 
                                     NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex))
@@ -273,7 +273,9 @@ struct ItemRow: View {
                        .aspectRatio(contentMode: .fill)
                        .frame(width: 35, height: 35)
                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
                    }
+            
         }
         .padding(.leading, 30)
 
