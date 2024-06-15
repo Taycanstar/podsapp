@@ -861,6 +861,9 @@ struct FinalPreview: View {
                                                          cameraModel.reRecordCurrentItem()
                                                          showPreview = false
                                                      }
+                                                     
+                                                cleanUpPlayer()
+//                                                cameraModel.configureSessionFor(mode: .fifteen)
                                                  }) {
                                                      Image(systemName: "chevron.left")
                                                          .foregroundColor(.white)
@@ -990,6 +993,7 @@ struct FinalPreview: View {
 
         }
     }
+
 
     private func cleanUpPlayer() {
            player.pause()

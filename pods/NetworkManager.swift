@@ -1064,5 +1064,48 @@ class NetworkManager {
               completion(false, "Failed to encode request body")
           }
       }
+    
+    
+    func fetchItemsForPod(podId: Int, completion: @escaping ([PodItem]?, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/fetch-items/\(podId)/") else {
+            completion(nil, "Invalid URL")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(nil, "Network error: \(error.localizedDescription)")
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(nil, "No data received")
+                }
+                return
+            }
+
+            do {
+                let responseJSON = try JSONDecoder().decode([String: [PodItemJSON]].self, from: data)
+                if let itemsJSON = responseJSON["items"] {
+                    let podItems = itemsJSON.map { PodItem(from: $0) }
+                    DispatchQueue.main.async {
+                        completion(podItems, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(nil, "Invalid data format")
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(nil, "Failed to decode items: \(error.localizedDescription)")
+                }
+            }
+        }.resume()
+    }
+
 
 }

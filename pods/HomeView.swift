@@ -30,7 +30,7 @@ struct HomeView: View {
                     ForEach(homeViewModel.pods.indices, id: \.self) { index in
                         VStack {
                          
-                            PodTitleRow(pod: homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
+                            PodTitleRow(pod: $homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
                                 if editMode == .inactive {
                                                                            withAnimation {
                                                                                togglePodExpansion(for: homeViewModel.pods[index].title)
@@ -46,7 +46,7 @@ struct HomeView: View {
                             ForEach(homeViewModel.pods[index].items, id: \.metadata) { item in
                                 if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
 
-                                    NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items))
+                                    NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex))
                                     {
                                         ItemRow(item: item)
                                             .listRowInsets(EdgeInsets())
@@ -206,7 +206,7 @@ struct HomeView: View {
 }
 
 struct PodTitleRow: View {
-    let pod: Pod
+    @Binding var pod: Pod
     let isExpanded: Bool
     var onExpandCollapseTapped: () -> Void
     @Environment(\.colorScheme) var colorScheme
@@ -214,7 +214,7 @@ struct PodTitleRow: View {
     var body: some View {
         HStack {
             ZStack{
-                NavigationLink(destination: PodView(pod: pod)){ EmptyView() }.opacity(0.0)
+                NavigationLink(destination: PodView(pod: $pod)){ EmptyView() }.opacity(0.0)
                     .padding(.trailing, -5).frame(width:0, height:0)
                 Text(pod.title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))

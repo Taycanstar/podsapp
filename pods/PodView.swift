@@ -164,7 +164,7 @@ extension URL {
 }
 
 struct PodView: View {
-    var pod: Pod
+    @Binding var pod: Pod
     @Environment(\.presentationMode) var presentationMode
     @State private var isEditing = false
     @State private var currentIndex: Int = 0
@@ -173,12 +173,13 @@ struct PodView: View {
     @State private var showMenu = false
     var networkManager: NetworkManager = NetworkManager()
     @State private var showAddItemView = false
+    @EnvironmentObject var uploadViewModel: UploadViewModel
     
     var body: some View {
         List {
             ForEach(reorderedItems.indices, id: \.self) { index in
 
-                NavigationLink(destination: PlayerContainerView(items: reorderedItems)) {
+                NavigationLink(destination: PlayerContainerView(items: reorderedItems, initialIndex: index)) {
                     HStack {
                         Text(reorderedItems[index].metadata)
                         Spacer()
@@ -225,9 +226,9 @@ struct PodView: View {
         .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
         .onAppear {
             self.reorderedItems = self.pod.items // Initialize reorderedItems with the current items
-            for item in self.reorderedItems {
-                print(item)
-            }
+            uploadViewModel.addItemCompletion = {
+                          refreshPodItems()
+                      }
         }
         .actionSheet(isPresented: $showMenu) {
             ActionSheet(title: Text("Options"), buttons: [
@@ -247,6 +248,17 @@ struct PodView: View {
                 
         }
     }
+    
+    private func refreshPodItems() {
+           networkManager.fetchItemsForPod(podId: pod.id) { items, error in
+               if let items = items {
+                   self.reorderedItems = items
+                   self.pod.items = items
+               } else {
+                   print("Failed to fetch items for pod: \(error ?? "Unknown error")")
+               }
+           }
+       }
     
     private var trailingNavigationBarItem: some View {
         Group {

@@ -494,6 +494,7 @@ struct ItemPreview: View {
     @Binding var podId: Int
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Binding var showAddItemView: Bool
+    @EnvironmentObject var uploadViewModel: UploadViewModel
 
     
     var body: some View {
@@ -576,6 +577,7 @@ struct ItemPreview: View {
                                                                                        cameraModel.addVideoItem(podId: podId, email: viewModel.email) { success, message in
                                                                                            if success {
                                                                                                showPreview = false
+                                                                                               uploadViewModel.addItemCompleted()
                                                                                            } else {
                                                                                                print("Failed to add video item: \(message ?? "Unknown error")")
                                                                                            }
@@ -584,6 +586,7 @@ struct ItemPreview: View {
                                                                                        cameraModel.addPhotoItem(podId: podId, email: viewModel.email) { success, message in
                                                                                            if success {
                                                                                                showPreview = false
+                                                                                               uploadViewModel.addItemCompleted()
                                                                                            } else {
                                                                                                print("Failed to add photo item: \(message ?? "Unknown error")")
                                                                                            }
@@ -667,6 +670,7 @@ struct ItemPreview: View {
 
         }
     }
+   
 
     private func cleanUpPlayer() {
            player.pause()

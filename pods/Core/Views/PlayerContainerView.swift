@@ -9,27 +9,27 @@ import SwiftUI
 
 struct PlayerContainerView: View {
     @State private var index = 0
-//    @State private var videos = MockData().videos
-    @State var items: [PodItem]
+    var items: [PodItem]
     @Environment(\.presentationMode) var presentationMode
     @State private var currentIndex = 0
     @EnvironmentObject var sharedViewModel: SharedViewModel
+//    @State var initialIndex: Int
 
     
+    init(items: [PodItem], initialIndex: Int) {
+            self.items = items
+            self._currentIndex = State(initialValue: initialIndex)
+        }
   
-    
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            PlayerPageView(items: $items, currentIndex: $currentIndex)
+            PlayerPageView(items: items, currentIndex: $currentIndex)
           
                 .background(Color.black
                     .edgesIgnoringSafeArea(.all))
                 .edgesIgnoringSafeArea(.all)
-               
-            
-//                .navigationBarItems(leading: backButton)
-//                .navigationBarTitle(displayTitle(), displayMode: .inline)
-            // Custom navigation bar items using toolbar
+
                          .toolbar {
                              ToolbarItem(placement: .navigationBarLeading) {
                                  backButton
@@ -42,6 +42,8 @@ struct PlayerContainerView: View {
                          }
                          .onAppear {
                                     sharedViewModel.isItemViewActive = true
+//                             currentIndex = initialIndex
+                             
                                 }
                                 .onDisappear {
                                     sharedViewModel.isItemViewActive = false

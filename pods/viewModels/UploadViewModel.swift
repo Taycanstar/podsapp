@@ -7,6 +7,7 @@ class UploadViewModel: ObservableObject {
     @Published var thumbnailImage: Image? // Store the thumbnail as an Image
     @Published var postSuccess = false
     @Published var uploadCompletion: (() -> Void)?
+    @Published var addItemCompletion: (() -> Void)?
 
 
     func updateProgress(_ progress: Float) {
@@ -34,6 +35,12 @@ class UploadViewModel: ObservableObject {
     private func resetPostSuccessAfterDelay() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
             self.postSuccess = false
+        }
+    }
+    
+    func addItemCompleted() {
+        DispatchQueue.main.async {
+            self.addItemCompletion?()
         }
     }
 
