@@ -9,7 +9,7 @@ struct CreatePodView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @StateObject var cameraModel = CameraViewModel()
     @Binding var showingVideoCreationScreen: Bool
-    
+    @Binding var selectedTab: Int
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
 
@@ -115,7 +115,7 @@ struct CreatePodView: View {
                    
                     print("Pod created successfully in \(duration) seconds.")
                     uploadViewModel.uploadCompleted()
-        
+                    selectedTab = 0
           
 //                    self.homeViewModel.fetchPodsForUser(email: self.viewModel.email)
                     

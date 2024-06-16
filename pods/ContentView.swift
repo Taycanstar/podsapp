@@ -63,7 +63,7 @@ struct ContentView: View {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
                         
                             .fullScreenCover(isPresented: $showingVideoCreationScreen) {
-                                CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen)
+                                CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                                     .background(Color.black.edgesIgnoringSafeArea(.all))
                             }
                         

@@ -150,7 +150,7 @@ struct CameraContainerView: View {
     @State private var latestPhoto: UIImage? = nil
     @State private var showTranscribeLabel = true
     @State private var showCommandLabel = true
-
+    @Binding var selectedTab: Int
    
     
     @EnvironmentObject var uploadViewModel: UploadViewModel
@@ -180,7 +180,7 @@ struct CameraContainerView: View {
                 .environmentObject(cameraModel)
             
                 .fullScreenCover(isPresented: $showCreatePodView) {
-                    CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen)
+                    CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                     // Pass any required environment objects or parameters
                 }
 
