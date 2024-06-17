@@ -12,12 +12,24 @@ struct CreatePodView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
+    @State private var errorMessage: String?
 
     var body: some View {
         VStack {
             header
             PlaceholderTextView(placeholder: "Pod name", text: $podName)
             itemList
+            if let errorMessage = errorMessage {
+                           Text(errorMessage)
+                               .foregroundColor(.red)
+                               .padding(.horizontal, 15)
+                               .padding(.top, 5)
+                               .onAppear {
+                                   DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                                       self.errorMessage = nil
+                                   }
+                               }
+                       }
             createButton
             Spacer()
         }
@@ -94,6 +106,7 @@ struct CreatePodView: View {
     private func createPodAction() {
         guard !podName.isEmpty else {
             print("Pod name is required.")
+            errorMessage = "Pod name is required."
             return
         }
         self.showingVideoCreationScreen = false 
@@ -121,6 +134,7 @@ struct CreatePodView: View {
                     
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")
+                    errorMessage = "\(String(describing: message))"
                 }
              
             }
