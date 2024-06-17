@@ -10,7 +10,71 @@ class NetworkManager {
     let baseUrl = "http://192.168.1.67:8000"
 //    let baseUrl = "http://192.168.86.39:8000"
 
+
+    func determineUserLocation() {
+        let url = URL(string: "https://ipapi.co/json/")!
+        
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil else {
+                DispatchQueue.main.async {
+                    setenv("REGION", "centralus", 1) // Default region
+                    print("Error fetching location data: \(error?.localizedDescription ?? "Unknown error")")
+                }
+                return
+            }
+            
+            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                print("JSON response: \(json)") // Debugging print
+                if let regionCode = json["region_code"] as? String {
+                    let region = self.mapRegionToAzureBlobLocation(region: regionCode)
+                    DispatchQueue.main.async {
+                        setenv("REGION", region, 1)
+                        print("Determined region: \(region)")
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        setenv("REGION", "centralus", 1) // Default region
+                        print("Region code not found in JSON response.")
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    setenv("REGION", "centralus", 1) // Default region
+                    print("Failed to parse JSON response.")
+                }
+            }
+        }
+        task.resume()
+    }
+        
+    func mapRegionToAzureBlobLocation(region: String) -> String {
+        switch region {
+        case "CA", "OR", "WA", "NV", "AZ", "UT", "ID", "MT", "WY", "CO", "NM", "HI", "AK":
+            return "westus"
+        case "NY", "NJ", "PA", "CT", "RI", "MA", "NH", "VT", "ME", "MD", "DE", "VA", "WV", "NC", "SC", "GA", "FL", "AL", "TN", "KY":
+            return "eastus"
+        case "TX", "OK", "LA", "AR", "MO", "KS", "NE", "IA", "MN", "SD", "ND", "IL", "WI", "IN", "OH", "MI":
+            return "centralus"
+        default:
+            return "centralus" // Default region
+        }
+    }
+
     
+    func getStorageAccountCredentials(for region: String) -> (accountName: String, sasToken: String)? {
+           let accountNameKey = "BLOB_NAME_\(region.uppercased())"
+           let sasTokenKey = "SAS_TOKEN_\(region.uppercased())"
+           
+           guard let accountName = ProcessInfo.processInfo.environment[accountNameKey],
+                 let sasToken = ProcessInfo.processInfo.environment[sasTokenKey] else {
+               print("Missing environment variables for region \(region)")
+               return nil
+           }
+           
+        print(accountName, sasToken, "hot shit")
+           return (accountName, sasToken)
+       }
+
 
     func signup(email: String, password: String, completion: @escaping (Bool, String) -> Void) {
         guard let url = URL(string: "\(baseUrl)/signup/") else {
@@ -142,55 +206,7 @@ class NetworkManager {
             }
         }.resume()
     }
-//    func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/login/") else {
-//            completion(false, "Invalid URL")
-//            return
-//        }
-//        
-//        let body: [String: Any] = ["username": username, "password": password]
-//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
-//        
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = finalBody
-//        
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                DispatchQueue.main.async {
-//                    completion(false, "Login failed: \(error.localizedDescription)")
-//                }
-//                return
-//            }
-//            
-//            guard let httpResponse = response as? HTTPURLResponse else {
-//                DispatchQueue.main.async {
-//                    completion(false, "No response from server")
-//                }
-//                return
-//            }
-//            
-//            if httpResponse.statusCode == 200 {
-//                // Login successful
-//                DispatchQueue.main.async {
-//                    completion(true, nil)
-//                }
-//            } else {
-//                // Extract error message if available
-//                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let errorMessage = json["error"] as? String {
-//                    DispatchQueue.main.async {
-//                        completion(false, errorMessage)
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Login failed with statusCode: \(httpResponse.statusCode)")
-//                    }
-//                }
-//            }
-//        }.resume()
-//    }
-//    
+
     
     func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
@@ -290,6 +306,8 @@ class NetworkManager {
         let dispatchGroup = DispatchGroup()
         var updatedItems = [PodItem]()
         var uploadErrors = [String]()
+        
+      
         guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
             print("No container name found in environment variables.")
             completion(false, "No container name found.")
@@ -437,55 +455,111 @@ class NetworkManager {
         }.resume()
     }
 
+//    func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let accountName = ProcessInfo.processInfo.environment["BLOB_NAME"],
+//              let sasToken = ProcessInfo.processInfo.environment["SAS_TOKEN"] else {
+//            print("Missing required configuration for Azure Blob Storage")
+//            completion(false, "Missing required configuration")
+//            return
+//        }
+//
+//        let endpoint = "https://\(accountName).blob.core.windows.net/\(containerName)/\(blobName)?\(sasToken)"
+//        guard let url = URL(string: endpoint) else {
+//            print("Invalid URL for Azure Blob Storage")
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        print("Attempting to upload to: \(url)")
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "PUT"
+//        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+//        request.setValue("\(fileData.count)", forHTTPHeaderField: "Content-Length")
+//        request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+//        request.httpBody = fileData
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error during upload to Azure Blob Storage: \(error.localizedDescription)")
+//                completion(false, "Network error: \(error.localizedDescription)")
+//                return
+//            }
+//
+//            if let httpResponse = response as? HTTPURLResponse {
+//                print("Response status code: \(httpResponse.statusCode)")
+//                if httpResponse.statusCode == 201 {
+//                    let blobUrl = "https://\(accountName).blob.core.windows.net/\(containerName)/\(blobName)"
+//                    print("Upload successful to Azure Blob Storage: \(blobUrl)")
+//                    completion(true, blobUrl)
+//                } else {
+//                    if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
+//                        print("Response Data: \(responseString)")
+//                    }
+//                    print("Failed to upload to Azure Blob Storage, status code: \(httpResponse.statusCode)")
+//                    completion(false, "Upload failed with status code: \(httpResponse.statusCode)")
+//                }
+//            } else {
+//                print("No HTTP response received.")
+//                completion(false, "No response from server")
+//            }
+//        }.resume()
+//    }
+    
     func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
-        guard let accountName = ProcessInfo.processInfo.environment["BLOB_NAME"],
-              let sasToken = ProcessInfo.processInfo.environment["SAS_TOKEN"] else {
-            print("Missing required configuration for Azure Blob Storage")
-            completion(false, "Missing required configuration")
-            return
-        }
-
-        let endpoint = "https://\(accountName).blob.core.windows.net/\(containerName)/\(blobName)?\(sasToken)"
-        guard let url = URL(string: endpoint) else {
-            print("Invalid URL for Azure Blob Storage")
-            completion(false, "Invalid URL")
-            return
-        }
-
-        print("Attempting to upload to: \(url)")
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        request.setValue("\(fileData.count)", forHTTPHeaderField: "Content-Length")
-        request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
-        request.httpBody = fileData
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("Network error during upload to Azure Blob Storage: \(error.localizedDescription)")
-                completion(false, "Network error: \(error.localizedDescription)")
-                return
-            }
-
-            if let httpResponse = response as? HTTPURLResponse {
-                print("Response status code: \(httpResponse.statusCode)")
-                if httpResponse.statusCode == 201 {
-                    let blobUrl = "https://\(accountName).blob.core.windows.net/\(containerName)/\(blobName)"
-                    print("Upload successful to Azure Blob Storage: \(blobUrl)")
-                    completion(true, blobUrl)
-                } else {
-                    if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
-                        print("Response Data: \(responseString)")
-                    }
-                    print("Failed to upload to Azure Blob Storage, status code: \(httpResponse.statusCode)")
-                    completion(false, "Upload failed with status code: \(httpResponse.statusCode)")
+        
+        guard let region = ProcessInfo.processInfo.environment["REGION"] else {
+                    print("Region not set in environment variables")
+                    completion(false, "Region not set in environment variables")
+                    return
                 }
-            } else {
-                print("No HTTP response received.")
-                completion(false, "No response from server")
-            }
-        }.resume()
-    }
+          
+        guard let credentials = getStorageAccountCredentials(for: region) else {
+            print("Missing required configuration for region \(region)")
+              completion(false, "Missing required configuration")
+              return
+          }
+
+          let endpoint = "https://\(credentials.accountName).blob.core.windows.net/\(containerName)/\(blobName)?\(credentials.sasToken)"
+          guard let url = URL(string: endpoint) else {
+              print("Invalid URL for Azure Blob Storage")
+              completion(false, "Invalid URL")
+              return
+          }
+
+          print("Attempting to upload to: \(url)")
+          var request = URLRequest(url: url)
+          request.httpMethod = "PUT"
+          request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+          request.setValue("\(fileData.count)", forHTTPHeaderField: "Content-Length")
+          request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+          request.httpBody = fileData
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  print("Network error during upload to Azure Blob Storage: \(error.localizedDescription)")
+                  completion(false, "Network error: \(error.localizedDescription)")
+                  return
+              }
+
+              if let httpResponse = response as? HTTPURLResponse {
+                  print("Response status code: \(httpResponse.statusCode)")
+                  if httpResponse.statusCode == 201 {
+                      let blobUrl = "https://\(credentials.accountName).blob.core.windows.net/\(containerName)/\(blobName)"
+                      print("Upload successful to Azure Blob Storage: \(blobUrl)")
+                      completion(true, blobUrl)
+                  } else {
+                      if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
+                          print("Response Data: \(responseString)")
+                      }
+                      print("Failed to upload to Azure Blob Storage, status code: \(httpResponse.statusCode)")
+                      completion(false, "Upload failed with status code: \(httpResponse.statusCode)")
+                  }
+              } else {
+                  print("No HTTP response received.")
+                  completion(false, "No response from server")
+              }
+          }.resume()
+      }
 
 
 
@@ -758,52 +832,7 @@ class NetworkManager {
         print("Starting transcription request to backend.")
         task.resume()
     }
-//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-//            completion(false, "Invalid URL")
-//            return
-//        }
-//
-//        let body: [String: Any] = ["token": idToken]
-//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
-//        
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = finalBody
-//        
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)")
-//                }
-//                return
-//            }
-//            
-//            guard let httpResponse = response as? HTTPURLResponse else {
-//                DispatchQueue.main.async {
-//                    completion(false, "No response from server")
-//                }
-//                return
-//            }
-//            
-//            if httpResponse.statusCode == 200 {
-//                DispatchQueue.main.async {
-//                    completion(true, nil)
-//                }
-//            } else if let data = data,
-//                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-//                      let errorMessage = json["error"] as? String {
-//                DispatchQueue.main.async {
-//                    completion(false, errorMessage)
-//                }
-//            } else {
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed with statusCode: \(httpResponse.statusCode)")
-//                }
-//            }
-//        }.resume()
-//    }
+
     func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
         guard let url = URL(string: "\(baseUrl)/google-login/") else {
             completion(false, "Invalid URL", false)
@@ -936,136 +965,7 @@ class NetworkManager {
         }.resume()
     }
     
-//    func addNewItem(podId: Int, itemType: String, videoURL: URL?, imageURL: URL?, label: String, thumbnail: UIImage?, email: String, completion: @escaping (Bool, String?) -> Void) {
-//          let dispatchGroup = DispatchGroup()
-//          var uploadErrors = [String]()
-//          
-//          guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
-//              print("No container name found in environment variables.")
-//              completion(false, "No container name found.")
-//              return
-//          }
-//          
-//          var uploadedVideoURL: String?
-//          var uploadedImageURL: String?
-//          var uploadedThumbnailURL: String?
-//          
-//          if let videoURL = videoURL {
-//              let videoBlobName = UUID().uuidString + ".mp4"
-//              do {
-//                  let videoData = try Data(contentsOf: videoURL)
-//                  dispatchGroup.enter()
-//                  uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
-//                      if success, let videoUrl = videoUrlString {
-//                          uploadedVideoURL = videoUrl
-//                      } else {
-//                          uploadErrors.append("Failed to upload video")
-//                      }
-//                      dispatchGroup.leave()
-//                  }
-//              } catch {
-//                  uploadErrors.append("Failed to load video data for URL: \(videoURL)")
-//              }
-//          }
-//          
-//          if let imageURL = imageURL {
-//              let imageBlobName = UUID().uuidString + ".jpg"
-//              do {
-//                  let imageData = try Data(contentsOf: imageURL)
-//                  dispatchGroup.enter()
-//                  uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
-//                      if success, let imageUrl = imageUrlString {
-//                          uploadedImageURL = imageUrl
-//                      } else {
-//                          uploadErrors.append("Failed to upload image")
-//                      }
-//                      dispatchGroup.leave()
-//                  }
-//              } catch {
-//                  uploadErrors.append("Failed to load image data for URL: \(imageURL)")
-//              }
-//          }
-//          
-//          if let thumbnail = thumbnail, let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
-//              let thumbnailBlobName = UUID().uuidString + ".jpg"
-//              dispatchGroup.enter()
-//              uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
-//                  if success, let thumbnailUrl = thumbnailUrlString {
-//                      uploadedThumbnailURL = thumbnailUrl
-//                  } else {
-//                      uploadErrors.append("Failed to upload thumbnail")
-//                  }
-//                  dispatchGroup.leave()
-//              }
-//          }
-//          
-//          dispatchGroup.notify(queue: .main) {
-//              if !uploadErrors.isEmpty {
-//                  completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
-//                  return
-//              }
-//              
-//              self.sendAddItemRequest(podId: podId, itemType: itemType, videoURL: uploadedVideoURL, imageURL: uploadedImageURL, label: label, thumbnail: uploadedThumbnailURL, email: email, completion: completion)
-//          }
-//      }
-//
-//      private func sendAddItemRequest(podId: Int, itemType: String, videoURL: String?, imageURL: String?, label: String, thumbnail: String?, email: String, completion: @escaping (Bool, String?) -> Void) {
-//          guard let url = URL(string: "\(baseUrl)/add-pod-item/") else {
-//              completion(false, "Invalid URL")
-//              return
-//          }
-//          
-//          let body: [String: Any] = [
-//              "pod_id": podId,
-//              "itemType": itemType,
-//              "videoURL": videoURL ?? "",
-//              "imageURL": imageURL ?? "",
-//              "label": label,
-//              "thumbnail": thumbnail ?? "",
-//              "email": email
-//          ]
-//          
-//          do {
-//              var request = URLRequest(url: url)
-//              request.httpMethod = "POST"
-//              request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//              request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-//              
-//              URLSession.shared.dataTask(with: request) { data, response, error in
-//                  if let error = error {
-//                      DispatchQueue.main.async {
-//                          completion(false, "Network error: \(error.localizedDescription)")
-//                      }
-//                      return
-//                  }
-//                  
-//                  guard let httpResponse = response as? HTTPURLResponse else {
-//                      DispatchQueue.main.async {
-//                          completion(false, "No response from server")
-//                      }
-//                      return
-//                  }
-//                  
-//                  if httpResponse.statusCode == 201 {
-//                      DispatchQueue.main.async {
-//                          completion(true, "Item added to pod successfully.")
-//                      }
-//                  } else {
-//                      var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
-//                      if let data = data, let responseString = String(data: data, encoding: .utf8) {
-//                          errorMessage += ", Response: \(responseString)"
-//                      }
-//                      DispatchQueue.main.async {
-//                          completion(false, errorMessage)
-//                      }
-//                  }
-//              }.resume()
-//          } catch {
-//              completion(false, "Failed to encode request body")
-//          }
-//      }
-//    
-    
+ 
     func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, email: String, completion: @escaping (Bool, String?) -> Void) {
         let dispatchGroup = DispatchGroup()
         var uploadErrors = [String]()

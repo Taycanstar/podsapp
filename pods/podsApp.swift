@@ -17,6 +17,7 @@ struct podsApp: App {
     @StateObject private var themeManager = ThemeManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
+    @Environment(\.scenePhase) var scenePhase
    
     var body: some Scene {
         WindowGroup {
@@ -27,16 +28,17 @@ struct podsApp: App {
                 .environmentObject(homeViewModel)
                 .environmentObject(themeManager) 
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
+                .onChange(of: scenePhase) { newPhase in
+                                   if newPhase == .active {
+                                       NetworkManager().determineUserLocation()
+                                   }
+                               }
+         
         }
     }
 }
 
 
-//class AppDelegate: NSObject, UIApplicationDelegate {
-//    func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-//        return GIDSignIn.sharedInstance.handle(url)
-//    }
-//}
 import GoogleSignIn
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -50,8 +52,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 print("Restored previous sign-in: \(String(describing: user))")
             }
         }
+     
         return true
     }
+    
+
+        
 
     func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         return GIDSignIn.sharedInstance.handle(url)

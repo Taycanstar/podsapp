@@ -14,6 +14,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var currentStep: OnboardingStep = .landing
 //    @Published var email: String = "dimi@humuli.com"
     @Published var email: String = ""
+    @Published var region: String = ""
     @Published var username: String = ""
     @Published var password: String = ""
 }

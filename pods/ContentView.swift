@@ -70,6 +70,9 @@ struct ContentView: View {
                         
                         
                     }
+                  
+                  
+                  
                 
             } else {
                 MainOnboardingView(isAuthenticated:$isAuthenticated)

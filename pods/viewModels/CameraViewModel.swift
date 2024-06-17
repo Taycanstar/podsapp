@@ -87,10 +87,10 @@ extension PodItem {
         // Immediately initialize player if URL is available
                if let url = self.videoURL {
                    player = AVPlayer(url: url)
-                   print("AVPlayer initialized with URL: \(url)")
+              
                } else {
                    player = nil
-                   print("AVPlayer not initialized due to missing URL")
+                  
                }
     }
 }
