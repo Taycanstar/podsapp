@@ -24,7 +24,7 @@ class NetworkManager {
             }
             
             if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                print("JSON response: \(json)") // Debugging print
+                // Debugging print
                 if let regionCode = json["region_code"] as? String {
                     let region = self.mapRegionToAzureBlobLocation(region: regionCode)
                     DispatchQueue.main.async {
@@ -564,38 +564,70 @@ class NetworkManager {
 
 
 
-    func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+//    func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+//        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+//        guard let url = URL(string: "\(NetworkManager().baseUrl)/get-user-pods/\(encodedEmail)") else {
+//            completion(false, nil, "Invalid URL")
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "GET"
+//        // Add headers if needed, e.g., Authorization
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            guard let data = data, error == nil else {
+//                completion(false, nil, "Network request failed")
+//                return
+//            }
+//            
+//            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+//                do {
+//                    let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
+//                    // Use the custom initializer for Pod which was added as an extension.
+//                    let pods = podResponse.pods.map { Pod(from: $0) }
+//                    completion(true, pods, nil)
+//                } catch {
+//                    print(error)
+//                    completion(false, nil, "Failed to decode pods")
+//                }
+//            } else {
+//                completion(false, nil, "Failed to fetch pods")
+//            }
+//        }.resume()
+//    }
+
+    func fetchPodsForUser(email: String, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
         let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        guard let url = URL(string: "\(NetworkManager().baseUrl)/get-user-pods/\(encodedEmail)") else {
-            completion(false, nil, "Invalid URL")
+        guard let url = URL(string: "\(baseUrl)/get-user-pods/\(encodedEmail)?page=\(page)&pageSize=10") else {
+            completion(false, nil, 0, "Invalid URL")
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        // Add headers if needed, e.g., Authorization
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {
-                completion(false, nil, "Network request failed")
+                completion(false, nil, 0, "Network request failed")
                 return
             }
             
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                 do {
                     let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
-                    // Use the custom initializer for Pod which was added as an extension.
                     let pods = podResponse.pods.map { Pod(from: $0) }
-                    completion(true, pods, nil)
+                    completion(true, pods, podResponse.totalPods, nil)
                 } catch {
-                    print(error)
-                    completion(false, nil, "Failed to decode pods")
+                    completion(false, nil, 0, "Failed to decode pods")
                 }
             } else {
-                completion(false, nil, "Failed to fetch pods")
+                completion(false, nil, 0, "Failed to fetch pods")
             }
         }.resume()
     }
+
+   
 
     func deletePod(podId: Int, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/delete-pod/\(podId)/") else {
@@ -1261,3 +1293,4 @@ class NetworkManager {
             }.resume()
         }
 }
+

@@ -58,6 +58,7 @@ struct PodItemJSON: Codable {
 
 struct PodResponse: Codable {
     let pods: [PodJSON]
+    let totalPods: Int
 }
 
 extension Pod {

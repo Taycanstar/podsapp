@@ -128,6 +128,7 @@ struct PodView: View {
             ActionSheet(title: Text("Options"), buttons: [
                 .default(Text("Edit")) {
                     isEditing.toggle()
+                    
                 },
                 .default(Text("Add Item")) {
                     showAddItemView.toggle()
