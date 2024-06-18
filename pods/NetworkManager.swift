@@ -5,9 +5,9 @@ import SwiftUI
 class NetworkManager {
 
 //    
-//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-    let baseUrl = "http://192.168.1.67:8000"
+//    let baseUrl = "http://192.168.1.67:8000"
 
 
     func determineUserLocation() {
@@ -1287,6 +1287,100 @@ class NetworkManager {
                     DispatchQueue.main.async {
                         let errorMessage = "Server returned status code: \(httpResponse.statusCode)"
                         completion(false, errorMessage)
+                    }
+                }
+            }.resume()
+        }
+    
+    func requestPasswordReset(email: String, completion: @escaping (Bool, String?) -> Void) {
+          guard let url = URL(string: "\(baseUrl)/request-password-reset/") else {
+              completion(false, "Invalid URL")
+              return
+          }
+
+          let body: [String: String] = ["email": email]
+          let finalBody = try? JSONSerialization.data(withJSONObject: body)
+
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+          request.httpBody = finalBody
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  DispatchQueue.main.async {
+                      completion(false, "Request failed: \(error.localizedDescription)")
+                  }
+                  return
+              }
+
+              guard let httpResponse = response as? HTTPURLResponse else {
+                  DispatchQueue.main.async {
+                      completion(false, "No response from server")
+                  }
+                  return
+              }
+
+              if httpResponse.statusCode == 200 {
+                  DispatchQueue.main.async {
+                      completion(true, nil)
+                  }
+              } else if let data = data,
+                        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                        let errorMessage = json["error"] as? String {
+                  DispatchQueue.main.async {
+                      completion(false, errorMessage)
+                  }
+              } else {
+                  DispatchQueue.main.async {
+                      completion(false, "Request failed with status code: \(httpResponse.statusCode)")
+                  }
+              }
+          }.resume()
+      }
+    
+    func resetPassword(email: String, code: String, newPassword: String, completion: @escaping (Bool, String?) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/reset-password/") else {
+                completion(false, "Invalid URL")
+                return
+            }
+
+            let body: [String: String] = ["email": email, "code": code, "new_password": newPassword]
+            let finalBody = try? JSONSerialization.data(withJSONObject: body)
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = finalBody
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        completion(false, "Request failed: \(error.localizedDescription)")
+                    }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        completion(false, "No response from server")
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 200 {
+                    DispatchQueue.main.async {
+                        completion(true, nil)
+                    }
+                } else if let data = data,
+                          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(false, errorMessage)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(false, "Request failed with status code: \(httpResponse.statusCode)")
                     }
                 }
             }.resume()

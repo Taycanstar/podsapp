@@ -9,6 +9,8 @@ struct LoginView: View {
     @State private var errorMessage: String? = nil
     @Binding var isAuthenticated: Bool
     @State private var isLoading = false
+    
+    @State private var showForgotPassword = false
 
     var body: some View {
         
@@ -54,23 +56,13 @@ struct LoginView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.black)
 
-//            TextField("Email", text: $email)
-//                .textFieldStyle(CustomTextFieldStyle())
-//                .autocapitalization(.none)
-//                .keyboardType(.emailAddress)
             CustomTextField(placeholder: "Email", text: $email)
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
                 
 
             ZStack(alignment: .trailing) {
-//                if showPassword {
-//                    TextField("Password", text: $password)
-//                        .textFieldStyle(CustomTextFieldStyle())
-//                } else {
-//                    SecureField("Password", text: $password)
-//                        .textFieldStyle(CustomTextFieldStyle())
-//                }
+
                 CustomTextField(placeholder: "Password", text: $password, isSecure: true, showPassword: showPassword)
 
                 Button(action: {
@@ -81,6 +73,20 @@ struct LoginView: View {
                 }
                 .padding(.trailing, 15)
             }
+            
+            HStack {
+                          Spacer()
+                          Button(action: {
+                              showForgotPassword = true
+                          }) {
+                              Text("Forgot Password?")
+                                  .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                                  .font(.footnote)
+                          }
+                          .sheet(isPresented: $showForgotPassword) {
+                              ForgotPasswordView(showForgotPassword: $showForgotPassword)
+                          }
+                      }
 
             if let errorMessage = errorMessage {
                 Text(errorMessage)
@@ -152,17 +158,6 @@ struct LoginView: View {
         }
     }
 }
-
-
-
-//
-//
-//struct LoginView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        LoginView()
-//    }
-//}
-
 
 
 

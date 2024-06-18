@@ -257,24 +257,41 @@ struct HomeView: View {
                     .onMove(perform: movePod)
                     .onDelete(perform: deletePod)
                     
-                    if homeViewModel.currentPage < homeViewModel.totalPages {
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                if !isLoadingMore {
-                                    isLoadingMore = true
-                                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) {
-                                        isLoadingMore = false
-                                    }
-                                }
-                            }) {
-                                Text("Load More")
-                                    .foregroundColor(.blue)
-//                                    .padding()
-                            }
-                            Spacer()
-                        }
-                    }
+//                    if homeViewModel.currentPage < homeViewModel.totalPages {
+//                        HStack {
+//                            Spacer()
+//                            Button(action: {
+//                                if !isLoadingMore {
+//                                    isLoadingMore = true
+//                                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) {
+//                                        isLoadingMore = false
+//                                    }
+//                                }
+//                            }) {
+//                                Text("Load More")
+//                                    .foregroundColor(.blue)
+////                                    .padding()
+//                            }
+//                            Spacer()
+//                        }
+//                    }
+                    if shouldShowLoadMoreButton {
+                                            HStack {
+                                                Spacer()
+                                                Button(action: {
+                                                    if !isLoadingMore {
+                                                        isLoadingMore = true
+                                                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) {
+                                                            isLoadingMore = false
+                                                        }
+                                                    }
+                                                }) {
+                                                    Text("Load More")
+                                                        .foregroundColor(.blue)
+                                                }
+                                                Spacer()
+                                            }
+                                        }
                     
                     if isLoadingMore {
                         HStack {
@@ -311,6 +328,11 @@ struct HomeView: View {
         }
         .background(colorScheme == .dark ? Color.black.edgesIgnoringSafeArea(.all) : Color.white.edgesIgnoringSafeArea(.all))
     }
+    
+    private var shouldShowLoadMoreButton: Bool {
+            return homeViewModel.pods.count < homeViewModel.totalPods
+        }
+
 
     private func togglePodExpansion(for title: String) {
         withAnimation(.easeInOut) {

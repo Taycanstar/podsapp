@@ -144,29 +144,7 @@ struct SignupView: View {
     }
 
 
-//    private func validateAndSignUp() {
-//        if email.isEmpty || !email.contains("@") {
-//            self.errorMessage = "Please enter a valid email address."
-//            return
-//        } else if password.count < 8 {
-//            self.errorMessage = "Password must be at least 8 characters."
-//            return
-//        }
-//        
-//        self.errorMessage = nil
-//        let networkManager = NetworkManager()
-//        networkManager.signup(email: email, password: password) { success, message in
-//            if success {
-//                DispatchQueue.main.async {
-//                    self.viewModel.currentStep = .emailVerification
-//                    self.viewModel.email = self.email
-//                    self.viewModel.password = self.password
-//                }
-//            } else {
-//                self.errorMessage = message
-//            }
-//        }
-//    }
+
     private func validateAndSignUp() {
         isLoading = true
         // Directly validate email and password to reflect the most current input
@@ -175,9 +153,11 @@ struct SignupView: View {
         
         if currentEmail.isEmpty || !currentEmail.contains("@") {
             self.errorMessage = "Please enter a valid email address."
+            isLoading = false
             return
         } else if currentPassword.count < 8 {
             self.errorMessage = "Password must be at least 8 characters."
+            isLoading = false
             return
         } else {
             self.errorMessage = nil
@@ -192,6 +172,7 @@ struct SignupView: View {
                     }
                 } else {
                     self.errorMessage = message
+                    isLoading = false
                 }
             }
         }

@@ -41,6 +41,7 @@
 		3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9602B99939600D211D7 /* OnboardingViewModel.swift */; };
 		3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9622B99990E00D211D7 /* MainOnboardingView.swift */; };
 		3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9642B999B3A00D211D7 /* WelcomeView.swift */; };
+		3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F12C21F9730040AF60 /* ResetPasswordView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
 		36C458BE2B7421110060355F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
@@ -55,6 +56,7 @@
 		36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C848172BFB0065008EA74B /* ColorThemeView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
+		36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */; };
 		36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */; };
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
 		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
@@ -119,6 +121,7 @@
 		3696B9602B99939600D211D7 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		3696B9622B99990E00D211D7 /* MainOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainOnboardingView.swift; sourceTree = "<group>"; };
 		3696B9642B999B3A00D211D7 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		3698E4F12C21F9730040AF60 /* ResetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* Podstack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Podstack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
 		36C458BB2B7421100060355F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -137,6 +140,7 @@
 		36CE7F002C1176DA001774F9 /* pods.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = pods.entitlements; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorViewController.swift; sourceTree = "<group>"; };
 		36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditorRepresentable.swift; sourceTree = "<group>"; };
 		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -235,6 +239,8 @@
 				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
 				36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */,
 				36963A222C1E17D800E53EF5 /* DataControlsView.swift */,
+				3698E4F12C21F9730040AF60 /* ResetPasswordView.swift */,
+				36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -617,9 +623,11 @@
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
+				3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */,
 				36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */,
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
+				36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
