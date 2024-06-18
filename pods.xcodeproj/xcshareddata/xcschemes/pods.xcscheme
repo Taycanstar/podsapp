@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "36C458B52B7421100060355F"
-               BuildableName = "pods.app"
-               BlueprintName = "pods"
+               BuildableName = "Podstack.app"
+               BlueprintName = "Podstack"
                ReferencedContainer = "container:pods.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -68,8 +68,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "36C458B52B7421100060355F"
-            BuildableName = "pods.app"
-            BlueprintName = "pods"
+            BuildableName = "Podstack.app"
+            BlueprintName = "Podstack"
             ReferencedContainer = "container:pods.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -96,7 +96,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "SAS_TOKEN"
-            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-03-14T09:21:57Z&amp;st=2024-03-15T01:21:57Z&amp;spr=https,http&amp;sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D"
+            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
@@ -106,7 +106,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "FILE_SAS_URL"
-            value = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-03-15T00:00:30Z&amp;st=2024-03-14T16:00:30Z&amp;spr=https,http&amp;sig=1k0Op1b%2F6h3ZFv8oTC4JAJALVP69hnHOXLxXl4DCX%2BU%3D"
+            value = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
@@ -121,7 +121,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "CONN_STRING"
-            value = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-03-14T09:21:57Z&amp;st=2024-03-15T01:21:57Z&amp;spr=https,http&amp;sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D"
+            value = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
@@ -151,47 +151,47 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "CONN_STRING_EASTUS"
-            value = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-03-14T09:21:57Z&amp;st=2024-03-15T01:21:57Z&amp;spr=https,http&amp;sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D"
+            value = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "CONN_STRING_WESTUS"
-            value = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:57:43Z&amp;st=2024-06-16T23:57:43Z&amp;spr=https&amp;sig=1xJ26c6G%2FFWoviG9biwvSRhICiP2ykq9iA1oXki1Wos%3D"
+            value = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "CONN_STRING_CENTRALUS"
-            value = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:55:51Z&amp;st=2024-06-16T23:55:51Z&amp;spr=https&amp;sig=2oSf9%2BFv9K%2FmAjuKRUK9pfyaO9HFcBwz1Oqnt2XFdkU%3D"
+            value = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "SAS_TOKEN_CENTRALUS"
-            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:55:51Z&amp;st=2024-06-16T23:55:51Z&amp;spr=https&amp;sig=2oSf9%2BFv9K%2FmAjuKRUK9pfyaO9HFcBwz1Oqnt2XFdkU%3D"
+            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "FILE_SAS_URL_CENTRALUS"
-            value = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:55:51Z&amp;st=2024-06-16T23:55:51Z&amp;spr=https&amp;sig=2oSf9%2BFv9K%2FmAjuKRUK9pfyaO9HFcBwz1Oqnt2XFdkU%3D"
+            value = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "SAS_TOKEN_WESTUS"
-            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:57:43Z&amp;st=2024-06-16T23:57:43Z&amp;spr=https&amp;sig=1xJ26c6G%2FFWoviG9biwvSRhICiP2ykq9iA1oXki1Wos%3D"
+            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "FILE_SAS_URL_WESTUS"
-            value = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-06-17T07:57:43Z&amp;st=2024-06-16T23:57:43Z&amp;spr=https&amp;sig=1xJ26c6G%2FFWoviG9biwvSRhICiP2ykq9iA1oXki1Wos%3D"
+            value = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "FILE_SAS_URL_EASTUS"
-            value = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2024-03-15T00:00:30Z&amp;st=2024-03-14T16:00:30Z&amp;spr=https,http&amp;sig=1k0Op1b%2F6h3ZFv8oTC4JAJALVP69hnHOXLxXl4DCX%2BU%3D"
+            value = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "SAS_TOKEN_EASTUS"
-            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-03-14T09:21:57Z&amp;st=2024-03-15T01:21:57Z&amp;spr=https,http&amp;sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D"
+            value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
@@ -207,8 +207,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "36C458B52B7421100060355F"
-            BuildableName = "pods.app"
-            BlueprintName = "pods"
+            BuildableName = "Podstack.app"
+            BlueprintName = "Podstack"
             ReferencedContainer = "container:pods.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

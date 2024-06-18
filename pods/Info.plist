@@ -17,6 +17,8 @@
 	<string>com.googleusercontent.apps.499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h</string>
 	<key>GIDClientID</key>
 	<string>499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.4</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

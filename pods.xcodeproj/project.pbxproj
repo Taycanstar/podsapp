@@ -119,7 +119,7 @@
 		3696B9602B99939600D211D7 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		3696B9622B99990E00D211D7 /* MainOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainOnboardingView.swift; sourceTree = "<group>"; };
 		3696B9642B999B3A00D211D7 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
-		36C458B62B7421100060355F /* pods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pods.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		36C458B62B7421100060355F /* Podstack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Podstack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
 		36C458BB2B7421100060355F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		36C458BD2B7421110060355F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -276,7 +276,7 @@
 		36C458B72B7421100060355F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				36C458B62B7421100060355F /* pods.app */,
+				36C458B62B7421100060355F /* Podstack.app */,
 				36C458C62B7421110060355F /* podsTests.xctest */,
 				36C458D02B7421110060355F /* podsUITests.xctest */,
 			);
@@ -371,9 +371,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		36C458B52B7421100060355F /* pods */ = {
+		36C458B52B7421100060355F /* Podstack */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 36C458DA2B7421110060355F /* Build configuration list for PBXNativeTarget "pods" */;
+			buildConfigurationList = 36C458DA2B7421110060355F /* Build configuration list for PBXNativeTarget "Podstack" */;
 			buildPhases = (
 				854E22C89739D753C85CE594 /* [CP] Check Pods Manifest.lock */,
 				36C458B22B7421100060355F /* Sources */,
@@ -385,9 +385,9 @@
 			);
 			dependencies = (
 			);
-			name = pods;
+			name = Podstack;
 			productName = pods;
-			productReference = 36C458B62B7421100060355F /* pods.app */;
+			productReference = 36C458B62B7421100060355F /* Podstack.app */;
 			productType = "com.apple.product-type.application";
 		};
 		36C458C52B7421110060355F /* podsTests */ = {
@@ -465,7 +465,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				36C458B52B7421100060355F /* pods */,
+				36C458B52B7421100060355F /* Podstack */,
 				36C458C52B7421110060355F /* podsTests */,
 				36C458CF2B7421110060355F /* podsUITests */,
 			);
@@ -677,12 +677,12 @@
 /* Begin PBXTargetDependency section */
 		36C458C82B7421110060355F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 36C458B52B7421100060355F /* pods */;
+			target = 36C458B52B7421100060355F /* Podstack */;
 			targetProxy = 36C458C72B7421110060355F /* PBXContainerItemProxy */;
 		};
 		36C458D22B7421110060355F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 36C458B52B7421100060355F /* pods */;
+			target = 36C458B52B7421100060355F /* Podstack */;
 			targetProxy = 36C458D12B7421110060355F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -837,11 +837,12 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen.storyboard;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -882,11 +883,12 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen.storyboard;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -985,7 +987,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		36C458DA2B7421110060355F /* Build configuration list for PBXNativeTarget "pods" */ = {
+		36C458DA2B7421110060355F /* Build configuration list for PBXNativeTarget "Podstack" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				36C458DB2B7421110060355F /* Debug */,

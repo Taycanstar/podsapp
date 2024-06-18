@@ -117,11 +117,13 @@ struct LoginView: View {
             
         if email.isEmpty || !email.contains("@") {
             self.errorMessage = "Please enter a valid email address."
+            isLoading = false
             return
         }
 
         if password.count < 8 {
             self.errorMessage = "Password must be at least 8 characters."
+            isLoading = false
             return
         }
 
@@ -143,7 +145,8 @@ struct LoginView: View {
                 }
             } else {
                 DispatchQueue.main.async {
-                    self.errorMessage = error ?? "Login failed. Please check your credentials and try again."
+                    self.errorMessage = "Invalid credentials"
+                    isLoading = false
                 }
             }
         }

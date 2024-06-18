@@ -1543,24 +1543,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
            audioRecorder = nil
        }
     
-//    func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
-//          guard let previewURL = previewURL else {
-//              completion(false, "No preview URL available.")
-//              return
-//          }
-//
-//          let thumbnail = generateThumbnail(for: previewURL, usingFrontCamera: isFrontCameraUsed)
-//          let metadata = "New item" // Replace with actual metadata if available
-//
-//          NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
-//              if success {
-//                  print("Video item added to pod successfully.")
-//              } else {
-//                  print("Failed to add video item to pod: \(message ?? "Unknown error")")
-//              }
-//              completion(success, message)
-//          }
-//      }
     func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let previewURL = previewURL else {
             completion(false, "No preview URL available.")
