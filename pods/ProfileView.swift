@@ -84,7 +84,7 @@ struct ProfileView: View {
             }
             .navigationBarTitle("Settings and privacy")
             .sheet(isPresented: $showingMail) {
-                         MailView()
+                MailView(isPresented: self.$showingMail)
                      }
         }
      
@@ -174,19 +174,54 @@ struct PlaybackView: View {
 }
 
 struct MailView: UIViewControllerRepresentable {
-    func makeUIViewController(context: UIViewControllerRepresentableContext<MailView>) -> MFMailComposeViewController {
+    @Binding var isPresented: Bool
+
+    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        @Binding var isPresented: Bool
+
+        init(isPresented: Binding<Bool>) {
+            _isPresented = isPresented
+        }
+
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            if let error = error {
+                print("Mail compose error: \(error.localizedDescription)")
+            } else {
+                switch result {
+                case .cancelled:
+                    print("Mail cancelled")
+                case .saved:
+                    print("Mail saved")
+                case .sent:
+                    print("Mail sent")
+                case .failed:
+                    print("Mail failed")
+                @unknown default:
+                    print("Unknown result")
+                }
+            }
+            controller.dismiss(animated: true) {
+                self.isPresented = false
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(isPresented: $isPresented)
+    }
+
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let mail = MFMailComposeViewController()
         mail.setToRecipients(["support@humuli.com"])
         mail.setSubject("Humuli Feedback")
         mail.setMessageBody("", isHTML: true)
+        mail.mailComposeDelegate = context.coordinator
         return mail
     }
-    
-    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: UIViewControllerRepresentableContext<MailView>) {
-    }
-    
-    static func dismantleUIViewController(_ uiViewController: MFMailComposeViewController, coordinator: ()) {
+
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
+
+    static func dismantleUIViewController(_ uiViewController: MFMailComposeViewController, coordinator: Coordinator) {
         uiViewController.dismiss(animated: true)
     }
 }
-
