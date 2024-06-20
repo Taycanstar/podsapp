@@ -727,27 +727,13 @@ struct FinalPreview: View {
                     
                     ZStack{
                         if let url = cameraModel.previewURL, FileManager.default.fileExists(atPath: url.path) {
-                                  // Video preview
-//                                  VideoPlayer(player: player)
-//
-//                                .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
-//                                .frame(width: screenWidth, height: videoHeight)
-//                                .id(url)
-//                                .onAppear {
-//                                    setupPlayer()
-//                                    
-//                                }
-//                                .onDisappear {
-//                                    cleanUpPlayer()
-//                                }
-//                            
-//                                .onChange(of: editParameters) { _ in
-//                                    // Apply edit parameters to the video preview
-//                                    // This is a placeholder action; actual implementation depends on your video processing approach
-//                                    applyEditParametersAndSetupPlayer()
-//                                }
-//                            
                             CustomVideoPlayer(player: player)
+                                .onAppear {
+                                    setupPlayer()
+                                }
+                                .onDisappear {
+                                    cleanUpPlayer()
+                                }
                                         .frame(width: screenWidth, height: videoHeight)
 //                                        .offset(y: -30)
                                         .onTapGesture {
@@ -760,16 +746,8 @@ struct FinalPreview: View {
                                         }
                                         .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                         .id(url)
-                                        .onAppear {
-                                            setupPlayer()
-                                        }
-                                        .onDisappear {
-                                            cleanUpPlayer()
-                                        }
-//                                        .onChange(of: editParameters) { _ in
-//                                            // Apply edit parameters to the video preview
-//                                            applyEditParametersAndSetupPlayer()
-//                                        }
+                                        
+
                               } else
                         if let image = cameraModel.selectedImage {
                               
@@ -972,27 +950,39 @@ struct FinalPreview: View {
     }
 }
 
+//    private func setupPlayer() {
+//        DispatchQueue.main.async {
+//           
+//            if let videoURL = self.url {
+//                let playerItem = AVPlayerItem(url: videoURL)
+//                self.player.replaceCurrentItem(with: playerItem)
+//                self.player.play()
+//                // Setup the loop playback observer if needed...
+//                self.player.replaceCurrentItem(with: playerItem)
+//                self.player.play()
+//                
+//                // Additional step: Ensure the observer for loop playback is correctly set up
+//                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.player.currentItem, queue: .main) { [self] _ in
+//                    self.player.seek(to: .zero)
+//                    self.player.play()
+//                }
+//
+//            }
+//
+//        }
+//    }
     private func setupPlayer() {
-        DispatchQueue.main.async {
-           
             if let videoURL = self.url {
                 let playerItem = AVPlayerItem(url: videoURL)
                 self.player.replaceCurrentItem(with: playerItem)
                 self.player.play()
-                // Setup the loop playback observer if needed...
-                self.player.replaceCurrentItem(with: playerItem)
-                self.player.play()
-                
-                // Additional step: Ensure the observer for loop playback is correctly set up
                 NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.player.currentItem, queue: .main) { [self] _ in
                     self.player.seek(to: .zero)
                     self.player.play()
                 }
-
             }
-
         }
-    }
+
 
 
     private func cleanUpPlayer() {

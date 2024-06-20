@@ -24,17 +24,7 @@ struct AltCameraView: View {
         .alert(isPresented: $cameraModel.alert) {
             Alert(title: Text("Camera and microphone are required to record videos"))
         }
-//        .onReceive(Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()) { _ in
-//               if cameraModel.recordedDuration <= cameraModel.maxDuration && cameraModel.isRecording{
-//                   cameraModel.recordedDuration += 0.01
-//               }
-//               
-//               if cameraModel.recordedDuration >= cameraModel.maxDuration && cameraModel.isRecording{
-//                   // Stopping the Recording
-//                   cameraModel.stopRecording()
-//                   cameraModel.isRecording = false
-//               }
-//           }
+
     }
 }
 

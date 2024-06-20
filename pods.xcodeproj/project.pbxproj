@@ -42,6 +42,10 @@
 		3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9622B99990E00D211D7 /* MainOnboardingView.swift */; };
 		3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9642B999B3A00D211D7 /* WelcomeView.swift */; };
 		3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F12C21F9730040AF60 /* ResetPasswordView.swift */; };
+		3698E4F42C2483F90040AF60 /* config.release.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3698E4F32C2483F90040AF60 /* config.release.plist */; };
+		3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */; };
+		3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F72C248EBB0040AF60 /* RegionManager.swift */; };
+		3698E4FA2C24916D0040AF60 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 3698E4F92C24916D0040AF60 /* .gitignore */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
 		36C458BE2B7421110060355F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
@@ -122,6 +126,10 @@
 		3696B9622B99990E00D211D7 /* MainOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainOnboardingView.swift; sourceTree = "<group>"; };
 		3696B9642B999B3A00D211D7 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		3698E4F12C21F9730040AF60 /* ResetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordView.swift; sourceTree = "<group>"; };
+		3698E4F32C2483F90040AF60 /* config.release.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.release.plist; sourceTree = "<group>"; };
+		3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
+		3698E4F72C248EBB0040AF60 /* RegionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionManager.swift; sourceTree = "<group>"; };
+		3698E4F92C24916D0040AF60 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* Podstack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Podstack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
 		36C458BB2B7421100060355F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -226,6 +234,7 @@
 			children = (
 				3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */,
 				368D67192BDD421B000434E0 /* MediaManager.swift */,
+				3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -269,6 +278,8 @@
 		36C458AD2B7421100060355F = {
 			isa = PBXGroup;
 			children = (
+				3698E4F92C24916D0040AF60 /* .gitignore */,
+				3698E4F32C2483F90040AF60 /* config.release.plist */,
 				362170B02B90F81C00DA93EE /* vid.mp4 */,
 				36C458B82B7421100060355F /* pods */,
 				36C458C92B7421110060355F /* podsTests */,
@@ -298,6 +309,7 @@
 				36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */,
 				3642C2252B9D3BF100D059B9 /* viewModels */,
 				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
+				3698E4F72C248EBB0040AF60 /* RegionManager.swift */,
 				3696B9572B98305C00D211D7 /* auth */,
 				368A27352B977F320001BBCA /* onboarding */,
 				3682F0A22B84173100ABF344 /* Podfile */,
@@ -483,9 +495,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3698E4FA2C24916D0040AF60 /* .gitignore in Resources */,
 				362170B22B90F91700DA93EE /* vid.mp4 in Resources */,
 				368A27332B9597CE0001BBCA /* pods-logo.png in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
+				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
 				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
 				36C458BE2B7421110060355F /* Assets.xcassets in Resources */,
@@ -636,6 +650,7 @@
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
+				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				3686EB1D2BF9558500F501C6 /* VideoCacheManager.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
@@ -660,6 +675,7 @@
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
+				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -822,18 +838,33 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				BLOB_CONTAINER = videos;
+				BLOB_NAME = humulipremiumstorage;
+				BLOB_NAME_CENTRALUS = humulistoragecentral;
+				BLOB_NAME_EASTUS = humulipremiumstorage;
+				BLOB_NAME_WESTUS = humulistoragewest;
+				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
+				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FILE_SAS_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				FILE_SAS_URL_CENTRALUS = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				FILE_SAS_URL_EASTUS = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				FILE_SAS_URL_WESTUS = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				GENERATE_INFOPLIST_FILE = YES;
+				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_CFBundleDisplayName = Podstack;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
@@ -850,11 +881,17 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
+				REGION = centralus;
+				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				SAS_TOKEN_CENTRALUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				SAS_TOKEN_EASTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				SAS_TOKEN_WESTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -868,18 +905,33 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				BLOB_CONTAINER = videos;
+				BLOB_NAME = humulipremiumstorage;
+				BLOB_NAME_CENTRALUS = humulistoragecentral;
+				BLOB_NAME_EASTUS = humulipremiumstorage;
+				BLOB_NAME_WESTUS = humulistoragewest;
+				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
+				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FILE_SAS_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				FILE_SAS_URL_CENTRALUS = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				FILE_SAS_URL_EASTUS = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				FILE_SAS_URL_WESTUS = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				GENERATE_INFOPLIST_FILE = YES;
+				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_CFBundleDisplayName = Podstack;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
@@ -896,11 +948,17 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
+				REGION = centralus;
+				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				SAS_TOKEN_CENTRALUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
+				SAS_TOKEN_EASTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
+				SAS_TOKEN_WESTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

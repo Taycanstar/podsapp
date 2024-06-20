@@ -54,7 +54,7 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -192,6 +192,11 @@
          <EnvironmentVariable
             key = "SAS_TOKEN_EASTUS"
             value = "sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "REGION"
+            value = "centralus"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

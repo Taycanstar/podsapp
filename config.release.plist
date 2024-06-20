@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SAS_TOKEN_WESTUS</key>
+	<string>sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D</string>
+	<key>SAS_TOKEN_EASTUS</key>
+	<string>sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>SAS_TOKEN_CENTRALUS</key>
+	<string>sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D</string>
+	<key>SAS_TOKEN</key>
+	<string>sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>REGION</key>
+	<string>centralus</string>
+	<key>QUEUE_SAS_URL</key>
+	<string>https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&amp;ss=bfqt&amp;srt=sco&amp;sp=rwdlacupiyx&amp;se=2025-03-08T07:13:23Z&amp;st=2024-03-08T23:13:23Z&amp;spr=https,http&amp;sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D</string>
+	<key>GOOGLE_CLIENT_ID</key>
+	<string>499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com</string>
+	<key>FILE_SAS_URL_WESTUS</key>
+	<string>https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D</string>
+	<key>FILE_SAS_URL_EASTUS</key>
+	<string>https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>FILE_SAS_URL_CENTRALUS</key>
+	<string>https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D</string>
+	<key>FILE_SAS_URL</key>
+	<string>https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>CONN_STRING_WESTUS</key>
+	<string>BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:58:47Z&amp;st=2024-06-18T15:58:47Z&amp;spr=https&amp;sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D</string>
+	<key>CONN_STRING_EASTUS</key>
+	<string>BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>CONN_STRING_CENTRALUS</key>
+	<string>BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:52:05Z&amp;st=2024-06-18T15:52:05Z&amp;spr=https&amp;sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D</string>
+	<key>CONN_STRING</key>
+	<string>BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-07-01T23:59:47Z&amp;st=2024-06-18T15:59:47Z&amp;spr=https&amp;sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D</string>
+	<key>BLOB_URL</key>
+	<string>https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rwdlaciytfx&amp;se=2025-03-14T09:21:57Z&amp;st=2024-03-15T01:21:57Z&amp;spr=https,http&amp;sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D</string>
+	<key>BLOB_NAME_EASTUS</key>
+	<string>humulipremiumstorage</string>
+	<key>BLOB_NAME_WESTUS</key>
+	<string>humulistoragewest</string>
+	<key>BLOB_NAME_CENTRALUS</key>
+	<string>humulistoragecentral</string>
+	<key>BLOB_NAME</key>
+	<string>humulipremiumstorage</string>
+	<key>BLOB_CONTAINER</key>
+	<string>videos</string>
+</dict>
+</plist>

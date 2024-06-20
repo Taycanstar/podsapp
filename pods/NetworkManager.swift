@@ -10,35 +10,71 @@ class NetworkManager {
 //    let baseUrl = "http://192.168.1.67:8000"
 
 
+//    func determineUserLocation() {
+//        let url = URL(string: "https://ipapi.co/json/")!
+//        
+//        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+//            guard let data = data, error == nil else {
+//                DispatchQueue.main.async {
+//                    setenv("REGION", "centralus", 1) // Default region
+//                    print("Error fetching location data: \(error?.localizedDescription ?? "Unknown error")")
+//                }
+//                return
+//            }
+//            
+//            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+//                // Debugging print
+//                if let regionCode = json["region_code"] as? String {
+//                    let region = self.mapRegionToAzureBlobLocation(region: regionCode)
+//                    DispatchQueue.main.async {
+//                        setenv("REGION", region, 1)
+//                        print("Determined region: \(region)")
+//                    }
+//                } else {
+//                    DispatchQueue.main.async {
+//                        setenv("REGION", "centralus", 1) // Default region
+//                        print("Region code not found in JSON response.")
+//                    }
+//                }
+//            } else {
+//                DispatchQueue.main.async {
+//                    setenv("REGION", "centralus", 1) // Default region
+//                    print("Failed to parse JSON response.")
+//                }
+//            }
+//        }
+//        task.resume()
+//    }
+    
+    
     func determineUserLocation() {
         let url = URL(string: "https://ipapi.co/json/")!
         
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil else {
                 DispatchQueue.main.async {
-                    setenv("REGION", "centralus", 1) // Default region
+                    RegionManager.shared.region = "centralus" // Default region
                     print("Error fetching location data: \(error?.localizedDescription ?? "Unknown error")")
                 }
                 return
             }
             
             if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                // Debugging print
                 if let regionCode = json["region_code"] as? String {
                     let region = self.mapRegionToAzureBlobLocation(region: regionCode)
                     DispatchQueue.main.async {
-                        setenv("REGION", region, 1)
+                        RegionManager.shared.region = region
                         print("Determined region: \(region)")
                     }
                 } else {
                     DispatchQueue.main.async {
-                        setenv("REGION", "centralus", 1) // Default region
+                        RegionManager.shared.region = "centralus" // Default region
                         print("Region code not found in JSON response.")
                     }
                 }
             } else {
                 DispatchQueue.main.async {
-                    setenv("REGION", "centralus", 1) // Default region
+                    RegionManager.shared.region = "centralus" // Default region
                     print("Failed to parse JSON response.")
                 }
             }
@@ -60,17 +96,31 @@ class NetworkManager {
     }
 
     
+//    func getStorageAccountCredentials(for region: String) -> (accountName: String, sasToken: String)? {
+//           let accountNameKey = "BLOB_NAME_\(region.uppercased())"
+//           let sasTokenKey = "SAS_TOKEN_\(region.uppercased())"
+//           
+//           guard let accountName = ProcessInfo.processInfo.environment[accountNameKey],
+//                 let sasToken = ProcessInfo.processInfo.environment[sasTokenKey] else {
+//               print("Missing environment variables for region \(region)")
+//               return nil
+//           }
+//           
+//        print(accountName, sasToken, "hot shit")
+//           return (accountName, sasToken)
+//       }
+    
     func getStorageAccountCredentials(for region: String) -> (accountName: String, sasToken: String)? {
            let accountNameKey = "BLOB_NAME_\(region.uppercased())"
            let sasTokenKey = "SAS_TOKEN_\(region.uppercased())"
            
-           guard let accountName = ProcessInfo.processInfo.environment[accountNameKey],
-                 let sasToken = ProcessInfo.processInfo.environment[sasTokenKey] else {
-               print("Missing environment variables for region \(region)")
+           guard let accountName = ConfigurationManager.shared.getValue(forKey: accountNameKey) as? String,
+                 let sasToken = ConfigurationManager.shared.getValue(forKey: sasTokenKey) as? String else {
+               print("Missing configuration values for region \(region)")
                return nil
            }
            
-        print(accountName, sasToken, "hot shit")
+           print(accountName, sasToken, "hot shit")
            return (accountName, sasToken)
        }
 
@@ -307,11 +357,18 @@ class NetworkManager {
         var uploadErrors = [String]()
         
       
-        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
-            print("No container name found in environment variables.")
-            completion(false, "No container name found.")
-            return
-        }
+//        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
+//            print("No container name found in environment variables.")
+//            completion(false, "No container name found.")
+//            return
+//        }
+        
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
+                       else {
+                    print("Missing configuration values for container")
+                    completion(false, "No container name found.")
+                    return
+                }
 
         items.forEach { item in
             dispatchGroup.enter()
@@ -506,11 +563,13 @@ class NetworkManager {
     
     func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
         
-        guard let region = ProcessInfo.processInfo.environment["REGION"] else {
-                    print("Region not set in environment variables")
-                    completion(false, "Region not set in environment variables")
-                    return
-                }
+//        guard let region = ProcessInfo.processInfo.environment["REGION"] else {
+//                    print("Region not set in environment variables")
+//                    completion(false, "Region not set in environment variables")
+//                    return
+//                }
+        let region = RegionManager.shared.region
+                
           
         guard let credentials = getStorageAccountCredentials(for: region) else {
             print("Missing required configuration for region \(region)")
@@ -559,9 +618,6 @@ class NetworkManager {
               }
           }.resume()
       }
-
-
-
 
 //    func fetchPodsForUser(email: String, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
 //        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
@@ -1001,11 +1057,17 @@ class NetworkManager {
         let dispatchGroup = DispatchGroup()
         var uploadErrors = [String]()
 
-        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
-            print("No container name found in environment variables.")
-            completion(false, "No container name found.")
-            return
-        }
+//        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
+//            print("No container name found in environment variables.")
+//            completion(false, "No container name found.")
+//            return
+//        }
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
+                       else {
+                    print("Missing configuration values for container")
+                    completion(false, "No container name found.")
+                    return
+                }
 
         var uploadedVideoURL: String?
         var uploadedImageURL: String?

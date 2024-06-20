@@ -18,6 +18,8 @@ struct podsApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
+    
+      
    
     var body: some Scene {
         WindowGroup {
