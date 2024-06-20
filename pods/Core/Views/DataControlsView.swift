@@ -88,6 +88,7 @@ struct DataControlsView: View {
           // Clear the authentication state and email from UserDefaults
           UserDefaults.standard.set(false, forKey: "isAuthenticated")
           UserDefaults.standard.set("", forKey: "userEmail")
+        UserDefaults.standard.set("", forKey: "username")
         // Sign out from Google
                 GIDSignIn.sharedInstance.signOut()
           // Update the state variables

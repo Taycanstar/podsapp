@@ -3,13 +3,12 @@ import Combine
 
 struct LoginView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @State private var email: String = ""
     @State private var password: String = ""
     @State private var showPassword: Bool = false
     @State private var errorMessage: String? = nil
     @Binding var isAuthenticated: Bool
     @State private var isLoading = false
-    
+    @State private var identifier: String = ""
     @State private var showForgotPassword = false
 
     var body: some View {
@@ -56,9 +55,9 @@ struct LoginView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.black)
 
-            CustomTextField(placeholder: "Email", text: $email)
+            CustomTextField(placeholder: "Email or username", text: $identifier)
                             .autocapitalization(.none)
-                            .keyboardType(.emailAddress)
+                            
                 
 
             ZStack(alignment: .trailing) {
@@ -121,8 +120,8 @@ struct LoginView: View {
     private func loginAction() {
         isLoading = true
             
-        if email.isEmpty || !email.contains("@") {
-            self.errorMessage = "Please enter a valid email address."
+        if identifier.isEmpty || identifier.contains(" ") {
+            self.errorMessage = "Please enter a valid email address or username"
             isLoading = false
             return
         }
@@ -138,25 +137,30 @@ struct LoginView: View {
     }
 
     private func authenticateUser() {
-        
-        // Assuming you have a function to authenticate the user
-        NetworkManager().login(username: email, password: password) { success, error in
-            if success {
-                DispatchQueue.main.async {
-                    self.isAuthenticated = true
-                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                    UserDefaults.standard.set(email, forKey: "userEmail")
-                    viewModel.email = email
-                    isLoading = false
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Invalid credentials"
-                    isLoading = false
-                }
-            }
-        }
-    }
+         NetworkManager().login(identifier: identifier, password: password) { success, error, email, username in
+             if success {
+                 DispatchQueue.main.async {
+                     self.isAuthenticated = true
+                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                     UserDefaults.standard.set(identifier, forKey: "userIdentifier")
+                     if let email = email {
+                         self.viewModel.email = email
+                         UserDefaults.standard.set(email, forKey: "userEmail")
+                     }
+                     if let username = username {
+                         self.viewModel.username = username
+                         UserDefaults.standard.set(username, forKey: "username")
+                     }
+                     isLoading = false
+                 }
+             } else {
+                 DispatchQueue.main.async {
+                     self.errorMessage = error ?? "Invalid credentials"
+                     isLoading = false
+                 }
+             }
+         }
+     }
 }
 
 

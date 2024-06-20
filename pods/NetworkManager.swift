@@ -4,10 +4,10 @@ import SwiftUI
 
 class NetworkManager {
 
-//    
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+  
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
 
 //    func determineUserLocation() {
@@ -257,21 +257,78 @@ class NetworkManager {
     }
 
     
-    func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+//    func login(username: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/login/") else {
+//            print("Invalid URL for login endpoint")
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        let body: [String: Any] = ["username": username, "password": password]
+//        var finalBody: Data? = nil
+//        do {
+//            finalBody = try JSONSerialization.data(withJSONObject: body)
+//            print("Sending login request with body: \(String(data: finalBody!, encoding: .utf8) ?? "")")
+//        } catch {
+//            print("Error serializing login request body: \(error)")
+//            completion(false, "Error creating request body")
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = finalBody
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Login request failed: \(error.localizedDescription)")
+//                DispatchQueue.main.async {
+//                    completion(false, "Login failed: \(error.localizedDescription)")
+//                }
+//                return
+//            }
+//            
+//            guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
+//                print("No response or data received from login request")
+//                DispatchQueue.main.async {
+//                    completion(false, "No response from server")
+//                }
+//                return
+//            }
+//            
+//            print("Received HTTP response status code: \(httpResponse.statusCode)")
+//            let responseString = String(data: responseData, encoding: .utf8)
+//            print("Response data string: \(String(describing: responseString))")
+//            
+//            if httpResponse.statusCode == 200 {
+//                DispatchQueue.main.async {
+//                    completion(true, nil)
+//                }
+//            } else {
+//                let errorMessage = responseString ?? "Login failed with statusCode: \(httpResponse.statusCode)"
+//                DispatchQueue.main.async {
+//                    completion(false, errorMessage)
+//                }
+//            }
+//        }.resume()
+//    }
+    
+    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
             print("Invalid URL for login endpoint")
-            completion(false, "Invalid URL")
+            completion(false, "Invalid URL", nil, nil)
             return
         }
 
-        let body: [String: Any] = ["username": username, "password": password]
+        let body: [String: Any] = ["username": identifier, "password": password]
         var finalBody: Data? = nil
         do {
             finalBody = try JSONSerialization.data(withJSONObject: body)
             print("Sending login request with body: \(String(data: finalBody!, encoding: .utf8) ?? "")")
         } catch {
             print("Error serializing login request body: \(error)")
-            completion(false, "Error creating request body")
+            completion(false, "Error creating request body", nil, nil)
             return
         }
         
@@ -284,7 +341,7 @@ class NetworkManager {
             if let error = error {
                 print("Login request failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(false, "Login failed: \(error.localizedDescription)")
+                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil)
                 }
                 return
             }
@@ -292,7 +349,7 @@ class NetworkManager {
             guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
                 print("No response or data received from login request")
                 DispatchQueue.main.async {
-                    completion(false, "No response from server")
+                    completion(false, "No response from server", nil, nil)
                 }
                 return
             }
@@ -302,13 +359,26 @@ class NetworkManager {
             print("Response data string: \(String(describing: responseString))")
             
             if httpResponse.statusCode == 200 {
-                DispatchQueue.main.async {
-                    completion(true, nil)
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
+                        let email = json["email"] as? String
+                        let username = json["username"] as? String
+                        DispatchQueue.main.async {
+                            completion(true, nil, email, username)
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(false, "Invalid response format", nil, nil)
+                        }
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        completion(false, "Failed to parse response", nil, nil)
+                    }
                 }
             } else {
-                let errorMessage = responseString ?? "Login failed with statusCode: \(httpResponse.statusCode)"
                 DispatchQueue.main.async {
-                    completion(false, errorMessage)
+                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil)
                 }
             }
         }.resume()
@@ -920,74 +990,127 @@ class NetworkManager {
         task.resume()
     }
 
-    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
+//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/google-login/") else {
+//            completion(false, "Invalid URL", false, nil, nil)
+//            return
+//        }
+//
+//        let body: [String: Any] = ["token": idToken]
+//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = finalBody
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                DispatchQueue.main.async {
+//                    completion(false, "Request failed: \(error.localizedDescription)", false)
+//                }
+//                return
+//            }
+//            
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                DispatchQueue.main.async {
+//                    completion(false, "No response from server", false)
+//                }
+//                return
+//            }
+//            
+//            if httpResponse.statusCode == 200 {
+//                if let data = data {
+//                    do {
+//                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+//                        print("Server response: \(json ?? [:])")  // Debugging line
+//                        
+//                        if let token = json?["token"] as? String,
+//                           let email = json?["email"] as? String,
+//                           let username = json?["username"] as? String,
+//                           let isNewUser = json?["is_new_user"] as? Bool {
+//                            DispatchQueue.main.async {
+//                                completion(true, nil, isNewUser, email, username)
+//                            }
+//                        } else {
+//                            DispatchQueue.main.async {
+//                                completion(false, "Invalid data from server", false)
+//                            }
+//                        }
+//                    } catch {
+//                        DispatchQueue.main.async {
+//                            completion(false, "Failed to parse server response: \(error.localizedDescription)", false)
+//                        }
+//                    }
+//                } else {
+//                    DispatchQueue.main.async {
+//                        completion(false, "No data from server", false)
+//                    }
+//                }
+//            } else if let data = data,
+//                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+//                      let errorMessage = json["error"] as? String {
+//                DispatchQueue.main.async {
+//                    completion(false, errorMessage, false)
+//                }
+//            } else {
+//                DispatchQueue.main.async {
+//                    completion(false, "Request failed with statusCode: \(httpResponse.statusCode)", false)
+//                }
+//            }
+//        }.resume()
+//    }
+    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/google-login/") else {
-            completion(false, "Invalid URL", false)
+            completion(false, "Invalid URL", false, nil, nil)
             return
         }
 
         let body: [String: Any] = ["token": idToken]
         let finalBody = try? JSONSerialization.data(withJSONObject: body)
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = finalBody
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", false)
+                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil)
                 }
                 return
             }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
+
+            guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(false, "No response from server", false)
+                    completion(false, "No data from server", false, nil, nil)
                 }
                 return
             }
-            
-            if httpResponse.statusCode == 200 {
-                if let data = data {
-                    do {
-                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                        print("Server response: \(json ?? [:])")  // Debugging line
-                        
-                        if let token = json?["token"] as? String,
-                           let isNewUser = json?["is_new_user"] as? Bool {
-                            DispatchQueue.main.async {
-                                completion(true, nil, isNewUser)
-                            }
-                        } else {
-                            DispatchQueue.main.async {
-                                completion(false, "Invalid data from server", false)
-                            }
-                        }
-                    } catch {
-                        DispatchQueue.main.async {
-                            completion(false, "Failed to parse server response: \(error.localizedDescription)", false)
-                        }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let token = json["token"] as? String,
+                   let isNewUser = json["is_new_user"] as? Bool,
+                   let email = json["email"] as? String,
+                   let username = json["username"] as? String {
+                    DispatchQueue.main.async {
+                        completion(true, nil, isNewUser, email, username)
                     }
                 } else {
                     DispatchQueue.main.async {
-                        completion(false, "No data from server", false)
+                        completion(false, "Invalid data from server", false, nil, nil)
                     }
                 }
-            } else if let data = data,
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let errorMessage = json["error"] as? String {
+            } catch {
                 DispatchQueue.main.async {
-                    completion(false, errorMessage, false)
-                }
-            } else {
-                DispatchQueue.main.async {
-                    completion(false, "Request failed with statusCode: \(httpResponse.statusCode)", false)
+                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil)
                 }
             }
         }.resume()
     }
+
     
     func sendAppleTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
         guard let url = URL(string: "\(baseUrl)/apple-login/") else {

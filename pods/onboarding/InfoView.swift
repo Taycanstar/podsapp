@@ -44,24 +44,16 @@ struct InfoView: View {
                 Text("Tell us about you.")
                     .font(.headline)
                     .foregroundColor(.gray)
-                
-//                TextField("Name", text: $name)
-//                    .textFieldStyle(CustomTextFieldStyle())
+
                 
                 CustomTextField(placeholder: "Name", text: $name)
                                 .autocapitalization(.none)
                                 .keyboardType(.default)
-                   
-//                
-//                TextField("Username", text: $username)
-//                    .textFieldStyle(CustomTextFieldStyle())
+
                 CustomTextField(placeholder: "Username", text: $username)
                                 .autocapitalization(.none)
                                 .keyboardType(.default)
-                
-//                TextField("Birthday", text: $birthday)
-//                    .textFieldStyle(CustomTextFieldStyle())
-                
+            
                 Button(action: {
                                self.showingDatePicker = true
                            }) {
@@ -130,8 +122,7 @@ struct InfoView: View {
                     .padding()
 
                 Button(action: {
-                    // Handle continue action here
-                    // Check for required fields before proceeding
+
                                  guard !name.isEmpty, !username.isEmpty, let birthdayDate = birthday else {
                                      self.errorMessage = "Name, and birthday are required."
                                      self.showError = true

@@ -86,6 +86,9 @@ struct ContentView: View {
             if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
                                        viewModel.email = storedEmail
                                    }
+            if let storedUsername = UserDefaults.standard.string(forKey: "username") {
+                                       viewModel.username = storedUsername
+                                   }
                           }
                           .onChange(of: isAuthenticated) { newValue in
                               // Persist the authentication state

@@ -29,6 +29,13 @@ struct ProfileView: View {
                         Text(viewModel.email)
                             .foregroundColor(iconColor)
                     }
+                    HStack {
+                        Label("Username", systemImage: "person")
+                            .foregroundColor(iconColor)
+                        Spacer()
+                        Text(viewModel.username)
+                            .foregroundColor(iconColor)
+                    }
                     NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                         Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                             .foregroundColor(iconColor)
@@ -91,6 +98,7 @@ struct ProfileView: View {
           // Clear the authentication state and email from UserDefaults
           UserDefaults.standard.set(false, forKey: "isAuthenticated")
           UserDefaults.standard.set("", forKey: "userEmail")
+        UserDefaults.standard.set("", forKey: "username")
         // Sign out from Google
                 GIDSignIn.sharedInstance.signOut()
           // Update the state variables
