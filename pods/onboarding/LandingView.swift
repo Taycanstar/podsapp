@@ -94,14 +94,18 @@ struct LandingView: View {
         }
     }
     func handleGoogleSignIn() {
-//            guard let clientID = Bundle.main.object(forInfoDictionaryKey: ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"]) as String else {
-//                fatalError("Missing CLIENT_ID in Info.plist")
-//            }
         
-        guard let clientID = ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"] else {
-            print("Environment variables for GOOGLE_CLIENT_ID are not set.")
-            return
-        }
+//        guard let clientID = ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"] else {
+//            print("Environment variables for GOOGLE_CLIENT_ID are not set.")
+//            return
+//        }
+        
+        guard let clientID = ConfigurationManager.shared.getValue(forKey: "GOOGLE_CLIENT_ID") as? String
+                       else {
+                    print("Missing configuration values for google client")
+                  
+                    return
+                }
             
             let signInConfig = GIDConfiguration(clientID: clientID)
             
