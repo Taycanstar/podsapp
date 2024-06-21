@@ -851,7 +851,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -918,7 +918,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;

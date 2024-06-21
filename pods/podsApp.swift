@@ -30,11 +30,14 @@ struct podsApp: App {
                 .environmentObject(homeViewModel)
                 .environmentObject(themeManager) 
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
-                .onChange(of: scenePhase) { newPhase in
-                                   if newPhase == .active {
-                                       NetworkManager().determineUserLocation()
-                                   }
-                               }
+//                .onChange(of: scenePhase) { newPhase in
+//                                   if newPhase == .active {
+//                                       NetworkManager().determineUserLocation()
+//                                   }
+//                               }
+                .onAppear{
+                    NetworkManager().determineUserLocation()
+                }
          
         }
     }

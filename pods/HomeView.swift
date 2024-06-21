@@ -216,7 +216,7 @@ struct HomeView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var podsReordered = false
 
-    @State private var expandedPods = Set<String>()
+    @State private var expandedPods = Set<Int>()
     @State private var currentItemIndex = 0
     @State private var editMode: EditMode = .inactive
     @State private var isLoadingMore = false
@@ -230,10 +230,10 @@ struct HomeView: View {
                 List {
                     ForEach(homeViewModel.pods.indices, id: \.self) { index in
                         VStack {
-                            PodTitleRow(pod: $homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
+                            PodTitleRow(pod: $homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].id), onExpandCollapseTapped: {
                                 if editMode == .inactive {
                                     withAnimation {
-                                        togglePodExpansion(for: homeViewModel.pods[index].title)
+                                        togglePodExpansion(for: homeViewModel.pods[index].id)
                                     }
                                 }
                             })
@@ -241,7 +241,7 @@ struct HomeView: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                         .listRowInsets(EdgeInsets())
-                        if expandedPods.contains(homeViewModel.pods[index].title) {
+                        if expandedPods.contains(homeViewModel.pods[index].id) {
                             ForEach(homeViewModel.pods[index].items, id: \.id) { item in
                                 if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
                                     NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex)) {
@@ -256,25 +256,6 @@ struct HomeView: View {
                     }
                     .onMove(perform: movePod)
                     .onDelete(perform: deletePod)
-                    
-//                    if homeViewModel.currentPage < homeViewModel.totalPages {
-//                        HStack {
-//                            Spacer()
-//                            Button(action: {
-//                                if !isLoadingMore {
-//                                    isLoadingMore = true
-//                                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) {
-//                                        isLoadingMore = false
-//                                    }
-//                                }
-//                            }) {
-//                                Text("Load More")
-//                                    .foregroundColor(.blue)
-////                                    .padding()
-//                            }
-//                            Spacer()
-//                        }
-//                    }
                     if shouldShowLoadMoreButton {
                                             HStack {
                                                 Spacer()
@@ -333,16 +314,16 @@ struct HomeView: View {
             return homeViewModel.pods.count < homeViewModel.totalPods
         }
 
-
-    private func togglePodExpansion(for title: String) {
+    private func togglePodExpansion(for id: Int) {
         withAnimation(.easeInOut) {
-            if expandedPods.contains(title) {
-                expandedPods.remove(title)
+            if expandedPods.contains(id) {
+                expandedPods.remove(id)
             } else {
-                expandedPods.insert(title)
+                expandedPods.insert(id)
             }
         }
     }
+
 
     private var editButton: some View {
         Button(action: {
