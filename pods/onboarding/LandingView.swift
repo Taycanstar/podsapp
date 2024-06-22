@@ -143,7 +143,7 @@ struct LandingView: View {
                                                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
                                                        UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
                                                       viewModel.email = result.user.profile?.email ?? ""
-                                                       UserDefaults.standard.set(result.user.profile?.email, forKey: "username")
+                                                       UserDefaults.standard.set(username, forKey: "username")
                                                        viewModel.username = username ?? ""
                                                        self.isAuthenticated = true
                                                    }

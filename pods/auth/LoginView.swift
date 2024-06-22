@@ -142,7 +142,7 @@ struct LoginView: View {
                  DispatchQueue.main.async {
                      self.isAuthenticated = true
                      UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                     UserDefaults.standard.set(identifier, forKey: "userIdentifier")
+                   
                      if let email = email {
                          self.viewModel.email = email
                          UserDefaults.standard.set(email, forKey: "userEmail")
