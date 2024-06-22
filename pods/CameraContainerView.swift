@@ -522,71 +522,78 @@ struct CameraContainerView: View {
         Spacer() // Pushes the bar to the bottom
         
 
-        
-        HStack(spacing: 10) { // Spacing between buttons is 10
-            // Start Over Button
-            
-            if !cameraModel.currentPod.items.isEmpty {
-                Button("Start over") {
-                    // Action for Start Over
-                    cameraModel.currentPod = Pod(id: -1, items:[],title: "")
-                    cameraModel.recordedDuration = 0
-                    cameraModel.previewURL = nil
-                }
-                .foregroundColor(.black) // Text color
-                .padding(.vertical, 15) // Padding for thickness
-                .frame(maxWidth: .infinity) // Make button expand
-                .background(Color.white)
-                .cornerRadius(8) // Rounded corners
-                .fontWeight(.semibold)
-
-
-                Button("Next") {
-                    // Check if there's either a video URL or a selected image available for preview
-                    if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
-                        cameraModel.showPreview = true
-                    } else {
-                        print("No preview content available")
-                        print(cameraModel.previewURL, "url")
-                 
+        if !cameraModel.isRecording {
+            HStack(spacing: 10) { // Spacing between buttons is 10
+                // Start Over Button
+                
+                if !cameraModel.currentPod.items.isEmpty {
+                    Button("Start over") {
+                        // Action for Start Over
+                        cameraModel.currentPod = Pod(id: -1, items:[],title: "")
+                        cameraModel.recordedDuration = 0
+                        cameraModel.previewURL = nil
                     }
+                    .foregroundColor(.black) // Text color
+                    .padding(.vertical, 15) // Padding for thickness
+                    .frame(maxWidth: .infinity) // Make button expand
+                    .background(Color.white)
+                    .cornerRadius(8) // Rounded corners
+                    .fontWeight(.semibold)
+
+
+                    Button("Next") {
+                        // Check if there's either a video URL or a selected image available for preview
+                        if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
+                            cameraModel.showPreview = true
+                        } else {
+                            print("No preview content available")
+                            print(cameraModel.previewURL, "url")
+                     
+                        }
+                    }
+                    .foregroundColor(.white) // Text color for the Next button
+                    .padding(.vertical, 15) // Padding for thickness
+                    .frame(maxWidth: .infinity) // Make button expand
+                    .fontWeight(.semibold)
+                    .background(Color(red: 57/255, green: 106/255, blue: 247/255))
+                    .cornerRadius(8) // Rounded corners
+                } else{
+                    Rectangle()
+                        .foregroundColor(.black)
                 }
-                .foregroundColor(.white) // Text color for the Next button
-                .padding(.vertical, 15) // Padding for thickness
-                .frame(maxWidth: .infinity) // Make button expand
-                .fontWeight(.semibold)
-                .background(Color(red: 57/255, green: 106/255, blue: 247/255))
-                .cornerRadius(8) // Rounded corners
-            } else{
-                Rectangle()
-                    .foregroundColor(.black)
+         
             }
-     
-        }
-        .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each side
-        .frame(height: 60) // Set the height of the bottom bar
-        .background(Color.black) // Set the color to black
-        .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
+            .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each side
+            .frame(height: 60) // Set the height of the bottom bar
+            .background(Color.black) // Set the color to black
+            .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
 
-
-
-        .onAppear {
-            let initialMode: CameraMode = .fifteen
-                
-                // Ensure session is configured for the initial mode
-                cameraModel.configureSessionFor(mode: initialMode)
-                
-                // Update maxDuration based on the initial mode
-                cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0 
-                  // Request authorization and fetch latest photo
-                  PHPhotoLibrary.requestAuthorization { status in
-                      if status == .authorized {
-                          self.fetchLatestPhoto { photo in
-                              self.latestPhoto = photo
+            .onAppear {
+                let initialMode: CameraMode = .fifteen
+                    
+                    // Ensure session is configured for the initial mode
+                    cameraModel.configureSessionFor(mode: initialMode)
+                    
+                    // Update maxDuration based on the initial mode
+                    cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0
+                      // Request authorization and fetch latest photo
+                      PHPhotoLibrary.requestAuthorization { status in
+                          if status == .authorized {
+                              self.fetchLatestPhoto { photo in
+                                  self.latestPhoto = photo
+                              }
                           }
                       }
                   }
-              }
+        } else {
+            HStack { // This empty HStack ensures it covers the same height as the buttons
+                   Spacer()
+               }
+               .frame(height: 60)
+        }
+        
+
+
         
     }
     
@@ -860,19 +867,23 @@ struct FinalPreview: View {
                                           
                                                  Button(action: {
                                                      // Action for checkmark/save
-                                                    
-                                                     if let _ = cameraModel.previewURL {
-                                                             // It's a video
-                                                             cameraModel.confirmVideo()
-                                                 
-                                                         } else if cameraModel.selectedImage != nil {
-                                                             // It's a photo
-                                                             cameraModel.confirmPhoto()
-                                                           
-                                                         }
                                                      
-                                                cleanUpPlayer()
-                                                     cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                                                     DispatchQueue.global(qos: .userInitiated).async {
+                                                         if let _ = cameraModel.previewURL {
+                                                                 // It's a video
+                                                                 cameraModel.confirmVideo()
+                                                     
+                                                             } else if cameraModel.selectedImage != nil {
+                                                                 // It's a photo
+                                                                 cameraModel.confirmPhoto()
+                                                               
+                                                             }
+//                                                         
+//                                                    cleanUpPlayer()
+                                                         cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                                                     }
+                                                    
+                                                 
                                                     
                                                  }) {
                                                      
@@ -896,21 +907,19 @@ struct FinalPreview: View {
                                                  Button(action: {
                                              
                                                          showCreatePodView = true
-         
-                                                                  // Start the confirmation and handle navigation in its completion
-                                                                  if let _ = cameraModel.previewURL {
-                                                                      
-                                                                      cameraModel.confirmVideoAndNavigateToCreatePod()
-                                                                      
-                                                          
-                                                                  } else if let _ = cameraModel.selectedImage {
-                                                                      cameraModel.confirmPhotoAndNavigateToCreatePod()
-                                                          
-                                                                  }
-                                                     
-                                                cleanUpPlayer()
-                                                     cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-                                                
+                                                     // Perform the confirmation and cleanup in the background
+                                                             DispatchQueue.global(qos: .userInitiated).async {
+                                                                 if let _ = cameraModel.previewURL {
+                                                                     cameraModel.confirmVideo()
+                                                                 } else if let _ = cameraModel.selectedImage {
+                                                                     cameraModel.confirmPhoto()
+                                                                 }
+
+//                                                                 cleanUpPlayer()
+                                                                 cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                                                             }
+//
+//
 
                                                  }) {
                                                      Image(systemName: "chevron.right")
