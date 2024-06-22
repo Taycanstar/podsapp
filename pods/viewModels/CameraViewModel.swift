@@ -918,39 +918,20 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             session.addInput(audioInput)
         }
     }
-//    func startRecordingNextItem() {
-//        // Reset the preview URL for the new recording
-//        self.previewURL = nil
-//
-//        // Check if the session is already running; if not, start it
-//        if !session.isRunning {
-//            session.startRunning()
-//        }
-//
-//        // Generate a unique URL for the new recording
-//        let tempURL = NSTemporaryDirectory() + "item_\(Date().timeIntervalSince1970).mov"
-//        let outputFileURL = URL(fileURLWithPath: tempURL)
-//
-//        // Start recording to the new file URL
-//        output.startRecording(to: outputFileURL, recordingDelegate: self)
-//
-//    }
 
-   
     
     func reRecordCurrentItem() {
-        // If the user is re-recording before confirming the video,
-        // we just reset the necessary states for a new recording
+   
+            
+            // Reset the preview URL for the new recording
+            previewURL = nil
 
-        // Reset the preview URL for the new recording
-        previewURL = nil
+            // Indicate that we are not currently recording
+            isRecording = false
 
-        // Indicate that we are not currently recording
-        isRecording = false
+            recordedDuration = 0
+  
 
-        recordedDuration = 0
-
-        // setupCameraForRecording()
     }
     
     func filterCommands(from transcription: String) -> String {

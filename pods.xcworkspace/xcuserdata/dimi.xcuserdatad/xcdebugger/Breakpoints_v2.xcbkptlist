@@ -30,10 +30,10 @@
             filePath = "pods/CameraContainerView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1015"
-            endingLineNumber = "1015"
-            landmarkName = "unknown"
-            landmarkType = "0">
+            startingLineNumber = "1062"
+            endingLineNumber = "1062"
+            landmarkName = "body"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

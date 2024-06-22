@@ -400,39 +400,81 @@ struct CameraContainerView: View {
                         }
                    
                       
-                        
+//                        
+//                        Button(action: {
+//                            if cameraModel.selectedCameraMode == .photo {
+//                                   cameraModel.takePhoto()
+//                               } else if cameraModel.isRecording {
+//                                   cameraModel.stopRecording()
+//                               } else {
+//                                   cameraModel.startRecordingBasedOnMode()
+//                               }
+//                        }) {
+//
+//                            ZStack {
+//                                if cameraModel.selectedCameraMode == .photo {
+//                                    Circle()
+//                                        .fill(Color.white) // Inner circle color
+//                                        .frame(width: 65, height: 65) // Inner circle size
+//
+//                                    Circle()
+//                                        .stroke(Color.white, lineWidth: 4) // Outer circle border
+//                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
+//                                } else {
+//                                    Circle()
+//                                        .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
+//                                        .frame(width: 65, height: 65) // Inner circle size
+//
+//                                    Circle()
+//                                        .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
+//                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
+//                                }
+//                                
+//                               
+//                            }
+//                        }
                         Button(action: {
-                            if cameraModel.selectedCameraMode == .photo {
-                                   cameraModel.takePhoto()
-                               } else if cameraModel.isRecording {
-                                   cameraModel.stopRecording()
-                               } else {
-                                   cameraModel.startRecordingBasedOnMode()
-                               }
-                        }) {
+                                  if cameraModel.selectedCameraMode == .photo {
+                                      cameraModel.takePhoto()
+                                  } else if cameraModel.isRecording {
+                                      cameraModel.stopRecording()
+                                  } else {
+                                      cameraModel.startRecordingBasedOnMode()
+                                  }
+                              }) {
+                                  ZStack {
+                                      if cameraModel.selectedCameraMode == .photo {
+                                          Circle()
+                                              .fill(Color.white) // Inner circle color
+                                              .frame(width: 65, height: 65) // Inner circle size
 
-                            ZStack {
-                                if cameraModel.selectedCameraMode == .photo {
-                                    Circle()
-                                        .fill(Color.white) // Inner circle color
-                                        .frame(width: 65, height: 65) // Inner circle size
+                                          Circle()
+                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
+                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
+                                      } else {
+                                          Circle()
+                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
+                                              .frame(width: cameraModel.isRecording ? 35 : 65, height: cameraModel.isRecording ? 35 : 65) // Transition to square size
+                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
 
-                                    Circle()
-                                        .stroke(Color.white, lineWidth: 4) // Outer circle border
-                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
-                                } else {
-                                    Circle()
-                                        .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
-                                        .frame(width: 65, height: 65) // Inner circle size
+                                          Circle()
+                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
+                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
+                                              .opacity(cameraModel.isRecording ? 0 : 1)
+                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
 
-                                    Circle()
-                                        .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
-                                }
-                                
-                               
-                            }
-                        }
+                                          Circle()
+                                              .fill(cameraModel.isRecording ? Color.white.opacity(0.3) : Color.clear)
+                                              .frame(width: 75, height: 75)
+                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+
+                                          RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
+                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+                                              .frame(width: cameraModel.isRecording ? 35 : 0, height: cameraModel.isRecording ? 35 : 0)
+                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+                                      }
+                                  }
+                              }
                       
                         
                         if !cameraModel.isRecording {
@@ -835,19 +877,24 @@ struct FinalPreview: View {
                                              // Chevron left with label "Back"
                                              VStack {
                                                  Button(action: {
-                                                     // Action for back
-                                                     if cameraModel.currentPod.items.isEmpty {
-                                                         // If it's the first item (Pod is empty), just close the preview
-                                                         // This essentially cancels the recording
-                                                         showPreview = false
-                                                     } else {
-                                                         // If Pod has items, prepare to re-record the current item
-                                                         // This keeps the Pod items intact but allows for re-recording
-                                                         cameraModel.reRecordCurrentItem()
-                                                         showPreview = false
+                                                     DispatchQueue.global(qos: .userInitiated).async {
+                                                         DispatchQueue.main.async {
+                                                             // Action for back
+                                                             if cameraModel.currentPod.items.isEmpty {
+                                                                 // If it's the first item (Pod is empty), just close the preview
+                                                                 // This essentially cancels the recording
+                                                                 showPreview = false
+                                                             } else {
+                                                                 // If Pod has items, prepare to re-record the current item
+                                                                 // This keeps the Pod items intact but allows for re-recording
+                                                                 cameraModel.reRecordCurrentItem()
+                                                                 showPreview = false
+                                                             }
+                                                             
+//                                                             cleanUpPlayer()
+                                                         }
                                                      }
-                                                     
-                                                cleanUpPlayer()
+                                                
 //                                                cameraModel.configureSessionFor(mode: .fifteen)
                                                  }) {
                                                      Image(systemName: "chevron.left")
