@@ -160,6 +160,7 @@ struct CameraContainerView: View {
         ZStack {
             // MARK: Camera View
             AltCameraView()
+
                 .onAppear {
                                 
                                  cameraModel.checkPermission()
@@ -178,7 +179,7 @@ struct CameraContainerView: View {
                                     cameraModel.stopAudioRecorder()
                                 }
                 .environmentObject(cameraModel)
-            
+ 
                 .fullScreenCover(isPresented: $showCreatePodView) {
                     CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                     // Pass any required environment objects or parameters
@@ -355,6 +356,7 @@ struct CameraContainerView: View {
                                       WheelPicker(selectedMode: $cameraModel.selectedCameraMode, cameraViewModel: cameraModel)
                                                  .background(Color.clear) // Just to highlight the ScrollView area
                                                  .frame(width: 200)
+                                                 .zIndex(3)
               //                                   .frame(maxWidth: .infinity)
                                       Spacer()
                                   }
@@ -399,40 +401,6 @@ struct CameraContainerView: View {
                        
                         }
                    
-                      
-//                        
-//                        Button(action: {
-//                            if cameraModel.selectedCameraMode == .photo {
-//                                   cameraModel.takePhoto()
-//                               } else if cameraModel.isRecording {
-//                                   cameraModel.stopRecording()
-//                               } else {
-//                                   cameraModel.startRecordingBasedOnMode()
-//                               }
-//                        }) {
-//
-//                            ZStack {
-//                                if cameraModel.selectedCameraMode == .photo {
-//                                    Circle()
-//                                        .fill(Color.white) // Inner circle color
-//                                        .frame(width: 65, height: 65) // Inner circle size
-//
-//                                    Circle()
-//                                        .stroke(Color.white, lineWidth: 4) // Outer circle border
-//                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
-//                                } else {
-//                                    Circle()
-//                                        .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
-//                                        .frame(width: 65, height: 65) // Inner circle size
-//
-//                                    Circle()
-//                                        .stroke(cameraModel.isRecording ? Color.clear : Color.white, lineWidth: 4) // Outer circle border
-//                                        .frame(width: 75, height: 75) // Outer circle size (including padding)
-//                                }
-//                                
-//                               
-//                            }
-//                        }
                         Button(action: {
                                   if cameraModel.selectedCameraMode == .photo {
                                       cameraModel.takePhoto()
@@ -454,7 +422,7 @@ struct CameraContainerView: View {
                                       } else {
                                           Circle()
                                               .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
-                                              .frame(width: cameraModel.isRecording ? 35 : 65, height: cameraModel.isRecording ? 35 : 65) // Transition to square size
+                                              .frame(width: cameraModel.isRecording ? 25 : 65, height: cameraModel.isRecording ? 25 : 65) // Transition to square size
                                               .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
 
                                           Circle()
@@ -470,7 +438,7 @@ struct CameraContainerView: View {
 
                                           RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
                                               .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
-                                              .frame(width: cameraModel.isRecording ? 35 : 0, height: cameraModel.isRecording ? 35 : 0)
+                                              .frame(width: cameraModel.isRecording ? 25 : 0, height: cameraModel.isRecording ? 25 : 0)
                                               .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
                                       }
                                   }
@@ -1057,7 +1025,6 @@ extension Image {
             .foregroundColor(.white)
     }
 }
-
 //#Preview {
 //    CameraContainerView()
 //}
