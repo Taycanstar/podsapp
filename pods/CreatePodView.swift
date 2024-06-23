@@ -57,10 +57,9 @@ struct CreatePodView: View {
         List {
             ForEach($pod.items, id: \.id) { $item in
                 HStack {
-//                    ColoredPlaceholderTextField(placeholder: "Element name", text: $item.metadata, placeholderColor: Color(red: 0.9, green: 0.9, blue: 0.9))
-//                        .foregroundColor(.black)
-//                        .background(Color.white)
-                    DynamicTextField(text: $item.metadata)
+
+                    DynamicTextField(text: $item.metadata,  placeholder: "Item \($item.id.wrappedValue)")
+                    
                 
                     Spacer()
                     Image(uiImage: item.thumbnail ?? UIImage())
@@ -116,8 +115,12 @@ struct CreatePodView: View {
            }
         
         let startTime = Date()
-
-        let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
+//
+//        let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
+        let items = pod.items.map { item -> PodItem in
+               let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
+               return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType)
+           }
         
         networkManager.createPod(podTitle: podName, items: items, email: viewModel.email) { success, message in
             let endTime = Date() // End time
@@ -150,7 +153,7 @@ struct PlaceholderTextView: View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
                 Text(placeholder)
-                    .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
+                    .foregroundColor(Color(red: 0.85, green: 0.85, blue: 0.85))
                     .font(.system(size: 28, design: .rounded).bold())
                     .padding(.horizontal, 15)
             }
@@ -187,18 +190,26 @@ struct ColoredPlaceholderTextField: View {
     }
 }
 
+
 struct DynamicTextField: View {
     @Binding var text: String
+    var placeholder: String
 
     var body: some View {
-        TextEditor(text: $text)
-            .frame(minHeight: 10, maxHeight: .infinity) // Adjust the minimum height as needed
-//            .padding(.horizontal, 10)
-//            .background(.white) 
-            .cornerRadius(5) // Rounded corners for the text editor
-            /*.padding()*/ // Padding around the TextEditor
+        ZStack(alignment: .leading) {
+            TextEditor(text: $text)
+                .background(Color.clear)
+                .padding(.top, 10)
+                .padding(.leading, -5)
+
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(Color(red: 0.85, green: 0.85, blue: 0.85))
+                    .allowsHitTesting(false)
+            }
+        }
+   
+        .frame(minHeight: 10, maxHeight: .infinity) // Ensuring a fixed height for the entire row
     }
 }
-
-
 

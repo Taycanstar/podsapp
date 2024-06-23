@@ -1167,7 +1167,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
 
         let nextId = currentPod.items.count + 1
-        let defaultMetadata = "Item \(nextId)"
+//        let defaultMetadata = "Item \(nextId)"
+        let defaultMetadata = ""
         
         // Use the original video URL directly
         if self.isWaveformEnabled {
