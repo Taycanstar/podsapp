@@ -993,7 +993,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         return filteredTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-
+//
 //    func confirmVideo() {
 //print(isWaveformEnabled, "is waveform enabed?")
 ////        
@@ -1068,16 +1068,19 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 //        }
 //      
 //    }
-    
+//    
     func transcribeAudioUsingBackend(from url: URL, completion: @escaping (String?) -> Void) {
         NetworkManager().transcribeAudio(from: url) { success, transcription in
-            if success, let text = transcription {
-                completion(text)
-                print("Transcription successful: \(text)")
-            } else {
-                completion(nil)
-                print("Transcription failed.")
-            }
+        
+                if success, let text = transcription {
+                    completion(text)
+                    print("Transcription successful: \(text)")
+                } else {
+                    completion(nil)
+                    print("Transcription failed.")
+                }
+          
+            
         }
     }
 
@@ -1173,8 +1176,10 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         // Use the original video URL directly
         if self.isWaveformEnabled {
             print("Waveform enabled, proceeding with transcription.")
-            self.isTranscribing = true
-
+            
+            DispatchQueue.main.async {
+                        self.isTranscribing = true
+                    }
             self.transcribeAudioUsingBackend(from: videoURL) { transcribedText in
                 DispatchQueue.main.async {
                     let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
@@ -1243,6 +1248,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         }
     }
+    
+
     private func completeVideoConfirmation(with videoURL: URL, metadata: String) {
         guard let recordingUUID = currentRecordingUUID else {
               print("No video to confirm or UUID is missing.")
