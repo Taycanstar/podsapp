@@ -220,7 +220,9 @@ struct HomeView: View {
     @State private var currentItemIndex = 0
     @State private var editMode: EditMode = .inactive
     @State private var isLoadingMore = false
-  
+    @State private var editingPods: [Pod] = []
+    
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -228,7 +230,8 @@ struct HomeView: View {
                     UploadingSection()
                 }
                 List {
-                    ForEach(homeViewModel.pods.indices, id: \.self) { index in
+//                    ForEach(homeViewModel.pods.indices, id: \.self) { index in
+                    ForEach(editMode == .active ? editingPods.indices : homeViewModel.pods.indices, id: \.self) { index in
                         VStack {
                             PodTitleRow(pod: $homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].id), onExpandCollapseTapped: {
                                 if editMode == .inactive {
@@ -298,6 +301,8 @@ struct HomeView: View {
                             // No additional action needed
                         }
                     }
+                    
+                    editingPods = homeViewModel.pods
                 }
                 .listStyle(InsetGroupedListStyle())
                 .navigationTitle("Pods")
@@ -325,6 +330,36 @@ struct HomeView: View {
     }
 
 
+//    private var editButton: some View {
+//        Button(action: {
+//            if !expandedPods.isEmpty {
+//                withAnimation {
+//                    expandedPods.removeAll()
+//                }
+//            }
+//
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+//                editMode = editMode == .active ? .inactive : .active
+//                
+//                if editMode == .inactive && podsReordered {
+//                    let orderedPodIds = homeViewModel.pods.map { $0.id }
+//                    networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
+//                        DispatchQueue.main.async {
+//                            if success {
+//                                print("Pods reordered successfully on the backend.")
+//                            } else {
+//                                print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+//                            }
+//                        }
+//                    }
+//                    podsReordered = false
+//                }
+//            }
+//        }) {
+//            Text(editMode == .active ? "Done" : "Edit")
+//                .foregroundColor(.blue)
+//        }
+//    }
     private var editButton: some View {
         Button(action: {
             if !expandedPods.isEmpty {
@@ -334,20 +369,27 @@ struct HomeView: View {
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                editMode = editMode == .active ? .inactive : .active
-                
-                if editMode == .inactive && podsReordered {
-                    let orderedPodIds = homeViewModel.pods.map { $0.id }
-                    networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
-                        DispatchQueue.main.async {
-                            if success {
-                                print("Pods reordered successfully on the backend.")
-                            } else {
-                                print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+                if editMode == .active {
+                    // Switching to inactive mode
+                    editMode = .inactive
+                    if podsReordered {
+                        homeViewModel.pods = editingPods
+                        let orderedPodIds = homeViewModel.pods.map { $0.id }
+                        networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
+                            DispatchQueue.main.async {
+                                if success {
+                                    print("Pods reordered successfully on the backend.")
+                                } else {
+                                    print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+                                }
                             }
                         }
+                        podsReordered = false
                     }
-                    podsReordered = false
+                } else {
+                    // Switching to active mode
+                    editMode = .active
+                    editingPods = homeViewModel.pods
                 }
             }
         }) {
@@ -357,7 +399,8 @@ struct HomeView: View {
     }
 
     func movePod(from source: IndexSet, to destination: Int) {
-        homeViewModel.pods.move(fromOffsets: source, toOffset: destination)
+//        homeViewModel.pods.move(fromOffsets: source, toOffset: destination)
+        editingPods.move(fromOffsets: source, toOffset: destination)
         podsReordered = true
     }
 

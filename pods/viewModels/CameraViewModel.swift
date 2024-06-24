@@ -150,7 +150,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     var itemConfirmed: Bool = false
     @Published var currentRecordingUUID: String?
     @Published var isMuted: Bool = true
-
+    var lastConfirmedURL: URL?
 
 
 
@@ -1007,18 +1007,18 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     
     func reRecordCurrentItem() {
-   
-            
-            // Reset the preview URL for the new recording
-            previewURL = nil
+            // Set the preview URL to the last confirmed item if available
+            if let lastConfirmed = lastConfirmedURL {
+                previewURL = lastConfirmed
+            } else {
+                previewURL = nil
+            }
 
             // Indicate that we are not currently recording
             isRecording = false
 
             recordedDuration = 0
-  
-
-    }
+        }
     
     func filterCommands(from transcription: String) -> String {
         let commandsToFilter = ["stop recording"] // Add any other commands you want to filter out
@@ -1029,82 +1029,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         return filteredTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-//
-//    func confirmVideo() {
-//print(isWaveformEnabled, "is waveform enabed?")
-////        
-//        guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
-//              print("No video to confirm or UUID is missing.")
-//              return
-//          }
-//        resetPreviewState()
-//        
-////         // Check for duplicate video using UUID
-//        let isDuplicate = currentPod.items.contains { item in
-//            return item.uuid == recordingUUID
-//        }
-//
-//        if isDuplicate {
-//            print("Duplicate video detected. Skipping addition.")
-//            DispatchQueue.main.async {
-//                self.showPreview = false
-//            }
-//            return
-//        }
-//
-//
-//        let nextId = currentPod.items.count + 1
-//        let defaultMetadata = "Item \(nextId)"
-//        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
-//    
-//
-//
-//        // Compress the video first
-//        compressVideo(inputURL: videoURL, outputURL: outputURL) { [weak self] result in
-//            guard let self = self else { return }
-//            switch result {
-//            case .success(let compressedUrl):
-//                print("Video compression succeeded, proceeding with confirmation.")
-//                // Proceed with checking the waveform and handling audio transcription if enabled
-//                if self.isWaveformEnabled {
-//                    print("Waveform enabled all good")
-//                    self.isTranscribing = true
-//                    let audioFilename = self.getDocumentsDirectory().appendingPathComponent("audioRecording.wav")
-//                    print("Audio file path: \(audioFilename.path)")
-//
-//                    if FileManager.default.fileExists(atPath: audioFilename.path) {
-//                        print("Audio file found, proceeding with transcription.")
-//                        self.transcribeAudio(from: audioFilename) { transcribedText in
-//                            DispatchQueue.main.async {
-//                                let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
-//                                self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
-//                            }
-//                        }
-//                    } else {
-//                        print("Audio file does not exist, proceeding without transcription.")
-//                        self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
-//                        self.itemConfirmed = true
-//                        if self.isWaveformEnabled {
-//                            self.isWaveformEnabled = false
-//                        }
-//                    }
-//                } else {
-//                    // If waveform is not enabled, skip transcription
-//                    print("Waveform not enabled, skipping transcription.")
-//                    self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
-//                    self.itemConfirmed = true
-//                    if self.isWaveformEnabled {
-//                        self.isWaveformEnabled = false
-//                    }
-//                    
-//                }
-//            case .failure(let error):
-//                print("Video compression failed with error: \(error.localizedDescription)")
-//            }
-//        }
-//      
-//    }
-//    
+
     func transcribeAudioUsingBackend(from url: URL, completion: @escaping (String?) -> Void) {
         NetworkManager().transcribeAudio(from: url) { success, transcription in
         
@@ -1302,6 +1227,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             DispatchQueue.main.async {
                 self.currentPod.items.append(newItem)
                 print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count), Item Type: \(self.currentPod.items.last?.itemType ?? "nil")")
+                // Store the confirmed URL
+                self.lastConfirmedURL = videoURL
             }
         } else {
             print("The item is already in the Pod.")
@@ -1327,7 +1254,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
             }
         } else {
             // No duplicate detected, proceed to append the new item
-            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "Item \(nextId)", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image")
+            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image")
 
             DispatchQueue.main.async {
                 self.currentPod.items.append(newItem)
