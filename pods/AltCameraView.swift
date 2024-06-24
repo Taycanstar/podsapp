@@ -21,7 +21,7 @@ struct AltCameraView: View {
                 CameraPreview(size: size)
                 
                     .environmentObject(cameraModel)
-//                    .frame(width: size.width, height: size.height * 0.75)
+                    .frame(width: size.width, height: size.height * 0.75)
 //            }
             
 

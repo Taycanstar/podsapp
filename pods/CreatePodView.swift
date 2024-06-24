@@ -13,11 +13,19 @@ struct CreatePodView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
     @State private var errorMessage: String?
+    @State private var showOptionsSheet: Bool = false
+    @State private var selectedOption: String = "Create pod"
+    @State private var showPodSelectionSheet: Bool = false
+    @State private var selectedPod: Pod?
+
 
     var body: some View {
         VStack {
             header
-            PlaceholderTextView(placeholder: "Pod name", text: $podName)
+            if selectedOption == "Create pod" {
+                PlaceholderTextView(placeholder: "Pod name", text: $podName)
+            }
+       
             itemList
             if let errorMessage = errorMessage {
                            Text(errorMessage)
@@ -33,21 +41,43 @@ struct CreatePodView: View {
             createButton
             Spacer()
         }
-//        .background(Color.white)
+        .sheet(isPresented: $showOptionsSheet) {
+            OptionsSheetView(showOptionsSheet: $showOptionsSheet, selectedOption: $selectedOption, showPodSelectionSheet: $showPodSelectionSheet)
+                       .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+               }
+        
+        .sheet(isPresented: $showPodSelectionSheet) {
+            PodSelectionView(selectedPod: $selectedPod, showPodSelectionSheet: $showPodSelectionSheet, selectedOption: $selectedOption)
+                .environmentObject(homeViewModel)
+                .environmentObject(viewModel)
+          
+        }
+
     }
+
 
     private var header: some View {
         HStack {
             Button(action: { presentationMode.wrappedValue.dismiss() }) {
                 Image(systemName: "chevron.backward")
-//                    .foregroundColor(.black)
                     .font(.system(size: 20))
             }
             Spacer()
-            Text("Create Pod")
-                .font(.system(size: 18))
-                .fontWeight(.bold)
-//                .foregroundColor(.black)
+            HStack {
+                Text(selectedOption)
+                    .font(.system(size: 18))
+                    .fontWeight(.bold)
+                Button(action: {
+                    showOptionsSheet.toggle()
+                }) {
+                    Image(systemName: showOptionsSheet || showPodSelectionSheet ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 18))
+                }
+            }
+            .onTapGesture {
+                showOptionsSheet.toggle()
+            }
             Spacer()
         }
         .padding()
@@ -77,13 +107,14 @@ struct CreatePodView: View {
     private var createButton: some View {
         VStack {
 //            Spacer() // Use to push everything up
-            Button(action: createPodAction) {
+            Button(action: selectedOption == "Create pod" ? createPodAction : addItemsToPod) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(1)
                 } else {
-                    Text("Create")
+
+                        Text(selectedOption == "Create pod" ? "Create" : "Add to pod")
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -115,8 +146,6 @@ struct CreatePodView: View {
            }
         
         let startTime = Date()
-//
-//        let items = pod.items.map { PodItem(id: $0.id, videoURL: $0.videoURL, image: $0.image, metadata: $0.metadata, thumbnail: $0.thumbnail, itemType: $0.itemType) }
         let items = pod.items.map { item -> PodItem in
                let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
                return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType)
@@ -132,9 +161,6 @@ struct CreatePodView: View {
                     print("Pod created successfully in \(duration) seconds.")
                     uploadViewModel.uploadCompleted()
                     selectedTab = 0
-          
-//                    self.homeViewModel.fetchPodsForUser(email: self.viewModel.email)
-                    
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")
                     errorMessage = "\(String(describing: message))"
@@ -143,6 +169,41 @@ struct CreatePodView: View {
             }
         }
     }
+    
+    private func addItemsToPod() {
+        guard let selectedPod = selectedPod else {
+              print("No pod selected.")
+              errorMessage = "No pod selected."
+              return
+          }
+          self.showingVideoCreationScreen = false
+          isLoading = true // Start loading
+          if let thumbnail = pod.items.last?.thumbnail {
+              uploadViewModel.startUpload(withThumbnail: thumbnail)
+          }
+          
+          let startTime = Date()
+          let items = pod.items.map { item -> PodItem in
+              let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
+              return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType)
+          }
+          
+          networkManager.addItemsToPod(podId: selectedPod.id, items: items) { success, message in
+              let endTime = Date() // End time
+              let duration = endTime.timeIntervalSince(startTime)
+              DispatchQueue.main.async {
+                  isLoading = false // Stop loading
+                  if success {
+                      print("Items added to pod successfully in \(duration) seconds.")
+                      uploadViewModel.uploadCompleted()
+                      selectedTab = 0
+                  } else {
+                      print("Failed to add items to pod: \(message ?? "Unknown error")")
+                      errorMessage = "\(String(describing: message))"
+                  }
+              }
+          }
+      }
 }
 
 struct PlaceholderTextView: View {
@@ -213,3 +274,99 @@ struct DynamicTextField: View {
     }
 }
 
+struct OptionsSheetView: View {
+    @Binding var showOptionsSheet: Bool
+    @Binding var selectedOption: String
+    @Binding var showPodSelectionSheet: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Button(action: {
+                selectedOption = "Create pod"
+                showOptionsSheet = false
+                
+            }) {
+                HStack {
+                    Image(systemName: "plus.viewfinder")
+                        .font(.system(size: 20))
+                    Text("Create pod")
+                        .padding(.horizontal, 10)
+                }
+              
+                .padding(.vertical, 8)
+                .foregroundColor(Color(UIColor.label))
+                .background(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Divider()
+            Button(action: {
+//                selectedOption = "Add to Existing Pod"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                   showPodSelectionSheet = true
+                               }
+                showOptionsSheet = false
+             
+            }) {
+                HStack {
+                    Image(systemName: "memories.badge.plus")
+                        .font(.system(size: 20))
+                    Text("Add to existing pod")
+                        .padding(.horizontal, 10)
+                }
+                
+                .padding(.vertical, 8)
+                .foregroundColor(Color(UIColor.label))
+                .background(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 15)
+        .padding(.top, 45)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(10)
+    }
+}
+
+
+
+struct PodSelectionView: View {
+    @Binding var selectedPod: Pod?
+    @EnvironmentObject var homeViewModel: HomeViewModel
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @Binding var showPodSelectionSheet: Bool
+    @Binding var selectedOption: String
+
+    var body: some View {
+        VStack {
+            Text("Select a Pod")
+                .font(.system(size: 16, weight: .bold))
+                .padding(.top, 20)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading) {
+                    ForEach(homeViewModel.pods) { pod in
+                        Button(action: {
+                            selectedPod = pod
+                            selectedOption = pod.title
+                            showPodSelectionSheet = false
+                        }) {
+                            Text(pod.title)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 15)
+                                .foregroundColor(Color(UIColor.label))
+                                .background(Color(UIColor.systemBackground))
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        Divider()
+                    }
+                }
+            }
+            .padding(.leading, 15)
+        }
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(10)
+    }
+}
