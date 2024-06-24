@@ -212,14 +212,22 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     private var maxZoomFactor: CGFloat = 5.0 // Adjust as needed
 
     func zoom(factor: CGFloat) {
-        print("Zooming with factor: \(factor)") // Debug log
-        guard let device = AVCaptureDevice.default(for: .video),
-              device.activeFormat.videoMaxZoomFactor > 1.0 else { return }
+        print("Attempting to zoom. Current camera: \(isFrontCameraUsed ? "Front" : "Back")")
+        print("Initial zoom factor: \(initialZoomFactor)")
+        print("Max zoom factor: \(maxZoomFactor)")
+        
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: isFrontCameraUsed ? .front : .back),
+              device.activeFormat.videoMaxZoomFactor > 1.0 else {
+           
+            return
+        }
+        
         do {
             try device.lockForConfiguration()
             let zoomFactor = initialZoomFactor * factor
-            device.videoZoomFactor = max(1.0, min(zoomFactor, device.activeFormat.videoMaxZoomFactor))
-            print("Current zoom factor: \(device.videoZoomFactor)") // Debug log
+            let newZoomFactor = max(1.0, min(zoomFactor, device.activeFormat.videoMaxZoomFactor))
+            device.videoZoomFactor = newZoomFactor
+            print("Zoom applied. New zoom factor: \(newZoomFactor)")
             device.unlockForConfiguration()
         } catch {
             print("Failed to set zoom factor: \(error)")
@@ -445,28 +453,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
     
-//    private func addCameraInput(position: AVCaptureDevice.Position) {
-//        guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
-//              let videoInput = try? AVCaptureDeviceInput(device: cameraDevice) else {
-//            print("Error setting up camera input.")
-//            return
-//        }
-//
-//        // Clear existing video inputs before adding a new one
-//        let existingVideoInputs = session.inputs.filter { input in
-//            guard let input = input as? AVCaptureDeviceInput else { return false }
-//            return input.device.hasMediaType(.video)
-//        }
-//        existingVideoInputs.forEach(session.removeInput)
-//
-//        if session.canAddInput(videoInput) {
-//            session.addInput(videoInput)
-//        } else {
-//            print("Cannot add video input.")
-//        }
-//    }
-    
-
     private func addCameraInput(position: AVCaptureDevice.Position) {
         guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
               let videoInput = try? AVCaptureDeviceInput(device: cameraDevice) else {
@@ -483,11 +469,37 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         if session.canAddInput(videoInput) {
             session.addInput(videoInput)
             initialZoomFactor = cameraDevice.videoZoomFactor
-            print("Initial zoom factor set: \(initialZoomFactor)") // Debug log
+            maxZoomFactor = cameraDevice.activeFormat.videoMaxZoomFactor // Set the max zoom factor for the current device
+            print("Initial zoom factor set: \(initialZoomFactor), Max zoom factor: \(maxZoomFactor)") // Debug log
         } else {
             print("Cannot add video input.")
         }
     }
+
+    
+
+//    private func addCameraInput(position: AVCaptureDevice.Position) {
+//        guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
+//              let videoInput = try? AVCaptureDeviceInput(device: cameraDevice) else {
+//            print("Error setting up camera input.")
+//            return
+//        }
+//
+//        let existingVideoInputs = session.inputs.filter { input in
+//            guard let input = input as? AVCaptureDeviceInput else { return false }
+//            return input.device.hasMediaType(.video)
+//        }
+//        existingVideoInputs.forEach(session.removeInput)
+//
+//        if session.canAddInput(videoInput) {
+//            session.addInput(videoInput)
+////            initialZoomFactor = cameraDevice.videoZoomFactor
+//            initialZoomFactor = 1.0 // Reset zoom factor whenever a new input is added
+//            print("Initial zoom factor set: \(initialZoomFactor)") // Debug log
+//        } else {
+//            print("Cannot add video input.")
+//        }
+//    }
 
 
 
@@ -744,29 +756,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
                 print("Failed to stop speech recognition: \(error)")
             }
         }
-        
-    
-//    private func handleRecognizedText(_ text: String) {
-//        let command = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-//        
-//        // Using a switch statement can prepare the structure for easier extension with new commands
-//        switch command {
-//        case let cmd where cmd.contains("start recording"):
-//            DispatchQueue.main.async {
-//                if !self.isRecording {
-//                    self.startRecording()
-//                }
-//            }
-//        case let cmd where cmd.contains("stop recording"):
-//            DispatchQueue.main.async {
-//                if self.isRecording {
-//                    self.stopRecording()
-//                }
-//            }
-//        default:
-//            break
-//        }
-//    }
+
     
     private func handleRecognizedText(_ text: String) {
         let command = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -911,6 +901,52 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
 
+
+//    func switchCamera() {
+//        guard let currentCameraInput = session.inputs.first(where: { input in
+//            guard let input = input as? AVCaptureDeviceInput else { return false }
+//            return input.device.hasMediaType(.video)
+//        }) as? AVCaptureDeviceInput else {
+//            print("Failed to get current camera input")
+//            return
+//        }
+//
+//        session.beginConfiguration()
+//        session.removeInput(currentCameraInput)
+//
+//        let newCameraPosition: AVCaptureDevice.Position = currentCameraInput.device.position == .front ? .back : .front
+//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
+//              let newCameraInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
+//            print("Failed to create new camera input")
+//            session.commitConfiguration()
+//            return
+//        }
+//
+//        if session.canAddInput(newCameraInput) {
+//            session.addInput(newCameraInput)
+//            isFrontCameraUsed.toggle()
+//            initialZoomFactor = 1.0 // Reset zoom factor
+//        } else {
+//            print("Cannot add new camera input")
+//        }
+//
+//        // After switching the camera, ensure the photo output is correctly configured.
+//        // This may involve adjusting the connection settings for the photo output.
+//        if let photoConnection = photoOutput.connection(with: .video) {
+//            // Check and adjust the photoConnection settings as needed, for example:
+//            if photoConnection.isVideoOrientationSupported {
+//                photoConnection.videoOrientation = AVCaptureVideoOrientation.portrait
+//            }
+//        }
+//
+//        session.commitConfiguration()
+//        
+//        // If the session was stopped, start it again.
+//        if !session.isRunning {
+//            session.startRunning()
+//        }
+//    }
+    
     func switchCamera() {
         guard let currentCameraInput = session.inputs.first(where: { input in
             guard let input = input as? AVCaptureDeviceInput else { return false }
@@ -933,27 +969,27 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
         if session.canAddInput(newCameraInput) {
             session.addInput(newCameraInput)
-            isFrontCameraUsed.toggle() // Update the flag indicating which camera is being used
+            isFrontCameraUsed.toggle()
+            initialZoomFactor = newCameraDevice.videoZoomFactor // Initialize zoom factor for the new device
+            maxZoomFactor = newCameraDevice.activeFormat.videoMaxZoomFactor // Set max zoom factor for new device
+            print("Switched to \(newCameraPosition == .front ? "front" : "back") camera. Max zoom factor: \(maxZoomFactor)") // Log max zoom factor
         } else {
             print("Cannot add new camera input")
         }
 
-        // After switching the camera, ensure the photo output is correctly configured.
-        // This may involve adjusting the connection settings for the photo output.
         if let photoConnection = photoOutput.connection(with: .video) {
-            // Check and adjust the photoConnection settings as needed, for example:
             if photoConnection.isVideoOrientationSupported {
-                photoConnection.videoOrientation = AVCaptureVideoOrientation.portrait
+                photoConnection.videoOrientation = .portrait
             }
         }
 
         session.commitConfiguration()
-        
-        // If the session was stopped, start it again.
+
         if !session.isRunning {
             session.startRunning()
         }
     }
+
 
 
 
