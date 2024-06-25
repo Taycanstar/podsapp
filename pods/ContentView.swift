@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var selectedCameraMode = CameraMode.fifteen
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var showTourView = false
    
     
  
@@ -42,7 +43,7 @@ struct ContentView: View {
                                     HomeView()
                                 case 2:
                                     //                            ProfileView() // Assuming you have a ProfileView
-                                    ProfileView(isAuthenticated: $isAuthenticated)
+                                    ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                                 default:
                                     EmptyView() // Removed placeholder text to avoid showing incorrect content
                                 }
@@ -75,11 +76,14 @@ struct ContentView: View {
                   
                 
             } else {
-                MainOnboardingView(isAuthenticated:$isAuthenticated)
+                MainOnboardingView(isAuthenticated:$isAuthenticated, showTourView: $showTourView)
                    
                     
             }
         }
+        .sheet(isPresented: $showTourView) {
+                TourView(isTourViewPresented: $showTourView)
+            }
         .onAppear {
                               // Update the authentication state on appearance
                               self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")

@@ -3,6 +3,7 @@ import SwiftUI
 struct MainOnboardingView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Binding var isAuthenticated: Bool
+    @Binding var showTourView: Bool
 
     var body: some View {
         ZStack {
@@ -23,7 +24,7 @@ struct MainOnboardingView: View {
               
                     
             case .welcome:
-                WelcomeView(isAuthenticated: $isAuthenticated)
+                WelcomeView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
         }
      

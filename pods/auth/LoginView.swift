@@ -55,9 +55,10 @@ struct LoginView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.black)
 
-            CustomTextField(placeholder: "Email or username", text: $identifier)
-                            .autocapitalization(.none)
-                            
+            ZStack(alignment: .leading) {
+                CustomTextField(placeholder: "Email or username", text: $identifier)
+                    .autocapitalization(.none)
+            }
                 
 
             ZStack(alignment: .trailing) {

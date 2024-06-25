@@ -859,7 +859,7 @@ struct FinalPreview: View {
                                                                  showPreview = false
                                                              }
                                                              
-//                                                             cleanUpPlayer()
+                                                             cleanUpPlayer()
                                                          }
                                                      }
                                                 
@@ -894,7 +894,7 @@ struct FinalPreview: View {
                                                                
                                                              }
 //                                                         
-//                                                    cleanUpPlayer()
+                                                    cleanUpPlayer()
                                                          cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
                                                      }
                                                     
@@ -930,7 +930,7 @@ struct FinalPreview: View {
                                                                      cameraModel.confirmPhoto()
                                                                  }
 
-//                                                                 cleanUpPlayer()
+                                                                 cleanUpPlayer()
                                                                  cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
                                                              }
 //

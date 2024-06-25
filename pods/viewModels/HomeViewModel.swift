@@ -98,5 +98,16 @@ class HomeViewModel: ObservableObject {
             }
         }
     }
+    
+    func refreshPods(email: String, completion: @escaping () -> Void) {
+        self.pods = []  // Clear existing pods
+        self.currentPage = 0
+        self.totalPages = 1
+        self.totalPods = 0
+        
+        fetchPodsForUser(email: email, page: 1) {
+            completion()
+        }
+    }
 }
 

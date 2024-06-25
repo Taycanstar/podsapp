@@ -1,209 +1,4 @@
-//import SwiftUI
-//
-//
-//
-//
-//struct HomeView: View {
-//
-//    @ObservedObject var cameraModel = CameraViewModel()
-//    @EnvironmentObject var homeViewModel: HomeViewModel
-//    @EnvironmentObject var viewModel: OnboardingViewModel
-//    @EnvironmentObject var uploadViewModel: UploadViewModel
-//    var networkManager: NetworkManager = NetworkManager()
-//    
-//    @Environment(\.colorScheme) var colorScheme
-//    @State private var podsReordered = false
-//
-//    @State private var expandedPods = Set<String>()
-//    @State private var currentItemIndex = 0
-//    @State private var editMode: EditMode = .inactive
-//  
-//    var body: some View {
-//      
-//        NavigationView {
-//            VStack(spacing: 0){
-//
-//                if uploadViewModel.isUploading {
-//                                   UploadingSection()
-//                               }
-//                List {
-//                    ForEach(homeViewModel.pods.indices, id: \.self) { index in
-//                        VStack {
-//                         
-//                            PodTitleRow(pod: $homeViewModel.pods[index], isExpanded: expandedPods.contains(homeViewModel.pods[index].title), onExpandCollapseTapped: {
-//                                if editMode == .inactive {
-//                                                                           withAnimation {
-//                                                                               togglePodExpansion(for: homeViewModel.pods[index].title)
-//                                                                           }
-//                                                                       }
-//                                    })
-//                                        .listRowInsets(EdgeInsets())
-//                                        .buttonStyle(PlainButtonStyle())
-//                        }
-//                        .listRowInsets(EdgeInsets())
-//     
-//                        if(expandedPods.contains(homeViewModel.pods[index].title)) {
-//                            ForEach(homeViewModel.pods[index].items, id: \.id) { item in
-//                                if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
-//
-//                                    NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex))
-//                                    {
-//                                        ItemRow(item: item)
-//                                            .listRowInsets(EdgeInsets())
-//                                    }
-//                                }
-//                            }
-//                                .listRowInsets(EdgeInsets())
-//                                .padding(.trailing, 15)
-//                            }
-//                        
-//                        
-//                        }
-//
-//                    .onMove(perform: movePod)
-//                    .onDelete(perform: deletePod)
-//                  
-//                        
-//                }
-//                .scrollIndicators(.hidden)  // This hides the vertical scroll indicators
-//                                .padding(.bottom, 50)
-//                .refreshable {
-//                       homeViewModel.fetchPodsForUser(email: viewModel.email)
-//                   }
-//                
-//                .onAppear {
-//                 
-//                    homeViewModel.fetchPodsForUser(email: viewModel.email) // Use the actual user email
-//                    uploadViewModel.uploadCompletion = {
-//                                           homeViewModel.fetchPodsForUser(email: viewModel.email)
-//                                       }
-//                           }
-//                
-//                .listStyle(InsetGroupedListStyle())
-//                               .navigationTitle("Pods")
-//                               .navigationBarTitleDisplayMode(.inline)
-//                               .navigationBarItems(trailing: editButton)
-//                               .environment(\.editMode, $editMode)
-////                               .preferredColorScheme(.light)
-//                               .background(colorScheme == .dark ? Color.black : Color.white)
-//                
-////                if uploadViewModel.postSuccess {
-////                                 Text("Your pod was posted")
-////                        .fontWeight(.semibold)
-////                                     .padding()
-////                                     .background(Color.black.opacity(0.75))
-////                                     .foregroundColor(.white)
-////                                     .cornerRadius(8)
-//////                                     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
-////                                     .transition(.move(edge: .top).combined(with: .opacity))
-////                                     .animation(.easeInOut,  value: uploadViewModel.postSuccess)
-//////                                     .onAppear {
-//////                                         print("Post success message appeared")
-//////                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { // Change delay to 5 seconds
-//////                                                                uploadViewModel.postSuccess = false  // Automatically reset after 5 seconds
-//////                                            
-//////                                                        print("Post success message dismissed")
-//////                                                        }
-//////                                     }
-////                               
-////                                     .zIndex(1)  // Ensure the popup is above other content
-////                             }
-//                
-//                // Overlay the UploadProgressView
-////                               if uploadViewModel.isUploading {
-////                                   UploadProgressView()
-////                                       .environmentObject(uploadViewModel) // Make sure to pass the environment object
-////                                       .position(x: UIScreen.main.bounds.width * 0.1, y: 30)// Adjust position as necessary
-////                               }
-//            }
-//       
-//    
-//        }
-//        .background(colorScheme == .dark ? Color.black.edgesIgnoringSafeArea(.all) : Color.white.edgesIgnoringSafeArea(.all))
-//
-////        .background(backgroundColor.edgesIgnoringSafeArea(.all))
-//    }
-//
-//    private func togglePodExpansion(for title: String) {
-//        withAnimation(.easeInOut) {
-//            if expandedPods.contains(title) {
-//                expandedPods.remove(title)
-//            } else {
-//                expandedPods.insert(title)
-//            }
-//        }
-//    }
-//
-//    private var editButton: some View {
-//        Button(action: {
-//            // Collapse all expanded pods before toggling edit mode
-//            if !expandedPods.isEmpty {
-//                withAnimation {
-//                    expandedPods.removeAll()
-//                }
-//            }
-//
-//            // Delay the toggle of edit mode to allow animation to complete
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-//                // Toggle edit mode
-//                editMode = editMode == .active ? .inactive : .active
-//                
-//                // If exiting edit mode and pods have been reordered, send the new order to the backend
-//                if editMode == .inactive && podsReordered {
-//                    let orderedPodIds = homeViewModel.pods.map { $0.id }
-//                    
-//                    // Send the new order to the backend
-//                    networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
-//                        DispatchQueue.main.async {
-//                            if success {
-//                                print("Pods reordered successfully on the backend.")
-//                            } else {
-//                                print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
-//                            }
-//                        }
-//                    }
-//                    podsReordered = false // Reset the reorder flag
-//                }
-//            }
-//        }) {
-//            Text(editMode == .active ? "Done" : "Edit")
-//        }
-//    }
-//    
-//
-//
-////    private var backgroundColor: Color {
-////        colorScheme == .dark ? Color.black : Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
-////    }
-//    
-//        func movePod(from source: IndexSet, to destination: Int) {
-//            // Move the pods in the local data source to reflect the new order
-//            homeViewModel.pods.move(fromOffsets: source, toOffset: destination)
-//            podsReordered = true
-//        }
-//    
-//    
-//        func deletePod(at offsets: IndexSet) {
-//            offsets.forEach { index in
-//                 let podId = homeViewModel.pods[index].id // Assuming each Pod has an 'id' property
-//    
-//                 // Call the network manager to delete the pod from the backend
-//                 networkManager.deletePod(podId: podId) { success, message in
-//                     DispatchQueue.main.async {
-//                         if success {
-//                             print("Pod deleted successfully.")
-//                             // Remove the pod from the local array to update the UI
-//                             self.homeViewModel.pods.remove(atOffsets: offsets)
-//                         } else {
-//                             // Handle error, e.g., show an alert to the user
-//                             print("Failed to delete pod: \(message ?? "Unknown error")")
-//                         }
-//                     }
-//                 }
-//             }
-//        }
-//    
-//}
+
 import SwiftUI
 
 struct HomeView: View {
@@ -228,6 +23,13 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 if uploadViewModel.isUploading {
                     UploadingSection()
+                }
+                if homeViewModel.pods.isEmpty {
+                    Text("Your pods will display here, tap + to create one")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 45)
+                        .padding(.vertical, 35)
+                        .multilineTextAlignment(.center)
                 }
                 List {
 //                    ForEach(homeViewModel.pods.indices, id: \.self) { index in
@@ -296,11 +98,11 @@ struct HomeView: View {
                     homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
                         // No additional action needed
                     }
-                    uploadViewModel.uploadCompletion = {
-                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-                            // No additional action needed
-                        }
-                    }
+//                    uploadViewModel.uploadCompletion = {
+//                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+//                            // No additional action needed
+//                        }
+//                    }
                     
                     editingPods = homeViewModel.pods
                 }
@@ -318,6 +120,7 @@ struct HomeView: View {
     private var shouldShowLoadMoreButton: Bool {
             return homeViewModel.pods.count < homeViewModel.totalPods
         }
+    
 
     private func togglePodExpansion(for id: Int) {
         withAnimation(.easeInOut) {
@@ -329,37 +132,6 @@ struct HomeView: View {
         }
     }
 
-
-//    private var editButton: some View {
-//        Button(action: {
-//            if !expandedPods.isEmpty {
-//                withAnimation {
-//                    expandedPods.removeAll()
-//                }
-//            }
-//
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-//                editMode = editMode == .active ? .inactive : .active
-//                
-//                if editMode == .inactive && podsReordered {
-//                    let orderedPodIds = homeViewModel.pods.map { $0.id }
-//                    networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
-//                        DispatchQueue.main.async {
-//                            if success {
-//                                print("Pods reordered successfully on the backend.")
-//                            } else {
-//                                print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
-//                            }
-//                        }
-//                    }
-//                    podsReordered = false
-//                }
-//            }
-//        }) {
-//            Text(editMode == .active ? "Done" : "Edit")
-//                .foregroundColor(.blue)
-//        }
-//    }
     private var editButton: some View {
         Button(action: {
             if !expandedPods.isEmpty {
@@ -403,15 +175,24 @@ struct HomeView: View {
         editingPods.move(fromOffsets: source, toOffset: destination)
         podsReordered = true
     }
-
     func deletePod(at offsets: IndexSet) {
-        offsets.forEach { index in
+        let indicesToDelete = Array(offsets)
+        let sortedIndices = indicesToDelete.sorted().reversed()
+        
+        for index in sortedIndices {
             let podId = homeViewModel.pods[index].id
-            networkManager.deletePod(podId: podId) { success, message in
+            networkManager.deletePod(podId: podId) { [self] success, message in
                 DispatchQueue.main.async {
                     if success {
                         print("Pod deleted successfully.")
-                        self.homeViewModel.pods.remove(atOffsets: offsets)
+                        self.homeViewModel.pods.remove(at: index)
+                        if self.editMode == .active {
+                            self.editingPods.remove(at: index)
+                        }
+                        self.expandedPods.remove(podId)
+                        
+                        // Decrease the total pod count
+                        self.homeViewModel.totalPods -= 1
                     } else {
                         print("Failed to delete pod: \(message ?? "Unknown error")")
                     }
@@ -419,6 +200,7 @@ struct HomeView: View {
             }
         }
     }
+
 }
 
 

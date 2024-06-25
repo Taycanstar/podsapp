@@ -15,6 +15,7 @@ struct ProfileView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingMail = false
     @Binding var isAuthenticated: Bool
+    @Binding var showTourView: Bool
     
     var body: some View {
         
@@ -58,7 +59,7 @@ struct ProfileView: View {
                     Button(action: {
                                           self.showingMail = true
                                       }) {
-                                          Label("Send Feedback", systemImage: "message")
+                                          Label("Send feedback", systemImage: "message")
                                               .foregroundColor(iconColor)
                                       }
                     Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
@@ -67,6 +68,12 @@ struct ProfileView: View {
                                       }
                                       Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
                                           Label("Privacy Policy", systemImage: "lock")
+                                              .foregroundColor(iconColor)
+                                      }
+                    Button(action: {
+                                          self.showTourView = true
+                                      }) {
+                                          Label("App tour guide", systemImage: "safari")
                                               .foregroundColor(iconColor)
                                       }
                 }

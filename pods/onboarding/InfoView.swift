@@ -45,15 +45,17 @@ struct InfoView: View {
                     .font(.headline)
                     .foregroundColor(.gray)
 
+                ZStack(alignment: .leading) {
+                    CustomTextField(placeholder: "Name", text: $name)
+                        .autocapitalization(.none)
+                        .keyboardType(.default)
+                }
                 
-                CustomTextField(placeholder: "Name", text: $name)
-                                .autocapitalization(.none)
-                                .keyboardType(.default)
-
-                CustomTextField(placeholder: "Username", text: $username)
-                                .autocapitalization(.none)
-                                .keyboardType(.default)
-            
+                ZStack(alignment: .leading) {
+                    CustomTextField(placeholder: "Username", text: $username)
+                        .autocapitalization(.none)
+                        .keyboardType(.default)
+                }
                 Button(action: {
                                self.showingDatePicker = true
                            }) {

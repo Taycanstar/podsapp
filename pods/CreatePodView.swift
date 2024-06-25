@@ -115,6 +115,7 @@ struct CreatePodView: View {
                 } else {
 
                         Text(selectedOption == "Create pod" ? "Create" : "Add to pod")
+                        .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -160,6 +161,9 @@ struct CreatePodView: View {
                    
                     print("Pod created successfully in \(duration) seconds.")
                     uploadViewModel.uploadCompleted()
+                    homeViewModel.refreshPods(email: viewModel.email) {
+                                      // Additional actions after refresh if needed
+                                  }
                     selectedTab = 0
                 } else {
                     print("Failed to create pod: \(message ?? "Unknown error")")
@@ -196,6 +200,9 @@ struct CreatePodView: View {
                   if success {
                       print("Items added to pod successfully in \(duration) seconds.")
                       uploadViewModel.uploadCompleted()
+                      homeViewModel.refreshPods(email: viewModel.email) {
+                                        // Additional actions after refresh if needed
+                                    }
                       selectedTab = 0
                   } else {
                       print("Failed to add items to pod: \(message ?? "Unknown error")")
@@ -291,6 +298,7 @@ struct OptionsSheetView: View {
                         .font(.system(size: 20))
                     Text("Create pod")
                         .padding(.horizontal, 10)
+                       
                 }
               
                 .padding(.vertical, 8)
@@ -312,6 +320,7 @@ struct OptionsSheetView: View {
                         .font(.system(size: 20))
                     Text("Add to existing pod")
                         .padding(.horizontal, 10)
+                      
                 }
                 
                 .padding(.vertical, 8)
