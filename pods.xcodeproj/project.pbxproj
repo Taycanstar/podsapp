@@ -12,7 +12,8 @@
 		361507282B7DBA270060974A /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507272B7DBA270060974A /* CameraViewModel.swift */; };
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
-		362170B22B90F91700DA93EE /* vid.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 362170B02B90F81C00DA93EE /* vid.mp4 */; };
+		3623724F2C2B91DB005EDCAF /* preview2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3623724E2C2B91DB005EDCAF /* preview2.mp4 */; };
+		362372512C2B91F7005EDCAF /* previe1.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 362372502C2B91F7005EDCAF /* previe1.mp4 */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
@@ -97,7 +98,8 @@
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
-		362170B02B90F81C00DA93EE /* vid.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = vid.mp4; sourceTree = "<group>"; };
+		3623724E2C2B91DB005EDCAF /* preview2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = preview2.mp4; path = pods/Assets.xcassets/preview2.dataset/preview2.mp4; sourceTree = "<group>"; };
+		362372502C2B91F7005EDCAF /* previe1.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = previe1.mp4; path = pods/Assets.xcassets/previe1.dataset/previe1.mp4; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
@@ -285,9 +287,10 @@
 		36C458AD2B7421100060355F = {
 			isa = PBXGroup;
 			children = (
+				362372502C2B91F7005EDCAF /* previe1.mp4 */,
+				3623724E2C2B91DB005EDCAF /* preview2.mp4 */,
 				3698E4FB2C24968F0040AF60 /* .gitignore */,
 				3698E4F32C2483F90040AF60 /* config.release.plist */,
-				362170B02B90F81C00DA93EE /* vid.mp4 */,
 				36C458B82B7421100060355F /* pods */,
 				36C458C92B7421110060355F /* podsTests */,
 				36C458D32B7421110060355F /* podsUITests */,
@@ -506,8 +509,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				362372512C2B91F7005EDCAF /* previe1.mp4 in Resources */,
+				3623724F2C2B91DB005EDCAF /* preview2.mp4 in Resources */,
 				3698E4FC2C24968F0040AF60 /* .gitignore in Resources */,
-				362170B22B90F91700DA93EE /* vid.mp4 in Resources */,
 				368A27332B9597CE0001BBCA /* pods-logo.png in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
