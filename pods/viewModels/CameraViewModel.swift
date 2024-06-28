@@ -552,9 +552,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
          // Start or restart the timer
          recordingTimer?.invalidate() // Invalidate any existing timer
-         recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
              guard let self = self else { return }
-             self.recordedDuration += 1
+            self.recordedDuration += 0.1
              if self.recordedDuration >= maxDuration {
                  self.stopRecording()
                  timer.invalidate() // Stop the timer
@@ -900,53 +900,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         }
     }
 
-
-
-//    func switchCamera() {
-//        guard let currentCameraInput = session.inputs.first(where: { input in
-//            guard let input = input as? AVCaptureDeviceInput else { return false }
-//            return input.device.hasMediaType(.video)
-//        }) as? AVCaptureDeviceInput else {
-//            print("Failed to get current camera input")
-//            return
-//        }
-//
-//        session.beginConfiguration()
-//        session.removeInput(currentCameraInput)
-//
-//        let newCameraPosition: AVCaptureDevice.Position = currentCameraInput.device.position == .front ? .back : .front
-//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-//              let newCameraInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
-//            print("Failed to create new camera input")
-//            session.commitConfiguration()
-//            return
-//        }
-//
-//        if session.canAddInput(newCameraInput) {
-//            session.addInput(newCameraInput)
-//            isFrontCameraUsed.toggle()
-//            initialZoomFactor = 1.0 // Reset zoom factor
-//        } else {
-//            print("Cannot add new camera input")
-//        }
-//
-//        // After switching the camera, ensure the photo output is correctly configured.
-//        // This may involve adjusting the connection settings for the photo output.
-//        if let photoConnection = photoOutput.connection(with: .video) {
-//            // Check and adjust the photoConnection settings as needed, for example:
-//            if photoConnection.isVideoOrientationSupported {
-//                photoConnection.videoOrientation = AVCaptureVideoOrientation.portrait
-//            }
-//        }
-//
-//        session.commitConfiguration()
-//        
-//        // If the session was stopped, start it again.
-//        if !session.isRunning {
-//            session.startRunning()
-//        }
-//    }
-    
     func switchCamera() {
         guard let currentCameraInput = session.inputs.first(where: { input in
             guard let input = input as? AVCaptureDeviceInput else { return false }

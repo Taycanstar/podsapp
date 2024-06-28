@@ -5,6 +5,8 @@ import Photos
 import UniformTypeIdentifiers
 
 
+
+
 struct PhotoPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var cameraViewModel: CameraViewModel
@@ -401,48 +403,105 @@ struct CameraContainerView: View {
                        
                         }
                    
-                        Button(action: {
-                                  if cameraModel.selectedCameraMode == .photo {
-                                      cameraModel.takePhoto()
-                                  } else if cameraModel.isRecording {
-                                      cameraModel.stopRecording()
-                                  } else {
-                                      cameraModel.startRecordingBasedOnMode()
-                                  }
-                              }) {
-                                  ZStack {
-                                      if cameraModel.selectedCameraMode == .photo {
-                                          Circle()
-                                              .fill(Color.white) // Inner circle color
-                                              .frame(width: 65, height: 65) // Inner circle size
+//                        Button(action: {
+//                                  if cameraModel.selectedCameraMode == .photo {
+//                                      cameraModel.takePhoto()
+//                                  } else if cameraModel.isRecording {
+//                                      cameraModel.stopRecording()
+//                                  } else {
+//                                      cameraModel.startRecordingBasedOnMode()
+//                                  }
+//                              }) {
+//                                  ZStack {
+//                                      if cameraModel.selectedCameraMode == .photo {
+//                                          Circle()
+//                                              .fill(Color.white) // Inner circle color
+//                                              .frame(width: 65, height: 65) // Inner circle size
+//
+//                                          Circle()
+//                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
+//                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
+//                                      } else {
+//                                          Circle()
+//                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
+//                                              .frame(width: cameraModel.isRecording ? 25 : 65, height: cameraModel.isRecording ? 25 : 65) // Transition to square size
+//                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+//
+//                                          Circle()
+//                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
+//                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
+//                                              .opacity(cameraModel.isRecording ? 0 : 1)
+//                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+//
+//                                          Circle()
+//                                              .fill(cameraModel.isRecording ? Color.white : Color.clear)
+//                                              .frame(width: 75, height: 75)
+//                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+//
+//                                          RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
+//                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+//                                              .frame(width: cameraModel.isRecording ? 25 : 0, height: cameraModel.isRecording ? 25 : 0)
+//                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
+//                                      }
+//                                  }
+//                              }
+                        ZStack {
+                            Button(action: {
+                                if cameraModel.selectedCameraMode == .photo {
+                                    cameraModel.takePhoto()
+                                } else if cameraModel.isRecording {
+                                    cameraModel.stopRecording()
+                                } else {
+                                    cameraModel.startRecordingBasedOnMode()
+                                }
+                            }) {
+                                ZStack {
+                                    if cameraModel.selectedCameraMode == .photo {
+                                        Circle()
+                                            .fill(Color.white)
+                                            .frame(width: 65, height: 65)
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 4)
+                                            .frame(width: 75, height: 75)
+                                    } else {
+                                        // Background circle (white when recording, clear when not)
+                                        Circle()
+                                            .fill(cameraModel.isRecording ? Color.white.opacity(0.6) : Color.clear)
+                                            .frame(width: 75, height: 75)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        // Stroke (red loop when recording)
+                                        if cameraModel.isRecording && (cameraModel.selectedCameraMode == .fifteen || cameraModel.selectedCameraMode == .thirty) {
+                                            Circle()
+                                                .trim(from: 0.0, to: CGFloat(cameraModel.recordedDuration.truncatingRemainder(dividingBy: cameraModel.maxDuration) / cameraModel.maxDuration))
+                                                .stroke(Color(red: 230/255, green: 55/255, blue: 67/255), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                                .rotationEffect(Angle(degrees: -90))
+                                                .frame(width: 71, height: 71)
+                                                .animation(.linear(duration: 0.1), value: cameraModel.recordedDuration)
+                                        }
+                                        
+                                        // Main circle (red when recording, white stroke when not)
+                                        Circle()
+                                            .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+                                            .frame(width: cameraModel.isRecording ? 25 : 65, height: cameraModel.isRecording ? 25 : 65)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 4)
+                                            .frame(width: 75, height: 75)
+                                            .opacity(cameraModel.isRecording ? 0 : 1)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        // Rectangle for recording state
+                                        RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
+                                            .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+                                            .frame(width: cameraModel.isRecording ? 25 : 0, height: cameraModel.isRecording ? 25 : 0)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                    }
+                                }
+                            }
+                        }
 
-                                          Circle()
-                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
-                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
-                                      } else {
-                                          Circle()
-                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255)) // Inner circle color
-                                              .frame(width: cameraModel.isRecording ? 25 : 65, height: cameraModel.isRecording ? 25 : 65) // Transition to square size
-                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
-
-                                          Circle()
-                                              .stroke(Color.white, lineWidth: 4) // Outer circle border
-                                              .frame(width: 75, height: 75) // Outer circle size (including padding)
-                                              .opacity(cameraModel.isRecording ? 0 : 1)
-                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
-
-                                          Circle()
-                                              .fill(cameraModel.isRecording ? Color.white.opacity(0.3) : Color.clear)
-                                              .frame(width: 75, height: 75)
-                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
-
-                                          RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
-                                              .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
-                                              .frame(width: cameraModel.isRecording ? 25 : 0, height: cameraModel.isRecording ? 25 : 0)
-                                              .animation(.easeInOut(duration: 0.3), value: cameraModel.isRecording)
-                                      }
-                                  }
-                              }
                       
                         
                         if !cameraModel.isRecording {
@@ -775,64 +834,7 @@ struct FinalPreview: View {
 //                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                       .frame(width: screenWidth, height: videoHeight)
                               }
-                        
-//                        VStack {
-//                            HStack {
-//                                Spacer() // Pushes the button to the right
-//                                Button(action: {
-//                                    isMuted.toggle()
-//                                    player.isMuted = isMuted
-//                                }) {
-//                                    Image(systemName: isMuted ? "speaker.minus.fill" : "speaker.wave.2.fill")
-//                                        .font(.title)
-//                                        .foregroundColor(.white)
-//                                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                        .font(.system(size: 16))
-//                                        .padding()
-//                                }
-//                                .padding(.top, 44) // Adjust for safe area and desired spacing
-//                                .padding(.trailing, 15) // Right padding
-//                            }
-                            
-                            // start
-                            
-//                                                      Button(action: {
-//                                                          //action here
-//                                                          cameraModel.toggleRecordingAudio()
-//                                                          if cameraModel.isRecordingAudio {
-//                                                              cameraModel.recordingTimeElapsed = 0 // Reset the timer when starting
-//                                                          }
-//                                                      }) {
-//                                                        
-//                                                          HStack {
-//                                                              Spacer() // Pushes the button to the right
-//                                                              Image(systemName: "mic.fill")
-//                                                                  .font(.title)
-//                                                                  .foregroundColor(cameraModel.isRecordingAudio ? Color(red: 230/255, green: 55/255, blue: 67/255) : Color.white)
-//                                                                  .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                                                  .overlay(
-//                                                                      Text(cameraModel.isRecordingAudio ? cameraModel.formatTime(seconds: Int(cameraModel.recordingTimeElapsed)) : "Add label")
-//                                                                          .font(.system(size: 14))
-//                                                                          .fontWeight(.semibold)
-//                                                                          .foregroundColor(.white)
-//                                                                          .opacity(showAddLabel ? 1.0 : 0.0) // Control opacity of the label only
-//                                                                          .fixedSize()
-//                                                                          .offset(x: cameraModel.isRecordingAudio ? -50 : -68)
-//                                                                      , alignment: .leading
-//                                                                  )
-//                                                                  .font(.system(size: 16))
-//                                                          }
-//                                                          .background(.blue)
-//                                                          .padding(.top, 44) // Adjust for safe area and desired spacing
-//                                                          .padding(.trailing, 15) // Right padding
-//                                                          
-//                                                      }
-//                                                      .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-//                                                          if cameraModel.isRecordingAudio {
-//                                                              cameraModel.recordingTimeElapsed += 1
-//                                                          }
-//                                                      }
-                            //end
+
                             Spacer() // Pushes everything up
 //                        }
 //                    
