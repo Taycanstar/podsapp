@@ -37,10 +37,16 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-    
+//    
+//    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: ()) {
+//        guard let controller = uiViewController as? AVPlayerViewController else { return }
+//        controller.player?.pause()
+//        controller.player = nil
+//    }
     static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: ()) {
         guard let controller = uiViewController as? AVPlayerViewController else { return }
         controller.player?.pause()
+        controller.player?.replaceCurrentItem(with: nil)
         controller.player = nil
     }
 }

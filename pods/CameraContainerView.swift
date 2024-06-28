@@ -1008,13 +1008,16 @@ struct FinalPreview: View {
                 }
             }
         }
-
-
+    func stopAndResetPlayer() {
+        self.url = nil
+        self.showPreview = false
+    }
 
     private func cleanUpPlayer() {
            player.pause()
            player.replaceCurrentItem(with: nil) // Reset the player
            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+        player.seek(to: .zero)
        }
 
 
