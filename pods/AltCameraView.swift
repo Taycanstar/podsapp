@@ -9,60 +9,52 @@ import SwiftUI
 import AVFoundation
 import UIKit
 
+//struct AltCameraView: View {
+//    @EnvironmentObject var cameraModel: CameraViewModel
+//
+//    
+//    var body: some View{
+//        
+//        GeometryReader{proxy in
+//            let size = proxy.size
+//                CameraPreview(size: size)
+//                
+//                    .environmentObject(cameraModel)
+//                    .frame(width: size.width, height: size.height * 0.75)
+//        }
+//        .onAppear(perform: cameraModel.checkPermission)
+//        .alert(isPresented: $cameraModel.alert) {
+//            Alert(title: Text("Camera and microphone are required to record videos"))
+//        }
+//
+//    }
+//}
 struct AltCameraView: View {
     @EnvironmentObject var cameraModel: CameraViewModel
+    @State private var isSetup = false
 
-    
-    var body: some View{
-        
-        GeometryReader{proxy in
+    var body: some View {
+        GeometryReader { proxy in
             let size = proxy.size
-//            ZStack {
-                CameraPreview(size: size)
-                
-                    .environmentObject(cameraModel)
-                    .frame(width: size.width, height: size.height * 0.75)
-//            }
-            
-
-
+            CameraPreview(size: size)
+                .environmentObject(cameraModel)
+                .frame(width: size.width, height: size.height * 0.75)
         }
-        .onAppear(perform: cameraModel.checkPermission)
+        .onAppear {
+            if !isSetup {
+                cameraModel.checkPermission { granted in
+                    if granted {
+                        cameraModel.setUp()
+                    }
+                    isSetup = true
+                }
+            }
+        }
         .alert(isPresented: $cameraModel.alert) {
             Alert(title: Text("Camera and microphone are required to record videos"))
         }
-
     }
 }
-
-//struct CameraPreview: UIViewRepresentable {
-//    
-//    @EnvironmentObject var cameraModel : CameraViewModel
-//    var size: CGSize
-//    
-//    func makeUIView(context: Context) ->  UIView {
-////     
-//        let view = UIView()
-//        
-//        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
-//        cameraModel.preview.frame.size = size
-//        
-//        cameraModel.preview.videoGravity = .resizeAspectFill
-//        view.layer.addSublayer(cameraModel.preview)
-//        
-//        cameraModel.session.startRunning()
-//        
-//        return view
-//    }
-//    
-//    func updateUIView(_ uiView: UIView, context: Context) {
-//        
-//    }
-//}
-
-
-
-
 
 //
 struct CameraPreview: UIViewRepresentable {
@@ -70,6 +62,23 @@ struct CameraPreview: UIViewRepresentable {
     @EnvironmentObject var cameraModel: CameraViewModel
     var size: CGSize
     
+//    func makeUIView(context: Context) -> UIView {
+//        let view = UIView()
+//        
+//        // Set up the preview layer
+//        cameraModel.preview = AVCaptureVideoPreviewLayer(session: cameraModel.session)
+//        cameraModel.preview.frame.size = size
+//        cameraModel.preview.videoGravity = .resizeAspectFill
+//        view.layer.addSublayer(cameraModel.preview)
+//        
+//        // Add pinch gesture recognizer
+//        let pinchGestureRecognizer = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinch(_:)))
+//        view.addGestureRecognizer(pinchGestureRecognizer)
+//        
+//        cameraModel.session.startRunning()
+//        
+//        return view
+//    }
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         
@@ -83,11 +92,12 @@ struct CameraPreview: UIViewRepresentable {
         let pinchGestureRecognizer = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinch(_:)))
         view.addGestureRecognizer(pinchGestureRecognizer)
         
-        cameraModel.session.startRunning()
+        DispatchQueue.global(qos: .userInitiated).async {
+            cameraModel.session.startRunning()
+        }
         
         return view
     }
-    
     func updateUIView(_ uiView: UIView, context: Context) {
         cameraModel.preview.frame = CGRect(origin: .zero, size: size) 
     }

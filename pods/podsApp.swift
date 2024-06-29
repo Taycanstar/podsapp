@@ -18,7 +18,7 @@ struct podsApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
-    
+    @StateObject var cameraModel = CameraViewModel()
       
    
     var body: some Scene {
@@ -37,6 +37,7 @@ struct podsApp: App {
 //                               }
                 .onAppear{
                     NetworkManager().determineUserLocation()
+                    cameraModel.setUp()
                 }
          
         }

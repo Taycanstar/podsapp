@@ -17,7 +17,8 @@ struct CreatePodView: View {
     @State private var selectedOption: String = "Create pod"
     @State private var showPodSelectionSheet: Bool = false
     @State private var selectedPod: Pod?
-
+    @Binding var showCreatePodView: Bool
+    @Binding var showPreview: Bool
 
     var body: some View {
         VStack {
@@ -58,7 +59,10 @@ struct CreatePodView: View {
 
     private var header: some View {
         HStack {
-            Button(action: { presentationMode.wrappedValue.dismiss() }) {
+            Button(action: {
+                showCreatePodView = false
+                showPreview = true
+            }) {
                 Image(systemName: "chevron.backward")
                     .font(.system(size: 20))
             }

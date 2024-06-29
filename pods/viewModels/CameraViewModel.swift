@@ -151,6 +151,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var currentRecordingUUID: String?
     @Published var isMuted: Bool = true
     var lastConfirmedURL: URL?
+    
+    @Published var isAuthorized = false
 
 
 
@@ -265,26 +267,47 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
     
-    func checkPermission(){
-        
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            setUp()
-            return
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { (status) in
-                
-                if status{
-                    self.setUp()
+//    func checkPermission(){
+//        
+//        switch AVCaptureDevice.authorizationStatus(for: .video) {
+//        case .authorized:
+//            setUp()
+//            return
+//        case .notDetermined:
+//            AVCaptureDevice.requestAccess(for: .video) { (status) in
+//                
+//                if status{
+//                    self.setUp()
+//                }
+//            }
+//        case .denied:
+//            self.alert.toggle()
+//            return
+//        default:
+//            return
+//        }
+//    }
+    func checkPermission(completion: @escaping (Bool) -> Void) {
+            switch AVCaptureDevice.authorizationStatus(for: .video) {
+            case .authorized:
+                isAuthorized = true
+                completion(true)
+            case .notDetermined:
+                AVCaptureDevice.requestAccess(for: .video) { status in
+                    DispatchQueue.main.async {
+                        self.isAuthorized = status
+                        completion(status)
+                    }
                 }
+            case .denied:
+                isAuthorized = false
+                alert = true
+                completion(false)
+            default:
+                isAuthorized = false
+                completion(false)
             }
-        case .denied:
-            self.alert.toggle()
-            return
-        default:
-            return
         }
-    }
     
     
     private func getDocumentsDirectory() -> URL {
@@ -310,24 +333,33 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
 
+//    func setUp() {
+//        do {
+//            // Set up the audio session for recording
+//            let audioSession = AVAudioSession.sharedInstance()
+//            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
+//            try audioSession.setActive(true)
+//
+//            // Call configureSessionFor with the initial mode
+//            configureSessionFor(mode: selectedCameraMode)
+//        } catch {
+//            print("Error setting up video/audio input or audio session: \(error)")
+//        }
+//    }
     func setUp() {
-        do {
-            // Set up the audio session for recording
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
-            try audioSession.setActive(true)
-
-            // Call configureSessionFor with the initial mode
-            configureSessionFor(mode: selectedCameraMode)
-        } catch {
-            print("Error setting up video/audio input or audio session: \(error)")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .allowBluetooth])
+                try audioSession.setActive(true)
+                self.configureSessionFor(mode: self.selectedCameraMode)
+            } catch {
+                print("Error setting up video/audio input or audio session: \(error)")
+            }
         }
     }
-    
-//    func setUp() {
-//           // Only configure the session here, not the audio session
-//           configureSessionFor(mode: selectedCameraMode)
-//       }
+
     
     // Function to format seconds into minutes:seconds (00:00) format
     func formatTime(seconds: Int) -> String {
@@ -390,28 +422,34 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
  
     func configureSessionFor(mode: CameraMode) {
-        if session.isRunning {
-            session.stopRunning()
+     
+            if session.isRunning {
+                session.stopRunning()
+            }
+            
+            session.beginConfiguration()
+            
+            session.inputs.forEach(session.removeInput)
+            session.outputs.forEach(session.removeOutput)
+            
+            switch mode {
+            case .photo:
+                configureForPhotoMode()
+            case .fifteen, .thirty:
+                // Use the maxDuration property to configure the session if necessary
+                configureForVideoMode()
+                
+            }
+            
+            session.commitConfiguration()
+            
+            
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.startRunning()
+            
         }
-
-        session.beginConfiguration()
-
-        session.inputs.forEach(session.removeInput)
-        session.outputs.forEach(session.removeOutput)
-
-        switch mode {
-        case .photo:
-            configureForPhotoMode()
-        case .fifteen, .thirty:
-            // Use the maxDuration property to configure the session if necessary
-            configureForVideoMode()
-        
-        }
-
-        session.commitConfiguration()
-
-        session.startRunning()
     }
+    
 
 
 

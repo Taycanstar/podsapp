@@ -37,10 +37,6 @@ struct AddItemContainerView: View {
             // MARK: Camera View
             AltCameraView()
                 .onAppear {
-                                
-                                 cameraModel.checkPermission()
-//                                cameraModel.setUp()
-//                                cameraModel.configureSpeechService()
                     
                     // Set labels to disappear after 4 seconds
                     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
