@@ -881,6 +881,7 @@
 				FILE_SAS_URL_CENTRALUS = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				FILE_SAS_URL_EASTUS = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				FILE_SAS_URL_WESTUS = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GENERATE_INFOPLIST_FILE = YES;
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
@@ -913,6 +914,7 @@
 				SAS_TOKEN_EASTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				SAS_TOKEN_WESTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -948,6 +950,7 @@
 				FILE_SAS_URL_CENTRALUS = "https://humulistoragecentral.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				FILE_SAS_URL_EASTUS = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				FILE_SAS_URL_WESTUS = "https://humulistoragewest.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
+				GCC_OPTIMIZATION_LEVEL = s;
 				GENERATE_INFOPLIST_FILE = YES;
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
@@ -980,6 +983,7 @@
 				SAS_TOKEN_EASTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				SAS_TOKEN_WESTUS = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

@@ -520,7 +520,7 @@ struct CameraContainerView: View {
             }
         }
    
-        Spacer() // Pushes the bar to the bottom
+//        Spacer() 
         
         
         if !showCreatePodView {
@@ -586,7 +586,8 @@ struct CameraContainerView: View {
                               }
                           }
                       }
-            } else {
+            } 
+            else {
     //            HStack { // This empty HStack ensures it covers the same height as the buttons
     //                   Spacer()
     //               }
@@ -594,6 +595,7 @@ struct CameraContainerView: View {
                 Color.black  // Use Color.black instead of Spacer when recording
                                 .frame(height: 60)
                                 .edgesIgnoringSafeArea(.bottom)
+  
                 
             }
         } else {
@@ -785,23 +787,6 @@ struct FinalPreview: View {
                                             }
                                         }
 
-//                                        DispatchQueue.global(qos: .userInitiated).async {
-//                                            DispatchQueue.main.async {
-//                                                // Action for back
-//                                                if cameraModel.currentPod.items.isEmpty {
-//                                                    // If it's the first item (Pod is empty), just close the preview
-//                                                    // This essentially cancels the recording
-//                                                    showPreview = false
-//                                                } else {
-//                                                    // If Pod has items, prepare to re-record the current item
-//                                                    // This keeps the Pod items intact but allows for re-recording
-//                                                    cameraModel.reRecordCurrentItem()
-//                                                    showPreview = false
-//                                                }
-//
-//                                            }
-//                                        }
-//                                  
 
                                     }) {
                                         Image(systemName: "chevron.left")
@@ -840,22 +825,7 @@ struct FinalPreview: View {
                                             cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
                                         }
                                     }
-        
-//                                    DispatchQueue.global(qos: .userInitiated).async {
-//                                        DispatchQueue.main.async {
-//                                            if let _ = cameraModel.previewURL {
-//                                                // It's a video
-//                                                cameraModel.confirmVideo()
-//                                                
-//                                            } else if cameraModel.selectedImage != nil {
-//                                                // It's a photo
-//                                                cameraModel.confirmPhoto()
-//                                                
-//                                            }
-//                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-//                                        }
-//                                    }
-//                       
+
                                 }) {
                                     
                                     Image(systemName: "checkmark")
@@ -899,7 +869,7 @@ struct FinalPreview: View {
                                         .fontWeight(.medium)
                                 }
                             }
-                            .padding(.bottom, 15) // Adjust this value to position the buttons closer to the bottom edge
+                            .padding(.bottom, 15)
                         }
                         
                     }
@@ -915,6 +885,7 @@ struct FinalPreview: View {
                     .padding(.top, 25)
                     .padding(.horizontal, 15)
                     .frame(height: bottomSegmentHeight)
+                  
                     
                 }
                 .navigationBarHidden(true)
@@ -935,67 +906,7 @@ extension Image {
             .foregroundColor(.white)
     }
 }
-//#Preview {
-//    CameraContainerView()
-//}
-//
-//class PlayerViewModel: ObservableObject {
-//    @Published var player = AVPlayer()
-//    private var timeObserverToken: Any?
-//    private var playerItemObserver: NSKeyValueObservation?
-//
-//    func setupPlayer(with url: URL) {
-//        let playerItem = AVPlayerItem(url: url)
-//        player.replaceCurrentItem(with: playerItem)
-//        addObservers()
-//        player.play()
-//    }
-//
-//    private func addObservers() {
-//        removeObservers()
-//        
-//        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-//        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-//            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
-//                self?.player.seek(to: .zero)
-//                self?.player.play()
-//            }
-//        }
-//
-//        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
-//            if playerItem.status == .readyToPlay {
-//                self?.player.play()
-//            }
-//        })
-//    }
-//
-//    func removeObservers() {
-//        if let token = timeObserverToken {
-//            player.removeTimeObserver(token)
-//            timeObserverToken = nil
-//        }
-//        playerItemObserver?.invalidate()
-//        playerItemObserver = nil
-//    }
-//
-//    func cleanUpPlayer() {
-//        removeObservers()
-//        player.pause()
-//        player.replaceCurrentItem(with: nil)
-//    }
-//
-//    func togglePlayPause() {
-//        if player.timeControlStatus == .playing {
-//            player.pause()
-//        } else {
-//            player.play()
-//        }
-//    }
-//
-//    deinit {
-//        removeObservers()
-//    }
-//}
+
 class PlayerViewModel: ObservableObject {
     @Published var player = AVPlayer()
     @Published var isPlaying = false

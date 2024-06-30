@@ -21,39 +21,45 @@ struct CreatePodView: View {
     @Binding var showPreview: Bool
 
     var body: some View {
-        VStack {
-            header
-            if selectedOption == "Create pod" {
-                PlaceholderTextView(placeholder: "Pod name", text: $podName)
-            }
-       
-            itemList
-            if let errorMessage = errorMessage {
-                           Text(errorMessage)
-                               .foregroundColor(.red)
-                               .padding(.horizontal, 15)
-                               .padding(.top, 5)
-                               .onAppear {
-                                   DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                                       self.errorMessage = nil
-                                   }
-                               }
-                       }
-            createButton
-            Spacer()
-        }
-        .sheet(isPresented: $showOptionsSheet) {
-            OptionsSheetView(showOptionsSheet: $showOptionsSheet, selectedOption: $selectedOption, showPodSelectionSheet: $showPodSelectionSheet)
-                       .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
-               }
         
-        .sheet(isPresented: $showPodSelectionSheet) {
-            PodSelectionView(selectedPod: $selectedPod, showPodSelectionSheet: $showPodSelectionSheet, selectedOption: $selectedOption)
-                .environmentObject(homeViewModel)
-                .environmentObject(viewModel)
-          
-        }
-
+  
+            
+            
+            VStack {
+                header
+                if selectedOption == "Create pod" {
+                    PlaceholderTextView(placeholder: "Pod name", text: $podName)
+                }
+                
+                itemList
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 15)
+                        .padding(.top, 5)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                                self.errorMessage = nil
+                            }
+                        }
+                }
+                createButton
+                Spacer()
+            }
+            
+            .background(Color(UIColor.systemBackground))
+            .sheet(isPresented: $showOptionsSheet) {
+                OptionsSheetView(showOptionsSheet: $showOptionsSheet, selectedOption: $selectedOption, showPodSelectionSheet: $showPodSelectionSheet)
+                    .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+            }
+            
+            .sheet(isPresented: $showPodSelectionSheet) {
+                PodSelectionView(selectedPod: $selectedPod, showPodSelectionSheet: $showPodSelectionSheet, selectedOption: $selectedOption)
+                    .environmentObject(homeViewModel)
+                    .environmentObject(viewModel)
+                
+            }
+        
     }
 
 
@@ -109,33 +115,35 @@ struct CreatePodView: View {
     }
 
     private var createButton: some View {
-        VStack {
-//            Spacer() // Use to push everything up
-            Button(action: selectedOption == "Create pod" ? createPodAction : addItemsToPod) {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1)
-                } else {
 
+            VStack {
+                //            Spacer() // Use to push everything up
+                Button(action: selectedOption == "Create pod" ? createPodAction : addItemsToPod) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1)
+                    } else {
+                        
                         Text(selectedOption == "Create pod" ? "Create" : "Add to pod")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
+                
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 15)
+                .foregroundColor(.white)
+                .background(Color(rgb: 71, 98, 246
+                                 ))
+                .cornerRadius(8)
+                
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 15)
-            .foregroundColor(.white)
-            .background(Color(rgb: 71, 98, 246
-                                ))
-            .cornerRadius(8)
-
-        }
-        .padding(.horizontal, 15)
-        .padding(.vertical, 10)
-        .overlay(Divider().opacity(0.5), alignment: .top)
-      
+            .padding(.horizontal, 15)
+            .padding(.vertical, 10)
+            .overlay(Divider().opacity(0.5), alignment: .top)
+        
     }
 
     private func createPodAction() {
@@ -281,7 +289,7 @@ struct DynamicTextField: View {
             }
         }
    
-        .frame(minHeight: 10, maxHeight: .infinity) // Ensuring a fixed height for the entire row
+        .frame(minHeight: 10, maxHeight: .infinity)
     }
 }
 
@@ -383,3 +391,19 @@ struct PodSelectionView: View {
         .cornerRadius(10)
     }
 }
+
+
+
+
+//#Preview {
+//    CreatePodView(
+//        pod: .constant(Pod(id: 1, items: [], title: "Test Pod")),
+//        showingVideoCreationScreen: .constant(false),
+//        selectedTab: .constant(0),
+//        showCreatePodView: .constant(true),
+//        showPreview: .constant(false)
+//    )
+//    .environmentObject(OnboardingViewModel())
+//    .environmentObject(UploadViewModel())
+//    .environmentObject(HomeViewModel())
+//}

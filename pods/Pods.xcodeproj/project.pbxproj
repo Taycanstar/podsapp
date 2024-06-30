@@ -2602,6 +2602,7 @@
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = NO;
 				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/AppAuth";
+				GCC_OPTIMIZATION_LEVEL = 0;
 				IBSC_MODULE = AppAuth;
 				INFOPLIST_FILE = "Target Support Files/AppAuth/ResourceBundle-AppAuthCore_Privacy-AppAuth-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;

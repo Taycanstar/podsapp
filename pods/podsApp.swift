@@ -24,6 +24,13 @@ struct podsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+//            CreatePodView(
+//                pod: .constant(Pod(id: 1, items: [], title: "Test Pod")),
+//                showingVideoCreationScreen: .constant(false),
+//                selectedTab: .constant(0),
+//                showCreatePodView: .constant(true),
+//                showPreview: .constant(false)
+//            )
                 .environmentObject(onboardingViewModel)
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
