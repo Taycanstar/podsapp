@@ -32,51 +32,19 @@ struct PodView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     
     var body: some View {
-        List {
-            ForEach(reorderedItems.indices, id: \.self) { index in
-                if isEditing {
-                    HStack {
-                        TextField("Metadata", text: $reorderedItems[index].metadata)
-                            .textFieldStyle(PlainTextFieldStyle()) // Match existing styling
-                            .onSubmit {
-                                updateMetadata(item: reorderedItems[index])
-                            }
-                        
-                        Spacer()
-                        
-                        if let thumbnailURL = reorderedItems[index].thumbnailURL {
-                            AsyncImage(url: thumbnailURL) { phase in
-                                switch phase {
-                                case .empty:
-                                    ProgressView()
-                                case .success(let image):
-                                    image.resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 35, height: 35)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                case .failure(_):
-                                    Image(systemName: "photo")
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 35, height: 35)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                @unknown default:
-                                    EmptyView()
-                                }
-                            }
-                        } else {
-                            Image(systemName: "photo.on.rectangle.angled")
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 35, height: 35)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                    }
-                } else {
-                    NavigationLink(destination: PlayerContainerView(items: reorderedItems, initialIndex: index)) {
+
+            List {
+                ForEach(reorderedItems.indices, id: \.self) { index in
+                    if isEditing {
                         HStack {
-                            Text(reorderedItems[index].metadata)
+                            TextField("Metadata", text: $reorderedItems[index].metadata)
+                                .textFieldStyle(PlainTextFieldStyle()) // Match existing styling
+                                .onSubmit {
+                                    updateMetadata(item: reorderedItems[index])
+                                }
+                            
                             Spacer()
+                            
                             if let thumbnailURL = reorderedItems[index].thumbnailURL {
                                 AsyncImage(url: thumbnailURL) { phase in
                                     switch phase {
@@ -105,40 +73,75 @@ struct PodView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                         }
-                        .padding(.vertical, 1)
+                    } else {
+                        NavigationLink(destination: PlayerContainerView(items: reorderedItems, initialIndex: index)) {
+                            HStack {
+                                Text(reorderedItems[index].metadata)
+                                Spacer()
+                                if let thumbnailURL = reorderedItems[index].thumbnailURL {
+                                    AsyncImage(url: thumbnailURL) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            ProgressView()
+                                        case .success(let image):
+                                            image.resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 35, height: 35)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        case .failure(_):
+                                            Image(systemName: "photo")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 35, height: 35)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        @unknown default:
+                                            EmptyView()
+                                        }
+                                    }
+                                } else {
+                                    Image(systemName: "photo.on.rectangle.angled")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 35, height: 35)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                            .padding(.vertical, 1)
+                        }
                     }
                 }
+                .onMove(perform: moveItem)
+                .onDelete(perform: deleteItem)
             }
-            .onMove(perform: moveItem)
-            .onDelete(perform: deleteItem)
-        }
-        .scrollIndicators(.hidden)
-        .padding(.bottom, 45)
-        .navigationTitle(pod.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarItems(trailing: trailingNavigationBarItem)
-        .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
-        .onAppear {
-            self.reorderedItems = self.pod.items // Initialize reorderedItems with the current items
-            uploadViewModel.addItemCompletion = {
-                refreshPodItems()
+            .scrollIndicators(.hidden)
+            .padding(.bottom, 45)
+            .navigationTitle(pod.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: trailingNavigationBarItem)
+            .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
+            .onAppear {
+                self.reorderedItems = self.pod.items // Initialize reorderedItems with the current items
+                uploadViewModel.addItemCompletion = {
+                    refreshPodItems()
+                }
             }
-        }
-        .actionSheet(isPresented: $showMenu) {
-            ActionSheet(title: Text("Options"), buttons: [
-                .default(Text("Edit")) {
-                    isEditing.toggle()
-                    
-                },
-                .default(Text("Add Item")) {
-                    showAddItemView.toggle()
-                },
-                .cancel()
-            ])
-        }
-        .fullScreenCover(isPresented: $showAddItemView) {
-            AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
-        }
+            .actionSheet(isPresented: $showMenu) {
+                ActionSheet(title: Text("Options"), buttons: [
+                    .default(Text("Edit")) {
+                        isEditing.toggle()
+                        
+                    },
+                    .default(Text("Add Item")) {
+                        showAddItemView.toggle()
+                    },
+                    .cancel()
+                ])
+            }
+            .fullScreenCover(isPresented: $showAddItemView) {
+                AddItemView(showAddItemView: $showAddItemView, podId: pod.id, podName: pod.title)
+            }
+        
+
     }
     
     private func refreshPodItems() {

@@ -1,160 +1,31 @@
+//
+//  AddItemView.swift
+//  Podstack
+//
+//  Created by Dimi Nunez on 6/29/24.
+//
 import SwiftUI
 import AVKit
 import PhotosUI
 import Photos
 import UniformTypeIdentifiers
 
-
-
-
-struct PhotoPicker: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
-    var cameraViewModel: CameraViewModel
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
-        config.selectionLimit = 1
-        // Allow both photos and videos
-        config.filter = .any(of: [.images, .videos])
-        
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let parent: PhotoPicker
-
-        init(_ parent: PhotoPicker) {
-            self.parent = parent
-        }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            parent.isPresented = false // Dismiss the picker immediately
-            guard let provider = results.first?.itemProvider else {
-                print("No provider found for the selected item.")
-                return
-            }
-
-            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                processVideo(provider: provider)
-            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                processImage(provider: provider)
-            }
-        }
-
-        private func processVideo(provider: NSItemProvider) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        print("Error loading video data: \(error.localizedDescription)")
-                        return
-                    }
-
-                    guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
-                        print("Unable to write video data to temporary location.")
-                        return
-                    }
-
-                    // Process the selected video
-                    self.parent.cameraViewModel.handleSelectedVideo(url)
-                }
-            }
-        }
-
-        private func processImage(provider: NSItemProvider) {
-            provider.loadObject(ofClass: UIImage.self) { (object, error) in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        print("Error loading image: \(error.localizedDescription)")
-                    }
-                    if let image = object as? UIImage {
-                        print("Successfully selected image: \(image)")
-                        self.parent.cameraViewModel.handleSelectedImage(image)
-                    } else {
-                        print("No image found in the provider.")
-                    }
-                }
-            }
-        }
-
-
-        private func writeDataToTemporaryLocation(data: Data) -> URL? {
-            let tempDirectory = FileManager.default.temporaryDirectory
-            let tempUrl = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
-
-            do {
-                try data.write(to: tempUrl)
-                return tempUrl
-            } catch {
-                print("Error writing video data to temporary location: \(error)")
-                return nil
-            }
-        }
-    }
-}
-
-
-
-
-
-
-// Create the WheelPicker view
-struct WheelPicker: View {
-    @Binding var selectedMode: CameraMode
-    @ObservedObject var cameraViewModel: CameraViewModel
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 20) {
-                ForEach(CameraMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue)
-                        .padding(.vertical, 5)
-                        .padding(.horizontal, 10)
-                        .background(self.selectedMode == mode ? Color.white : Color.clear)
-                        .foregroundColor(self.selectedMode == mode ? .black : .white)
-                        .clipShape(Capsule())
-                        .onTapGesture {
-                            self.selectedMode = mode
-                           self.cameraViewModel.selectedCameraMode = mode
-                           // Ensure session is configured for the new mode
-                           self.cameraViewModel.configureSessionFor(mode: mode)
-                           // Directly use the duration property
-                            self.cameraViewModel.maxDuration = CGFloat(mode.duration)
-                        }
-                        .animation(.easeInOut, value: selectedMode)
-                }
-            }
-            .padding(.horizontal, 5)
-        }
-    }
-}
-
-
-
-
-struct CameraContainerView: View {
+struct AddItemView: View {
     @StateObject var cameraModel = CameraViewModel()
-    @State private var showCreatePodView = false
     @State private var isShowingVideoPicker = false
     @State private var selectedVideoURL: URL?
     @State private var isProcessingVideo = false
     @State private var showingVoiceCommandPopup = false
     @State private var voiceCommandPopupMessage: String? = nil
-    @Binding var showingVideoCreationScreen: Bool
+    @Binding var showAddItemView: Bool
     @State private var latestPhoto: UIImage? = nil
     @State private var showTranscribeLabel = true
     @State private var showCommandLabel = true
-    @Binding var selectedTab: Int
     @State private var navigationPath = NavigationPath()
-    
+    @State var podId: Int 
+    @State var podName: String
     @EnvironmentObject var uploadViewModel: UploadViewModel
+    
     @StateObject private var playerViewModel = PlayerViewModel()
     
     // New state variables
@@ -170,8 +41,8 @@ struct CameraContainerView: View {
             // code starts here
             ZStack {
                 AltCameraView()
-                    .opacity(cameraModel.showPreview || showCreatePodView ? 0 : 1)
-                    .allowsHitTesting(!(cameraModel.showPreview || showCreatePodView))
+                    .opacity(cameraModel.showPreview ? 0 : 1)
+                    .allowsHitTesting(!(cameraModel.showPreview))
                 
                     .onAppear {
                         
@@ -192,7 +63,8 @@ struct CameraContainerView: View {
                 if !cameraModel.isRecording {
                     Button(action: {
                         // Instead of resetting properties, just close the video creation screen
-                        showingVideoCreationScreen = false
+       
+                        showAddItemView = false
                     }) {
                         Image(systemName: "xmark")
                             .foregroundColor(.white)
@@ -486,34 +358,32 @@ struct CameraContainerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 //                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .opacity(cameraModel.showPreview || showCreatePodView ? 0 : 1)
-            .allowsHitTesting(!(cameraModel.showPreview || showCreatePodView))
+            .opacity(cameraModel.showPreview ? 0 : 1)
+            .allowsHitTesting(!(cameraModel.showPreview))
         
             // ends here
             
             if cameraModel.showPreview {
                 if let url = cameraModel.previewURL {
-                    FinalPreview(
+                    AddItemPreview(
                         url: url,
                         selectedImage: nil,
                         showPreview: $cameraModel.showPreview,
                         cameraModel: cameraModel,
-                        isFrontCameraUsed: cameraModel.isFrontCameraUsed,
-                        showCreatePodView: $showCreatePodView
+                        isFrontCameraUsed: cameraModel.isFrontCameraUsed, podId: $podId, podName: $podName,
+                        showAddItemView: $showAddItemView
                     )
                 } else if let selectedImage = cameraModel.selectedImage {
-                    FinalPreview(
+                    AddItemPreview(
                         url: nil,
                         selectedImage: selectedImage,
                         showPreview: $cameraModel.showPreview,
                         cameraModel: cameraModel,
                         isFrontCameraUsed: cameraModel.isFrontCameraUsed,
-                        showCreatePodView: $showCreatePodView
+                        podId: $podId, podName: $podName,
+                        showAddItemView: $showAddItemView
                     )
                 }
-            } else if showCreatePodView{
-                CreatePodView(pod: $cameraModel.currentPod, showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab, showCreatePodView: $showCreatePodView, showPreview: $cameraModel.showPreview)
-                
             }else {
                 EmptyView()
                 
@@ -522,8 +392,7 @@ struct CameraContainerView: View {
    
         Spacer() // Pushes the bar to the bottom
         
-        
-        if !showCreatePodView {
+      
             if !cameraModel.isRecording && !cameraModel.showPreview  {
                 HStack(spacing: 10) { // Spacing between buttons is 10
                     // Start Over Button
@@ -596,9 +465,7 @@ struct CameraContainerView: View {
                                 .edgesIgnoringSafeArea(.bottom)
                 
             }
-        } else {
-            EmptyView()
-        }
+     
 
         
     }
@@ -674,43 +541,20 @@ struct CameraContainerView: View {
 
 
 
-struct VoiceCommandPopupView: View {
-    let message: String
-
-    var body: some View {
-        Text(message)
-            .font(.system(size: 14))
-            .fontWeight(.semibold)
-            .padding(15)
-            .background(Color(red: 66 / 255, green: 66 / 255, blue: 66 / 255))
-            .foregroundColor(.white)
-            .cornerRadius(100)
-            .frame(width: 300)
-    }
-}
 
 
 
-extension View {
-    func alignAsFloating() -> some View {
-        self.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-    }
-}
-
-
-
-
-struct FinalPreview: View {
+struct AddItemPreview: View {
     
     @State var url: URL?
     @State var selectedImage: UIImage?
     @Binding var showPreview: Bool
+
 //    var player: AVPlayer
 //     @State var player = AVPlayer()
     @StateObject private var playerViewModel = PlayerViewModel()
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
-    @Binding var showCreatePodView: Bool
     @State private var isPresentingEditor = false
     @State private var editParameters = VideoEditParameters()
     private let blackSegmentHeight: CGFloat = 100
@@ -718,6 +562,13 @@ struct FinalPreview: View {
     @State private var isMuted: Bool = false
     @State private var showAddLabel: Bool = true
     @Environment(\.presentationMode) var presentationMode
+    @Binding var podId: Int
+    @Binding var podName: String
+    @State private var showAddItemSheet = false
+    @State private var itemLabel = ""
+    @Binding var showAddItemView: Bool
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+    @State private var wasPlayingBeforeSheet = false
     
     var body: some View {
         ZStack {
@@ -749,6 +600,7 @@ struct FinalPreview: View {
                                                                 playerViewModel.togglePlayPause()
                                                
                                                            }
+
                                 .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                 .id(url)
                             
@@ -785,24 +637,6 @@ struct FinalPreview: View {
                                             }
                                         }
 
-//                                        DispatchQueue.global(qos: .userInitiated).async {
-//                                            DispatchQueue.main.async {
-//                                                // Action for back
-//                                                if cameraModel.currentPod.items.isEmpty {
-//                                                    // If it's the first item (Pod is empty), just close the preview
-//                                                    // This essentially cancels the recording
-//                                                    showPreview = false
-//                                                } else {
-//                                                    // If Pod has items, prepare to re-record the current item
-//                                                    // This keeps the Pod items intact but allows for re-recording
-//                                                    cameraModel.reRecordCurrentItem()
-//                                                    showPreview = false
-//                                                }
-//
-//                                            }
-//                                        }
-//                                  
-
                                     }) {
                                         Image(systemName: "chevron.left")
                                             .foregroundColor(.white)
@@ -818,71 +652,26 @@ struct FinalPreview: View {
                                         .fontWeight(.medium)
                                 }
                                 
-                                
-                                Button(action: {
-                                    // Immediately hide the preview
-                                       showPreview = false
-                                    
-                                    
-                                   
-                                    
-                                    // Perform the confirmation and other actions in the background
-                                    DispatchQueue.global(qos: .userInitiated).async {
-                                        if let _ = cameraModel.previewURL {
-                                            // It's a video
-                                            cameraModel.confirmVideo()
-                                        } else if cameraModel.selectedImage != nil {
-                                            // It's a photo
-                                            cameraModel.confirmPhoto()
-                                        }
-                                        
-                                        DispatchQueue.main.async {
-                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-                                        }
-                                    }
-        
-//                                    DispatchQueue.global(qos: .userInitiated).async {
-//                                        DispatchQueue.main.async {
-//                                            if let _ = cameraModel.previewURL {
-//                                                // It's a video
-//                                                cameraModel.confirmVideo()
-//                                                
-//                                            } else if cameraModel.selectedImage != nil {
-//                                                // It's a photo
-//                                                cameraModel.confirmPhoto()
-//                                                
-//                                            }
-//                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-//                                        }
-//                                    }
-//                       
-                                }) {
-                                    
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.black)
-                                        .font(.system(size: 34))
-                                        .frame(width: 75, height: 75) // Making this larger as specified
-                                        .background(Color.white)
-                                        .clipShape(Circle())
-                                    
+                                VStack {
+                                    Spacer()
+                                        .frame(width: 44, height: 44) // Size of the continue button
+                                        .background(Color.clear) // Transparent background
+                                    Text(" ")
+                                        .foregroundColor(.clear) // Hidden text
+                                        .font(.system(size: 12))
+                                        .fontWeight(.medium)
                                 }
                                 .padding(.bottom, 15)
 
+                              
+                                
                                 VStack {
                                     Button(action: {
-                                        
-                                        showCreatePodView = true
-                                        // Perform the confirmation and cleanup in the background
-                                        DispatchQueue.global(qos: .userInitiated).async {
-                                            if let _ = cameraModel.previewURL {
-                                                cameraModel.confirmVideo()
-                                            } else if let _ = cameraModel.selectedImage {
-                                                cameraModel.confirmPhoto()
-                                            }
-          
-                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-                                        }
-
+                                        wasPlayingBeforeSheet = playerViewModel.isPlaying
+                                              if wasPlayingBeforeSheet {
+                                                  playerViewModel.pause()
+                                              }
+                                        showAddItemSheet = true
                                         
                                     }) {
                                         Image(systemName: "chevron.right")
@@ -916,6 +705,35 @@ struct FinalPreview: View {
                     .padding(.horizontal, 15)
                     .frame(height: bottomSegmentHeight)
                     
+//                    .sheet(isPresented: $showAddItemSheet) {
+//                        AddItemSheet(
+//                            showSheet: $showAddItemSheet,
+//                            podId: podId,
+//                            podName: podName,
+//                            showPreview: $showPreview,
+//                            showAddItemView: $showAddItemView
+//                            
+//                        )
+//                        .environmentObject(uploadViewModel)
+//                           .environmentObject(cameraModel)
+//                           .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+//                    }
+                    .sheet(isPresented: $showAddItemSheet, onDismiss: {
+                        if wasPlayingBeforeSheet {
+                            playerViewModel.play()
+                        }
+                    }) {
+                        AddItemSheet(
+                            showSheet: $showAddItemSheet,
+                            podId: podId,
+                            podName: podName,
+                            showPreview: $showPreview,
+                            showAddItemView: $showAddItemView
+                        )
+                        .environmentObject(uploadViewModel)
+                        .environmentObject(cameraModel)
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                    }
                 }
                 .navigationBarHidden(true)
                 
@@ -925,142 +743,134 @@ struct FinalPreview: View {
      
         
     }
+    
+
 
 }
 
-extension Image {
-    func iconStyle() -> some View {
-        self
-            .font(.title)
-            .foregroundColor(.white)
-    }
-}
-//#Preview {
-//    CameraContainerView()
-//}
-//
-//class PlayerViewModel: ObservableObject {
-//    @Published var player = AVPlayer()
-//    private var timeObserverToken: Any?
-//    private var playerItemObserver: NSKeyValueObservation?
-//
-//    func setupPlayer(with url: URL) {
-//        let playerItem = AVPlayerItem(url: url)
-//        player.replaceCurrentItem(with: playerItem)
-//        addObservers()
-//        player.play()
-//    }
-//
-//    private func addObservers() {
-//        removeObservers()
-//        
-//        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-//        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-//            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
-//                self?.player.seek(to: .zero)
-//                self?.player.play()
-//            }
-//        }
-//
-//        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
-//            if playerItem.status == .readyToPlay {
-//                self?.player.play()
-//            }
-//        })
-//    }
-//
-//    func removeObservers() {
-//        if let token = timeObserverToken {
-//            player.removeTimeObserver(token)
-//            timeObserverToken = nil
-//        }
-//        playerItemObserver?.invalidate()
-//        playerItemObserver = nil
-//    }
-//
-//    func cleanUpPlayer() {
-//        removeObservers()
-//        player.pause()
-//        player.replaceCurrentItem(with: nil)
-//    }
-//
-//    func togglePlayPause() {
-//        if player.timeControlStatus == .playing {
-//            player.pause()
-//        } else {
-//            player.play()
-//        }
-//    }
-//
-//    deinit {
-//        removeObservers()
-//    }
-//}
-class PlayerViewModel: ObservableObject {
-    @Published var player = AVPlayer()
-    @Published var isPlaying = false
-    private var timeObserverToken: Any?
-    private var playerItemObserver: NSKeyValueObservation?
+struct AddItemSheet: View {
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+    @EnvironmentObject var cameraModel: CameraViewModel
+    @Binding var showSheet: Bool
+    let podId: Int
+    let podName: String
+    @State private var itemLabel: String = ""
+    @State private var isLoading = false
+    @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @Binding var showPreview: Bool
+    @Binding var showAddItemView: Bool
+    
+    var body: some View {
 
-    func setupPlayer(with url: URL) {
-        let playerItem = AVPlayerItem(url: url)
-        player.replaceCurrentItem(with: playerItem)
-        addObservers()
-        play()
+        VStack {
+            Text("Add to \(podName)")
+                .font(.system(size: 16, weight: .bold))
+                .padding(.top, 20)
+            Divider()
+            .padding(.bottom, 15)
+            ZStack(alignment: .leading) {
+                CustomTextField2(placeholder: "Item label", text: $itemLabel)
+                    .autocapitalization(.none)
+                    .keyboardType(.default)
+                  
+                
+            }
+            .padding(.horizontal, 25)
+//            .padding(.bottom, 15)
+//            Spacer()
+            addButton
+                .padding(.horizontal, 10)
+                .padding(.top, 20) // 30 pixels distance from the input
+//                .padding(.bottom, 20)
+        }
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(10)
     }
 
-    private func addObservers() {
-        removeObservers()
+    private func addItemToPod() {
+        isLoading = true // Show loading indicator
         
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
-                self?.player.seek(to: .zero)
-                self?.play()
+        let addItem = { (success: Bool, message: String?) in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                if success {
+                    self.showSheet = false // Close the sheet
+                    self.showPreview = false // Close the ItemPreview
+                    self.showAddItemView = false // Close the AddItemView
+                    self.uploadViewModel.addItemCompleted()
+                } else {
+                    print("Failed to add item: \(message ?? "Unknown error")")
+                    // Optionally show an error message to the user
+                }
             }
         }
 
-        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
-            if playerItem.status == .readyToPlay {
-                self?.play()
+        if let _ = cameraModel.previewURL {
+            cameraModel.addVideoItem(podId: podId, email: viewModel.email, label: itemLabel, completion: addItem)
+        } else if cameraModel.selectedImage != nil {
+            cameraModel.addPhotoItem(podId: podId, email: viewModel.email, label: itemLabel, completion: addItem)
+        }
+    }
+    
+    private var addButton: some View {
+        Button(action: addItemToPod) {
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Add")
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                       
+                }
+                
             }
-        })
-    }
-
-    func removeObservers() {
-        if let token = timeObserverToken {
-            player.removeTimeObserver(token)
-            timeObserverToken = nil
+            .frame(maxWidth: .infinity)
+            .padding()
+            .frame(height: 52)
+            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .cornerRadius(10)
         }
-        playerItemObserver?.invalidate()
-        playerItemObserver = nil
+        .padding(.horizontal)
+        .padding(.bottom, 10)
     }
+}
 
-    func cleanUpPlayer() {
-        removeObservers()
-        pause()
-        player.replaceCurrentItem(with: nil)
-    }
 
-    func togglePlayPause() {
-        if isPlaying {
-            pause()
-        } else {
-            play()
+struct CustomTextField2: View {
+    var placeholder: String
+    @Binding var text: String
+    var isSecure: Bool = false
+    var showPassword: Bool = false
+    
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(colorScheme == .dark ? Color(red: 161/255, green: 168/255, blue: 179/255) : Color(red: 111/255, green: 117/255, blue: 127/255)) // Adjust opacity for better visibility
+//                    .padding(.leading, 10)
+                    .padding()
+            }
+            if isSecure && !showPassword {
+                SecureField("", text: $text)
+                    .foregroundColor(.black)
+                    .padding()
+            } else {
+                TextField("", text: $text)
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .padding()
+            }
         }
-    }
-
-    func play() {
-        player.play()
-        isPlaying = true
-    }
-
-    func pause() {
-        player.pause()
-        isPlaying = false
-    }
-
-    deinit {
-        removeObservers()
+        .frame(height: 52)
+        .background(colorScheme == .dark ? Color(red: 33/255, green: 35/255, blue: 40/255) : Color(red: 246/255, green: 246/255, blue: 248/255))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray, lineWidth: 0.2)
+        )
     }
 }

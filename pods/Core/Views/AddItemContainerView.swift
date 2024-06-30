@@ -573,23 +573,23 @@ struct ItemPreview: View {
                                                      showAddItemView = false
                                                      cameraModel.configureSessionFor(mode: .fifteen)
                                                      if let _ = cameraModel.previewURL {
-                                                   cameraModel.addVideoItem(podId: podId, email: viewModel.email) { success, message in
-                                                       if success {
-                                                          
-                                                           uploadViewModel.addItemCompleted()
-                                                       } else {
-                                                           print("Failed to add video item: \(message ?? "Unknown error")")
-                                                       }
-                                                   }
+//                                                   cameraModel.addVideoItem(podId: podId, email: viewModel.email) { success, message in
+//                                                       if success {
+//                                                          
+//                                                           uploadViewModel.addItemCompleted()
+//                                                       } else {
+//                                                           print("Failed to add video item: \(message ?? "Unknown error")")
+//                                                       }
+//                                                   }
                                                } else if cameraModel.selectedImage != nil {
-                                                   cameraModel.addPhotoItem(podId: podId, email: viewModel.email) { success, message in
-                                                       if success {
-//                                                                                               showPreview = false
-                                                           uploadViewModel.addItemCompleted()
-                                                       } else {
-                                                           print("Failed to add photo item: \(message ?? "Unknown error")")
-                                                       }
-                                                   }
+//                                                   cameraModel.addPhotoItem(podId: podId, email: viewModel.email) { success, message in
+//                                                       if success {
+////                                                                                               showPreview = false
+//                                                           uploadViewModel.addItemCompleted()
+//                                                       } else {
+//                                                           print("Failed to add photo item: \(message ?? "Unknown error")")
+//                                                       }
+//                                                   }
                                                }
 //                                                                                showAddItemView = false
                                            cleanUpPlayer()

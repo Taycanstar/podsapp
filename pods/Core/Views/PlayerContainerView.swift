@@ -13,6 +13,7 @@ struct PlayerContainerView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var currentIndex = 0
     @EnvironmentObject var sharedViewModel: SharedViewModel
+    
 //    @State var initialIndex: Int
 
     
