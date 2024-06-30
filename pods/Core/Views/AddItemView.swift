@@ -667,10 +667,10 @@ struct AddItemPreview: View {
                                 
                                 VStack {
                                     Button(action: {
-                                        wasPlayingBeforeSheet = playerViewModel.isPlaying
-                                              if wasPlayingBeforeSheet {
-                                                  playerViewModel.pause()
-                                              }
+//                                        wasPlayingBeforeSheet = playerViewModel.isPlaying
+//                                              if wasPlayingBeforeSheet {
+//                                                  playerViewModel.pause()
+//                                              }
                                         showAddItemSheet = true
                                         
                                     }) {
@@ -719,9 +719,9 @@ struct AddItemPreview: View {
 //                           .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
 //                    }
                     .sheet(isPresented: $showAddItemSheet, onDismiss: {
-                        if wasPlayingBeforeSheet {
-                            playerViewModel.play()
-                        }
+//                        if wasPlayingBeforeSheet {
+//                            playerViewModel.play()
+//                        }
                     }) {
                         AddItemSheet(
                             showSheet: $showAddItemSheet,

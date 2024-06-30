@@ -520,7 +520,7 @@ struct CameraContainerView: View {
             }
         }
    
-//        Spacer() 
+//        Spacer()
         
         
         if !showCreatePodView {
@@ -909,7 +909,6 @@ extension Image {
 
 class PlayerViewModel: ObservableObject {
     @Published var player = AVPlayer()
-    @Published var isPlaying = false
     private var timeObserverToken: Any?
     private var playerItemObserver: NSKeyValueObservation?
 
@@ -917,23 +916,23 @@ class PlayerViewModel: ObservableObject {
         let playerItem = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: playerItem)
         addObservers()
-        play()
+        player.play()
     }
 
     private func addObservers() {
         removeObservers()
-        
+
         let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
                 self?.player.seek(to: .zero)
-                self?.play()
+                self?.player.play()
             }
         }
 
         playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
             if playerItem.status == .readyToPlay {
-                self?.play()
+                self?.player.play()
             }
         })
     }
@@ -949,29 +948,88 @@ class PlayerViewModel: ObservableObject {
 
     func cleanUpPlayer() {
         removeObservers()
-        pause()
+        player.pause()
         player.replaceCurrentItem(with: nil)
     }
 
     func togglePlayPause() {
-        if isPlaying {
-            pause()
+        if player.timeControlStatus == .playing {
+            player.pause()
         } else {
-            play()
+            player.play()
         }
-    }
-
-    func play() {
-        player.play()
-        isPlaying = true
-    }
-
-    func pause() {
-        player.pause()
-        isPlaying = false
     }
 
     deinit {
         removeObservers()
     }
 }
+
+//class PlayerViewModel: ObservableObject {
+//    @Published var player = AVPlayer()
+//    @Published var isPlaying = false
+//    private var timeObserverToken: Any?
+//    private var playerItemObserver: NSKeyValueObservation?
+//
+//    func setupPlayer(with url: URL) {
+//        let playerItem = AVPlayerItem(url: url)
+//        player.replaceCurrentItem(with: playerItem)
+//        addObservers()
+//        play()
+//    }
+//
+//    private func addObservers() {
+//        removeObservers()
+//        
+//        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+//        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
+//            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
+//                self?.player.seek(to: .zero)
+//                self?.play()
+//            }
+//        }
+//
+//        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
+//            if playerItem.status == .readyToPlay {
+//                self?.play()
+//            }
+//        })
+//    }
+//
+//    func removeObservers() {
+//        if let token = timeObserverToken {
+//            player.removeTimeObserver(token)
+//            timeObserverToken = nil
+//        }
+//        playerItemObserver?.invalidate()
+//        playerItemObserver = nil
+//    }
+//
+//    func cleanUpPlayer() {
+//        removeObservers()
+//        pause()
+//        player.replaceCurrentItem(with: nil)
+//    }
+//
+//    func togglePlayPause() {
+//        if isPlaying {
+//            pause()
+//        } else {
+//            play()
+//        }
+//    }
+//
+//    func play() {
+//        player.play()
+//        isPlaying = true
+//    }
+//
+//    func pause() {
+//        player.pause()
+//        isPlaying = false
+//    }
+//
+//    deinit {
+//        removeObservers()
+//    }
+//}
