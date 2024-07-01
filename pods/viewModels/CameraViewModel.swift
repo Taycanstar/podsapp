@@ -552,9 +552,9 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
          // Start or restart the timer
          recordingTimer?.invalidate() // Invalidate any existing timer
-         recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
              guard let self = self else { return }
-             self.recordedDuration += 1
+            self.recordedDuration += 0.1
              if self.recordedDuration >= maxDuration {
                  self.stopRecording()
                  timer.invalidate() // Stop the timer
