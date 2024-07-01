@@ -1363,6 +1363,9 @@ var hasCheckedPermission = false
             self.currentRecordingUUID = UUID().uuidString
         }
     }
+
+
+
     
     func handleSelectedImage(_ image: UIImage) {
         DispatchQueue.main.async {
