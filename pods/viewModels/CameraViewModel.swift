@@ -4,6 +4,7 @@ import AVFoundation
 import CoreMedia
 import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
+import Combine
 
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
@@ -121,17 +122,7 @@ enum CameraMode: String, CaseIterable {
 // MARK: Camera View Model
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     
-//     Custom initializer
-//        override init() {
-//            super.init()
-//            configureSpeechService()
-//            checkPermission()
-//            configureSessionFor(mode: selectedCameraMode)
 
-
-//            setupAudioRecorder()
-//        }
-////    
     @Published var session = AVCaptureSession()
     @Published var alert = false
     @Published var output = AVCaptureMovieFileOutput()
@@ -152,7 +143,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isMuted: Bool = true
     var lastConfirmedURL: URL?
 
-
+    @Published var permissionGranted = false
+var hasCheckedPermission = false
 
 
     let voiceCommands = ["start recording", "stop recording"]
@@ -265,27 +257,50 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
     
-    func checkPermission(){
-        
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            setUp()
-            return
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { (status) in
-                
-                if status{
-                    self.setUp()
-                }
-            }
-        case .denied:
-            self.alert.toggle()
-            return
-        default:
-            return
-        }
-    }
-    
+//    func checkPermission(){
+//        
+//        switch AVCaptureDevice.authorizationStatus(for: .video) {
+//        case .authorized:
+//            setUp()
+//            return
+//        case .notDetermined:
+//            AVCaptureDevice.requestAccess(for: .video) { (status) in
+//                
+//                if status{
+//                    self.setUp()
+//                }
+//            }
+//        case .denied:
+//            self.alert.toggle()
+//            return
+//        default:
+//            return
+//        }
+//    }
+
+    func checkPermission() {
+          guard !hasCheckedPermission else { return }
+
+          switch AVCaptureDevice.authorizationStatus(for: .video) {
+          case .authorized:
+              permissionGranted = true
+          case .notDetermined:
+              AVCaptureDevice.requestAccess(for: .video) { [weak self] status in
+                  DispatchQueue.main.async {
+                      self?.permissionGranted = status
+                      if !status {
+                          self?.alert = true
+                      }
+                  }
+              }
+          case .denied, .restricted:
+              alert = true
+          @unknown default:
+              break
+          }
+
+          hasCheckedPermission = true
+      }
     
     private func getDocumentsDirectory() -> URL {
           FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -311,6 +326,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
     func setUp() {
+        guard permissionGranted else { return }
         do {
             // Set up the audio session for recording
             let audioSession = AVAudioSession.sharedInstance()
@@ -389,6 +405,30 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
 
  
+//    func configureSessionFor(mode: CameraMode) {
+//        if session.isRunning {
+//            session.stopRunning()
+//        }
+//
+//        session.beginConfiguration()
+//
+//        session.inputs.forEach(session.removeInput)
+//        session.outputs.forEach(session.removeOutput)
+//
+//        switch mode {
+//        case .photo:
+//            configureForPhotoMode()
+//        case .fifteen, .thirty:
+//            // Use the maxDuration property to configure the session if necessary
+//            configureForVideoMode()
+//        
+//        }
+//
+//        session.commitConfiguration()
+//
+//        session.startRunning()
+//    }
+
     func configureSessionFor(mode: CameraMode) {
         if session.isRunning {
             session.stopRunning()
@@ -403,19 +443,15 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
         case .photo:
             configureForPhotoMode()
         case .fifteen, .thirty:
-            // Use the maxDuration property to configure the session if necessary
             configureForVideoMode()
-        
         }
 
         session.commitConfiguration()
 
-        session.startRunning()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.startRunning()
+        }
     }
-
-
-
-    
 
     func configureForPhotoMode() {
         // Ensure there's a camera input for the current position
@@ -561,52 +597,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
              }
          }
     }
-
-    func muteVideo(inputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
-        let asset = AVURLAsset(url: inputURL)
-        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
-            completion(.failure(NSError(domain: "VideoMutingError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Could not create export session"])))
-            return
-        }
-
-        let composition = AVMutableComposition()
-        guard let videoTrack = asset.tracks(withMediaType: .video).first else {
-            completion(.failure(NSError(domain: "VideoMutingError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No video track found"])))
-            return
-        }
-
-        if let compositionVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
-            do {
-                try compositionVideoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: videoTrack, at: .zero)
-            } catch {
-                completion(.failure(error))
-                return
-            }
-        }
-
-        exportSession.outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
-        exportSession.outputFileType = .mov
-        exportSession.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
-        exportSession.exportAsynchronously {
-            DispatchQueue.main.async {
-                switch exportSession.status {
-                case .completed:
-                    if let outputURL = exportSession.outputURL {
-                        print("Mute video export completed successfully.")
-                        completion(.success(outputURL))
-                    } else {
-                        completion(.failure(NSError(domain: "VideoMutingError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Exported file URL is nil"])))
-                    }
-                case .failed:
-                    print("Mute video export failed with error: \(String(describing: exportSession.error))")
-                    completion(.failure(exportSession.error ?? NSError(domain: "VideoMutingError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unknown export error"])))
-                default:
-                    break
-                }
-            }
-        }
-    }
-
 
 
     
@@ -811,18 +801,33 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
           currentRecordingUUID = UUID().uuidString
           print(transcription, "transcription after")
       }
-//
-    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-         if let error = error {
-             print(error.localizedDescription)
-             return
-         }
 
-         DispatchQueue.main.async {
-             self.previewURL = outputFileURL
-             self.showPreview = true
-         }
-     }
+//
+//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+//         if let error = error {
+//             print(error.localizedDescription)
+//             return
+//         }
+//
+//         DispatchQueue.main.async {
+//             self.previewURL = outputFileURL
+//             self.showPreview = true
+//         }
+//     }
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+        if let error = error {
+            print(error.localizedDescription)
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.previewURL = outputFileURL
+            self.showPreview = true
+            // Ensure the session is reconfigured after recording
+            self.configureSessionFor(mode: self.selectedCameraMode)
+        }
+    }
     
 
     func compressVideo(inputURL: URL, outputURL: URL, handler: @escaping (Bool, URL?) -> Void) {
@@ -1163,12 +1168,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     }
 
 
-    private func muteVideo(_ inputURL: URL) -> URL {
-        // Assume muting functionality is implemented here.
-        // This should return either the original URL or a new URL to a muted video.
-        // For now, return the input URL as a placeholder.
-        return inputURL // Replace with actual muting logic
-    }
 
     func resetPreviewState() {
         // Update UI immediately to indicate that processing has started

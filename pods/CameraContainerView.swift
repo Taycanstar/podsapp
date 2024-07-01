@@ -1208,7 +1208,12 @@ struct CameraContainerView: View {
                 
                     .onAppear {
                         
-                        //                            cameraModel.checkPermission()
+                        if !cameraModel.hasCheckedPermission {
+                                cameraModel.checkPermission()
+                            }
+                            if cameraModel.permissionGranted {
+                                cameraModel.setUp()
+                            }
                         // Set labels to disappear after 4 seconds
                         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                             showTranscribeLabel = false
@@ -1821,16 +1826,17 @@ struct FinalPreview: View {
                                     Button(action: {
                                         showPreview = false
                                         
-                                        // Perform the other actions in the background
                                         DispatchQueue.global(qos: .userInitiated).async {
                                             if cameraModel.currentPod.items.isEmpty {
                                                 // If it's the first item (Pod is empty), we've already closed the preview
                                             } else {
                                                 // If Pod has items, prepare to re-record the current item
-                                                cameraModel.reRecordCurrentItem()
+                                                // Move the UI update to the main thread
+                                                DispatchQueue.main.async {
+                                                    cameraModel.reRecordCurrentItem()
+                                                }
                                             }
                                         }
-
 
                                     }) {
                                         Image(systemName: "chevron.left")
