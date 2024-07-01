@@ -130,9 +130,9 @@ struct PodView: View {
                     isEditing.toggle()
                     
                 },
-                .default(Text("Add Item")) {
-                    showAddItemView.toggle()
-                },
+//                .default(Text("Add Item")) {
+//                    showAddItemView.toggle()
+//                },
                 .cancel()
             ])
         }
