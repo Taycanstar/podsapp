@@ -39,13 +39,13 @@ struct PodItemCellImage: View {
                 Spacer()
 
                 HStack(alignment: .bottom) {
-                    VStack(alignment: .leading) {
-                        Text("Lewis Hamilton")
-                            .fontWeight(.semibold)
-                        Text("Still we raise")
-                    }
-                    .foregroundStyle(.white)
-                    .font(.subheadline)
+//                    VStack(alignment: .leading) {
+//                        Text("Lewis Hamilton")
+//                            .fontWeight(.semibold)
+//                        Text("Still we raise")
+//                    }
+//                    .foregroundStyle(.white)
+//                    .font(.subheadline)
 
                     Spacer()
                 }
