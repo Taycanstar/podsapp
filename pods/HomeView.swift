@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var editMode: EditMode = .inactive
     @State private var isLoadingMore = false
     @State private var editingPods: [Pod] = []
+    @State private var hasInitiallyFetched = false
     
     
     var body: some View {
@@ -95,15 +96,15 @@ struct HomeView: View {
                     }
                 }
                 .onAppear {
-                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-                        // No additional action needed
-                    }
-//                    uploadViewModel.uploadCompletion = {
-//                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-//                            // No additional action needed
-//                        }
+//                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+//                        // No additional action needed
 //                    }
-                    
+
+                    if !hasInitiallyFetched {
+                                  homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+                                      hasInitiallyFetched = true
+                                  }
+                              }
                     editingPods = homeViewModel.pods
                 }
                 .listStyle(InsetGroupedListStyle())

@@ -24,10 +24,18 @@ struct ContentView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showTourView = false
+    @EnvironmentObject var homeViewModel: HomeViewModel
    
     
  
-
+    private func fetchInitialPods() {
+        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+            // This closure is called after the fetch operation completes
+            print("Initial pods fetch completed")
+            // You could update some UI state here if needed
+        }
+    }
+    
 
     var body: some View {
         Group {
@@ -81,6 +89,11 @@ struct ContentView: View {
                     
             }
         }
+        .onChange(of: isAuthenticated) {_, newValue in
+                    if newValue {
+                        fetchInitialPods()
+                    }
+                }
         .sheet(isPresented: $showTourView) {
                 TourView(isTourViewPresented: $showTourView)
             }
@@ -94,7 +107,7 @@ struct ContentView: View {
                                        viewModel.username = storedUsername
                                    }
                           }
-                          .onChange(of: isAuthenticated) { newValue in
+                          .onChange(of: isAuthenticated) {_, newValue in
                               // Persist the authentication state
                               UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
                           }
