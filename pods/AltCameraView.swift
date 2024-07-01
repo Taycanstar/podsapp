@@ -1,9 +1,3 @@
-//
-//  AltCameraView.swift
-//  pods
-//
-//  Created by Dimi Nunez on 2/14/24.
-//
 
 import SwiftUI
 import AVFoundation
@@ -27,7 +21,7 @@ struct AltCameraView: View {
 
 
         }
-        .onAppear(perform: cameraModel.checkPermission)
+//        .onAppear(perform: cameraModel.checkPermission)
         .alert(isPresented: $cameraModel.alert) {
             Alert(title: Text("Camera and microphone are required to record videos"))
         }
@@ -55,9 +49,9 @@ struct CameraPreview: UIViewRepresentable {
         // Add pinch gesture recognizer
         let pinchGestureRecognizer = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinch(_:)))
         view.addGestureRecognizer(pinchGestureRecognizer)
-        
-        cameraModel.session.startRunning()
-        
+//        
+//        cameraModel.session.startRunning()
+//        
         return view
     }
     
@@ -94,3 +88,4 @@ struct CameraPreview: UIViewRepresentable {
 #Preview {
     AltCameraView()
 }
+
