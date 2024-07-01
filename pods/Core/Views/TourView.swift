@@ -10,7 +10,7 @@ import AVKit
 
 struct TourView: View {
     @State private var currentIndex: Int = 0
-    let videos: [String] = ["previe1", "preview2"]
+    let videos: [String] = ["app1", "app2"]
     @Binding var isTourViewPresented: Bool
     
     var body: some View {
