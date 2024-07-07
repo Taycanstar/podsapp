@@ -647,7 +647,7 @@ struct CameraContainerView: View {
                         .padding(.vertical, 15) // Padding for thickness
                         .frame(maxWidth: .infinity) // Make button expand
                         .fontWeight(.semibold)
-                        .background(Color(red: 57/255, green: 106/255, blue: 247/255))
+                        .background(Color(red: 35/255, green: 108/255, blue: 255/255))
                         .cornerRadius(8) // Rounded corners
                     } else{
                         Rectangle()

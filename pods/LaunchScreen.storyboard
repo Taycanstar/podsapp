@@ -17,16 +17,6 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="clear-logo" translatesAutoresizingMaskIntoConstraints="NO" id="Ylx-GI-kWN">
-                                <rect key="frame" x="71.666666666666686" y="301" width="250" height="250"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="250" id="1Wi-Js-sN0"/>
-                                    <constraint firstAttribute="width" secondItem="Ylx-GI-kWN" secondAttribute="height" multiplier="1:1" id="d1z-43-Ca5"/>
-                                    <constraint firstAttribute="width" constant="250" id="d20-tM-3fs"/>
-                                    <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="250" id="f5k-nA-anY"/>
-                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="250" id="gVK-kb-SbI"/>
-                                </constraints>
-                            </imageView>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="from" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Og5-TE-xwR">
                                 <rect key="frame" x="179" y="735" width="35" height="20"/>
                                 <fontDescription key="fontDescription" name="HelveticaNeue" family="Helvetica Neue" pointSize="17"/>
@@ -45,6 +35,13 @@
                                     <constraint firstAttribute="height" constant="38" id="bvv-Z7-sXr"/>
                                 </constraints>
                             </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="small" translatesAutoresizingMaskIntoConstraints="NO" id="b6S-lp-rNl">
+                                <rect key="frame" x="90" y="353" width="213" height="108"/>
+                                <color key="tintColor" name="AccentColor"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="108" id="UGc-1F-8ti"/>
+                                </constraints>
+                            </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vDu-zF-Fre"/>
                         <color key="backgroundColor" name="AccentColor"/>
@@ -53,11 +50,12 @@
                             <constraint firstItem="hS9-gd-oj7" firstAttribute="centerY" secondItem="dLn-Ci-lZh" secondAttribute="centerY" id="3Ke-hI-B3D"/>
                             <constraint firstItem="vDu-zF-Fre" firstAttribute="bottom" secondItem="hS9-gd-oj7" secondAttribute="bottom" constant="26" id="4Ji-Rp-w70"/>
                             <constraint firstItem="dLn-Ci-lZh" firstAttribute="top" secondItem="Og5-TE-xwR" secondAttribute="bottom" constant="4" id="C9M-D4-1CR"/>
-                            <constraint firstItem="Ylx-GI-kWN" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="ENC-lM-ll6"/>
-                            <constraint firstItem="Og5-TE-xwR" firstAttribute="centerX" secondItem="Ylx-GI-kWN" secondAttribute="centerX" id="KMK-mz-yGQ"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="top" secondItem="vDu-zF-Fre" secondAttribute="top" constant="294" id="LAL-Cb-CSN"/>
                             <constraint firstItem="vDu-zF-Fre" firstAttribute="trailing" secondItem="dLn-Ci-lZh" secondAttribute="trailing" constant="157" id="PgK-IP-8Ko"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="90" id="Rta-lb-CK4"/>
                             <constraint firstItem="dLn-Ci-lZh" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="169" id="XtR-hc-FGQ"/>
-                            <constraint firstItem="Ylx-GI-kWN" firstAttribute="centerY" secondItem="5EZ-qb-Rvc" secondAttribute="centerY" id="q6r-VO-TBa"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="Og5-TE-xwR" secondAttribute="centerX" id="bfm-Nx-HX6"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="n44-rG-3wp"/>
                             <constraint firstItem="hS9-gd-oj7" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="126" id="vPI-oM-Cbv"/>
                         </constraints>
                     </view>
@@ -68,10 +66,10 @@
         </scene>
     </scenes>
     <resources>
-        <image name="clear-logo" width="1024" height="1024"/>
+        <image name="small" width="220" height="320"/>
         <image name="white-logo" width="1024" height="1024"/>
         <namedColor name="AccentColor">
-            <color red="0.27500000596046448" green="0.37999999523162842" blue="0.96100002527236938" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+            <color red="0.13699999451637268" green="0.42399999499320984" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
         <systemColor name="systemGray5Color">
             <color red="0.8980392157" green="0.8980392157" blue="0.91764705879999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

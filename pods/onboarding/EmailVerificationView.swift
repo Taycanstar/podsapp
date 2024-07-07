@@ -31,7 +31,7 @@ struct EmailVerificationView: View {
 //                    presentationMode.wrappedValue.dismiss()
                     viewModel.currentStep = .landing
                 }
-                .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
                 .padding()
                 Spacer()
             }
@@ -51,7 +51,7 @@ struct EmailVerificationView: View {
                 Button("Resend email") {
                            resendVerificationEmail()
                        }
-                       .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                       .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
 //                       .padding()
 
                     

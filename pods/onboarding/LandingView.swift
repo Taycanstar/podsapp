@@ -5,7 +5,7 @@ import CryptoKit
 
 struct LandingView: View {
     // Background color as specified
-    let backgroundColor = Color(red: 70/255, green: 87/255, blue: 245/255)
+    let backgroundColor = Color(red: 35/255, green: 108/255, blue: 255/255)
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
     @EnvironmentObject var viewModel: OnboardingViewModel
@@ -21,10 +21,10 @@ struct LandingView: View {
                 VStack {
                     Spacer()
                     // Image centered on the screen
-                    Image("clear-logo")
+                    Image("small")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 200, height: 200) // Adjust size as needed
+                        .frame(width: 100, height: 100) // Adjust size as needed
                     Spacer()
                     
                     // Bottom card with buttons, corrected for padding and edge issues
@@ -162,42 +162,7 @@ struct LandingView: View {
           request.nonce = sha256(nonce)
       }
 
-    
-//    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
-//        switch result {
-//        case .success(let authResults):
-//            guard let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential else { return }
-//            guard currentNonce != nil else {
-//                fatalError("Invalid state: a login callback was received, but no login request was sent.")
-//            }
-//            guard let appleIDToken = appleIDCredential.identityToken else {
-//                print("Unable to fetch identity token")
-//                return
-//            }
-//            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-//                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
-//                return
-//            }
-//
-//            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString) { success, message, isNewUser in
-//                if success {
-//                    DispatchQueue.main.async {
-//                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
-//                        UserDefaults.standard.set(appleIDCredential.email ?? "", forKey: "userEmail")
-//                        viewModel.email = appleIDCredential.email ?? ""
-//                        viewModel.currentStep = isNewUser ? .welcome : .landing
-//                        self.isAuthenticated = true
-//                    }
-//                } else {
-//                    print("Failed to send token: \(message ?? "Unknown error")")
-//                }
-//            }
-//
-//        case .failure(let error):
-//            print("Authorization failed: \(error.localizedDescription)")
-//        }
-//    }
-    
+
     func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .success(let authResults):

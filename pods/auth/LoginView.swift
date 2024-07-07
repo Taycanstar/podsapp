@@ -42,7 +42,7 @@ struct LoginView: View {
             Button("Sign out") {
                 viewModel.currentStep = .landing
             }
-            .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
             .padding()
             Spacer()
         }
@@ -69,7 +69,7 @@ struct LoginView: View {
                     self.showPassword.toggle()
                 }) {
                     Image(systemName: self.showPassword ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                        .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
                 }
                 .padding(.trailing, 15)
             }
@@ -80,7 +80,7 @@ struct LoginView: View {
                               showForgotPassword = true
                           }) {
                               Text("Forgot Password?")
-                                  .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+                                  .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
                                   .font(.footnote)
                           }
                           .sheet(isPresented: $showForgotPassword) {
@@ -111,7 +111,7 @@ struct LoginView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .background(Color(red: 35/255, green: 108/255, blue: 255/255))
             .cornerRadius(10)
         }
         .padding(.horizontal)

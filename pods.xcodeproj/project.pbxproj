@@ -22,6 +22,7 @@
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
 		3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
+		367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
 		3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8662BBAE45200B350E2 /* PodItemView.swift */; };
 		3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8682BBAE68C00B350E2 /* PodItemCell.swift */; };
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
@@ -30,7 +31,6 @@
 		3686EB1D2BF9558500F501C6 /* VideoCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */; };
 		3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */; };
 		3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */; };
-		368A27332B9597CE0001BBCA /* pods-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 368A27322B9597CE0001BBCA /* pods-logo.png */; };
 		368A27372B977F5A0001BBCA /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27362B977F5A0001BBCA /* LandingView.swift */; };
 		368A27392B9818330001BBCA /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27382B9818330001BBCA /* InfoView.swift */; };
 		368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67172BDCC454000434E0 /* PodItemCellImage.swift */; };
@@ -50,7 +50,6 @@
 		36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36BBC80F2C2B39C70037CF74 /* TourView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
-		36C458BE2B7421110060355F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
 		36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458C02B7421110060355F /* Preview Assets.xcassets */; };
 		36C458CB2B7421110060355F /* podsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458CA2B7421110060355F /* podsTests.swift */; };
 		36C458D52B7421110060355F /* podsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458D42B7421110060355F /* podsUITests.swift */; };
@@ -116,7 +115,6 @@
 		3686EB1C2BF9558500F501C6 /* VideoCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCacheManager.swift; sourceTree = "<group>"; };
 		3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPageView.swift; sourceTree = "<group>"; };
 		3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerContainerView.swift; sourceTree = "<group>"; };
-		368A27322B9597CE0001BBCA /* pods-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "pods-logo.png"; path = "../../../../../Downloads/pods-logo.png"; sourceTree = "<group>"; };
 		368A27362B977F5A0001BBCA /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
 		368A27382B9818330001BBCA /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
 		368D67172BDCC454000434E0 /* PodItemCellImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCellImage.swift; sourceTree = "<group>"; };
@@ -341,7 +339,6 @@
 				36C458BB2B7421100060355F /* ContentView.swift */,
 				36C458BD2B7421110060355F /* Assets.xcassets */,
 				36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */,
-				368A27322B9597CE0001BBCA /* pods-logo.png */,
 				36C458BF2B7421110060355F /* Preview Content */,
 			);
 			path = pods;
@@ -512,12 +509,11 @@
 				36411D312C3286890034E36D /* app2.mp4 in Resources */,
 				36411D2F2C32867D0034E36D /* app1.mp4 in Resources */,
 				3698E4FC2C24968F0040AF60 /* .gitignore in Resources */,
-				368A27332B9597CE0001BBCA /* pods-logo.png in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
 				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
+				367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
-				36C458BE2B7421110060355F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -867,7 +863,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -934,7 +930,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;

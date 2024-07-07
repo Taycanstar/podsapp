@@ -72,7 +72,7 @@ struct TourView: View {
                 .padding(.horizontal)
                 .fontWeight(.semibold)
                 .font(.system(size: 16))
-                .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+                .background(Color(red: 35/255, green: 108/255, blue: 255/255))
                 .cornerRadius(15)
         }
         .frame(height: 50)
@@ -136,7 +136,7 @@ struct PageControl: View {
         HStack(spacing: 8) {
             ForEach(0..<numberOfPages, id: \.self) { index in
                 Circle()
-                    .fill(index == currentIndex ? Color(red: 70/255, green: 87/255, blue: 245/255) : Color.gray)
+                    .fill(index == currentIndex ? Color(red: 35/255, green: 108/255, blue: 255/255) : Color.gray)
                     .frame(width: 7, height: 7)
             }
         }

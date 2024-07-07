@@ -43,7 +43,7 @@ struct WelcomeView: View {
             Button("Sign out") {
                 viewModel.currentStep = .landing
             }
-            .foregroundColor(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .foregroundColor(Color(red: 35/255, green: 108/255, blue: 255/255))
             .padding()
             Spacer()
         }
@@ -125,7 +125,7 @@ struct WelcomeView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 70/255, green: 87/255, blue: 245/255))
+            .background(Color(red: 35/255, green: 108/255, blue: 255/255))
             .cornerRadius(10)
         }
         .disabled(isLoading) // Disable the button while loading
@@ -172,7 +172,7 @@ struct WelcomeView: View {
     private let infoData = [
         InfoItem(icon: "record.circle", title: "Organize with video", subtitle: "Create video-integrated ordered collections", color: .red),
         InfoItem(icon: "film.stack.fill", title: "Stack Pods", subtitle: "Stack collections called pods, each containing video items", color: .green),
-        InfoItem(icon: "waveform", title: "Transcribe videos", subtitle: "Automate item labeling by converting audio within the video into text", color: Color(red: 70/255, green: 86/255, blue: 246/255))
+        InfoItem(icon: "waveform", title: "Transcribe videos", subtitle: "Automate item labeling by converting audio within the video into text", color: Color(red: 35/255, green: 108/255, blue: 255/255))
     ]
 }
 
