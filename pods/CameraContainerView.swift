@@ -800,9 +800,6 @@ struct FinalPreview: View {
     @State var url: URL?
     @State var selectedImage: UIImage?
     @Binding var showPreview: Bool
-
-//     @State var player = AVPlayer()
-//    @StateObject private var playerViewModel = PlayerViewModel()
     @ObservedObject var cameraModel = CameraViewModel()
     var isFrontCameraUsed: Bool
     @Binding var showCreatePodView: Bool
@@ -813,8 +810,8 @@ struct FinalPreview: View {
     @State private var isMuted: Bool = false
     @State private var showAddLabel: Bool = true
     @Environment(\.presentationMode) var presentationMode
-//    var player: AVPlayer
     @State private var player: AVPlayer = AVPlayer()
+    @State private var showCheckmarkLabel: Bool = true
 
     
     
@@ -867,6 +864,7 @@ struct FinalPreview: View {
                             //                                      .scaleEffect(x: isFrontCameraUsed ? -1 : 1, y: 1, anchor: .center)
                                 .frame(width: screenWidth, height: videoHeight)
                         }
+               
                         
                         Spacer() // Pushes everything up
                    
@@ -896,7 +894,7 @@ struct FinalPreview: View {
                                             .foregroundColor(.white)
                                             .font(.system(size: 18))
                                             .frame(width: 44, height: 44)
-                                            .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.4))
+                                            .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.5))
                                             .clipShape(Circle())
                                         
                                     }
@@ -904,42 +902,92 @@ struct FinalPreview: View {
                                         .foregroundColor(.white)
                                         .font(.system(size: 12))
                                         .fontWeight(.medium)
+                                        .shadow(radius: 5)
                                 }
                                 
-                                
-                                Button(action: {
-                                    // Immediately hide the preview
-                                       showPreview = false
-                                    
-                                    
-                                   
-                                    
-                                    // Perform the confirmation and other actions in the background
-                                    DispatchQueue.global(qos: .userInitiated).async {
-                                        if let _ = cameraModel.previewURL {
-                                            // It's a video
-                                            cameraModel.confirmVideo()
-                                        } else if cameraModel.selectedImage != nil {
-                                            // It's a photo
-                                            cameraModel.confirmPhoto()
-                                        }
-                                        
-                                        DispatchQueue.main.async {
-                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-                                        }
-                                    }
+//                                
+//                                Button(action: {
+//                                    // Immediately hide the preview
+//                                       showPreview = false
+//                                    
+//                                    
+//                                   
+//                                    
+//                                    // Perform the confirmation and other actions in the background
+//                                    DispatchQueue.global(qos: .userInitiated).async {
+//                                        if let _ = cameraModel.previewURL {
+//                                            // It's a video
+//                                            cameraModel.confirmVideo()
+//                                        } else if cameraModel.selectedImage != nil {
+//                                            // It's a photo
+//                                            cameraModel.confirmPhoto()
+//                                        }
+//                                        
+//                                        DispatchQueue.main.async {
+//                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+//                                        }
+//                                    }
+//
+//                                }) {
+//                                    
+//                                    Image(systemName: "checkmark")
+//                                        .foregroundColor(.black)
+//                                        .font(.system(size: 34))
+//                                        .frame(width: 75, height: 75) // Making this larger as specified
+//                                        .background(Color.white)
+//                                        .clipShape(Circle())
+//                                    
+//                                }
+//                                .padding(.bottom, 15)
+//
 
-                                }) {
+                                VStack {
+                                        if showCheckmarkLabel {
+                                            Text("Tap below to confirm and continue adding items")
+                                                .font(.system(size: 14))
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .shadow(radius: 5)
+                                                .padding(.bottom, 10)
+                                                .frame(maxWidth: 175)
+                                                .multilineTextAlignment(.center)
+                                                .onAppear {
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                                                        withAnimation {
+                                                            showCheckmarkLabel = false
+                                                        }
+                                                    }
+                                                }
+                                        }
+                                        Button(action: {
+                                            // Immediately hide the preview
+                                            showPreview = false
+                                            
+                                            // Perform the confirmation and other actions in the background
+                                            DispatchQueue.global(qos: .userInitiated).async {
+                                                if let _ = cameraModel.previewURL {
+                                                    // It's a video
+                                                    cameraModel.confirmVideo()
+                                                } else if cameraModel.selectedImage != nil {
+                                                    // It's a photo
+                                                    cameraModel.confirmPhoto()
+                                                }
+                                                
+                                                DispatchQueue.main.async {
+                                                    cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                                                }
+                                            }
+                                        }) {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.black)
+                                                .font(.system(size: 34))
+                                                .frame(width: 75, height: 75) // Making this larger as specified
+                                                .background(Color.white)
+                                                .clipShape(Circle())
+                                        }
+                                        .padding(.bottom, 15)
+                                    }
                                     
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.black)
-                                        .font(.system(size: 34))
-                                        .frame(width: 75, height: 75) // Making this larger as specified
-                                        .background(Color.white)
-                                        .clipShape(Circle())
-                                    
-                                }
-                                .padding(.bottom, 15)
 
                                 VStack {
                                     Button(action: {
@@ -962,14 +1010,15 @@ struct FinalPreview: View {
                                             .foregroundColor(.white)
                                             .font(.system(size: 18))
                                             .frame(width: 44, height: 44)
-                                            .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.4))
+                                            .background(Color(red: 75/255, green: 75/255, blue: 75/255).opacity(0.5))
                                             .clipShape(Circle())
                                         
                                     }
-                                    Text("Continue")
+                                    Text("Next")
                                         .foregroundColor(.white)
                                         .font(.system(size: 12))
                                         .fontWeight(.medium)
+                                        .shadow(radius: 5)
                                 }
                             }
                             .padding(.bottom, 15)
@@ -1032,130 +1081,3 @@ extension Image {
             .foregroundColor(.white)
     }
 }
-
-//class PlayerViewModel: ObservableObject {
-//    @Published var player = AVPlayer()
-//    private var timeObserverToken: Any?
-//    private var playerItemObserver: NSKeyValueObservation?
-//
-//    func setupPlayer(with url: URL) {
-//        let playerItem = AVPlayerItem(url: url)
-//        player.replaceCurrentItem(with: playerItem)
-//        addObservers()
-//        player.play()
-//    }
-//
-//    private func addObservers() {
-//        removeObservers()
-//
-//        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-//        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-//            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
-//                self?.player.seek(to: .zero)
-//                self?.player.play()
-//            }
-//        }
-//
-//        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
-//            if playerItem.status == .readyToPlay {
-//                self?.player.play()
-//            }
-//        })
-//    }
-//
-//    func removeObservers() {
-//        if let token = timeObserverToken {
-//            player.removeTimeObserver(token)
-//            timeObserverToken = nil
-//        }
-//        playerItemObserver?.invalidate()
-//        playerItemObserver = nil
-//    }
-//
-//    func cleanUpPlayer() {
-//        removeObservers()
-//        player.pause()
-//        player.replaceCurrentItem(with: nil)
-//    }
-//
-//    func togglePlayPause() {
-//        if player.timeControlStatus == .playing {
-//            player.pause()
-//        } else {
-//            player.play()
-//        }
-//    }
-//
-//    deinit {
-//        removeObservers()
-//    }
-//}
-
-//class PlayerViewModel: ObservableObject {
-//    @Published var player = AVPlayer()
-//    @Published var isPlaying = false
-//    private var timeObserverToken: Any?
-//    private var playerItemObserver: NSKeyValueObservation?
-//
-//    func setupPlayer(with url: URL) {
-//        let playerItem = AVPlayerItem(url: url)
-//        player.replaceCurrentItem(with: playerItem)
-//        addObservers()
-//        play()
-//    }
-//
-//    private func addObservers() {
-//        removeObservers()
-//
-//        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-//        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-//            if let currentItem = self?.player.currentItem, currentItem.currentTime() >= currentItem.duration {
-//                self?.player.seek(to: .zero)
-//                self?.play()
-//            }
-//        }
-//
-//        playerItemObserver = player.currentItem?.observe(\.status, options: [.new, .old], changeHandler: { [weak self] playerItem, _ in
-//            if playerItem.status == .readyToPlay {
-//                self?.play()
-//            }
-//        })
-//    }
-//
-//    func removeObservers() {
-//        if let token = timeObserverToken {
-//            player.removeTimeObserver(token)
-//            timeObserverToken = nil
-//        }
-//        playerItemObserver?.invalidate()
-//        playerItemObserver = nil
-//    }
-//
-//    func cleanUpPlayer() {
-//        removeObservers()
-//        pause()
-//        player.replaceCurrentItem(with: nil)
-//    }
-//
-//    func togglePlayPause() {
-//        if isPlaying {
-//            pause()
-//        } else {
-//            play()
-//        }
-//    }
-//
-//    func play() {
-//        player.play()
-//        isPlaying = true
-//    }
-//
-//    func pause() {
-//        player.pause()
-//        isPlaying = false
-//    }
-//
-//    deinit {
-//        removeObservers()
-//    }
-//}
