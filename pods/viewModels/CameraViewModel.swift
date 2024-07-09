@@ -29,10 +29,12 @@ struct PodItem: Identifiable {
     var itemType: String?
     var uuid: String?
     var player: AVPlayer?
+    //new
+    var notes: String
 }
 
 struct Pod: Identifiable {
-    var id: Int // Correctly declare the type of `id`
+    var id: Int
     var items: [PodItem] = []
     var title: String
 }
@@ -43,7 +45,7 @@ struct PodJSON: Codable {
     let id: Int
     let title: String
     let created_at: String
-    let items: [PodItemJSON] // Add this line
+    let items: [PodItemJSON]
 }
 
 struct PodItemJSON: Codable {
@@ -53,6 +55,7 @@ struct PodItemJSON: Codable {
     let label: String
     let thumbnail: String
     let itemType: String?
+    let notes: String?
    
 }
 
@@ -94,6 +97,7 @@ extension PodItem {
                    player = nil
                   
                }
+        self.notes = itemJSON.notes ?? ""
     }
 }
 
@@ -905,52 +909,6 @@ var hasCheckedPermission = false
         }
     }
 
-
-
-//    func switchCamera() {
-//        guard let currentCameraInput = session.inputs.first(where: { input in
-//            guard let input = input as? AVCaptureDeviceInput else { return false }
-//            return input.device.hasMediaType(.video)
-//        }) as? AVCaptureDeviceInput else {
-//            print("Failed to get current camera input")
-//            return
-//        }
-//
-//        session.beginConfiguration()
-//        session.removeInput(currentCameraInput)
-//
-//        let newCameraPosition: AVCaptureDevice.Position = currentCameraInput.device.position == .front ? .back : .front
-//        guard let newCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newCameraPosition),
-//              let newCameraInput = try? AVCaptureDeviceInput(device: newCameraDevice) else {
-//            print("Failed to create new camera input")
-//            session.commitConfiguration()
-//            return
-//        }
-//
-//        if session.canAddInput(newCameraInput) {
-//            session.addInput(newCameraInput)
-//            isFrontCameraUsed.toggle()
-//            initialZoomFactor = 1.0 // Reset zoom factor
-//        } else {
-//            print("Cannot add new camera input")
-//        }
-//
-//        // After switching the camera, ensure the photo output is correctly configured.
-//        // This may involve adjusting the connection settings for the photo output.
-//        if let photoConnection = photoOutput.connection(with: .video) {
-//            // Check and adjust the photoConnection settings as needed, for example:
-//            if photoConnection.isVideoOrientationSupported {
-//                photoConnection.videoOrientation = AVCaptureVideoOrientation.portrait
-//            }
-//        }
-//
-//        session.commitConfiguration()
-//        
-//        // If the session was stopped, start it again.
-//        if !session.isRunning {
-//            session.startRunning()
-//        }
-//    }
     
     func switchCamera() {
         guard let currentCameraInput = session.inputs.first(where: { input in
@@ -1051,6 +1009,7 @@ var hasCheckedPermission = false
     }
 
 
+// old confirm
 //    func confirmVideo() {
 //        print(isWaveformEnabled, "is waveform enabled?")
 //        
@@ -1073,46 +1032,37 @@ var hasCheckedPermission = false
 //        }
 //
 //        let nextId = currentPod.items.count + 1
-//        let defaultMetadata = "Item \(nextId)"
-//        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+////        let defaultMetadata = "Item \(nextId)"
+//        let defaultMetadata = ""
 //        
-//        // Decide if muting is needed and process accordingly
-//        let processURL = videoURL
-//
-//        compressVideo(inputURL: processURL, outputURL: outputURL) { [weak self] result in
-//            guard let self = self else { return }
-//            switch result {
-//            case .success(let compressedUrl):
-//                print("Video compression succeeded, proceeding with confirmation.")
-//                
-//                if self.isWaveformEnabled {
-//                    print("Waveform enabled, proceeding with transcription.")
-//                    self.isTranscribing = true
-//
-//                    self.transcribeAudioUsingBackend(from: compressedUrl) { transcribedText in
-//                        DispatchQueue.main.async {
-//                            let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
-//                            print("Completing video confirmation with metadata: \(metadata)")
-//                            self.completeVideoConfirmation(with: compressedUrl, metadata: metadata)
-//                            self.itemConfirmed = true
-//                            if self.isWaveformEnabled {
-//                                self.isWaveformEnabled = false
-//                            }
-//                        }
+//        // Use the original video URL directly
+//        if self.isWaveformEnabled {
+//            print("Waveform enabled, proceeding with transcription.")
+//            
+//            DispatchQueue.main.async {
+//                        self.isTranscribing = true
 //                    }
-//                } else {
-//                    print("Waveform not enabled, skipping transcription.")
-//                    self.completeVideoConfirmation(with: compressedUrl, metadata: defaultMetadata)
+//            self.transcribeAudioUsingBackend(from: videoURL) { transcribedText in
+//                DispatchQueue.main.async {
+//                    let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
+//                    print("Completing video confirmation with metadata: \(metadata)")
+//                    self.completeVideoConfirmation(with: videoURL, metadata: metadata)
 //                    self.itemConfirmed = true
 //                    if self.isWaveformEnabled {
 //                        self.isWaveformEnabled = false
 //                    }
 //                }
-//            case .failure(let error):
-//                print("Video compression failed with error: \(error.localizedDescription)")
+//            }
+//        } else {
+//            print("Waveform not enabled, skipping transcription.")
+//            self.completeVideoConfirmation(with: videoURL, metadata: defaultMetadata)
+//            self.itemConfirmed = true
+//            if self.isWaveformEnabled {
+//                self.isWaveformEnabled = false
 //            }
 //        }
 //    }
+//end
 
     func confirmVideo() {
         print(isWaveformEnabled, "is waveform enabled?")
@@ -1138,6 +1088,7 @@ var hasCheckedPermission = false
         let nextId = currentPod.items.count + 1
 //        let defaultMetadata = "Item \(nextId)"
         let defaultMetadata = ""
+        let defaultNotes = ""
         
         // Use the original video URL directly
         if self.isWaveformEnabled {
@@ -1150,7 +1101,7 @@ var hasCheckedPermission = false
                 DispatchQueue.main.async {
                     let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
                     print("Completing video confirmation with metadata: \(metadata)")
-                    self.completeVideoConfirmation(with: videoURL, metadata: metadata)
+                    self.completeVideoConfirmation(with: videoURL, metadata: metadata, notes: defaultNotes)
                     self.itemConfirmed = true
                     if self.isWaveformEnabled {
                         self.isWaveformEnabled = false
@@ -1159,14 +1110,13 @@ var hasCheckedPermission = false
             }
         } else {
             print("Waveform not enabled, skipping transcription.")
-            self.completeVideoConfirmation(with: videoURL, metadata: defaultMetadata)
+            self.completeVideoConfirmation(with: videoURL, metadata: defaultMetadata, notes: defaultNotes)
             self.itemConfirmed = true
             if self.isWaveformEnabled {
                 self.isWaveformEnabled = false
             }
         }
     }
-
 
 
     func resetPreviewState() {
@@ -1209,20 +1159,40 @@ var hasCheckedPermission = false
         }
     }
     
-
-    private func completeVideoConfirmation(with videoURL: URL, metadata: String) {
+//complete vid start
+//    private func completeVideoConfirmation(with videoURL: URL, metadata: String) {
+//        guard let recordingUUID = currentRecordingUUID else {
+//              print("No video to confirm or UUID is missing.")
+//              return
+//          }
+//        // Check if the last item in the Pod is the same as the current preview URL
+//        if currentPod.items.last?.videoURL != videoURL {
+//            let thumbnail = generateThumbnail(for: videoURL, usingFrontCamera: isFrontCameraUsed)
+//            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video", uuid: recordingUUID)
+//            print(newItem, "new item")
+//            DispatchQueue.main.async {
+//                self.currentPod.items.append(newItem)
+//                print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count), Item Type: \(self.currentPod.items.last?.itemType ?? "nil")")
+//                // Store the confirmed URL
+//                self.lastConfirmedURL = videoURL
+//            }
+//        } else {
+//            print("The item is already in the Pod.")
+//        }
+//
+//    }
+// complete vid end
+    
+    private func completeVideoConfirmation(with videoURL: URL, metadata: String, notes: String) {
         guard let recordingUUID = currentRecordingUUID else {
-              print("No video to confirm or UUID is missing.")
-              return
-          }
+            print("No video to confirm or UUID is missing.")
+            return
+        }
         // Check if the last item in the Pod is the same as the current preview URL
         if currentPod.items.last?.videoURL != videoURL {
             let thumbnail = generateThumbnail(for: videoURL, usingFrontCamera: isFrontCameraUsed)
-            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video",  uuid: recordingUUID)
+            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video", uuid: recordingUUID, notes: notes)
             print(newItem, "new item")
-//            currentPod.items.append(newItem)
-//              print("Item confirmed and added to Pod. Current Pod count: \(currentPod.items), Item Type: \(currentPod.items.last?.itemType ?? "nil")")
-//            
             DispatchQueue.main.async {
                 self.currentPod.items.append(newItem)
                 print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count), Item Type: \(self.currentPod.items.last?.itemType ?? "nil")")
@@ -1232,9 +1202,72 @@ var hasCheckedPermission = false
         } else {
             print("The item is already in the Pod.")
         }
-
     }
 
+    func confirmPhoto(notes: String = "") {
+        guard let selectedImage = selectedImage else {
+            print("No photo to confirm.")
+            return
+        }
+        let nextId = currentPod.items.count + 1
+
+        // Check for duplicate image
+        if let lastItem = currentPod.items.last,
+           let lastImage = lastItem.image,
+           lastImage === selectedImage {
+            print("Duplicate image detected. Skipping addition.")
+            DispatchQueue.main.async {
+                self.showPreview = false // Adjust as needed for consistent UI flow
+            }
+        } else {
+            // No duplicate detected, proceed to append the new item
+            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image", notes: notes)
+
+            DispatchQueue.main.async {
+                self.currentPod.items.append(newItem)
+                // Consider when and how `selectedImage` should be reset
+                // self.selectedImage might be reset here or elsewhere depending on your app's flow
+                self.showPreview = false // Adjust as needed for consistent UI flow
+                self.itemConfirmed = true
+            }
+        }
+    }
+
+
+    
+    //old start
+//    func confirmPhoto() {
+//        guard let selectedImage = selectedImage else {
+//            print("No photo to confirm.")
+//            return
+//        }
+//        let nextId = currentPod.items.count + 1
+//
+//        // Check for duplicate image
+//        if let lastItem = currentPod.items.last,
+//           let lastImage = lastItem.image,
+//           lastImage === selectedImage {
+//            print("Duplicate image detected. Skipping addition.")
+//            DispatchQueue.main.async {
+//               
+//                self.showPreview = false // Adjust as needed for consistent UI flow
+//            }
+//        } else {
+//            // No duplicate detected, proceed to append the new item
+//            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image")
+//
+//            DispatchQueue.main.async {
+//                self.currentPod.items.append(newItem)
+//                // Consider when and how `selectedImage` should be reset
+//                // self.selectedImage might be reset here or elsewhere depending on your app's flow
+//                self.showPreview = false // Adjust as needed for consistent UI flow
+//                self.itemConfirmed = true
+//            }
+//        }
+//
+//    }
+    //old end
+    
     func confirmPhoto() {
         guard let selectedImage = selectedImage else {
             print("No photo to confirm.")
@@ -1253,7 +1286,7 @@ var hasCheckedPermission = false
             }
         } else {
             // No duplicate detected, proceed to append the new item
-            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image")
+            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image", notes: "")
 
             DispatchQueue.main.async {
                 self.currentPod.items.append(newItem)
@@ -1265,6 +1298,8 @@ var hasCheckedPermission = false
         }
 
     }
+    
+    
 
     func generateThumbnail(for url: URL, usingFrontCamera: Bool) -> UIImage? {
         let asset = AVAsset(url: url)
@@ -1378,34 +1413,6 @@ var hasCheckedPermission = false
             self.currentRecordingUUID = UUID().uuidString
         }
     }
-
-    
-//    func handleSelectedVideo(_ url: URL) {
-//        print("Selected video URL: \(url)")
-//
-//        // Specify the output path for the compressed video
-//        let compressedURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
-//        
-//        // Call the compression function
-//        compressVideo(inputURL: url, outputURL: compressedURL) { [weak self] (success, compressedURL) in
-//            guard let self = self, success, let compressedURL = compressedURL else {
-//                print("Compression failed.")
-//                // Ensure to stop the loading indicator in case of failure
-//                return
-//            }
-//            
-//            DispatchQueue.main.async {
-//                // Use the compressed video URL
-//                self.previewURL = compressedURL
-//                self.showPreview = true
-//                self.isProcessingVideo = false // Notify that processing ends
-//                // Now you can proceed with uploading compressedURL
-//                // Remember to clean up temporary files when done
-//            }
-//        }
-//    }
-
-
     
 
     func extractAudioFromVideo(videoURL: URL, completion: @escaping (Bool) -> Void) {
@@ -1515,65 +1522,131 @@ var hasCheckedPermission = false
            audioRecorder = nil
        }
     
+    //old start
 //    func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
 //        guard let previewURL = previewURL else {
 //            completion(false, "No preview URL available.")
 //            return
 //        }
 //
-//        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
-//        
-//        compressVideo(inputURL: previewURL, outputURL: outputURL) { [weak self] result in
-//            guard let self = self else { return }
-//            switch result {
-//            case .success(let compressedUrl):
-//                print("Video compression succeeded, proceeding with confirmation.")
-//                
-//                let handleCompletion: (String) -> Void = { metadata in
-//                    let thumbnail = self.generateThumbnail(for: compressedUrl, usingFrontCamera: self.isFrontCameraUsed)
-//                    NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: compressedUrl, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
-//                        if success {
-//                            print("Video item added to pod successfully.")
-//                        } else {
-//                            print("Failed to add video item to pod: \(message ?? "Unknown error")")
-//                        }
-//                        completion(success, message)
-//                    }
-//                }
-//
-//                if self.isWaveformEnabled {
-//                    print("Waveform enabled, proceeding with transcription.")
-//                    self.isTranscribing = true
-//
-//                    self.transcribeAudioUsingBackend(from: compressedUrl) { transcribedText in
-//                        DispatchQueue.main.async {
-//                            let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
-//                            print("Completing video addition with metadata: \(metadata)")
-//                            handleCompletion(metadata)
-//                            if self.isWaveformEnabled {
-//                                self.isWaveformEnabled = false
-//                            }
-//                        }
-//                    }
+//        let handleCompletion: (String) -> Void = { metadata in
+//            let thumbnail = self.generateThumbnail(for: previewURL, usingFrontCamera: self.isFrontCameraUsed)
+//            NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+//                if success {
+//                    print("Video item added to pod successfully.")
 //                } else {
-//                    print("Waveform not enabled, skipping transcription.")
-//                    handleCompletion("New item")
+//                    print("Failed to add video item to pod: \(message ?? "Unknown error")")
 //                }
-//            case .failure(let error):
-//                print("Video compression failed with error: \(error.localizedDescription)")
-//                completion(false, "Video compression failed: \(error.localizedDescription)")
+//                completion(success, message)
 //            }
 //        }
+//
+//        if self.isWaveformEnabled {
+//            print("Waveform enabled, proceeding with transcription.")
+//            self.isTranscribing = true
+//
+//            self.transcribeAudioUsingBackend(from: previewURL) { transcribedText in
+//                DispatchQueue.main.async {
+//                    let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
+//                    print("Completing video addition with metadata: \(metadata)")
+//                    handleCompletion(metadata)
+//                    if self.isWaveformEnabled {
+//                        self.isWaveformEnabled = false
+//                    }
+//                }
+//            }
+//        } else {
+//            print("Waveform not enabled, skipping transcription.")
+//            handleCompletion("New item")
+//        }
 //    }
+//
+//
+//      func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+//          guard let selectedImage = selectedImage else {
+//              completion(false, "No image selected.")
+//              return
+//          }
+//
+//          let metadata = "New item" // Replace with actual metadata if available
+//
+//          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, image: selectedImage, label: metadata, thumbnail: selectedImage, email: email) { success, message in
+//              if success {
+//                  print("Photo item added to pod successfully.")
+//              } else {
+//                  print("Failed to add photo item to pod: \(message ?? "Unknown error")")
+//              }
+//              completion(success, message)
+//          }
+//      }
+    //end
+    
+//    func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let previewURL = previewURL else {
+//            completion(false, "No preview URL available.")
+//            return
+//        }
+//
+//        let handleCompletion: (String) -> Void = { metadata in
+//            let thumbnail = self.generateThumbnail(for: previewURL, usingFrontCamera: self.isFrontCameraUsed)
+//            NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+//                if success {
+//                    print("Video item added to pod successfully.")
+//                } else {
+//                    print("Failed to add video item to pod: \(message ?? "Unknown error")")
+//                }
+//                completion(success, message)
+//            }
+//        }
+//
+//        if self.isWaveformEnabled {
+//            print("Waveform enabled, proceeding with transcription.")
+//            self.isTranscribing = true
+//
+//            self.transcribeAudioUsingBackend(from: previewURL) { transcribedText in
+//                DispatchQueue.main.async {
+//                    let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
+//                    print("Completing video addition with metadata: \(metadata)")
+//                    handleCompletion(metadata)
+//                    if self.isWaveformEnabled {
+//                        self.isWaveformEnabled = false
+//                    }
+//                }
+//            }
+//        } else {
+//            print("Waveform not enabled, skipping transcription.")
+//            handleCompletion("New item")
+//        }
+//    }
+//
+//
+//      func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+//          guard let selectedImage = selectedImage else {
+//              completion(false, "No image selected.")
+//              return
+//          }
+//
+//          let metadata = "New item" // Replace with actual metadata if available
+//
+//          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, image: selectedImage, label: metadata, thumbnail: selectedImage, email: email) { success, message in
+//              if success {
+//                  print("Photo item added to pod successfully.")
+//              } else {
+//                  print("Failed to add photo item to pod: \(message ?? "Unknown error")")
+//              }
+//              completion(success, message)
+//          }
+//      }
+
     func addVideoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let previewURL = previewURL else {
             completion(false, "No preview URL available.")
             return
         }
 
-        let handleCompletion: (String) -> Void = { metadata in
+        let handleCompletion: (String, String) -> Void = { metadata, notes in
             let thumbnail = self.generateThumbnail(for: previewURL, usingFrontCamera: self.isFrontCameraUsed)
-            NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, email: email) { success, message in
+            NetworkManager().addNewItem(podId: podId, itemType: "video", videoURL: previewURL, image: nil, label: metadata, thumbnail: thumbnail, notes: notes, email: email) { success, message in
                 if success {
                     print("Video item added to pod successfully.")
                 } else {
@@ -1591,7 +1664,7 @@ var hasCheckedPermission = false
                 DispatchQueue.main.async {
                     let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
                     print("Completing video addition with metadata: \(metadata)")
-                    handleCompletion(metadata)
+                    handleCompletion(metadata, "")
                     if self.isWaveformEnabled {
                         self.isWaveformEnabled = false
                     }
@@ -1599,29 +1672,28 @@ var hasCheckedPermission = false
             }
         } else {
             print("Waveform not enabled, skipping transcription.")
-            handleCompletion("New item")
+            handleCompletion("New item", "")
         }
     }
 
+    func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let selectedImage = selectedImage else {
+            completion(false, "No image selected.")
+            return
+        }
 
-      func addPhotoItem(podId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
-          guard let selectedImage = selectedImage else {
-              completion(false, "No image selected.")
-              return
-          }
+        let metadata = "New item" // Replace with actual metadata if available
+        let notes = ""
 
-          let metadata = "New item" // Replace with actual metadata if available
-
-          NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, image: selectedImage, label: metadata, thumbnail: selectedImage, email: email) { success, message in
-              if success {
-                  print("Photo item added to pod successfully.")
-              } else {
-                  print("Failed to add photo item to pod: \(message ?? "Unknown error")")
-              }
-              completion(success, message)
-          }
-      }
-
+        NetworkManager().addNewItem(podId: podId, itemType: "image", videoURL: nil, image: selectedImage, label: metadata, thumbnail: selectedImage, notes: notes, email: email) { success, message in
+            if success {
+                print("Photo item added to pod successfully.")
+            } else {
+                print("Failed to add photo item to pod: \(message ?? "Unknown error")")
+            }
+            completion(success, message)
+        }
+    }
 }
 
 

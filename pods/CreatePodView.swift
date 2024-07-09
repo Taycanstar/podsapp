@@ -21,6 +21,7 @@ struct CreatePodView: View {
     @Binding var showCreatePodView: Bool
     @Binding var showPreview: Bool
 
+
     var body: some View {
         
   
@@ -94,26 +95,28 @@ struct CreatePodView: View {
         .padding()
     }
 
-    private var itemList: some View {
-        List {
-            ForEach($pod.items, id: \.id) { $item in
-                HStack {
+       private var itemList: some View {
+           List {
+               ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
+                   HStack {
+                       VStack(alignment: .leading, spacing: 0) {
+                           DynamicTextField(text: $pod.items[index].metadata, placeholder: "Item \(item.id)")
 
-                    DynamicTextField(text: $item.metadata,  placeholder: "Item \($item.id.wrappedValue)")
-                    
-                
-                    Spacer()
-                    Image(uiImage: item.thumbnail ?? UIImage())
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 40, height: 40)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-//                .listRowBackground(Color.white)
-            }
-        }
-        .listStyle(PlainListStyle())
-    }
+                               DynamicTextFieldNotes(text: $pod.items[index].notes, placeholder: "Add note")
+
+                       }
+                       Spacer()
+                       Image(uiImage: item.thumbnail ?? UIImage())
+                           .resizable()
+                           .aspectRatio(contentMode: .fill)
+                           .frame(width: 40, height: 40)
+                           .clipShape(RoundedRectangle(cornerRadius: 8))
+                   }
+                   .contentShape(Rectangle())
+               }
+           }
+           .listStyle(PlainListStyle())
+       }
 
     private var createButton: some View {
 
@@ -161,7 +164,8 @@ struct CreatePodView: View {
         let startTime = Date()
         let items = pod.items.map { item -> PodItem in
                let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
-               return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType)
+            let notes = item.notes.isEmpty ? "Add note" : item.notes
+            return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType, notes: notes)
            }
         
         networkManager.createPod(podTitle: podName, items: items, email: viewModel.email) { success, message in
@@ -201,7 +205,8 @@ struct CreatePodView: View {
           let startTime = Date()
           let items = pod.items.map { item -> PodItem in
               let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
-              return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType)
+              let notes = item.notes.isEmpty ? "" : item.notes
+              return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType, notes: notes)
           }
           
           networkManager.addItemsToPod(podId: selectedPod.id, items: items) { success, message in
@@ -224,6 +229,8 @@ struct CreatePodView: View {
           }
       }
 }
+
+
 
 struct PlaceholderTextView: View {
     let placeholder: String
@@ -278,8 +285,9 @@ struct DynamicTextField: View {
         ZStack(alignment: .leading) {
             TextEditor(text: $text)
                 .background(Color.clear)
-                .padding(.top, 10)
+                .padding(.top, 0)
                 .padding(.leading, -5)
+                .font(.system(size: 17))
 
             if text.isEmpty {
                 Text(placeholder)
@@ -287,8 +295,36 @@ struct DynamicTextField: View {
                     .allowsHitTesting(false)
             }
         }
-   
-        .frame(minHeight: 10, maxHeight: .infinity)
+        .padding(.vertical, 0)
+        .background(.blue)
+//        .frame(minHeight: 10, maxHeight: .infinity)
+        .frame(height: 20)
+    }
+}
+
+struct DynamicTextFieldNotes: View {
+    @Binding var text: String
+    var placeholder: String
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            TextEditor(text: $text)
+                .background(Color.clear)
+                .padding(.top, 0)
+                .padding(.leading, -5)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(Color(red: 0.85, green: 0.85, blue: 0.85))
+                    .font(.system(size: 14))
+                    .allowsHitTesting(false)
+            }
+        }
+        .padding(.vertical, 0)
+//        .frame(minHeight: 10, maxHeight: .infinity)
+        .frame(height: 31)
     }
 }
 
@@ -390,7 +426,5 @@ struct PodSelectionView: View {
         .cornerRadius(10)
     }
 }
-
-
 
 

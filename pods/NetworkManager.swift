@@ -5,9 +5,9 @@ import SwiftUI
 class NetworkManager {
 
   
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
     
     func determineUserLocation() {
@@ -348,7 +348,7 @@ class NetworkManager {
                     uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
                         if success, let videoUrl = videoUrlString {
                             print("Video uploaded successfully for item \(item.id)")
-                            var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType)
+                            var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType, notes: item.notes)
                             if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
                                 let thumbnailBlobName = UUID().uuidString + ".jpg"
                                 print("Uploading thumbnail for item \(item.id)...")
@@ -384,7 +384,7 @@ class NetworkManager {
                 uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
                     if success, let imageUrl = imageUrlString {
                         print("Image uploaded successfully for item \(item.id)")
-                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType)
+                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType, notes: item.notes)
                         updatedItems.append(updatedItem)
                     } else {
                         print("Failed to upload image for item \(item.id)")
@@ -500,7 +500,7 @@ class NetworkManager {
                     uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
                         if success, let videoUrl = videoUrlString {
                             print("Video uploaded successfully for item \(item.id)")
-                            var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType)
+                            var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType, notes: item.notes)
                             if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
                                 let thumbnailBlobName = UUID().uuidString + ".jpg"
                                 print("Uploading thumbnail for item \(item.id)...")
@@ -536,7 +536,7 @@ class NetworkManager {
                 uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
                     if success, let imageUrl = imageUrlString {
                         print("Image uploaded successfully for item \(item.id)")
-                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType)
+                        let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType, notes: item.notes)
                         updatedItems.append(updatedItem)
                     } else {
                         print("Failed to upload image for item \(item.id)")
@@ -1131,22 +1131,146 @@ class NetworkManager {
         }.resume()
     }
     
- 
-    func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, email: String, completion: @escaping (Bool, String?) -> Void) {
+ //old start item addition
+//    func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, email: String, completion: @escaping (Bool, String?) -> Void) {
+//        let dispatchGroup = DispatchGroup()
+//        var uploadErrors = [String]()
+//
+//        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
+//                       else {
+//                    print("Missing configuration values for container")
+//                    completion(false, "No container name found.")
+//                    return
+//                }
+//
+//        var uploadedVideoURL: String?
+//        var uploadedImageURL: String?
+//        var uploadedThumbnailURL: String?
+//
+//        if let videoURL = videoURL {
+//            let videoBlobName = UUID().uuidString + ".mp4"
+//            do {
+//                let videoData = try Data(contentsOf: videoURL)
+//                dispatchGroup.enter()
+//                uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
+//                    if success, let videoUrl = videoUrlString {
+//                        uploadedVideoURL = videoUrl
+//                    } else {
+//                        uploadErrors.append("Failed to upload video")
+//                    }
+//                    dispatchGroup.leave()
+//                }
+//            } catch {
+//                uploadErrors.append("Failed to load video data for URL: \(videoURL)")
+//            }
+//        }
+//
+//        if let image = image {
+//            let imageBlobName = UUID().uuidString + ".jpg"
+//            if let imageData = image.jpegData(compressionQuality: 0.8) {
+//                dispatchGroup.enter()
+//                uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
+//                    if success, let imageUrl = imageUrlString {
+//                        uploadedImageURL = imageUrl
+//                    } else {
+//                        uploadErrors.append("Failed to upload image")
+//                    }
+//                    dispatchGroup.leave()
+//                }
+//            } else {
+//                uploadErrors.append("Failed to convert image to data")
+//            }
+//        }
+//
+//        if let thumbnail = thumbnail, let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
+//            let thumbnailBlobName = UUID().uuidString + ".jpg"
+//            dispatchGroup.enter()
+//            uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
+//                if success, let thumbnailUrl = thumbnailUrlString {
+//                    uploadedThumbnailURL = thumbnailUrl
+//                } else {
+//                    uploadErrors.append("Failed to upload thumbnail")
+//                }
+//                dispatchGroup.leave()
+//            }
+//        }
+//
+//        dispatchGroup.notify(queue: .main) {
+//            if !uploadErrors.isEmpty {
+//                completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
+//                return
+//            }
+//
+//            self.sendAddItemRequest(podId: podId, itemType: itemType, videoURL: uploadedVideoURL, imageURL: uploadedImageURL, label: label, thumbnail: uploadedThumbnailURL, email: email, completion: completion)
+//        }
+//    }
+//
+//    private func sendAddItemRequest(podId: Int, itemType: String, videoURL: String?, imageURL: String?, label: String, thumbnail: String?, email: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/add-pod-item/") else {
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "pod_id": podId,
+//            "itemType": itemType,
+//            "videoURL": videoURL ?? "",
+//            "imageURL": imageURL ?? "",
+//            "label": label,
+//            "thumbnail": thumbnail ?? "",
+//            "email": email
+//        ]
+//
+//        do {
+//            var request = URLRequest(url: url)
+//            request.httpMethod = "POST"
+//            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+//
+//            URLSession.shared.dataTask(with: request) { data, response, error in
+//                if let error = error {
+//                    DispatchQueue.main.async {
+//                        completion(false, "Network error: \(error.localizedDescription)")
+//                    }
+//                    return
+//                }
+//
+//                guard let httpResponse = response as? HTTPURLResponse else {
+//                    DispatchQueue.main.async {
+//                        completion(false, "No response from server")
+//                    }
+//                    return
+//                }
+//
+//                if httpResponse.statusCode == 201 {
+//                    DispatchQueue.main.async {
+//                        completion(true, "Item added to pod successfully.")
+//                    }
+//                } else {
+//                    var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
+//                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
+//                        errorMessage += ", Response: \(responseString)"
+//                    }
+//                    DispatchQueue.main.async {
+//                        completion(false, errorMessage)
+//                    }
+//                }
+//            }.resume()
+//        } catch {
+//            completion(false, "Failed to encode request body")
+//        }
+//    }
+//end
+    
+    func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, notes: String, email: String, completion: @escaping (Bool, String?) -> Void) {
         let dispatchGroup = DispatchGroup()
         var uploadErrors = [String]()
 
-//        guard let containerName = ProcessInfo.processInfo.environment["BLOB_CONTAINER"] else {
-//            print("No container name found in environment variables.")
-//            completion(false, "No container name found.")
-//            return
-//        }
-        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
-                       else {
-                    print("Missing configuration values for container")
-                    completion(false, "No container name found.")
-                    return
-                }
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+            print("Missing configuration values for container")
+            completion(false, "No container name found.")
+            return
+        }
 
         var uploadedVideoURL: String?
         var uploadedImageURL: String?
@@ -1206,11 +1330,11 @@ class NetworkManager {
                 return
             }
 
-            self.sendAddItemRequest(podId: podId, itemType: itemType, videoURL: uploadedVideoURL, imageURL: uploadedImageURL, label: label, thumbnail: uploadedThumbnailURL, email: email, completion: completion)
+            self.sendAddItemRequest(podId: podId, itemType: itemType, videoURL: uploadedVideoURL, imageURL: uploadedImageURL, label: label, thumbnail: uploadedThumbnailURL, notes: notes, email: email, completion: completion)
         }
     }
-
-    private func sendAddItemRequest(podId: Int, itemType: String, videoURL: String?, imageURL: String?, label: String, thumbnail: String?, email: String, completion: @escaping (Bool, String?) -> Void) {
+    
+    private func sendAddItemRequest(podId: Int, itemType: String, videoURL: String?, imageURL: String?, label: String, thumbnail: String?, notes: String, email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/add-pod-item/") else {
             completion(false, "Invalid URL")
             return
@@ -1223,6 +1347,7 @@ class NetworkManager {
             "imageURL": imageURL ?? "",
             "label": label,
             "thumbnail": thumbnail ?? "",
+            "notes": notes,
             "email": email
         ]
 
@@ -1265,6 +1390,7 @@ class NetworkManager {
             completion(false, "Failed to encode request body")
         }
     }
+
 
     
     func fetchItemsForPod(podId: Int, completion: @escaping ([PodItem]?, String?) -> Void) {
