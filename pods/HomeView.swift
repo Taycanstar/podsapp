@@ -102,6 +102,7 @@ struct HomeView: View {
                         }
                     }
                     editingPods = homeViewModel.pods
+                  
                 }
                 .background(
                     NavigationLink(
@@ -152,6 +153,7 @@ struct HomeView: View {
                 .environment(\.editMode, $editMode)
                 .background(colorScheme == .dark ? Color.black : Color.white)
             }
+     
         }
         .background(colorScheme == .dark ? Color.black.edgesIgnoringSafeArea(.all) : Color.white.edgesIgnoringSafeArea(.all))
     }
@@ -241,7 +243,7 @@ struct ItemRow: View {
     @FocusState private var isNotesFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 TextField("", text: $item.metadata)
                     .focused($isMetadataFocused)
@@ -264,7 +266,7 @@ struct ItemRow: View {
                             ProgressView()
                         }
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 35, height: 35)
+                        .frame(width: 30, height: 30)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     Image(systemName: "chevron.right")
@@ -273,6 +275,7 @@ struct ItemRow: View {
                 }
                 .onTapGesture(perform: onTapNavigate)
             }
+  
 
             if !item.notes.isEmpty || isNotesFocused {
                 TextEditor(text: $item.notes)
@@ -354,3 +357,7 @@ struct PodTitleRow: View {
         .padding(.horizontal, 15)
     }
 }
+
+
+
+
