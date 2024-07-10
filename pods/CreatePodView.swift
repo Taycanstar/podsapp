@@ -164,7 +164,7 @@ struct CreatePodView: View {
         let startTime = Date()
         let items = pod.items.map { item -> PodItem in
                let metadata = item.metadata.isEmpty ? "Item \(item.id)" : item.metadata
-            let notes = item.notes.isEmpty ? "Add note" : item.notes
+            let notes = item.notes
             return PodItem(id: item.id, videoURL: item.videoURL, image: item.image, metadata: metadata, thumbnail: item.thumbnail, itemType: item.itemType, notes: notes)
            }
         

@@ -428,7 +428,7 @@ class NetworkManager {
           request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let itemsForBody = items.map { item -> [String: Any] in
-            var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? ""]
+            var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? "", "notes": item.notes]
             print(item, "item")
             if item.itemType == "video", let videoURL = item.videoURL?.absoluteString {
                 itemDict["videoURL"] = videoURL
@@ -578,7 +578,7 @@ class NetworkManager {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let itemsForBody = items.map { item -> [String: Any] in
-            var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? ""]
+            var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? "", "notes": item.notes]
             if item.itemType == "video", let videoURL = item.videoURL?.absoluteString {
                 itemDict["videoURL"] = videoURL
             } else if item.itemType == "image", let imageURL = item.imageURL?.absoluteString {

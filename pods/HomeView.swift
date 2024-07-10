@@ -17,6 +17,7 @@ struct HomeView: View {
     @State private var isLoadingMore = false
     @State private var editingPods: [Pod] = []
     @State private var hasInitiallyFetched = false
+    @State private var selection: (podIndex: Int, itemIndex: Int)?
     
     
     var body: some View {
@@ -47,18 +48,33 @@ struct HomeView: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                         .listRowInsets(EdgeInsets())
+//                        if expandedPods.contains(homeViewModel.pods[index].id) {
+//                            ForEach(homeViewModel.pods[index].items, id: \.id) { item in
+//                                if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
+//                                    NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex)) {
+//                                        ItemRow(item: item)
+//                                            .listRowInsets(EdgeInsets())
+//                                    
+//                                    }
+//                                }
+//                            }
+//                            .listRowInsets(EdgeInsets())
+//                            .padding(.trailing, 15)
+//                        }
                         if expandedPods.contains(homeViewModel.pods[index].id) {
                             ForEach(homeViewModel.pods[index].items, id: \.id) { item in
                                 if let initialIndex = homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) {
-                                    NavigationLink(destination: PlayerContainerView(items: homeViewModel.pods[index].items, initialIndex: initialIndex)) {
-                                        ItemRow(item: item)
-                                            .listRowInsets(EdgeInsets())
+                                    ItemRow(item: item) {
+                                        self.selection = (index, initialIndex)
                                     }
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {} // This empty gesture prevents taps from propagating to the whole row
                                 }
                             }
                             .listRowInsets(EdgeInsets())
                             .padding(.trailing, 15)
                         }
+       
                     }
                     .onMove(perform: movePod)
                     .onDelete(perform: deletePod)
@@ -107,6 +123,22 @@ struct HomeView: View {
                               }
                     editingPods = homeViewModel.pods
                 }
+                .background(
+                    NavigationLink(
+                        destination: selection.map { index in
+                            PlayerContainerView(
+                                items: homeViewModel.pods[index.podIndex].items,
+                                initialIndex: index.itemIndex
+                            )
+                        },
+                        isActive: Binding(
+                            get: { selection != nil },
+                            set: { if !$0 { selection = nil } }
+                        )
+                    ) {
+                        EmptyView()
+                    }
+                )
                 .listStyle(InsetGroupedListStyle())
                 .navigationTitle("Pods")
                 .navigationBarTitleDisplayMode(.inline)
@@ -254,34 +286,79 @@ struct PodTitleRow: View {
 }
 
 
+//struct ItemRow: View {
+//    let item: PodItem
+//
+//    var body: some View {
+//        HStack {
+//            Text(item.metadata)
+//           
+//
+//            Spacer()
+//
+//            if let thumbnailURL = item.thumbnailURL {
+//                       AsyncImage(url: thumbnailURL) { image in
+//                           image.resizable()
+//                       } placeholder: {
+//                           ProgressView() // Show a placeholder or a default image until the image loads
+//                       }
+//                       .aspectRatio(contentMode: .fill)
+//                       .frame(width: 35, height: 35)
+//                       .clipShape(RoundedRectangle(cornerRadius: 8))
+//
+//                   }
+//            
+//        }
+//        .padding(.leading, 30)
+//
+//        .padding(.bottom, 10)
+//        .padding(.top, 10)
+//
+//    }
+//}
+
 struct ItemRow: View {
     let item: PodItem
+    let onTapNavigate: () -> Void
 
     var body: some View {
-        HStack {
-            Text(item.metadata)
-           
-
-            Spacer()
-
-            if let thumbnailURL = item.thumbnailURL {
-                       AsyncImage(url: thumbnailURL) { image in
-                           image.resizable()
-                       } placeholder: {
-                           ProgressView() // Show a placeholder or a default image until the image loads
-                       }
-                       .aspectRatio(contentMode: .fill)
-                       .frame(width: 35, height: 35)
-                       .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                   }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(item.metadata)
+                    .lineLimit(1)
+                Spacer()
+                HStack(spacing: 5) {
+                    if let thumbnailURL = item.thumbnailURL {
+                        AsyncImage(url: thumbnailURL) { image in
+                            image.resizable()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 35, height: 35)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 14))
+                }
+                .onTapGesture {
+                    onTapNavigate()
+                }
+            }
             
+            if !item.notes.isEmpty {
+                Text(item.notes)
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(nil)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+            }
         }
-        .padding(.leading, 30)
-
-        .padding(.bottom, 10)
-        .padding(.top, 10)
-
+        .padding(.vertical, 10)
+        .padding(.leading, 25)
     }
 }
 
