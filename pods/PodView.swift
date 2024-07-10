@@ -194,7 +194,7 @@ struct PodView: View {
                 Button(action: {
                     showMenu.toggle()
                 }) {
-                    Image(systemName: "ellipsis")
+                    Image(systemName: "ellipsis.circle")
                         .foregroundColor(.primary)
                 }
             }
