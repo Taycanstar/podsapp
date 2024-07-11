@@ -20,6 +20,9 @@ struct HomeView: View {
     @State private var showDoneButton = false
     @State private var isEditMode: Bool = false
     
+    @State private var editingItemId: Int?
+
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -50,12 +53,18 @@ struct HomeView: View {
 
                         if expandedPods.contains(homeViewModel.pods[index].id) {
                             ForEach($homeViewModel.pods[index].items, id: \.id) { $item in
-                                ItemRow(item: $item, isEditing: editMode == .active, onTapNavigate: {
-                                    self.selection = (index, homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) ?? 0)
-                                }, isAnyItemEditing: $isAnyItemEditing, showDoneButton: $showDoneButton)
+                                ItemRow(item: $item,
+                                        isEditing: editMode == .active,
+                                        onTapNavigate: {
+                                            self.selection = (index, homeViewModel.pods[index].items.firstIndex(where: { $0.id == item.id }) ?? 0)
+                                        },
+                                        isAnyItemEditing: $isAnyItemEditing,
+                                        showDoneButton: $showDoneButton,
+                                        editingItemId: $editingItemId)
                                 .contentShape(Rectangle())
                                 .onTapGesture {} // This empty gesture prevents taps from propagating to the whole row
                             }
+
                             .listRowInsets(EdgeInsets())
                             .padding(.trailing, 15)
                         }
@@ -192,12 +201,38 @@ struct HomeView: View {
     }
 
     private func saveInputChanges() {
-        // Dummy function for now
         print("Saving input changes")
-        showDoneButton = false
-        isAnyItemEditing = false
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        
+        guard let itemId = editingItemId else {
+            print("No item selected for editing")
+            return
+        }
+        
+        if let podIndex = homeViewModel.pods.firstIndex(where: { $0.items.contains(where: { $0.id == itemId }) }),
+           let itemIndex = homeViewModel.pods[podIndex].items.firstIndex(where: { $0.id == itemId }) {
+            let item = homeViewModel.pods[podIndex].items[itemIndex]
+            
+            print("Updating item:", item)
+            
+            networkManager.updatePodItemLabelAndNotes(itemId: item.id, newLabel: item.metadata, newNotes: item.notes) { success, errorMessage in
+                if success {
+                    print("Pod item label and notes updated successfully.")
+                } else {
+                    print("Failed to update pod item label and notes: \(errorMessage ?? "Unknown error")")
+                }
+                DispatchQueue.main.async {
+                    self.showDoneButton = false
+                    self.isAnyItemEditing = false
+                    self.editingItemId = nil
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        } else {
+            print("Item not found for itemId \(itemId)")
+        }
     }
+
+
 
     func movePod(from source: IndexSet, to destination: Int) {
         editingPods.move(fromOffsets: source, toOffset: destination)
@@ -233,28 +268,30 @@ struct HomeView: View {
 
 struct ItemRow: View {
     @Binding var item: PodItem
-    let isEditing: Bool
-    let onTapNavigate: () -> Void
-    @EnvironmentObject var homeViewModel: HomeViewModel
-    @Binding var isAnyItemEditing: Bool
-    @Binding var showDoneButton: Bool
+     let isEditing: Bool
+     let onTapNavigate: () -> Void
+     @EnvironmentObject var homeViewModel: HomeViewModel
+     @Binding var isAnyItemEditing: Bool
+     @Binding var showDoneButton: Bool
+     @Binding var editingItemId: Int?
 
-    @FocusState private var isMetadataFocused: Bool
-    @FocusState private var isNotesFocused: Bool
+     @FocusState private var isMetadataFocused: Bool
+     @FocusState private var isNotesFocused: Bool
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField("", text: $item.metadata)
-                    .focused($isMetadataFocused)
-                    .font(.body)
-                    .onTapGesture {
-                        if !isEditing {
-                            isMetadataFocused = true
-                            showDoneButton = true
-                            isAnyItemEditing = true
-                        }
-                    }
+     var body: some View {
+         VStack(alignment: .leading, spacing: 0) {
+             HStack {
+                 TextField("", text: $item.metadata)
+                     .focused($isMetadataFocused)
+                     .font(.body)
+                     .onTapGesture {
+                         if !isEditing {
+                             isMetadataFocused = true
+                             showDoneButton = true
+                             isAnyItemEditing = true
+                             editingItemId = item.id
+                         }
+                     }
                 
                 Spacer()
                 
@@ -275,7 +312,6 @@ struct ItemRow: View {
                 }
                 .onTapGesture(perform: onTapNavigate)
             }
-  
 
             if !item.notes.isEmpty || isNotesFocused {
                 TextEditor(text: $item.notes)
@@ -289,6 +325,7 @@ struct ItemRow: View {
                             isNotesFocused = true
                             showDoneButton = true
                             isAnyItemEditing = true
+                            editingItemId = item.id
                         }
                     }
             } else {
@@ -300,6 +337,7 @@ struct ItemRow: View {
                             isNotesFocused = true
                             showDoneButton = true
                             isAnyItemEditing = true
+                            editingItemId = item.id
                             item.notes = ""
                         }
                     }
@@ -324,6 +362,7 @@ struct ItemRow: View {
         return size.height + 10 // Add some padding
     }
 }
+
 struct PodTitleRow: View {
     @Binding var pod: Pod
     let isExpanded: Bool

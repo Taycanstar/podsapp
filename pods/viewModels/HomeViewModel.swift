@@ -110,19 +110,6 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    func updateItem(_ updatedItem: PodItem) {
-           if let podIndex = pods.firstIndex(where: { $0.items.contains(where: { $0.id == updatedItem.id }) }),
-              let itemIndex = pods[podIndex].items.firstIndex(where: { $0.id == updatedItem.id }) {
-               pods[podIndex].items[itemIndex] = updatedItem
-               // Here, you would typically also call your API to update the item on the server
-               // networkManager.updateItem(updatedItem) { success in
-               //     if success {
-               //         print("Item updated successfully on the server")
-               //     } else {
-               //         print("Failed to update item on the server")
-               //     }
-               // }
-           }
-       }
+
 }
 
