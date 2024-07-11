@@ -175,6 +175,22 @@ struct PodView: View {
     
     func moveItem(from source: IndexSet, to destination: Int) {
         reorderedItems.move(fromOffsets: source, toOffset: destination)
+        
+        // Reorder in the backend
+        let itemIDs = reorderedItems.map { $0.id }
+        networkManager.reorderPodItems(podId: pod.id, itemIds: itemIDs) { success, errorMessage in
+            DispatchQueue.main.async {
+                if success {
+                    print("Items reordered successfully in the backend.")
+                    // Update the pod's items to reflect the new order
+                    self.pod.items = self.reorderedItems
+                } else {
+                    print("Failed to reorder items in the backend: \(errorMessage ?? "Unknown error")")
+                    // Optionally, revert the local order if the backend update fails
+                    // self.reorderedItems = self.pod.items
+                }
+            }
+        }
     }
 
     func deleteItem(at offsets: IndexSet) {
@@ -258,13 +274,7 @@ struct PodView: View {
     }
 }
 
-struct NoDividerListStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden, edges: .top)
-    }
-}
+
 //
 //import SwiftUI
 //import AVFoundation
