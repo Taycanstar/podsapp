@@ -194,9 +194,19 @@ struct PodView: View {
     }
 
     func deleteItem(at offsets: IndexSet) {
-        offsets.map { reorderedItems[$0].id }.forEach { deletedItemIDs.append($0) }
-        reorderedItems.remove(atOffsets: offsets)
+        offsets.forEach { index in
+            let itemId = reorderedItems[index].id
+            networkManager.deletePodItem(itemId: itemId) { success, errorMessage in
+                if success {
+                    print("Item \(itemId) deleted successfully.")
+                    reorderedItems.remove(at: index)
+                } else {
+                    print("Failed to delete item \(itemId): \(errorMessage ?? "Unknown error")")
+                }
+            }
+        }
     }
+
     
     private func saveChangesAndExitEditMode() {
         isEditing = false

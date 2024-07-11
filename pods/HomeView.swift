@@ -64,6 +64,12 @@ struct HomeView: View {
                                 .contentShape(Rectangle())
                                 .onTapGesture {} // This empty gesture prevents taps from propagating to the whole row
                             }
+                            .onMove { indices, newOffset in
+                                                          moveItem(at: indices, in: index, to: newOffset)
+                                                      }
+                            .onDelete { indexSet in
+                                                           deletePodItem(at: indexSet, in: index)
+                                                       }
 
                             .listRowInsets(EdgeInsets())
                             .padding(.trailing, 15)
@@ -284,6 +290,42 @@ struct HomeView: View {
                         self.homeViewModel.totalPods -= 1
                     } else {
                         print("Failed to delete pod: \(message ?? "Unknown error")")
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    private func moveItem(at source: IndexSet, in podIndex: Int, to destination: Int) {
+        homeViewModel.pods[podIndex].items.move(fromOffsets: source, toOffset: destination)
+        
+        let itemIds = homeViewModel.pods[podIndex].items.map { $0.id }
+        let podId = homeViewModel.pods[podIndex].id
+        
+        networkManager.reorderPodItems(podId: podId, itemIds: itemIds) { success, errorMessage in
+            if success {
+                print("Pod items reordered successfully in the backend.")
+            } else {
+                print("Failed to reorder pod items in the backend: \(errorMessage ?? "Unknown error")")
+            }
+        }
+    }
+    
+    private func deletePodItem(at offsets: IndexSet, in podIndex: Int) {
+        let indicesToDelete = Array(offsets)
+        let sortedIndices = indicesToDelete.sorted().reversed()
+        
+        for index in sortedIndices {
+            let itemId = homeViewModel.pods[podIndex].items[index].id
+            networkManager.deletePodItem(itemId: itemId) { [self] success, errorMessage in
+                DispatchQueue.main.async {
+                    if success {
+                        print("Pod item deleted successfully.")
+                        self.homeViewModel.pods[podIndex].items.remove(at: index)
+                        self.editingPods = self.homeViewModel.pods // Update editingPods to reflect the changes
+                    } else {
+                        print("Failed to delete pod item: \(errorMessage ?? "Unknown error")")
                     }
                 }
             }
