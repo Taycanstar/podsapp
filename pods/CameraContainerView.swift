@@ -9,101 +9,6 @@ import UniformTypeIdentifiers
 
 
 
-//
-//struct PhotoPicker: UIViewControllerRepresentable {
-//    @Binding var isPresented: Bool
-//    var cameraViewModel: CameraViewModel
-//
-//    func makeUIViewController(context: Context) -> PHPickerViewController {
-//        var config = PHPickerConfiguration()
-//        config.selectionLimit = 1
-//        // Allow both photos and videos
-//        config.filter = .any(of: [.images, .videos])
-//        
-//        let picker = PHPickerViewController(configuration: config)
-//        picker.delegate = context.coordinator
-//        return picker
-//    }
-//
-//    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-//
-//    func makeCoordinator() -> Coordinator {
-//        Coordinator(self)
-//    }
-//
-//    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-//        let parent: PhotoPicker
-//
-//        init(_ parent: PhotoPicker) {
-//            self.parent = parent
-//        }
-//
-//        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-//            parent.isPresented = false // Dismiss the picker immediately
-//            guard let provider = results.first?.itemProvider else {
-//                print("No provider found for the selected item.")
-//                return
-//            }
-//
-//            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-//                processVideo(provider: provider)
-//            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-//                processImage(provider: provider)
-//            }
-//        }
-//
-//        private func processVideo(provider: NSItemProvider) {
-//            provider.loadDataRepresentation(forTypeIdentifier: UTType.movie.identifier) { data, error in
-//                DispatchQueue.main.async {
-//                    if let error = error {
-//                        print("Error loading video data: \(error.localizedDescription)")
-//                        return
-//                    }
-//
-//                    guard let data = data, let url = self.writeDataToTemporaryLocation(data: data) else {
-//                        print("Unable to write video data to temporary location.")
-//                        return
-//                    }
-//
-//                    // Process the selected video
-//                    self.parent.cameraViewModel.handleSelectedVideo(url)
-//                }
-//            }
-//        }
-//
-//        private func processImage(provider: NSItemProvider) {
-//            provider.loadObject(ofClass: UIImage.self) { (object, error) in
-//                DispatchQueue.main.async {
-//                    if let error = error {
-//                        print("Error loading image: \(error.localizedDescription)")
-//                    }
-//                    if let image = object as? UIImage {
-//                        print("Successfully selected image: \(image)")
-//                        self.parent.cameraViewModel.handleSelectedImage(image)
-//                    } else {
-//                        print("No image found in the provider.")
-//                    }
-//                }
-//            }
-//        }
-//
-//
-//        private func writeDataToTemporaryLocation(data: Data) -> URL? {
-//            let tempDirectory = FileManager.default.temporaryDirectory
-//            let tempUrl = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
-//
-//            do {
-//                try data.write(to: tempUrl)
-//                return tempUrl
-//            } catch {
-//                print("Error writing video data to temporary location: \(error)")
-//                return nil
-//            }
-//        }
-//    }
-//}
-
-
 struct PhotoPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var cameraViewModel: CameraViewModel
@@ -232,10 +137,13 @@ struct CameraContainerView: View {
     @State private var selectedVideoURL: URL?
     @State private var isProcessingVideo = false
     @State private var showingVoiceCommandPopup = false
+    @State private var showingSummarizationPopup = false
     @State private var voiceCommandPopupMessage: String? = nil
+    @State private var summarizationMessage: String? = nil
     @Binding var showingVideoCreationScreen: Bool
     @State private var latestPhoto: UIImage? = nil
     @State private var showTranscribeLabel = true
+    @State private var showSummarizationLabel = true
     @State private var showCommandLabel = true
     @Binding var selectedTab: Int
     @State private var navigationPath = NavigationPath()
@@ -271,6 +179,7 @@ struct CameraContainerView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                             showTranscribeLabel = false
                             showCommandLabel = false
+                            showSummarizationLabel = false
                         }
                     }
                     .onDisappear {
@@ -339,56 +248,90 @@ struct CameraContainerView: View {
                         }
                         
                         
+//                        
+//                        Button(action: {
+//
+//                            cameraModel.toggleWaveform()
+//
+//                            print("Waveform Enabled State: \(cameraModel.isWaveformEnabled)")
+//                            voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Video transcription on" : "Video transcription off"
+//                            
+//                            // Show the message
+//                            withAnimation {
+//                                showingVoiceCommandPopup = true
+//                            }
+//                            
+//                            // Hide the popup after a few seconds and reset the message
+//                            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+//                                showingVoiceCommandPopup = false
+//                                // Reset the message after the animation completes to ensure it's ready for the next toggle
+//                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                                    voiceCommandPopupMessage = nil
+//                                }
+//                            }
+//                        }) {
+//                            Image(systemName: "waveform")
+//                                .font(.title)
+//                                .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
+//                                .font(.system(size: 16))
+//                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                                .overlay(
+//                                    Text("Transcribe video")
+//                                        .font(.system(size: 14))
+//                                        .fontWeight(.semibold)
+//                                        .foregroundColor(.white)
+//                                        .opacity(showTranscribeLabel ? 1.0 : 0.0) // Control opacity of the label only
+//                                        .fixedSize()
+//                                        .offset(x: -120) // Adjust position relative to the icon
+//                                    , alignment: .leading
+//                                )
+//                                .padding()
+//                            
+//                        }
+//                        
                         
                         Button(action: {
-                            
-                            //                            cameraModel.isWaveformEnabled.toggle()
-                            cameraModel.toggleWaveform()
-                            
-                            //                        cameraModel.toggleWaveform()
-                            // Set the message based on the waveform state
-                            print("Waveform Enabled State: \(cameraModel.isWaveformEnabled)")
-                            voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Video transcription on" : "Video transcription off"
+                            cameraModel.toggleSummary()
+                            summarizationMessage = cameraModel.isSummaryEnabled ? "Video context summary on" : "Video context summary off"
                             
                             // Show the message
                             withAnimation {
-                                showingVoiceCommandPopup = true
+                                showingSummarizationPopup = true
                             }
                             
                             // Hide the popup after a few seconds and reset the message
                             DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                                showingVoiceCommandPopup = false
-                                // Reset the message after the animation completes to ensure it's ready for the next toggle
+                                showingSummarizationPopup = false
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    voiceCommandPopupMessage = nil
+                                    summarizationMessage = nil
                                 }
                             }
                         }) {
-                            Image(systemName: "waveform")
+                            Image(systemName: "text.viewfinder")
                                 .font(.title)
-                                .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
+                                .foregroundColor(cameraModel.isSummaryEnabled ? Color(red: 35/255, green: 108/255, blue: 255/255) : .white)
                                 .font(.system(size: 16))
                                 .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
                                 .overlay(
-                                    Text("Transcribe video")
+                                    Text("Video context summary")
                                         .font(.system(size: 14))
                                         .fontWeight(.semibold)
                                         .foregroundColor(.white)
-                                        .opacity(showTranscribeLabel ? 1.0 : 0.0) // Control opacity of the label only
+                                        .opacity(showSummarizationLabel ? 1.0 : 0.0) // Control opacity of the label only
                                         .fixedSize()
-                                        .offset(x: -120) // Adjust position relative to the icon
+                                        .offset(x: -165) // Adjust position relative to the icon
                                     , alignment: .leading
                                 )
                                 .padding()
-                            
                         }
+
                         
                         
                     }
                     .position(x: UIScreen.main.bounds.width - 28, y: 130)
                 }
-                
-                if let message = voiceCommandPopupMessage {
+
+                if let message = summarizationMessage {
                     VStack {
                         VoiceCommandPopupView(message: message)
                             .padding(.top, 20) // Adjust this value to ensure it doesn't overlap with the notch or status bar

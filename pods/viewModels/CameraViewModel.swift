@@ -132,7 +132,6 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var output = AVCaptureMovieFileOutput()
     @Published var preview : AVCaptureVideoPreviewLayer!
     @Published var isFrontCameraUsed: Bool = false
-//    @Published var showCreatePodView = false
     @Published var isFlashOn: Bool = false
     var audioRecorder: AVAudioRecorder?
     @Published var isTranscribing: Bool = false
@@ -179,6 +178,7 @@ var hasCheckedPermission = false
 
     
     var isWaveformEnabled = false
+    var isSummaryEnabled = false
     var isVcEnabled = false
      var transcription = ""
     
@@ -257,6 +257,13 @@ var hasCheckedPermission = false
             isWaveformEnabled = false
         } else {
             isWaveformEnabled = true
+        }
+    }
+    func toggleSummary(){
+        if isSummaryEnabled{
+            isSummaryEnabled = false
+        } else {
+            isSummaryEnabled = true
         }
     }
 
