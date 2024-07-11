@@ -233,10 +233,35 @@ struct HomeView: View {
     }
 
 
-
     func movePod(from source: IndexSet, to destination: Int) {
-        editingPods.move(fromOffsets: source, toOffset: destination)
-        podsReordered = true
+        let podsToMove = source.map { homeViewModel.pods[$0] }
+        
+        // Perform the move operation
+        homeViewModel.pods.move(fromOffsets: source, toOffset: destination)
+        
+        // Update editingPods if in edit mode
+        if editMode == .active {
+            editingPods.move(fromOffsets: source, toOffset: destination)
+        }
+        
+        // Reorder in the backend
+        let orderedPodIds = homeViewModel.pods.map { $0.id }
+        networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { [self] success, errorMessage in
+            DispatchQueue.main.async {
+                if success {
+                    print("Pods reordered successfully in the backend.")
+                    self.podsReordered = true
+                    
+                    // Trigger UI update
+                    self.homeViewModel.objectWillChange.send()
+                } else {
+                    print("Failed to reorder pods in the backend: \(errorMessage ?? "Unknown error")")
+                    // Revert the local order if the backend update fails
+                    self.homeViewModel.pods = podsToMove
+                    self.homeViewModel.objectWillChange.send()
+                }
+            }
+        }
     }
 
     func deletePod(at offsets: IndexSet) {
