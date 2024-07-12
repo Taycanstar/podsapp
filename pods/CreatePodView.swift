@@ -21,7 +21,8 @@ struct CreatePodView: View {
     @Binding var showCreatePodView: Bool
     @Binding var showPreview: Bool
 
-
+    @FocusState private var focusedField: String?
+    @State private var showNotesPlaceholder: [Int: Bool] = [:]
     var body: some View {
         
   
@@ -61,8 +62,21 @@ struct CreatePodView: View {
                     .environmentObject(viewModel)
                 
             }
+            .onChange(of: focusedField) { newValue in
+                if newValue == nil {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        for (id, _) in showNotesPlaceholder {
+                            if let index = pod.items.firstIndex(where: { $0.id == id }),
+                               pod.items[index].notes.isEmpty {
+                                showNotesPlaceholder[id] = false
+                            }
+                        }
+                    }
+                }
+            }
         
     }
+    
 
 
     private var header: some View {
@@ -94,29 +108,74 @@ struct CreatePodView: View {
         }
         .padding()
     }
+    
+    private var itemList: some View {
+        List {
+            ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        ZStack(alignment: .leading) {
+                            if pod.items[index].metadata.isEmpty {
+                                Text("Item \(item.id)")
+                                    .foregroundColor(.gray)
+                            }
+                            TextField("", text: $pod.items[index].metadata)
+                                .focused($focusedField, equals: "metadata_\(item.id)")
+                        }
+                        .font(.body)
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                focusedField = "metadata_\(item.id)"
+                                showNotesPlaceholder[item.id] = true
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Image(uiImage: item.thumbnail ?? UIImage())
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 30, height: 30)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
 
-//       private var itemList: some View {
-//           List {
-//               ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
-//                   HStack {
-//                       VStack(alignment: .leading, spacing: 0) {
-//                           DynamicTextField(text: $pod.items[index].metadata, placeholder: "Item \(item.id)")
-//
-//                               DynamicTextFieldNotes(text: $pod.items[index].notes, placeholder: "Add note")
-//
-//                       }
-//                       Spacer()
-//                       Image(uiImage: item.thumbnail ?? UIImage())
-//                           .resizable()
-//                           .aspectRatio(contentMode: .fill)
-//                           .frame(width: 40, height: 40)
-//                           .clipShape(RoundedRectangle(cornerRadius: 8))
-//                   }
-//                   .contentShape(Rectangle())
-//               }
-//           }
-//           .listStyle(PlainListStyle())
-//       }
+                    if !pod.items[index].notes.isEmpty || showNotesPlaceholder[item.id] == true {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $pod.items[index].notes)
+                                .font(.footnote)
+                                .foregroundColor(.gray)
+                                .frame(height: max(20, calculateHeight(for: pod.items[index].notes)))
+                                .background(Color.clear)
+                                .focused($focusedField, equals: "notes_\(item.id)")
+                            
+                            if pod.items[index].notes.isEmpty {
+                                Text("Add note")
+                                    .font(.footnote)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                        .padding(.leading, -5)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+                .padding(.top, 5)
+                .padding(.bottom, 5)
+                .padding(.horizontal, 15)
+                
+                if index < pod.items.count - 1 {
+                    Divider()
+                        .padding(.leading, 15)
+                }
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+        }
+        .listStyle(PlainListStyle())
+        .environment(\.defaultMinListRowHeight, 1)
+    }
 //    private var itemList: some View {
 //        List {
 //            ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
@@ -141,25 +200,31 @@ struct CreatePodView: View {
 //                    }
 //
 //                    ZStack(alignment: .topLeading) {
-//                        if pod.items[index].notes.isEmpty {
-//                            Text("Add note")
-//                                .font(.footnote)
-//                                .foregroundColor(.gray)
-//                        }
 //                        TextEditor(text: $pod.items[index].notes)
 //                            .font(.footnote)
 //                            .foregroundColor(.gray)
 //                            .frame(height: max(20, calculateHeight(for: pod.items[index].notes)))
 //                            .background(Color.clear)
+//                        
+//                        if pod.items[index].notes.isEmpty {
+//                            Text("Add note")
+//                                .font(.footnote)
+//                                .foregroundColor(.gray)
+//                                .padding(.top, 8)
+//                                .padding(.leading, 5)
+//                                .allowsHitTesting(false)
+//                        }
 //                    }
+//                    .padding(.leading, -5)
 //                }
 //                .padding(.top, 5)
-//                .padding(.horizontal, 20)
-//                if index < pod.items.count - 1 {
-//                               Divider()
-//                                   .padding(.leading, 15)
-//                           }
+//                .padding(.bottom, 5)
+//                .padding(.horizontal, 15)
 //                
+//                if index < pod.items.count - 1 {
+//                    Divider()
+//                        .padding(.leading, 15)
+//                }
 //            }
 //            .listRowInsets(EdgeInsets())
 //            .listRowSeparator(.hidden)
@@ -167,62 +232,6 @@ struct CreatePodView: View {
 //        .listStyle(PlainListStyle())
 //        .environment(\.defaultMinListRowHeight, 1)
 //    }
-    private var itemList: some View {
-        List {
-            ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        ZStack(alignment: .leading) {
-                            if pod.items[index].metadata.isEmpty {
-                                Text("Item \(item.id)")
-                                    .foregroundColor(.gray)
-                            }
-                            TextField("", text: $pod.items[index].metadata)
-                        }
-                        .font(.body)
-                        
-                        Spacer()
-                        
-                        Image(uiImage: item.thumbnail ?? UIImage())
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 30, height: 30)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-
-                    ZStack(alignment: .topLeading) {
-                        TextEditor(text: $pod.items[index].notes)
-                            .font(.footnote)
-                            .foregroundColor(.gray)
-                            .frame(height: max(20, calculateHeight(for: pod.items[index].notes)))
-                            .background(Color.clear)
-                        
-                        if pod.items[index].notes.isEmpty {
-                            Text("Add note")
-                                .font(.footnote)
-                                .foregroundColor(.gray)
-                                .padding(.top, 8)
-                                .padding(.leading, 5)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                    .padding(.leading, -5)
-                }
-                .padding(.top, 5)
-                .padding(.bottom, 5)
-                .padding(.horizontal, 15)
-                
-                if index < pod.items.count - 1 {
-                    Divider()
-                        .padding(.leading, 15)
-                }
-            }
-            .listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden)
-        }
-        .listStyle(PlainListStyle())
-        .environment(\.defaultMinListRowHeight, 1)
-    }
 
     private func calculateHeight(for text: String) -> CGFloat {
         let font = UIFont.preferredFont(forTextStyle: .footnote)
