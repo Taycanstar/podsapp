@@ -135,6 +135,7 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
     @Published var isFlashOn: Bool = false
     var audioRecorder: AVAudioRecorder?
     @Published var isTranscribing: Bool = false
+    @Published var isSummarizing: Bool = false
     static let shared = CameraViewModel()
     var savedAudioURL: URL?
     @Published var photoOutput = AVCapturePhotoOutput()
@@ -188,20 +189,6 @@ var hasCheckedPermission = false
     @Published var recordingTimeElapsed = 0.0
 
 
-//    func toggleWaveform() {
-//        self.objectWillChange.send()
-//        print("Toggling waveform...")
-//        print("Current state before toggle: \(isWaveformEnabled)")
-//        isWaveformEnabled.toggle()
-//        if isWaveformEnabled {
-//            print("Waveform enabled. Starting speech recognition.")
-//            startSpeechRecognition()
-//        } else {
-//            print("Waveform disabled. Stopping speech recognition.")
-//            stopSpeechRecognition()
-//        }
-//        print("Current state after toggle: \(isWaveformEnabled)")
-//    }
     
     // Add zoom properties
     private var initialZoomFactor: CGFloat = 1.0
@@ -267,27 +254,6 @@ var hasCheckedPermission = false
         }
     }
 
-    
-//    func checkPermission(){
-//        
-//        switch AVCaptureDevice.authorizationStatus(for: .video) {
-//        case .authorized:
-//            setUp()
-//            return
-//        case .notDetermined:
-//            AVCaptureDevice.requestAccess(for: .video) { (status) in
-//                
-//                if status{
-//                    self.setUp()
-//                }
-//            }
-//        case .denied:
-//            self.alert.toggle()
-//            return
-//        default:
-//            return
-//        }
-//    }
 
     func checkPermission() {
           guard !hasCheckedPermission else { return }
@@ -415,31 +381,6 @@ var hasCheckedPermission = false
 
 
 
- 
-//    func configureSessionFor(mode: CameraMode) {
-//        if session.isRunning {
-//            session.stopRunning()
-//        }
-//
-//        session.beginConfiguration()
-//
-//        session.inputs.forEach(session.removeInput)
-//        session.outputs.forEach(session.removeOutput)
-//
-//        switch mode {
-//        case .photo:
-//            configureForPhotoMode()
-//        case .fifteen, .thirty:
-//            // Use the maxDuration property to configure the session if necessary
-//            configureForVideoMode()
-//        
-//        }
-//
-//        session.commitConfiguration()
-//
-//        session.startRunning()
-//    }
-
     func configureSessionFor(mode: CameraMode) {
         if session.isRunning {
             session.stopRunning()
@@ -475,8 +416,6 @@ var hasCheckedPermission = false
                  photoOutput.isHighResolutionCaptureEnabled = true // Enable high-resolution capture
              }
          }
-        // No need to set maxPhotoDimensions here as it's not a standard API.
-        // Just make sure to enable high resolution photos in your photo settings during capture.
     }
 
 
@@ -522,32 +461,6 @@ var hasCheckedPermission = false
             print("Cannot add video input.")
         }
     }
-
-    
-
-//    private func addCameraInput(position: AVCaptureDevice.Position) {
-//        guard let cameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
-//              let videoInput = try? AVCaptureDeviceInput(device: cameraDevice) else {
-//            print("Error setting up camera input.")
-//            return
-//        }
-//
-//        let existingVideoInputs = session.inputs.filter { input in
-//            guard let input = input as? AVCaptureDeviceInput else { return false }
-//            return input.device.hasMediaType(.video)
-//        }
-//        existingVideoInputs.forEach(session.removeInput)
-//
-//        if session.canAddInput(videoInput) {
-//            session.addInput(videoInput)
-////            initialZoomFactor = cameraDevice.videoZoomFactor
-//            initialZoomFactor = 1.0 // Reset zoom factor whenever a new input is added
-//            print("Initial zoom factor set: \(initialZoomFactor)") // Debug log
-//        } else {
-//            print("Cannot add video input.")
-//        }
-//    }
-
 
 
     private func addAudioInput() {
@@ -813,18 +726,7 @@ var hasCheckedPermission = false
           print(transcription, "transcription after")
       }
 
-//
-//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-//         if let error = error {
-//             print(error.localizedDescription)
-//             return
-//         }
-//
-//         DispatchQueue.main.async {
-//             self.previewURL = outputFileURL
-//             self.showPreview = true
-//         }
-//     }
+
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         if let error = error {
             print(error.localizedDescription)
@@ -1014,6 +916,21 @@ var hasCheckedPermission = false
             
         }
     }
+    
+    func summarizeVideoUsingBackend(from url: URL, completion: @escaping (String?) -> Void) {
+        NetworkManager().summarizeVideo(from: url) { success, transcription in
+        
+                if success, let text = transcription {
+                    completion(text)
+                    print("Transcription successful: \(text)")
+                } else {
+                    completion(nil)
+                    print("Transcription failed.")
+                }
+          
+            
+        }
+    }
 
 
 // old confirm
@@ -1072,7 +989,7 @@ var hasCheckedPermission = false
 //end
 
     func confirmVideo() {
-        print(isWaveformEnabled, "is waveform enabled?")
+        print(isSummaryEnabled, "is summary enabled?")
         
         guard let videoURL = previewURL, let recordingUUID = currentRecordingUUID else {
             print("No video to confirm or UUID is missing.")
@@ -1098,20 +1015,20 @@ var hasCheckedPermission = false
         let defaultNotes = ""
         
         // Use the original video URL directly
-        if self.isWaveformEnabled {
-            print("Waveform enabled, proceeding with transcription.")
+        if self.isSummaryEnabled {
+            print("Summary enabled, proceeding with summarization.")
             
             DispatchQueue.main.async {
-                        self.isTranscribing = true
+                        self.isSummarizing = true
                     }
-            self.transcribeAudioUsingBackend(from: videoURL) { transcribedText in
+            self.summarizeVideoUsingBackend(from: videoURL) { transcribedText in
                 DispatchQueue.main.async {
-                    let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? defaultMetadata
-                    print("Completing video confirmation with metadata: \(metadata)")
-                    self.completeVideoConfirmation(with: videoURL, metadata: metadata, notes: defaultNotes)
+                    let notes = transcribedText ?? defaultNotes
+                    print("Completing video confirmation with notes: \(notes)")
+                    self.completeVideoConfirmation(with: videoURL, metadata: defaultMetadata, notes: notes)
                     self.itemConfirmed = true
-                    if self.isWaveformEnabled {
-                        self.isWaveformEnabled = false
+                    if self.isSummaryEnabled {
+                        self.isSummaryEnabled = false
                     }
                 }
             }
@@ -1119,8 +1036,8 @@ var hasCheckedPermission = false
             print("Waveform not enabled, skipping transcription.")
             self.completeVideoConfirmation(with: videoURL, metadata: defaultMetadata, notes: defaultNotes)
             self.itemConfirmed = true
-            if self.isWaveformEnabled {
-                self.isWaveformEnabled = false
+            if self.isSummaryEnabled {
+                self.isSummaryEnabled = false
             }
         }
     }
@@ -1391,6 +1308,21 @@ var hasCheckedPermission = false
     }
 
     
+//    func handleSelectedVideo(_ url: URL) {
+//        print("Selected video URL: \(url)")
+//
+//        // Immediately proceed without extracting audio
+//        DispatchQueue.main.async {
+//            // Assuming the rest of the processing does not depend on the audio extraction outcome,
+//            // you can directly set the preview and show it.
+//            self.previewURL = url
+//            self.showPreview = true
+//            self.isProcessingVideo = false
+//            self.itemConfirmed = false
+//            self.currentRecordingUUID = UUID().uuidString
+//        }
+//    }
+//
     func handleSelectedVideo(_ url: URL) {
         print("Selected video URL: \(url)")
 
@@ -1403,10 +1335,32 @@ var hasCheckedPermission = false
             self.isProcessingVideo = false
             self.itemConfirmed = false
             self.currentRecordingUUID = UUID().uuidString
+            
+            // Check if summary is enabled
+            if self.isSummaryEnabled {
+                print("Summary enabled, proceeding with summarization.")
+                
+                self.summarizeVideoUsingBackend(from: url) { transcribedText in
+                    DispatchQueue.main.async {
+                        let notes = transcribedText ?? ""
+                        print("Completing video confirmation with notes: \(notes)")
+                        self.completeVideoConfirmation(with: url, metadata: "", notes: notes)
+                        self.itemConfirmed = true
+                        if self.isSummaryEnabled {
+                            self.isSummaryEnabled = false
+                        }
+                    }
+                }
+            } else {
+                print("Waveform not enabled, skipping transcription.")
+                self.completeVideoConfirmation(with: url, metadata: "", notes: "")
+                self.itemConfirmed = true
+                if self.isSummaryEnabled {
+                    self.isSummaryEnabled = false
+                }
+            }
         }
     }
-
-
 
     
     func handleSelectedImage(_ image: UIImage) {
@@ -1663,17 +1617,18 @@ var hasCheckedPermission = false
             }
         }
 
-        if self.isWaveformEnabled {
+        if self.isSummaryEnabled {
             print("Waveform enabled, proceeding with transcription.")
-            self.isTranscribing = true
+            self.isSummarizing = true
 
-            self.transcribeAudioUsingBackend(from: previewURL) { transcribedText in
+            self.summarizeVideoUsingBackend(from: previewURL) { transcribedText in
                 DispatchQueue.main.async {
-                    let metadata = transcribedText?.replacingOccurrences(of: "stop recording", with: "", options: .caseInsensitive) ?? "New item"
+                    let metadata = "New item"
+                    let notes = transcribedText ?? ""
                     print("Completing video addition with metadata: \(metadata)")
-                    handleCompletion(metadata, "")
-                    if self.isWaveformEnabled {
-                        self.isWaveformEnabled = false
+                    handleCompletion(metadata, notes)
+                    if self.isSummaryEnabled {
+                        self.isSummaryEnabled = false
                     }
                 }
             }

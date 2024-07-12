@@ -946,76 +946,67 @@ class NetworkManager {
         task.resume()
     }
 
-//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-//            completion(false, "Invalid URL", false, nil, nil)
-//            return
-//        }
-//
-//        let body: [String: Any] = ["token": idToken]
-//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
-//        
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = finalBody
-//        
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", false)
-//                }
-//                return
-//            }
-//            
-//            guard let httpResponse = response as? HTTPURLResponse else {
-//                DispatchQueue.main.async {
-//                    completion(false, "No response from server", false)
-//                }
-//                return
-//            }
-//            
-//            if httpResponse.statusCode == 200 {
-//                if let data = data {
-//                    do {
-//                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-//                        print("Server response: \(json ?? [:])")  // Debugging line
-//                        
-//                        if let token = json?["token"] as? String,
-//                           let email = json?["email"] as? String,
-//                           let username = json?["username"] as? String,
-//                           let isNewUser = json?["is_new_user"] as? Bool {
-//                            DispatchQueue.main.async {
-//                                completion(true, nil, isNewUser, email, username)
-//                            }
-//                        } else {
-//                            DispatchQueue.main.async {
-//                                completion(false, "Invalid data from server", false)
-//                            }
-//                        }
-//                    } catch {
-//                        DispatchQueue.main.async {
-//                            completion(false, "Failed to parse server response: \(error.localizedDescription)", false)
-//                        }
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "No data from server", false)
-//                    }
-//                }
-//            } else if let data = data,
-//                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-//                      let errorMessage = json["error"] as? String {
-//                DispatchQueue.main.async {
-//                    completion(false, errorMessage, false)
-//                }
-//            } else {
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed with statusCode: \(httpResponse.statusCode)", false)
-//                }
-//            }
-//        }.resume()
-//    }
+    func summarizeVideo(from url: URL, completion: @escaping (Bool, String?) -> Void) {
+        guard let apiUrl = URL(string: "\(baseUrl)/summarize-video/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: apiUrl)
+        request.httpMethod = "POST"
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(url.lastPathComponent)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: video/mp4\r\n\r\n".data(using: .utf8)!)
+
+        do {
+            let videoData = try Data(contentsOf: url)
+            print("Appending video data to request body.")
+            body.append(videoData)
+        } catch {
+            print("Error reading video file data: \(error.localizedDescription)")
+            completion(false, "Error reading video file data: \(error.localizedDescription)")
+            return
+        }
+
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Network error: \(error.localizedDescription)")
+                completion(false, "Error: \(String(describing: error))")
+                return
+            }
+
+            guard let data = data else {
+                print("No data received.")
+                completion(false, "No data received")
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any], let text = json["text"] as? String {
+                    print("Received transcription: \(text)")
+                    completion(true, text)
+                } else {
+                    let responseString = String(data: data, encoding: .utf8)
+                    print("Unable to parse response. Response: \(String(describing: responseString))")
+                    completion(false, "Error: Unable to parse response. Response: \(String(describing: responseString))")
+                }
+            } catch {
+                print("Error parsing JSON: \(error)")
+                completion(false, "Error parsing JSON: \(error)")
+            }
+        }
+
+        print("Starting transcription request to backend.")
+        task.resume()
+    }
     func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/google-login/") else {
             completion(false, "Invalid URL", false, nil, nil)

@@ -30,6 +30,68 @@ struct PhotoPicker: UIViewControllerRepresentable {
         Coordinator(self)
     }
 
+//    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+//        let parent: PhotoPicker
+//
+//        init(_ parent: PhotoPicker) {
+//            self.parent = parent
+//        }
+//
+//        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+//            parent.isPresented = false
+//            guard let provider = results.first?.itemProvider else {
+//                print("No provider found for the selected item.")
+//                return
+//            }
+//
+//            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+//                processVideo(provider: provider)
+//            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+//                processImage(provider: provider)
+//            }
+//        }
+//
+//        private func processVideo(provider: NSItemProvider) {
+//            provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
+//                guard let url = url else {
+//                    print("Error loading video: \(error?.localizedDescription ?? "Unknown error")")
+//                    return
+//                }
+//                
+//                let destinationURL = self.createUniqueVideoURL()
+//                do {
+//                    try FileManager.default.moveItem(at: url, to: destinationURL)
+//                    DispatchQueue.main.async {
+//                        self.parent.cameraViewModel.handleSelectedVideo(destinationURL)
+//                    }
+//                } catch {
+//                    print("Error moving video file: \(error)")
+//                }
+//            }
+//        }
+//
+//        private func processImage(provider: NSItemProvider) {
+//            provider.loadObject(ofClass: UIImage.self) { object, error in
+//                DispatchQueue.main.async {
+//                    if let error = error {
+//                        print("Error loading image: \(error.localizedDescription)")
+//                    }
+//                    if let image = object as? UIImage {
+//                        print("Successfully selected image: \(image)")
+//                        self.parent.cameraViewModel.handleSelectedImage(image)
+//                    } else {
+//                        print("No image found in the provider.")
+//                    }
+//                }
+//            }
+//        }
+//
+//        private func createUniqueVideoURL() -> URL {
+//            let tempDirectory = FileManager.default.temporaryDirectory
+//            return tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
+//        }
+//    }
+    
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         let parent: PhotoPicker
 
@@ -62,6 +124,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 do {
                     try FileManager.default.moveItem(at: url, to: destinationURL)
                     DispatchQueue.main.async {
+                        // Handle the selected video
                         self.parent.cameraViewModel.handleSelectedVideo(destinationURL)
                     }
                 } catch {
