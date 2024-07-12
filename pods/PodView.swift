@@ -19,6 +19,9 @@ struct PodView: View {
     @FocusState private var focusedField: String?
     @State private var showNotesPlaceholder: [Int: Bool] = [:]
     
+    @Binding var needsRefresh: Bool
+
+    
     var body: some View {
         List {
             ForEach(reorderedItems.indices, id: \.self) { index in
@@ -267,6 +270,7 @@ struct PodView: View {
         }
 
         deletedItemIDs.removeAll()
+        needsRefresh = true
     }
 
     private func saveInputChanges() {
@@ -289,6 +293,7 @@ struct PodView: View {
                 self.isAnyItemEditing = false
                 self.editingItemId = nil
                 self.focusedField = nil
+                self.needsRefresh = true
             }
         }
     }

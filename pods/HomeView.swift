@@ -19,7 +19,7 @@ struct HomeView: View {
     @State private var isAnyItemEditing: Bool = false
     @State private var showDoneButton = false
     @State private var isEditMode: Bool = false
-    
+    @State private var needsRefresh: Bool = false
     @State private var editingItemId: Int?
 
     
@@ -45,7 +45,7 @@ struct HomeView: View {
                                         togglePodExpansion(for: homeViewModel.pods[index].id)
                                     }
                                 }
-                            })
+                            }, needsRefresh: $needsRefresh)
                             .listRowInsets(EdgeInsets())
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -119,6 +119,12 @@ struct HomeView: View {
                     editingPods = homeViewModel.pods
                   
                 }
+                .onChange(of: needsRefresh) { _ in
+                           if needsRefresh {
+                               refreshPods()
+                               needsRefresh = false
+                           }
+                       }
                 .background(
                     NavigationLink(
                         destination: selection.map { index in
@@ -177,6 +183,8 @@ struct HomeView: View {
         return homeViewModel.pods.count < homeViewModel.totalPods
     }
     
+ 
+    
     private func togglePodExpansion(for id: Int) {
         withAnimation(.easeInOut) {
             if expandedPods.contains(id) {
@@ -203,6 +211,12 @@ struct HomeView: View {
                 }
             }
             podsReordered = false
+        }
+    }
+    
+    private func refreshPods() {
+        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+            // Additional actions after refresh if needed
         }
     }
 
@@ -552,11 +566,12 @@ struct PodTitleRow: View {
     let isExpanded: Bool
     var onExpandCollapseTapped: () -> Void
     @Environment(\.colorScheme) var colorScheme
+    @Binding var needsRefresh: Bool
 
     var body: some View {
         HStack {
             ZStack{
-                NavigationLink(destination: PodView(pod: $pod)){ EmptyView() }.opacity(0.0)
+                NavigationLink(destination: PodView(pod: $pod, needsRefresh: $needsRefresh)){ EmptyView() }.opacity(0.0)
                     .padding(.trailing, -5).frame(width:0, height:0)
                 Text(pod.title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
