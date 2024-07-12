@@ -395,6 +395,7 @@ struct ItemRow: View {
                             editingItemId = item.id
                         }
                     }
+                    .padding(.leading, -5)
             } else {
                 Text("Add note")
                     .font(.footnote)
