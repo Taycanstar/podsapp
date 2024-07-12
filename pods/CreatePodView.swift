@@ -209,6 +209,7 @@ struct CreatePodView: View {
                     .padding(.leading, -5)
                 }
                 .padding(.top, 5)
+                .padding(.bottom, 5)
                 .padding(.horizontal, 15)
                 
                 if index < pod.items.count - 1 {

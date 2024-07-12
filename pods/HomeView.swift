@@ -333,32 +333,131 @@ struct HomeView: View {
     }
 }
 
+//struct ItemRow: View {
+//    @Binding var item: PodItem
+//    let isEditing: Bool
+//    let onTapNavigate: () -> Void
+//    @EnvironmentObject var homeViewModel: HomeViewModel
+//    @Binding var isAnyItemEditing: Bool
+//    @Binding var showDoneButton: Bool
+//    @Binding var editingItemId: Int?
+//
+//    @FocusState private var isMetadataFocused: Bool
+//    @FocusState private var isNotesFocused: Bool
+//
+//    var body: some View {
+//        VStack(alignment: .leading, spacing: 5) {
+//            HStack {
+//                TextField("", text: $item.metadata)
+//                    .focused($isMetadataFocused)
+//                    .font(.body)
+//                    .onTapGesture {
+//                        if !isEditing {
+//                            isMetadataFocused = true
+//                            showDoneButton = true
+//                            isAnyItemEditing = true
+//                            editingItemId = item.id
+//                        }
+//                    }
+//                
+//                Spacer()
+//                
+//                HStack(spacing: 5) {
+//                    if let thumbnailURL = item.thumbnailURL {
+//                        AsyncImage(url: thumbnailURL) { image in
+//                            image.resizable()
+//                        } placeholder: {
+//                            ProgressView()
+//                        }
+//                        .aspectRatio(contentMode: .fill)
+//                        .frame(width: 30, height: 30)
+//                        .clipShape(RoundedRectangle(cornerRadius: 8))
+//                    }
+//                    Image(systemName: "chevron.right")
+//                        .foregroundColor(.gray)
+//                        .font(.system(size: 14))
+//                }
+//                .onTapGesture(perform: onTapNavigate)
+//            }
+//
+//            ZStack(alignment: .topLeading) {
+//                TextEditor(text: $item.notes)
+//                    .focused($isNotesFocused)
+//                    .font(.footnote)
+//                    .foregroundColor(.gray)
+//                    .frame(height: max(20, calculateHeight(for: item.notes)))
+//                    .background(Color.clear)
+//                    .opacity(item.notes.isEmpty && !isNotesFocused ? 0.02 : 1)
+//                    .onTapGesture {
+//                        if !isEditing {
+//                            isNotesFocused = true
+//                            showDoneButton = true
+//                            isAnyItemEditing = true
+//                            editingItemId = item.id
+//                        }
+//                    }
+//                
+//                if item.notes.isEmpty && !isNotesFocused {
+//                    Text("Add note")
+//                        .font(.footnote)
+//                        .foregroundColor(.gray)
+//                        .padding(.top, 7)
+//                        .allowsHitTesting(false)
+//                        .padding(.leading, 5)
+//                }
+//                    
+//            }
+//            .padding(.leading, -5)
+//        }
+//        .padding(.vertical, 10)
+//        .padding(.horizontal, 15)
+//        .contentShape(Rectangle())
+//        .disabled(isEditing)
+//    }
+//    
+//    private func calculateHeight(for text: String) -> CGFloat {
+//        let font = UIFont.preferredFont(forTextStyle: .footnote)
+//        let attributes = [NSAttributedString.Key.font: font]
+//        let size = (text as NSString).boundingRect(
+//            with: CGSize(width: UIScreen.main.bounds.width - 80, height: .greatestFiniteMagnitude),
+//            options: [.usesLineFragmentOrigin, .usesFontLeading],
+//            attributes: attributes,
+//            context: nil
+//        ).size
+//        
+//        return size.height + 10 // Add some padding
+//    }
+//}
 struct ItemRow: View {
     @Binding var item: PodItem
-     let isEditing: Bool
-     let onTapNavigate: () -> Void
-     @EnvironmentObject var homeViewModel: HomeViewModel
-     @Binding var isAnyItemEditing: Bool
-     @Binding var showDoneButton: Bool
-     @Binding var editingItemId: Int?
+    let isEditing: Bool
+    let onTapNavigate: () -> Void
+    @EnvironmentObject var homeViewModel: HomeViewModel
+    @Binding var isAnyItemEditing: Bool
+    @Binding var showDoneButton: Bool
+    @Binding var editingItemId: Int?
 
-     @FocusState private var isMetadataFocused: Bool
-     @FocusState private var isNotesFocused: Bool
+    @FocusState private var isMetadataFocused: Bool
+    @FocusState private var isNotesFocused: Bool
+    @State private var showNotesPlaceholder: Bool = false
 
-     var body: some View {
-         VStack(alignment: .leading, spacing: 0) {
-             HStack {
-                 TextField("", text: $item.metadata)
-                     .focused($isMetadataFocused)
-                     .font(.body)
-                     .onTapGesture {
-                         if !isEditing {
-                             isMetadataFocused = true
-                             showDoneButton = true
-                             isAnyItemEditing = true
-                             editingItemId = item.id
-                         }
-                     }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                TextField("", text: $item.metadata)
+                    .focused($isMetadataFocused)
+                    .font(.body)
+                    .onTapGesture {
+                        if !isEditing {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isMetadataFocused = true
+                                showDoneButton = true
+                                isAnyItemEditing = true
+                                editingItemId = item.id
+                                showNotesPlaceholder = true
+                            }
+                        }
+                    }
                 
                 Spacer()
                 
@@ -380,41 +479,59 @@ struct ItemRow: View {
                 .onTapGesture(perform: onTapNavigate)
             }
 
-            if !item.notes.isEmpty || isNotesFocused {
-                TextEditor(text: $item.notes)
-                    .focused($isNotesFocused)
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .frame(height: max(20, calculateHeight(for: item.notes)))
-                    .background(Color.clear)
-                    .onTapGesture {
-                        if !isEditing {
-                            isNotesFocused = true
-                            showDoneButton = true
-                            isAnyItemEditing = true
-                            editingItemId = item.id
+            if !item.notes.isEmpty || showNotesPlaceholder {
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $item.notes)
+                        .focused($isNotesFocused)
+                        .font(.footnote)
+                        .foregroundColor(.gray)
+                        .frame(height: max(20, calculateHeight(for: item.notes)))
+                        .background(Color.clear)
+                        .opacity(item.notes.isEmpty ? 0.6 : 1)
+                        .onTapGesture {
+                            if !isEditing {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isNotesFocused = true
+                                    showDoneButton = true
+                                    isAnyItemEditing = true
+                                    editingItemId = item.id
+                                }
+                            }
                         }
+                    
+                    if item.notes.isEmpty {
+                        Text("Add note")
+                            .font(.footnote)
+                            .foregroundColor(.gray)
+                            .padding(.top, 7)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
                     }
-                    .padding(.leading, -5)
-            } else {
-                Text("Add note")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .onTapGesture {
-                        if !isEditing {
-                            isNotesFocused = true
-                            showDoneButton = true
-                            isAnyItemEditing = true
-                            editingItemId = item.id
-                            item.notes = ""
-                        }
-                    }
+                }
+                .padding(.leading, -5)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.vertical, 10)
-        .padding(.leading, 25)
+        .padding(.horizontal, 15)
         .contentShape(Rectangle())
         .disabled(isEditing)
+        .onChange(of: isMetadataFocused) { focused in
+            if !focused && item.notes.isEmpty {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showNotesPlaceholder = false
+                }
+            }
+        }
+        .onChange(of: isNotesFocused) { focused in
+            if focused {
+                showNotesPlaceholder = true
+            } else if !focused && item.notes.isEmpty {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showNotesPlaceholder = false
+                }
+            }
+        }
     }
     
     private func calculateHeight(for text: String) -> CGFloat {
@@ -430,7 +547,6 @@ struct ItemRow: View {
         return size.height + 10 // Add some padding
     }
 }
-
 struct PodTitleRow: View {
     @Binding var pod: Pod
     let isExpanded: Bool
