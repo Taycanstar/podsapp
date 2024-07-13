@@ -353,7 +353,6 @@ struct AddItemContainerView: View {
                         cameraModel.showPreview = true
                     } else {
                         print("No preview content available")
-                        print(cameraModel.previewURL, "url")
                  
                     }
                 }

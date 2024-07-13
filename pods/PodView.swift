@@ -68,6 +68,11 @@ struct PodView: View {
                                     .font(.system(size: 14))
                             }
                         }
+                        .onTapGesture {
+                            if !isEditing {
+                                self.selection = (0, index)
+                            }
+                        }
                     }
 
                     if !reorderedItems[index].notes.isEmpty || showNotesPlaceholder[reorderedItems[index].id] == true {
@@ -202,14 +207,27 @@ struct PodView: View {
     }
     
     private func refreshPodItems() {
-        networkManager.fetchItemsForPod(podId: pod.id) { items, error in
-            if let items = items {
-                self.reorderedItems = items
-                self.pod.items = items
-            } else {
-                print("Failed to fetch items for pod: \(error ?? "Unknown error")")
+//        networkManager.fetchItemsForPod(podId: pod.id) { items, error in
+//            if let items = items {
+//                self.reorderedItems = items
+//                self.pod.items = items
+//            } else {
+//                print("Failed to fetch items for pod: \(error ?? "Unknown error")")
+//            }
+//        }
+        DispatchQueue.global(qos: .background).async {
+            networkManager.fetchItemsForPod(podId: pod.id) { items, error in
+                DispatchQueue.main.async {
+                    if let items = items {
+                        self.reorderedItems = items
+                        self.pod.items = items
+                    } else {
+                        print("Failed to fetch items for pod: \(error ?? "Unknown error")")
+                    }
+                }
             }
         }
+
     }
     
     func moveItem(from source: IndexSet, to destination: Int) {
@@ -217,30 +235,56 @@ struct PodView: View {
         
         // Reorder in the backend
         let itemIDs = reorderedItems.map { $0.id }
-        networkManager.reorderPodItems(podId: pod.id, itemIds: itemIDs) { success, errorMessage in
-            DispatchQueue.main.async {
-                if success {
-                    print("Items reordered successfully in the backend.")
-                    // Update the pod's items to reflect the new order
-                    self.pod.items = self.reorderedItems
-                } else {
-                    print("Failed to reorder items in the backend: \(errorMessage ?? "Unknown error")")
+//        networkManager.reorderPodItems(podId: pod.id, itemIds: itemIDs) { success, errorMessage in
+//            DispatchQueue.main.async {
+//                if success {
+//                    print("Items reordered successfully in the backend.")
+//                    // Update the pod's items to reflect the new order
+//                    self.pod.items = self.reorderedItems
+//                } else {
+//                    print("Failed to reorder items in the backend: \(errorMessage ?? "Unknown error")")
+//                }
+//            }
+//        }
+        DispatchQueue.global(qos: .background).async {
+            networkManager.reorderPodItems(podId: pod.id, itemIds: itemIDs) { success, errorMessage in
+                DispatchQueue.main.async {
+                    if success {
+                        print("Items reordered successfully in the backend.")
+                        self.pod.items = self.reorderedItems
+                    } else {
+                        print("Failed to reorder items in the backend: \(errorMessage ?? "Unknown error")")
+                    }
                 }
             }
         }
+
     }
 
     func deleteItem(at offsets: IndexSet) {
         offsets.forEach { index in
             let itemId = reorderedItems[index].id
-            networkManager.deletePodItem(itemId: itemId) { success, errorMessage in
-                if success {
-                    print("Item \(itemId) deleted successfully.")
-                    reorderedItems.remove(at: index)
-                } else {
-                    print("Failed to delete item \(itemId): \(errorMessage ?? "Unknown error")")
+//            networkManager.deletePodItem(itemId: itemId) { success, errorMessage in
+//                if success {
+//                    print("Item \(itemId) deleted successfully.")
+//                    reorderedItems.remove(at: index)
+//                } else {
+//                    print("Failed to delete item \(itemId): \(errorMessage ?? "Unknown error")")
+//                }
+//            }
+            DispatchQueue.global(qos: .background).async {
+                networkManager.deletePodItem(itemId: itemId) { success, errorMessage in
+                    DispatchQueue.main.async {
+                        if success {
+                            print("Item \(itemId) deleted successfully.")
+                            reorderedItems.remove(at: index)
+                        } else {
+                            print("Failed to delete item \(itemId): \(errorMessage ?? "Unknown error")")
+                        }
+                    }
                 }
             }
+
         }
     }
     
@@ -321,5 +365,4 @@ struct PodView: View {
         return size.height + 10 // Add some padding
     }
 }
-
 

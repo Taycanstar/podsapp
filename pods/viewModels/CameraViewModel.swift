@@ -523,6 +523,35 @@ var hasCheckedPermission = false
     }
 
 
+//    
+//    func takePhoto() {
+//        if !session.isRunning {
+//            session.startRunning()
+//        }
+//
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Delay for 0.5 seconds
+//            guard let connection = self.photoOutput.connection(with: .video), connection.isActive else {
+//                print("No active video connection for photo capture.")
+//                return
+//            }
+//
+//            if self.isFrontCameraUsed {
+//                connection.isVideoMirrored = true
+//                connection.videoOrientation = .portrait
+//            }
+//
+//            let photoSettings = AVCapturePhotoSettings()
+//            photoSettings.isHighResolutionPhotoEnabled = true
+//
+//            if self.isFlashIntendedForPhoto {
+//                photoSettings.flashMode = .on
+//            } else {
+//                photoSettings.flashMode = .off
+//            }
+//
+//            self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+//        }
+//    }
     
     func takePhoto() {
         if !session.isRunning {
@@ -553,6 +582,43 @@ var hasCheckedPermission = false
         }
     }
 
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            print("Error capturing photo: \(error.localizedDescription)")
+            return
+        }
+
+        guard let imageData = photo.fileDataRepresentation(), let capturedImage = UIImage(data: imageData) else {
+            print("Failed to convert photo to image.")
+            return
+        }
+
+        // Handle image processing in a background thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let imageToDisplay: UIImage
+            if self.isFrontCameraUsed {
+                if let cgImg = capturedImage.cgImage {
+                    imageToDisplay = UIImage(cgImage: cgImg, scale: capturedImage.scale, orientation: .leftMirrored)
+                } else {
+                    imageToDisplay = capturedImage
+                }
+            } else {
+                imageToDisplay = capturedImage
+            }
+
+            // Update UI on the main thread
+            DispatchQueue.main.async {
+                self.selectedImage = imageToDisplay
+                self.showPreview = true
+                self.isProcessingVideo = false
+                self.previewURL = nil
+                print("Captured image set. Size: \(imageToDisplay.size)")
+                self.itemConfirmed = false
+            }
+        }
+    }
+
+
     func lockExposureAndWhiteBalanceForPhoto() {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else { return }
 
@@ -577,41 +643,41 @@ var hasCheckedPermission = false
     }
 
     
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let error = error {
-            print("Error capturing photo: \(error.localizedDescription)")
-            return
-        }
-
-        guard let imageData = photo.fileDataRepresentation(), let capturedImage = UIImage(data: imageData) else {
-            print("Failed to convert photo to image.")
-            return
-        }
-
-        // If the front camera was used, mirror the image
-        let imageToDisplay: UIImage
-        if isFrontCameraUsed {
-            // Flip the image for the front camera
-            if let cgImg = capturedImage.cgImage {
-                imageToDisplay = UIImage(cgImage: cgImg, scale: capturedImage.scale, orientation: .leftMirrored)
-            } else {
-                imageToDisplay = capturedImage
-            }
-        } else {
-            imageToDisplay = capturedImage
-        }
-
-        // Handle the image (similar to handling selected image from picker)
-        DispatchQueue.main.async {
-            self.selectedImage = imageToDisplay
-            self.showPreview = true // Indicate to show preview
-            self.isProcessingVideo = false // Update processing state if needed
-            self.previewURL = nil
-            print("Captured image set. Size: \(imageToDisplay.size)")
-            self.itemConfirmed = false
-            // Trigger any UI updates to show the captured image
-        }
-    }
+//    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+//        if let error = error {
+//            print("Error capturing photo: \(error.localizedDescription)")
+//            return
+//        }
+//
+//        guard let imageData = photo.fileDataRepresentation(), let capturedImage = UIImage(data: imageData) else {
+//            print("Failed to convert photo to image.")
+//            return
+//        }
+//
+//        // If the front camera was used, mirror the image
+//        let imageToDisplay: UIImage
+//        if isFrontCameraUsed {
+//            // Flip the image for the front camera
+//            if let cgImg = capturedImage.cgImage {
+//                imageToDisplay = UIImage(cgImage: cgImg, scale: capturedImage.scale, orientation: .leftMirrored)
+//            } else {
+//                imageToDisplay = capturedImage
+//            }
+//        } else {
+//            imageToDisplay = capturedImage
+//        }
+//
+//        // Handle the image (similar to handling selected image from picker)
+//        DispatchQueue.main.async {
+//            self.selectedImage = imageToDisplay
+//            self.showPreview = true // Indicate to show preview
+//            self.isProcessingVideo = false // Update processing state if needed
+//            self.previewURL = nil
+//            print("Captured image set. Size: \(imageToDisplay.size)")
+//            self.itemConfirmed = false
+//            // Trigger any UI updates to show the captured image
+//        }
+//    }
 
 
     // Speech Service Configuration

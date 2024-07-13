@@ -106,15 +106,27 @@ struct HomeView: View {
                 .scrollIndicators(.hidden)
                 .padding(.bottom, 50)
                 .refreshable {
-                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-                        // No additional action needed
+//                    homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+//                        // No additional action needed
+//                    }
+                    DispatchQueue.global(qos: .background).async {
+                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+                            // Additional actions after refresh if needed
+                        }
                     }
+
                 }
                 .onAppear {
                     if !hasInitiallyFetched {
-                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-                            hasInitiallyFetched = true
+//                        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+//                            hasInitiallyFetched = true
+//                        }
+                        DispatchQueue.global(qos: .background).async {
+                            homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+                                hasInitiallyFetched = true
+                            }
                         }
+
                     }
                     editingPods = homeViewModel.pods
                   
@@ -201,23 +213,41 @@ struct HomeView: View {
         if podsReordered {
             homeViewModel.pods = editingPods
             let orderedPodIds = homeViewModel.pods.map { $0.id }
-            networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
-                DispatchQueue.main.async {
-                    if success {
-                        print("Pods reordered successfully on the backend.")
-                    } else {
-                        print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+//            networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
+//                DispatchQueue.main.async {
+//                    if success {
+//                        print("Pods reordered successfully on the backend.")
+//                    } else {
+//                        print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+//                    }
+//                }
+//            }
+            DispatchQueue.global(qos: .background).async {
+                networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { success, errorMessage in
+                    DispatchQueue.main.async {
+                        if success {
+                            print("Pods reordered successfully on the backend.")
+                        } else {
+                            print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+                        }
                     }
                 }
             }
+
             podsReordered = false
         }
     }
     
     private func refreshPods() {
-        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
-            // Additional actions after refresh if needed
+//        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+//            // Additional actions after refresh if needed
+//        }
+        DispatchQueue.global(qos: .background).async {
+            homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+                // Additional actions after refresh if needed
+            }
         }
+
     }
 
     private func saveInputChanges() {
@@ -234,19 +264,35 @@ struct HomeView: View {
             
             print("Updating item:", item)
             
-            networkManager.updatePodItemLabelAndNotes(itemId: item.id, newLabel: item.metadata, newNotes: item.notes) { success, errorMessage in
-                if success {
-                    print("Pod item label and notes updated successfully.")
-                } else {
-                    print("Failed to update pod item label and notes: \(errorMessage ?? "Unknown error")")
-                }
-                DispatchQueue.main.async {
-                    self.showDoneButton = false
-                    self.isAnyItemEditing = false
-                    self.editingItemId = nil
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+//            networkManager.updatePodItemLabelAndNotes(itemId: item.id, newLabel: item.metadata, newNotes: item.notes) { success, errorMessage in
+//                if success {
+//                    print("Pod item label and notes updated successfully.")
+//                } else {
+//                    print("Failed to update pod item label and notes: \(errorMessage ?? "Unknown error")")
+//                }
+//                DispatchQueue.main.async {
+//                    self.showDoneButton = false
+//                    self.isAnyItemEditing = false
+//                    self.editingItemId = nil
+//                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+//                }
+//            }
+            DispatchQueue.global(qos: .background).async {
+                networkManager.updatePodItemLabelAndNotes(itemId: item.id, newLabel: item.metadata, newNotes: item.notes) { success, errorMessage in
+                    DispatchQueue.main.async {
+                        if success {
+                            print("Pod item label and notes updated successfully.")
+                        } else {
+                            print("Failed to update pod item label and notes: \(errorMessage ?? "Unknown error")")
+                        }
+                        self.showDoneButton = false
+                        self.isAnyItemEditing = false
+                        self.editingItemId = nil
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
                 }
             }
+
         } else {
             print("Item not found for itemId \(itemId)")
         }
@@ -317,13 +363,25 @@ struct HomeView: View {
         let itemIds = homeViewModel.pods[podIndex].items.map { $0.id }
         let podId = homeViewModel.pods[podIndex].id
         
-        networkManager.reorderPodItems(podId: podId, itemIds: itemIds) { success, errorMessage in
-            if success {
-                print("Pod items reordered successfully in the backend.")
-            } else {
-                print("Failed to reorder pod items in the backend: \(errorMessage ?? "Unknown error")")
+//        networkManager.reorderPodItems(podId: podId, itemIds: itemIds) { success, errorMessage in
+//            if success {
+//                print("Pod items reordered successfully in the backend.")
+//            } else {
+//                print("Failed to reorder pod items in the backend: \(errorMessage ?? "Unknown error")")
+//            }
+//        }
+        DispatchQueue.global(qos: .background).async {
+                    networkManager.reorderPodItems(podId: podId, itemIds: itemIds) { success, errorMessage in
+                DispatchQueue.main.async {
+                    if success {
+                        print("Pods reordered successfully on the backend.")
+                    } else {
+                        print("Failed to reorder pods on the backend: \(errorMessage ?? "Unknown error")")
+                    }
+                }
             }
         }
+
     }
     
     private func deletePodItem(at offsets: IndexSet, in podIndex: Int) {
@@ -347,101 +405,6 @@ struct HomeView: View {
     }
 }
 
-//struct ItemRow: View {
-//    @Binding var item: PodItem
-//    let isEditing: Bool
-//    let onTapNavigate: () -> Void
-//    @EnvironmentObject var homeViewModel: HomeViewModel
-//    @Binding var isAnyItemEditing: Bool
-//    @Binding var showDoneButton: Bool
-//    @Binding var editingItemId: Int?
-//
-//    @FocusState private var isMetadataFocused: Bool
-//    @FocusState private var isNotesFocused: Bool
-//
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 5) {
-//            HStack {
-//                TextField("", text: $item.metadata)
-//                    .focused($isMetadataFocused)
-//                    .font(.body)
-//                    .onTapGesture {
-//                        if !isEditing {
-//                            isMetadataFocused = true
-//                            showDoneButton = true
-//                            isAnyItemEditing = true
-//                            editingItemId = item.id
-//                        }
-//                    }
-//                
-//                Spacer()
-//                
-//                HStack(spacing: 5) {
-//                    if let thumbnailURL = item.thumbnailURL {
-//                        AsyncImage(url: thumbnailURL) { image in
-//                            image.resizable()
-//                        } placeholder: {
-//                            ProgressView()
-//                        }
-//                        .aspectRatio(contentMode: .fill)
-//                        .frame(width: 30, height: 30)
-//                        .clipShape(RoundedRectangle(cornerRadius: 8))
-//                    }
-//                    Image(systemName: "chevron.right")
-//                        .foregroundColor(.gray)
-//                        .font(.system(size: 14))
-//                }
-//                .onTapGesture(perform: onTapNavigate)
-//            }
-//
-//            ZStack(alignment: .topLeading) {
-//                TextEditor(text: $item.notes)
-//                    .focused($isNotesFocused)
-//                    .font(.footnote)
-//                    .foregroundColor(.gray)
-//                    .frame(height: max(20, calculateHeight(for: item.notes)))
-//                    .background(Color.clear)
-//                    .opacity(item.notes.isEmpty && !isNotesFocused ? 0.02 : 1)
-//                    .onTapGesture {
-//                        if !isEditing {
-//                            isNotesFocused = true
-//                            showDoneButton = true
-//                            isAnyItemEditing = true
-//                            editingItemId = item.id
-//                        }
-//                    }
-//                
-//                if item.notes.isEmpty && !isNotesFocused {
-//                    Text("Add note")
-//                        .font(.footnote)
-//                        .foregroundColor(.gray)
-//                        .padding(.top, 7)
-//                        .allowsHitTesting(false)
-//                        .padding(.leading, 5)
-//                }
-//                    
-//            }
-//            .padding(.leading, -5)
-//        }
-//        .padding(.vertical, 10)
-//        .padding(.horizontal, 15)
-//        .contentShape(Rectangle())
-//        .disabled(isEditing)
-//    }
-//    
-//    private func calculateHeight(for text: String) -> CGFloat {
-//        let font = UIFont.preferredFont(forTextStyle: .footnote)
-//        let attributes = [NSAttributedString.Key.font: font]
-//        let size = (text as NSString).boundingRect(
-//            with: CGSize(width: UIScreen.main.bounds.width - 80, height: .greatestFiniteMagnitude),
-//            options: [.usesLineFragmentOrigin, .usesFontLeading],
-//            attributes: attributes,
-//            context: nil
-//        ).size
-//        
-//        return size.height + 10 // Add some padding
-//    }
-//}
 struct ItemRow: View {
     @Binding var item: PodItem
     let isEditing: Bool
