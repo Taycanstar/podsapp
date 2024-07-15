@@ -30,91 +30,167 @@ struct Player : UIViewControllerRepresentable {
     }
 }
 
-struct PlayerView : View {
-//    @Binding var videos : [Video]
+//struct PlayerView : View {
+////    @Binding var videos : [Video]
+//    @Environment(\.presentationMode) var presentationMode
+//
+//     var items: [PodItem]
+//    let lifecycleDelegate: ViewLifecycleDelegate?
+//    
+//    var body: some View{
+//      
+//            
+//            
+//            VStack(spacing: 0) {
+//                
+//                ForEach(items) { item in  // Direct iteration over items
+//                    
+//                    ZStack {
+//                  
+//                            if item.videoURL != nil {
+//                                if let player = item.player {
+//                            CustomVideoPlayer(player: player)
+//                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+//                                .offset(y: -30)
+//                                .onTapGesture {
+//                                    // Toggle play/pause directly on the player
+//                                    if player.timeControlStatus == .playing {
+//                                        player.pause()
+//                                    } else {
+//                                        player.play()
+//                                    }
+//                                }
+//                                              } else {
+//                                                  Text("Video unavailable")
+//                                                      .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+//                                                      .background(Color.gray)
+//                                              }
+//                          
+//                    }else {
+//                        PodItemCellImage(item: item)
+//                            .id(item.id)
+//                            
+//                        }
+//      
+//                    //Vstack goes here
+//
+//                        
+//                        
+//                    }
+//                    
+//                }
+//         
+//                
+//              
+//            }
+//            .onAppear {
+//                self.lifecycleDelegate?.onAppear()
+//            }
+//            .onDisappear {
+//                self.lifecycleDelegate?.onDisappear()
+//            }
+//            .padding(.bottom,80)
+////
+////            .navigationBarHidden(true)
+////            .navigationBarBackButtonHidden(true)
+////            .navigationBarItems(leading: backButton)
+////            .scrollIndicators(.hidden)
+//
+//
+//            
+//        }
+//    
+//    private var backButton: some View {
+//        
+//        Button(action: {
+//            presentationMode.wrappedValue.dismiss()
+//        }) {
+//            Image(systemName: "chevron.left").foregroundColor(.white)
+//                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+//                .font(.system(size: 24))
+//        }
+//        
+//        
+//    }
+//
+//}
+struct PlayerView: View {
     @Environment(\.presentationMode) var presentationMode
-
-     var items: [PodItem]
+    var items: [PodItem]
     let lifecycleDelegate: ViewLifecycleDelegate?
+    @State private var isLoading: [Int: Bool] = [:]
+    @State private var loadingFailed: [Int: Bool] = [:]
     
-    var body: some View{
-      
-            
-            
-            VStack(spacing: 0) {
-                
-                ForEach(items) { item in  // Direct iteration over items
-                    
-                    ZStack {
-                  
-                            if item.videoURL != nil {
-                                if let player = item.player {
-                            CustomVideoPlayer(player: player)
-                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                                .offset(y: -30)
-                                .onTapGesture {
-                                    // Toggle play/pause directly on the player
-                                    if player.timeControlStatus == .playing {
-                                        player.pause()
-                                    } else {
-                                        player.play()
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                ZStack {
+                    if let player = item.player {
+                        CustomVideoPlayer2(player: player,
+                                          isLoading: loadingBinding(for: index),
+                                          loadingFailed: failedBinding(for: index),
+                                          retryAction: { retryLoading(for: item, at: index) })
+                            .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                            .offset(y: -30)
+                            .onTapGesture {
+                                                             // Toggle play/pause directly on the player
+                                                             if player.timeControlStatus == .playing {
+                                                                 player.pause()
+                                                             } else {
+                                                                 player.play()
+                                                             }
+                                                         }
+                            .overlay(
+                                Group {
+                                    if isLoading[index] == true {
+                                        ProgressView()
+                                    } else if loadingFailed[index] == true {
+                                        Button("Retry") {
+                                            retryLoading(for: item, at: index)
+                                        }
                                     }
                                 }
-                                              } else {
-                                                  Text("Video unavailable")
-                                                      .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                                                      .background(Color.gray)
-                                              }
-                          
-                    }else {
+                            )
+                    } else {
                         PodItemCellImage(item: item)
                             .id(item.id)
-                            
-                        }
-      
-                    //Vstack goes here
-
-                        
-                        
                     }
-                    
                 }
-         
-                
-              
             }
-            .onAppear {
-                self.lifecycleDelegate?.onAppear()
-            }
-            .onDisappear {
-                self.lifecycleDelegate?.onDisappear()
-            }
-            .padding(.bottom,80)
-//
-//            .navigationBarHidden(true)
-//            .navigationBarBackButtonHidden(true)
-//            .navigationBarItems(leading: backButton)
-//            .scrollIndicators(.hidden)
-
-
-            
         }
-    
-    private var backButton: some View {
-        
-        Button(action: {
-            presentationMode.wrappedValue.dismiss()
-        }) {
-            Image(systemName: "chevron.left").foregroundColor(.white)
-                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-                .font(.system(size: 24))
+        .onAppear {
+            self.lifecycleDelegate?.onAppear()
         }
-        
-        
+        .onDisappear {
+            self.lifecycleDelegate?.onDisappear()
+        }
+        .padding(.bottom, 80)
     }
-
+    
+    private func loadingBinding(for index: Int) -> Binding<Bool> {
+        return Binding(
+            get: { self.isLoading[index] ?? false },
+            set: { self.isLoading[index] = $0 }
+        )
+    }
+    
+    private func failedBinding(for index: Int) -> Binding<Bool> {
+        return Binding(
+            get: { self.loadingFailed[index] ?? false },
+            set: { self.loadingFailed[index] = $0 }
+        )
+    }
+    
+    private func retryLoading(for item: PodItem, at index: Int) {
+        guard let url = item.videoURL else { return }
+        isLoading[index] = true
+        loadingFailed[index] = false
+        let asset = AVAsset(url: url)
+        let playerItem = AVPlayerItem(asset: asset)
+        item.player?.replaceCurrentItem(with: playerItem)
+        item.player?.play()
+    }
 }
-
 
 
 struct PlayerPageView : UIViewRepresentable {
