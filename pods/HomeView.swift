@@ -490,7 +490,7 @@ struct ItemRow: View {
             }
         }
         .padding(.vertical, 10)
-        .padding(.horizontal, 15)
+        .padding(.leading, 15)
         .contentShape(Rectangle())
         .disabled(isEditing)
         .onChange(of: isMetadataFocused) { focused in

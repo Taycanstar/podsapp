@@ -73,6 +73,80 @@ struct PlayerView : View {
                         }
       
                     //Vstack goes here
+                        
+                                                VStack{
+                                                    Spacer()
+                        
+                                                    HStack(alignment: .bottom){
+                                                        VStack(alignment: .leading) {
+//                                                            Text("Lewis Hamilton")
+//                                                                .fontWeight(.semibold)
+                                                          
+                                                            
+                                                            Text(item.notes)}
+                                                        .foregroundStyle(.white)
+                                                        .font(.body)
+                        
+                                                        Spacer()
+                        
+//                                                        VStack(spacing: 28){
+//                                                            Circle()
+//                                                                .frame(width: 48, height: 48)
+//                                                                .foregroundStyle(.gray)
+//                                                            Button{
+//                                                            } label:{
+//                                                                VStack{
+//                                                                    Image(systemName: "heart.fill")
+//                                                                        .resizable()
+//                                                                        .frame(width: 28, height: 28)
+//                                                                        .foregroundStyle(.white)
+//                                                                    Text("27")
+//                                                                        .font(.caption)
+//                                                                        .foregroundStyle(.white)
+//                                                                    .bold()}}
+//                                                            Button{
+//                                                            } label:{
+//                                                                VStack{
+//                                                                    Image(systemName: "ellipsis.bubble.fill")
+//                                                                        .resizable()
+//                                                                        .frame(width: 28, height: 28)
+//                                                                        .foregroundStyle(.white)
+//                                                                    Text("27")
+//                                                                        .font(.caption)
+//                                                                        .foregroundStyle(.white)
+//                                                                    .bold()}}
+//                                                            Button{
+//                                                            } label:{
+//                                                                VStack{
+//                                                                    Image(systemName: "bookmark.fill")
+//                                                                        .resizable()
+//                                                                        .frame(width: 22, height: 28)
+//                                                                        .foregroundStyle(.white)
+//                                                                    Text("27")
+//                                                                        .font(.caption)
+//                                                                        .foregroundStyle(.white)
+//                                                                    .bold()}}
+//                                                            Button{
+//                                                            } label:{
+//                                                                VStack{
+//                                                                    Image(systemName: "arrowshape.turn.up.right.fill")
+//                                                                        .resizable()
+//                                                                        .frame(width: 28, height: 28)
+//                                                                        .foregroundStyle(.white)
+//                        
+//                                                                    Text("27")
+//                                                                        .font(.caption)
+//                                                                        .foregroundStyle(.white)
+//                                                                        .bold()
+//                                                                }
+//                                                            }
+//                                                        }
+                                                    }
+                                                    .padding(.bottom,80)
+                                                }
+                                                .padding()
+                        
+                        //VStack end
 
                         
                         
@@ -185,6 +259,19 @@ struct PlayerPageView : UIViewRepresentable {
             preloadAdjacentVideos(currentIndex: parent.currentIndex)
         }
         
+//        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+//            let currentIndex = Int(scrollView.contentOffset.y / UIScreen.main.bounds.height)
+//            parent.currentIndex = currentIndex
+//            
+//            if index != currentIndex {
+//                parent.items[index].player?.pause()
+//                
+//                index = currentIndex
+//                parent.currentIndex = index
+//                prepareAndPlayVideo(at: index)
+//                preloadAdjacentVideos(currentIndex: index)
+//            }
+//        }
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             let currentIndex = Int(scrollView.contentOffset.y / UIScreen.main.bounds.height)
             parent.currentIndex = currentIndex
@@ -194,29 +281,53 @@ struct PlayerPageView : UIViewRepresentable {
                 
                 index = currentIndex
                 parent.currentIndex = index
-                prepareAndPlayVideo(at: index)
-                preloadAdjacentVideos(currentIndex: index)
-            }
-        }
-        
-        func prepareAndPlayVideo(at index: Int) {
-            if parent.items[index].player == nil {
-                parent.items[index].preparePlayer()
-            }
-            parent.items[index].player?.seek(to: .zero)
-            parent.items[index].player?.play()
-            setupPlayerObserver(for: index)
-        }
-        
-        func preloadAdjacentVideos(currentIndex: Int) {
-            let indicesToPreload = [currentIndex - 1, currentIndex + 1]
-            for index in indicesToPreload where index >= 0 && index < parent.items.count {
-                if parent.items[index].player == nil {
-                    parent.items[index].preparePlayer()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.preloadAdjacentVideos(currentIndex: self.index)
+                    DispatchQueue.main.async {
+                        self.prepareAndPlayVideo(at: self.index)
+                    }
                 }
             }
         }
-        
+
+        func prepareAndPlayVideo(at index: Int) {
+            DispatchQueue.main.async {
+                if self.parent.items[index].player == nil {
+                    self.parent.items[index].preparePlayer()
+                }
+                self.parent.items[index].player?.seek(to: .zero)
+                self.parent.items[index].player?.play()
+                self.setupPlayerObserver(for: index)
+            }
+        }
+//        
+//        func preloadAdjacentVideos(currentIndex: Int) {
+//            let indicesToPreload = [currentIndex - 1, currentIndex + 1]
+//            for index in indicesToPreload where index >= 0 && index < parent.items.count {
+//                if parent.items[index].player == nil {
+//                    parent.items[index].preparePlayer()
+//                }
+//            }
+//        }
+        func preloadAdjacentVideos(currentIndex: Int) {
+            let indicesToPreload = [currentIndex - 1, currentIndex, currentIndex + 1]
+            for index in indicesToPreload where index >= 0 && index < parent.items.count {
+                if parent.items[index].player == nil {
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        // Prepare assets in background
+                        guard let url = self.parent.items[index].videoURL else { return }
+                        let asset = AVAsset(url: url)
+                        let playerItem = AVPlayerItem(asset: asset)
+                        
+                        // Create player on main thread
+                        DispatchQueue.main.async {
+                            self.parent.items[index].player = AVPlayer(playerItem: playerItem)
+                        }
+                    }
+                }
+            }
+        }
+
         func setupPlayerObserver(for index: Int) {
             NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
             NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: parent.items[index].player?.currentItem, queue: .main) { [weak self] _ in
