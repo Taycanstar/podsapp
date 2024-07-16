@@ -30,180 +30,103 @@ struct Player : UIViewControllerRepresentable {
     }
 }
 
-//struct PlayerView : View {
-////    @Binding var videos : [Video]
-//    @Environment(\.presentationMode) var presentationMode
-//
-//     var items: [PodItem]
-//    let lifecycleDelegate: ViewLifecycleDelegate?
-//    
-//    var body: some View{
-//      
-//            
-//            
-//            VStack(spacing: 0) {
-//                
-//                ForEach(items) { item in  // Direct iteration over items
-//                    
-//                    ZStack {
-//                  
-//                            if item.videoURL != nil {
-//                                if let player = item.player {
-//                            CustomVideoPlayer(player: player)
-//                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-//                                .offset(y: -30)
-//                                .onTapGesture {
-//                                    // Toggle play/pause directly on the player
-//                                    if player.timeControlStatus == .playing {
-//                                        player.pause()
-//                                    } else {
-//                                        player.play()
-//                                    }
-//                                }
-//                                              } else {
-//                                                  Text("Video unavailable")
-//                                                      .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-//                                                      .background(Color.gray)
-//                                              }
-//                          
-//                    }else {
-//                        PodItemCellImage(item: item)
-//                            .id(item.id)
-//                            
-//                        }
-//      
-//                    //Vstack goes here
-//
-//                        
-//                        
-//                    }
-//                    
-//                }
-//         
-//                
-//              
-//            }
-//            .onAppear {
-//                self.lifecycleDelegate?.onAppear()
-//            }
-//            .onDisappear {
-//                self.lifecycleDelegate?.onDisappear()
-//            }
-//            .padding(.bottom,80)
-////
-////            .navigationBarHidden(true)
-////            .navigationBarBackButtonHidden(true)
-////            .navigationBarItems(leading: backButton)
-////            .scrollIndicators(.hidden)
-//
-//
-//            
-//        }
-//    
-//    private var backButton: some View {
-//        
-//        Button(action: {
-//            presentationMode.wrappedValue.dismiss()
-//        }) {
-//            Image(systemName: "chevron.left").foregroundColor(.white)
-//                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                .font(.system(size: 24))
-//        }
-//        
-//        
-//    }
-//
-//}
-struct PlayerView: View {
+struct PlayerView : View {
+//    @Binding var videos : [Video]
     @Environment(\.presentationMode) var presentationMode
-    var items: [PodItem]
+
+     var items: [PodItem]
     let lifecycleDelegate: ViewLifecycleDelegate?
-    @State private var isLoading: [Int: Bool] = [:]
-    @State private var loadingFailed: [Int: Bool] = [:]
     
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                ZStack {
-                    if let player = item.player {
-                        CustomVideoPlayer2(player: player,
-                                          isLoading: loadingBinding(for: index),
-                                          loadingFailed: failedBinding(for: index),
-                                          retryAction: { retryLoading(for: item, at: index) })
-                            .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                            .offset(y: -30)
-                            .onTapGesture {
-                                                             // Toggle play/pause directly on the player
-                                                             if player.timeControlStatus == .playing {
-                                                                 player.pause()
-                                                             } else {
-                                                                 player.play()
-                                                             }
-                                                         }
-                            .overlay(
-                                Group {
-                                    if isLoading[index] == true {
-                                        ProgressView()
-                                    } else if loadingFailed[index] == true {
-                                        Button("Retry") {
-                                            retryLoading(for: item, at: index)
-                                        }
+    var body: some View{
+      
+            
+            
+            VStack(spacing: 0) {
+                
+                ForEach(items) { item in  // Direct iteration over items
+                    
+                    ZStack {
+                  
+                            if item.videoURL != nil {
+                                if let player = item.player {
+                            CustomVideoPlayer(player: player)
+                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                                .offset(y: -30)
+                                .onTapGesture {
+                                    // Toggle play/pause directly on the player
+                                    if player.timeControlStatus == .playing {
+                                        player.pause()
+                                    } else {
+                                        player.play()
                                     }
                                 }
-                            )
-                    } else {
+                                              } else {
+                                                  Text("Video unavailable")
+                                                      .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                                                      .background(Color.gray)
+                                              }
+                          
+                    }else {
                         PodItemCellImage(item: item)
                             .id(item.id)
+                            
+                        }
+      
+                    //Vstack goes here
+
+                        
+                        
                     }
+                    
                 }
+         
+                
+              
             }
+            .onAppear {
+                self.lifecycleDelegate?.onAppear()
+            }
+            .onDisappear {
+                self.lifecycleDelegate?.onDisappear()
+            }
+            .padding(.bottom,80)
+//
+//            .navigationBarHidden(true)
+//            .navigationBarBackButtonHidden(true)
+//            .navigationBarItems(leading: backButton)
+//            .scrollIndicators(.hidden)
+
+
+            
         }
-        .onAppear {
-            self.lifecycleDelegate?.onAppear()
+    
+    private var backButton: some View {
+        
+        Button(action: {
+            presentationMode.wrappedValue.dismiss()
+        }) {
+            Image(systemName: "chevron.left").foregroundColor(.white)
+                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                .font(.system(size: 24))
         }
-        .onDisappear {
-            self.lifecycleDelegate?.onDisappear()
-        }
-        .padding(.bottom, 80)
+        
+        
     }
-    
-    private func loadingBinding(for index: Int) -> Binding<Bool> {
-        return Binding(
-            get: { self.isLoading[index] ?? false },
-            set: { self.isLoading[index] = $0 }
-        )
-    }
-    
-    private func failedBinding(for index: Int) -> Binding<Bool> {
-        return Binding(
-            get: { self.loadingFailed[index] ?? false },
-            set: { self.loadingFailed[index] = $0 }
-        )
-    }
-    
-    private func retryLoading(for item: PodItem, at index: Int) {
-        guard let url = item.videoURL else { return }
-        isLoading[index] = true
-        loadingFailed[index] = false
-        let asset = AVAsset(url: url)
-        let playerItem = AVPlayerItem(asset: asset)
-        item.player?.replaceCurrentItem(with: playerItem)
-        item.player?.play()
-    }
+
 }
 
 
 struct PlayerPageView : UIViewRepresentable {
-
-//    func makeCoordinator() -> Coordinator {
-//        return PlayerPageView.Coordinator(parent1: self)
-//    }
-    func makeCoordinator() -> Coordinator {
-          return Coordinator(parent: self)
-      }
     
-
-     var items: [PodItem]
+    //    func makeCoordinator() -> Coordinator {
+    //        return PlayerPageView.Coordinator(parent1: self)
+    //    }
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(parent: self)
+    }
+    
+    
+    var items: [PodItem]
     @Binding var currentIndex: Int
     func makeUIView(context: Context) -> UIScrollView{
         
@@ -211,8 +134,8 @@ struct PlayerPageView : UIViewRepresentable {
         
         let childView = UIHostingController(rootView: PlayerView(items: self.items, lifecycleDelegate: context.coordinator))
         childView.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((items.count)))
-//        view.contentSize = CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((items.count)))
-//        
+        //        view.contentSize = CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((items.count)))
+        //        
         let tabBarHeight: CGFloat = 55
         let totalHeight = (UIScreen.main.bounds.height + tabBarHeight) * CGFloat(items.count)
         view.contentSize = CGSize(width: UIScreen.main.bounds.width, height: totalHeight)
@@ -228,100 +151,88 @@ struct PlayerPageView : UIViewRepresentable {
         view.bounces = false  // Disable bouncing
         context.coordinator.setupInitialVideo(view: view)
         return view
-
+        
     }
     
     func updateUIView(_ uiView: UIScrollView, context: Context) {
         let tabBarHeight: CGFloat = 55
-//        let childHeight = UIScreen.main.bounds.height - tabBarHeight
+        //        let childHeight = UIScreen.main.bounds.height - tabBarHeight
         uiView.contentSize = CGSize(width: UIScreen.main.bounds.width, height: (UIScreen.main.bounds.height + tabBarHeight) * CGFloat((items.count)))
         
         for i in 0..<uiView.subviews.count{
             uiView.subviews[i].frame = CGRect(x: 0, y: 0,width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((items.count)))
         }
         
-    
-
+        
+        
     }
     
     
-    
-
-    
-    class Coordinator : NSObject, UIScrollViewDelegate, ViewLifecycleDelegate{
-        
-        var parent : PlayerPageView
+    class Coordinator: NSObject, UIScrollViewDelegate, ViewLifecycleDelegate {
+        var parent: PlayerPageView
         var index = 0
-//        init(parent1 : PlayerPageView) {
-//            parent = parent1
-////            index = parent.currentIndex
-//        }
-//        
-//        func setupInitialVideo() {
-//               let player = parent.items[index].player
-////            let player = parent.items[parent.currentIndex].player
-//               player?.seek(to: .zero)
-//               player?.play()
-//               NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem, queue: .main) { [weak self] _ in
-//                   guard let self = self else { return }
-//                   player?.seek(to: .zero)
-//                   player?.play()
-//               }
-//           }
-
+        
         init(parent: PlayerPageView) {
             self.parent = parent
             self.index = parent.currentIndex
         }
-
+        
         func setupInitialVideo(view: UIScrollView) {
             let yOffset = CGFloat(parent.currentIndex) * UIScreen.main.bounds.height
             view.setContentOffset(CGPoint(x: 0, y: yOffset), animated: false)
             
-            let player = parent.items[parent.currentIndex].player
-            player?.seek(to: .zero)
-            player?.play()
-            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem, queue: .main) { [weak self] _ in
-                guard let self = self else { return }
-                player?.seek(to: .zero)
-                player?.play()
-            }
+            prepareAndPlayVideo(at: parent.currentIndex)
+            preloadAdjacentVideos(currentIndex: parent.currentIndex)
         }
-
         
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-            let currentindex = Int(scrollView.contentOffset.y / UIScreen.main.bounds.height)
-            parent.currentIndex = currentindex
+            let currentIndex = Int(scrollView.contentOffset.y / UIScreen.main.bounds.height)
+            parent.currentIndex = currentIndex
             
-            if index != currentindex{
-                parent.items[index].player?.seek(to: .zero)
+            if index != currentIndex {
                 parent.items[index].player?.pause()
-                NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: parent.items[index].player?.currentItem)
-
-                index = currentindex
+                
+                index = currentIndex
                 parent.currentIndex = index
-                parent.items[index].player?.play()
-                parent.items[index].player?.actionAtItemEnd = .none
-                NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: parent.items[index].player?.currentItem, queue: .main) { (_) in
-                    self.parent.items[self.index].player?.seek(to: .zero)
-                    self.parent.items[self.index].player?.play()
+                prepareAndPlayVideo(at: index)
+                preloadAdjacentVideos(currentIndex: index)
+            }
+        }
+        
+        func prepareAndPlayVideo(at index: Int) {
+            if parent.items[index].player == nil {
+                parent.items[index].preparePlayer()
+            }
+            parent.items[index].player?.seek(to: .zero)
+            parent.items[index].player?.play()
+            setupPlayerObserver(for: index)
+        }
+        
+        func preloadAdjacentVideos(currentIndex: Int) {
+            let indicesToPreload = [currentIndex - 1, currentIndex + 1]
+            for index in indicesToPreload where index >= 0 && index < parent.items.count {
+                if parent.items[index].player == nil {
+                    parent.items[index].preparePlayer()
                 }
             }
         }
         
+        func setupPlayerObserver(for index: Int) {
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: parent.items[index].player?.currentItem, queue: .main) { [weak self] _ in
+                self?.parent.items[index].player?.seek(to: .zero)
+                self?.parent.items[index].player?.play()
+            }
+        }
+        
         func onAppear() {
-            parent.items[self.index].player?.seek(to: .zero)
-            parent.items[self.index].player?.play()
+            prepareAndPlayVideo(at: index)
+            preloadAdjacentVideos(currentIndex: index)
         }
         
         func onDisappear() {
-            parent.items[self.index].player?.seek(to: .zero)
-            parent.items[self.index].player?.pause()
-            //added code
-            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: parent.items[self.index].player?.currentItem)
+            parent.items[index].player?.pause()
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         }
-
     }
-
 }
-
