@@ -79,55 +79,6 @@ struct TourView: View {
     }
 }
 
-struct VideoPlayerView: View {
-    let videoName: String
-    @State private var player: AVQueuePlayer?
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.white  // This will fill the entire area with white
-                
-                if let player = player {
-                    VideoPlayer(player: player)
-                        .aspectRatio(9/16, contentMode: .fit)
-                        .frame(width: geometry.size.width * 0.9,  height: geometry.size.height)
-                        .clipped()
-                        .background(.white)
-                } else {
-                    Text("Loading video...")
-                }
-            }
-        }
-        .background(Color.white)
-        .onAppear(perform: setupPlayer)
-        .onDisappear(perform: cleanupPlayer)
-    }
-    
-    private func setupPlayer() {
-        guard let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") else {
-            print("Video file not found")
-            return
-        }
-        
-        let playerItem = AVPlayerItem(url: url)
-        player = AVQueuePlayer(playerItem: playerItem)
-        
-        // Loop the video
-        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { _ in
-            player?.seek(to: CMTime.zero)
-            player?.play()
-        }
-        
-        player?.play()
-    }
-    
-    private func cleanupPlayer() {
-        player?.pause()
-        player = nil
-    }
-}
-
 struct PageControl: View {
     @Binding var currentIndex: Int
     let numberOfPages: Int

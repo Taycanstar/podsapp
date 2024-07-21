@@ -2,7 +2,8 @@
 
 import SwiftUI
 import AVKit
-
+import Combine
+import AVFoundation
 
 
 struct CustomVideoPlayer: UIViewControllerRepresentable {
@@ -28,3 +29,4 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
         controller.player = nil
     }
 }
+
