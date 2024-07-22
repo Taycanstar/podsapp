@@ -34,6 +34,7 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
 struct CustomVideoPlayer2: UIViewControllerRepresentable {
     var url: URL
     @Binding var player: AVPlayer?
+    var isCurrentVideo: Bool
     
     func makeUIViewController(context: Context) -> UIViewController {
         let controller = AVPlayerViewController()
@@ -47,7 +48,15 @@ struct CustomVideoPlayer2: UIViewControllerRepresentable {
         return controller
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        if let player = player {
+            if isCurrentVideo && player.timeControlStatus != .playing {
+                player.play()
+            } else if !isCurrentVideo && player.timeControlStatus == .playing {
+                player.pause()
+            }
+        }
+    }
     
     private func loadAsset(url: URL, controller: AVPlayerViewController) {
         let asset = AVAsset(url: url)
@@ -59,15 +68,20 @@ struct CustomVideoPlayer2: UIViewControllerRepresentable {
                 let player = AVPlayer(playerItem: playerItem)
                 
                 // Set up looping
+                player.actionAtItemEnd = .none
                 NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { _ in
                     player.seek(to: .zero)
-                    player.play()
+                    if self.isCurrentVideo {
+                        player.play()
+                    }
                 }
                 
                 await MainActor.run {
                     controller.player = player
                     self.player = player
-                    player.play()
+                    if self.isCurrentVideo {
+                        player.play()
+                    }
                 }
             } catch {
                 print("Error loading asset: \(error.localizedDescription)")
@@ -79,5 +93,6 @@ struct CustomVideoPlayer2: UIViewControllerRepresentable {
         guard let controller = uiViewController as? AVPlayerViewController else { return }
         controller.player?.pause()
         controller.player = nil
+        NotificationCenter.default.removeObserver(controller.player as Any)
     }
 }
