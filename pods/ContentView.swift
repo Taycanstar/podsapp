@@ -27,7 +27,7 @@ struct ContentView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     
     @State private var showAddSheet = false
-   
+    @State private var showQuickPodView = false
     
  
     private func fetchInitialPods() {
@@ -74,7 +74,7 @@ struct ContentView: View {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, AddOptionsSheet: $showAddSheet)
                         
                             .sheet(isPresented: $showAddSheet) {
-                                                   AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen)
+                                AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
                                     .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
                                                }
                         
@@ -82,7 +82,10 @@ struct ContentView: View {
                                 CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                                     .background(Color.black.edgesIgnoringSafeArea(.all))
                             }
-                        
+                            .sheet(isPresented: $showQuickPodView) {
+                                                QuickPodView(isPresented: $showQuickPodView)
+                                    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                                            }
                         
                         
                     }

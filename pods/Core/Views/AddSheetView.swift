@@ -11,6 +11,7 @@ struct AddSheetView: View {
     @Binding var showAddSheet: Bool
     @Binding var showingVideoCreationScreen: Bool
     @Environment(\.dismiss) private var dismiss
+    @Binding var showQuickPodView: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -39,8 +40,10 @@ struct AddSheetView: View {
                 }
                 Divider()
                 Button(action: {
-                    print("Tapped Quick Pod")
-                    showAddSheet = false
+                    dismiss() // This will dismiss the current sheet
+                                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                      showQuickPodView = true
+                                  }
                 }) {
                     HStack {
                         Image(systemName: "text.badge.plus")
@@ -79,6 +82,7 @@ struct AddSheetView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(UIColor.systemBackground))
-        .cornerRadius(15)
+        .cornerRadius(20)
+    
     }
 }
