@@ -176,62 +176,7 @@ struct CreatePodView: View {
         .listStyle(PlainListStyle())
         .environment(\.defaultMinListRowHeight, 1)
     }
-//    private var itemList: some View {
-//        List {
-//            ForEach(Array(pod.items.enumerated()), id: \.element.id) { index, item in
-//                VStack(alignment: .leading, spacing: 0) {
-//                    HStack {
-//                        ZStack(alignment: .leading) {
-//                            if pod.items[index].metadata.isEmpty {
-//                                Text("Item \(item.id)")
-//                                    .foregroundColor(.gray)
-//                            }
-//                            TextField("", text: $pod.items[index].metadata)
-//                        }
-//                        .font(.body)
-//                        
-//                        Spacer()
-//                        
-//                        Image(uiImage: item.thumbnail ?? UIImage())
-//                            .resizable()
-//                            .aspectRatio(contentMode: .fill)
-//                            .frame(width: 30, height: 30)
-//                            .clipShape(RoundedRectangle(cornerRadius: 8))
-//                    }
-//
-//                    ZStack(alignment: .topLeading) {
-//                        TextEditor(text: $pod.items[index].notes)
-//                            .font(.footnote)
-//                            .foregroundColor(.gray)
-//                            .frame(height: max(20, calculateHeight(for: pod.items[index].notes)))
-//                            .background(Color.clear)
-//                        
-//                        if pod.items[index].notes.isEmpty {
-//                            Text("Add note")
-//                                .font(.footnote)
-//                                .foregroundColor(.gray)
-//                                .padding(.top, 8)
-//                                .padding(.leading, 5)
-//                                .allowsHitTesting(false)
-//                        }
-//                    }
-//                    .padding(.leading, -5)
-//                }
-//                .padding(.top, 5)
-//                .padding(.bottom, 5)
-//                .padding(.horizontal, 15)
-//                
-//                if index < pod.items.count - 1 {
-//                    Divider()
-//                        .padding(.leading, 15)
-//                }
-//            }
-//            .listRowInsets(EdgeInsets())
-//            .listRowSeparator(.hidden)
-//        }
-//        .listStyle(PlainListStyle())
-//        .environment(\.defaultMinListRowHeight, 1)
-//    }
+
 
     private func calculateHeight(for text: String) -> CGFloat {
         let font = UIFont.preferredFont(forTextStyle: .footnote)

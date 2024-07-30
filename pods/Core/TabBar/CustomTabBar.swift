@@ -5,6 +5,7 @@ struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @Binding var showVideoCreationScreen: Bool
+    @Binding var AddOptionsSheet: Bool
     @EnvironmentObject var sharedViewModel: SharedViewModel
 
     var body: some View {
@@ -24,7 +25,8 @@ struct CustomTabBar: View {
                     Spacer()
                     TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
                         // Directly trigger the video creation screen without changing the selectedTab
-                        showVideoCreationScreen = true
+//                        showVideoCreationScreen = true
+                        AddOptionsSheet = true
                     }
                         .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
                     Spacer()

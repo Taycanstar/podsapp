@@ -25,6 +25,8 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
+    
+    @State private var showAddSheet = false
    
     
  
@@ -69,7 +71,12 @@ struct ContentView: View {
                                 selectedTab = 0
                             }
                         }
-                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen)
+                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, AddOptionsSheet: $showAddSheet)
+                        
+                            .sheet(isPresented: $showAddSheet) {
+                                                   AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen)
+                                    .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+                                               }
                         
                             .fullScreenCover(isPresented: $showingVideoCreationScreen) {
                                 CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
