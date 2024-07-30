@@ -10,6 +10,7 @@ import SwiftUI
 struct AddSheetView: View {
     @Binding var showAddSheet: Bool
     @Binding var showingVideoCreationScreen: Bool
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +20,7 @@ struct AddSheetView: View {
                 .padding(.bottom, 10)
             Divider()
             
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 7) {
                 Button(action: {
                     print("Tapped New Item")
                     showAddSheet = false
@@ -29,6 +30,7 @@ struct AddSheetView: View {
                             .font(.system(size: 20))
                         Text("New Item")
                             .padding(.horizontal, 10)
+                            .font(.system(size: 15))
                     }
                     .padding(.vertical, 8)
                     .foregroundColor(Color(UIColor.label))
@@ -45,6 +47,7 @@ struct AddSheetView: View {
                             .font(.system(size: 20))
                         Text("Quick Pod")
                             .padding(.horizontal, 10)
+                            .font(.system(size: 15))
                     }
                     .padding(.vertical, 8)
                     .foregroundColor(Color(UIColor.label))
@@ -53,14 +56,17 @@ struct AddSheetView: View {
                 }
                 Divider()
                 Button(action: {
-                    showingVideoCreationScreen = true
-                    showAddSheet = false
+                    dismiss()  // This will dismiss the sheet
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        showingVideoCreationScreen = true
+                                    }
                 }) {
                     HStack {
                         Image(systemName: "video.badge.plus")
                             .font(.system(size: 20))
                         Text("Standard Pod")
                             .padding(.horizontal, 10)
+                            .font(.system(size: 15))
                     }
                     .padding(.vertical, 8)
                     .foregroundColor(Color(UIColor.label))
@@ -73,6 +79,6 @@ struct AddSheetView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(UIColor.systemBackground))
-        .cornerRadius(10)
+        .cornerRadius(15)
     }
 }
