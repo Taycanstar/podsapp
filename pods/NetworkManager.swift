@@ -6,8 +6,10 @@ class NetworkManager {
 
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+   
 
     let baseUrl = "http://192.168.1.67:8000"
+    
 
     
     func determineUserLocation() {
@@ -1740,11 +1742,11 @@ class NetworkManager {
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let podId = json["pod_id"] as? Int {
                     DispatchQueue.main.async {
-                        completion(true, "Pod created successfully with ID: \(podId)")
+                        completion(true, String(podId))
                     }
                 } else {
                     DispatchQueue.main.async {
-                        completion(true, "Pod created successfully, but couldn't retrieve pod ID")
+                        completion(false, "Pod created successfully, but couldn't retrieve pod ID")
                     }
                 }
             } else {

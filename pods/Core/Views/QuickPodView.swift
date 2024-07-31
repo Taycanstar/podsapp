@@ -84,26 +84,16 @@ struct QuickPodView: View {
             return
         }
         
-     
-        errorMessage = nil
-        
-        let startTime = Date()
-        
-        networkManager.createQuickPod(podTitle: podName, podMode: podMode.rawValue, email: viewModel.email) { success, message in
-            let endTime = Date()
-            let duration = endTime.timeIntervalSince(startTime)
-            
+        networkManager.createQuickPod(podTitle: podName, podMode: podMode.rawValue, email: viewModel.email) { [self] success, podIdString in
             DispatchQueue.main.async {
-                if success {
-                    print("Quick Pod created successfully in \(duration) seconds.")
-                    uploadViewModel.uploadCompleted()
-                    homeViewModel.refreshPods(email: viewModel.email) {
-                        // Additional actions after refresh if needed
-                    }
-                    isPresented = false
+                if success, let podIdString = podIdString, let podId = Int(podIdString) {
+                    print("Quick Pod created successfully with ID: \(podId)")
+                    let newPod = Pod(id: podId, items: [], title: self.podName ?? "")
+                    self.homeViewModel.appendNewPod(newPod)
+                    self.isPresented = false
                 } else {
-                    print("Failed to create quick pod: \(message ?? "Unknown error")")
-                    errorMessage = message
+                    print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
+                    self.errorMessage = podIdString
                 }
             }
         }

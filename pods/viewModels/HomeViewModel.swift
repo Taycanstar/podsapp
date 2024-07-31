@@ -74,6 +74,13 @@ class HomeViewModel: ObservableObject {
         }
     }
     
+    func appendNewPod(_ pod: Pod) {
+           DispatchQueue.main.async {
+               self.pods.append(pod)
+               self.totalPods += 1
+           }
+       }
+    
 
 }
 
