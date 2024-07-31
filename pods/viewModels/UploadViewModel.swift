@@ -23,14 +23,6 @@ class UploadViewModel: ObservableObject {
         }
     }
     
-//    func uploadCompleted() {
-//        DispatchQueue.main.async {
-//            self.isUploading = false
-//            self.postSuccess = true
-//            self.resetPostSuccessAfterDelay()
-//            self.uploadCompletion?()
-//        }
-//    }
     
     private func resetPostSuccessAfterDelay() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {

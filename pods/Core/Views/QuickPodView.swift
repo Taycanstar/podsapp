@@ -12,6 +12,11 @@ struct QuickPodView: View {
     @State private var podName: String = ""
     @State private var podMode: PodMode = .standard
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    var networkManager: NetworkManager = NetworkManager()
+    @State private var errorMessage: String?
+    @EnvironmentObject var uploadViewModel: UploadViewModel
+    @EnvironmentObject var homeViewModel: HomeViewModel
     
     enum PodMode: String, CaseIterable {
         case standard = "Standard"
@@ -63,7 +68,7 @@ struct QuickPodView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         // Handle pod creation here
-                        isPresented = false
+                        createQuickPod()
                     }
                     .disabled(podName.isEmpty)
                     .foregroundColor(podName.isEmpty ? .gray : .blue)
@@ -72,5 +77,35 @@ struct QuickPodView: View {
         }
         .accentColor(.blue)
         .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+    private func createQuickPod() {
+        guard !podName.isEmpty else {
+            errorMessage = "Pod name is required."
+            return
+        }
+        
+     
+        errorMessage = nil
+        
+        let startTime = Date()
+        
+        networkManager.createQuickPod(podTitle: podName, podMode: podMode.rawValue, email: viewModel.email) { success, message in
+            let endTime = Date()
+            let duration = endTime.timeIntervalSince(startTime)
+            
+            DispatchQueue.main.async {
+                if success {
+                    print("Quick Pod created successfully in \(duration) seconds.")
+                    uploadViewModel.uploadCompleted()
+                    homeViewModel.refreshPods(email: viewModel.email) {
+                        // Additional actions after refresh if needed
+                    }
+                    isPresented = false
+                } else {
+                    print("Failed to create quick pod: \(message ?? "Unknown error")")
+                    errorMessage = message
+                }
+            }
+        }
     }
 }

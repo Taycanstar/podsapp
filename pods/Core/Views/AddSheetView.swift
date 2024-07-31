@@ -79,6 +79,7 @@ struct AddSheetView: View {
             }
             .padding(.horizontal, 15)
             .padding(.top, 10)
+            .padding(.bottom, 15)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(UIColor.systemBackground))

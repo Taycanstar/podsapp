@@ -5,9 +5,9 @@ import SwiftUI
 class NetworkManager {
 
   
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
     
     func determineUserLocation() {
@@ -1696,5 +1696,71 @@ class NetworkManager {
                 }
             }.resume()
         }
+    
+    func createQuickPod(podTitle: String, podMode: String, email: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        let body: [String: Any] = [
+            "title": podTitle,
+            "mode": podMode,
+            "email": email
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(false, "Failed to encode request body")
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(false, "Network error: \(error.localizedDescription)")
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(false, "No response from server")
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 201 {
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let podId = json["pod_id"] as? Int {
+                    DispatchQueue.main.async {
+                        completion(true, "Pod created successfully with ID: \(podId)")
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(true, "Pod created successfully, but couldn't retrieve pod ID")
+                    }
+                }
+            } else {
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(false, errorMessage)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(false, "Failed to create pod. Status code: \(httpResponse.statusCode)")
+                    }
+                }
+            }
+        }.resume()
+    }
 }
 
