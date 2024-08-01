@@ -1,5 +1,5 @@
 import SwiftUI
-
+import UIKit
 //struct HomeView: View {
 //    @ObservedObject var cameraModel = CameraViewModel()
 //    @EnvironmentObject var homeViewModel: HomeViewModel
@@ -783,6 +783,14 @@ struct RecentlyVisitedHeader: View {
     }
 }
 
+
+struct HapticFeedback {
+    static func generate() {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+    }
+}
+
 struct PodCard: View {
     let pod: Pod
     @State private var isFavorite: Bool = false
@@ -821,6 +829,7 @@ struct PodCard: View {
                 Spacer()
                 Button(action: {
                     isFavorite.toggle()
+                    HapticFeedback.generate()
                 }) {
                     Image(systemName: "star.fill")
                         .foregroundColor(isFavorite ? Color(rgb: 255, 205, 42) : Color(rgb: 196, 198, 207))
@@ -850,6 +859,7 @@ struct PodCard: View {
                     withAnimation {
                         self.isPressed = true
                     }
+                    HapticFeedback.generate()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
                             self.isPressed = false
