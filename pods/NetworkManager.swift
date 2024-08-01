@@ -682,7 +682,7 @@ class NetworkManager {
 
     func fetchPodsForUser(email: String, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
         let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        guard let url = URL(string: "\(baseUrl)/get-user-pods/\(encodedEmail)?page=\(page)&pageSize=10") else {
+        guard let url = URL(string: "\(baseUrl)/get-user-pods/\(encodedEmail)?page=\(page)&pageSize=7") else {
             completion(false, nil, 0, "Invalid URL")
             return
         }

@@ -332,7 +332,7 @@ struct AddItemContainerView: View {
         HStack(spacing: 10) { // Spacing between buttons is 10
             // Start Over Button
             
-            if !cameraModel.currentPod.items.isEmpty {
+            if !$cameraModel.currentPod.items.isEmpty {
                 Button("Start over") {
                     // Action for Start Over
                     cameraModel.currentPod = Pod(id: -1, items:[],title: "")

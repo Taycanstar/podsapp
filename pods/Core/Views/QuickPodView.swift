@@ -88,7 +88,8 @@ struct QuickPodView: View {
             DispatchQueue.main.async {
                 if success, let podIdString = podIdString, let podId = Int(podIdString) {
                     print("Quick Pod created successfully with ID: \(podId)")
-                    let newPod = Pod(id: podId, items: [], title: self.podName ?? "")
+                    let newPod = Pod(id: podId, items: [], title: self.podName , mode: self.podMode.rawValue)
+                    print("New pod created with mode: \(newPod.mode)")
                     self.homeViewModel.appendNewPod(newPod)
                     self.isPresented = false
                 } else {

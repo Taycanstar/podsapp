@@ -53,7 +53,8 @@ class HomeViewModel: ObservableObject {
                     }
                     self?.currentPage = page
                     self?.totalPods = totalPods
-                    self?.totalPages = (totalPods / 10) + (totalPods % 10 > 0 ? 1 : 0)
+                    self?.totalPages = (totalPods / 7) + (totalPods % 7 > 0 ? 1 : 0)
+                   
                 } else {
                     print("Error fetching pods: \(errorMessage ?? "Unknown error")")
                 }
