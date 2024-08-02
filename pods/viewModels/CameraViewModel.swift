@@ -41,6 +41,8 @@ struct PodItem: Identifiable {
 }
 
 struct Pod: Identifiable {
+   
+    
     var id: Int
     var items: [PodItem] = []
     var title: String

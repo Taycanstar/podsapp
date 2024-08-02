@@ -1764,5 +1764,50 @@ class NetworkManager {
             }
         }.resume()
     }
+    
+    func toggleFavorite(podId: Int, isFavorite: Bool, completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/toggle-favorite/\(podId)/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        let body: [String: Any] = ["is_favorite": isFavorite]
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(false, "Network error: \(error.localizedDescription)")
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(false, "No response from server")
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                DispatchQueue.main.async {
+                    completion(true, nil)
+                }
+            } else {
+                var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
+                if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                    errorMessage += ", Response: \(responseString)"
+                }
+                DispatchQueue.main.async {
+                    completion(false, errorMessage)
+                }
+            }
+        }.resume()
+    }
+
+
 }
 

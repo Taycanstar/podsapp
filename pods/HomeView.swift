@@ -830,6 +830,13 @@ struct PodCard: View {
                 Button(action: {
                     isFavorite.toggle()
                     HapticFeedback.generate()
+                    NetworkManager().toggleFavorite(podId: pod.id, isFavorite: isFavorite) { success, error in
+                                   if success {
+                                       print("Favorite status updated successfully.")
+                                   } else {
+                                       print("Failed to update favorite status: \(error ?? "Unknown error")")
+                                   }
+                               }
                 }) {
                     Image(systemName: "star.fill")
                         .foregroundColor(isFavorite ? Color(rgb: 255, 205, 42) : Color(rgb: 196, 198, 207))
