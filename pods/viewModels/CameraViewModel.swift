@@ -6,6 +6,25 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+struct Workspace: Identifiable, Codable {
+    var id: Int
+    var name: String
+    var description: String?
+    var coverPhoto: URL?
+    var icon: URL?
+    var isMain: Bool
+    
+    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.coverPhoto = coverPhoto
+        self.icon = icon
+        self.isMain = isMain
+    }
+}
+
+
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
     var videoURL: URL? {
@@ -47,7 +66,7 @@ struct Pod: Identifiable {
     var items: [PodItem] = []
     var title: String
     var mode: String?
-    var workspace: String = "Main workspace"
+    var workspace: String?
 }
 
 

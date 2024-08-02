@@ -679,10 +679,50 @@ class NetworkManager {
               }
           }.resume()
       }
+    
+// og fetch
+//    func fetchPodsForUser(email: String, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
+//        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+//        guard let url = URL(string: "\(baseUrl)/get-user-pods/\(encodedEmail)?page=\(page)&pageSize=7") else {
+//            completion(false, nil, 0, "Invalid URL")
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "GET"
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            guard let data = data, error == nil else {
+//                completion(false, nil, 0, "Network request failed")
+//                return
+//            }
+//            
+//            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+//                do {
+//                    let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
+//                    let pods = podResponse.pods.map { Pod(from: $0) }
+//                    completion(true, pods, podResponse.totalPods, nil)
+//                } catch {
+//                    completion(false, nil, 0, "Failed to decode pods")
+//                }
+//            } else {
+//                completion(false, nil, 0, "Failed to fetch pods")
+//            }
+//        }.resume()
+//    }
+  
+    
 
-    func fetchPodsForUser(email: String, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
-        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        guard let url = URL(string: "\(baseUrl)/get-user-pods/\(encodedEmail)?page=\(page)&pageSize=7") else {
+    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
+        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")?page=\(page)&pageSize=7"
+        if let workspaceId = workspaceId {
+            urlString += "&workspaceId=\(workspaceId)"
+        }
+        if showFavorites {
+            urlString += "&favorites=true"
+        }
+        
+        guard let url = URL(string: urlString) else {
             completion(false, nil, 0, "Invalid URL")
             return
         }
@@ -709,6 +749,36 @@ class NetworkManager {
             }
         }.resume()
     }
+
+    func fetchWorkspacesForUser(email: String, completion: @escaping (Bool, [Workspace]?, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/get-user-workspaces/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                completion(false, nil, "Network request failed")
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                do {
+                    let workspaces = try JSONDecoder().decode([Workspace].self, from: data)
+                    completion(true, workspaces, nil)
+                } catch {
+                    completion(false, nil, "Failed to decode workspaces")
+                }
+            } else {
+                completion(false, nil, "Failed to fetch workspaces")
+            }
+        }.resume()
+    }
+
+
 
    
 

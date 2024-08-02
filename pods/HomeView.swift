@@ -404,12 +404,14 @@ struct HomeView: View {
     @State private var editingItemId: Int?
     @State private var isAnyItemEditing: Bool = false
     
+    @State private var showSheet = false
+    
 
     var body: some View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    RecentlyVisitedHeader()
+                    RecentlyVisitedHeader(showSheet: $showSheet)
                     
                     ForEach(homeViewModel.pods) { pod in
                         PodCard(pod: pod)
@@ -445,24 +447,35 @@ struct HomeView: View {
                             .padding(.bottom, 50)
             .navigationTitle("Pods")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear(perform: fetchPodsIfNeeded)
+            .onAppear {
+                fetchPodsAndWorkspacesIfNeeded()
+                    }
             .refreshable {
                 await refreshPods()
             }
+            .sheet(isPresented: $showSheet) {
+                           RecentlyVisitedSheet(showSheet: $showSheet, workspaces: homeViewModel.workspaces)  // Pass workspaces here
+                       }
         }
         
     }
     
     
+    private func fetchPodsAndWorkspacesIfNeeded() {
+          if homeViewModel.pods.isEmpty {
+              homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) { }
+          }
+          homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
+      }
     
     private func loadMorePods() {
         homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) { }
     }
-    private func fetchPodsIfNeeded() {
-          if homeViewModel.pods.isEmpty {
-              homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) { }
-          }
-      }
+//    private func fetchPodsIfNeeded() {
+//          if homeViewModel.pods.isEmpty {
+//              homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) { }
+//          }
+//      }
 
 
     
@@ -772,25 +785,114 @@ extension Color {
 }
 
 struct RecentlyVisitedHeader: View {
+    @Binding var showSheet: Bool  // Binding to control the sheet presentation
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        HStack {
+        HStack(spacing: 5) {  // Adjust spacing to bring chevron closer to the title
             Text("Recently visited")
                 .font(.headline)
-            Spacer()
+                .foregroundColor(colorScheme == .light ? .black : .white)
             Image(systemName: "chevron.down")
-                .foregroundColor(.gray)
+                .font(.system(size: 11))
+                .foregroundColor(colorScheme == .light ? .black : .white)
+                .padding(7)
+                .background(colorScheme == .light ? Color.gray.opacity(0.2) : Color.gray.opacity(0.6))
+                .clipShape(Circle())
+            Spacer()
         }
         .padding()
         .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color.white)
+        .onTapGesture {
+            showSheet = true  // Trigger the sheet when the header is tapped
+            HapticFeedback.generateLigth()
+        }
     }
 }
+
+
+struct RecentlyVisitedSheet: View {
+    @Environment(\.colorScheme) var colorScheme
+    @Binding var showSheet: Bool  // Binding to control the sheet presentation
+    var workspaces: [Workspace]  // Add this line
+
+    var body: some View {
+        NavigationView {
+            VStack {
+                HStack {
+                    Button(action: {
+                        showSheet = false
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(colorScheme == .light ? .black : .white)
+                    }
+                    Spacer()
+                    Text("Show by")
+                        .font(.headline)
+                    Spacer()
+                    Text("") // Placeholder to center the title
+                }
+                .padding()
+                .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color.white)
+
+                Text("Quick access from all products")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
+                
+                VStack(spacing: 1) {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundColor(.gray)
+                        Text("Recently visited")
+                        Spacer()
+                    }
+                    .padding()
+                    .background(colorScheme == .dark ? Color("container") : Color("container"))
+                    
+                    HStack {
+                        Image(systemName: "star")
+                            .foregroundColor(.gray)
+                        Text("Favorites")
+                        Spacer()
+                    }
+                    .padding()
+                    .background(colorScheme == .dark ? Color("container") : Color("container"))
+                }
+                
+                Text("My workspaces")
+                    .font(.subheadline)
+                    .padding(.top, 10)
+                
+                ScrollView {
+                    VStack(spacing: 1) {
+                        // Add your workspace list here
+                        // Example:
+                        ForEach(workspaces) { workspace in
+                            Text(workspace.name)
+                                .padding()
+                                .background(colorScheme == .dark ? Color("container") : Color("container"))
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+
 
 
 struct HapticFeedback {
     static func generate() {
         let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+    }
+    
+    static func generateLigth() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
 }
@@ -821,7 +923,7 @@ struct PodCard: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                 
-                Text(pod.workspace)
+                Text(pod.workspace ?? "Unknown workspace")
                     .font(.system(size: 14))
                     .foregroundColor(colorScheme == .dark ? .gray : .secondary)
             }
