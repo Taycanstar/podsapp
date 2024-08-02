@@ -421,7 +421,7 @@ struct HomeView: View {
                     .onDelete(perform: deletePod)
                 }
                       
-                .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color.white)
+                .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white)
                 .cornerRadius(10)
                 .overlay(
                                RoundedRectangle(cornerRadius: 10)
@@ -440,6 +440,7 @@ struct HomeView: View {
                     .padding()
                 }
             }
+            .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
                             .scrollIndicators(.hidden)
                             .padding(.bottom, 50)
             .navigationTitle("Pods")
@@ -449,6 +450,7 @@ struct HomeView: View {
                 await refreshPods()
             }
         }
+        
     }
     
     
@@ -461,6 +463,8 @@ struct HomeView: View {
               homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) { }
           }
       }
+
+
     
     private var shouldShowLoadMoreButton: Bool {
         return homeViewModel.pods.count < homeViewModel.totalPods

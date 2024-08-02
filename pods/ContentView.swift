@@ -51,6 +51,7 @@ struct ContentView: View {
                                 switch selectedTab {
                                 case 0:
                                     HomeView()
+                                
                                 case 2:
                                     //                            ProfileView() // Assuming you have a ProfileView
                                     ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
