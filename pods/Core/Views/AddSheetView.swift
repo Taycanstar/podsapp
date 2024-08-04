@@ -15,9 +15,13 @@ struct AddSheetView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            Capsule()
+                           .fill(Color.secondary.opacity(0.6))
+                           .frame(width: 35, height: 4)
+                           .padding(.top, 10)
             Text("Add")
                 .font(.system(size: 16, weight: .bold))
-                .padding(.top, 20)
+                .padding(.top, 15)
                 .padding(.bottom, 10)
             Divider()
             

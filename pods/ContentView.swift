@@ -76,7 +76,7 @@ struct ContentView: View {
                         
                             .sheet(isPresented: $showAddSheet) {
                                 AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
-                                    .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+                                    .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                                                }
                         
                             .fullScreenCover(isPresented: $showingVideoCreationScreen) {
