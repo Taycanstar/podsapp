@@ -20,6 +20,9 @@ struct PodView: View {
     @State private var showNotesPlaceholder: [Int: Bool] = [:]
     
     @Binding var needsRefresh: Bool
+    @State private var showPodOptionsSheet = false
+    @EnvironmentObject var homeViewModel: HomeViewModel
+
 
     
     var body: some View {
@@ -126,6 +129,7 @@ struct PodView: View {
             .onMove(perform: moveItem)
             .onDelete(perform: deleteItem)
         }
+      
         .padding(.horizontal, 5)
         
         .scrollIndicators(.hidden)
@@ -141,6 +145,9 @@ struct PodView: View {
                 refreshPodItems()
             }
         }
+        .sheet(isPresented: $showPodOptionsSheet) {
+            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
+           }
         .padding(.top, 15)
         .background(
             NavigationLink(
@@ -158,6 +165,8 @@ struct PodView: View {
                 EmptyView()
             }
         )
+  
+
         .actionSheet(isPresented: $showMenu) {
             ActionSheet(title: Text("Options"), buttons: [
                 .default(Text("Edit")) {
@@ -181,29 +190,35 @@ struct PodView: View {
                 }
             }
         }
+        
+       
     }
     
-    private var trailingNavigationBarItem: some View {
-        Group {
-            if isEditing || showDoneButton {
-                Button("Done") {
-                    if isEditing {
-                        saveChangesAndExitEditMode()
-                    } else {
-                        saveInputChanges()
+    private func deletePod() {
+        networkManager.deletePod(podId: pod.id) { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    print("Pod deleted successfully.")
+                    if let index = homeViewModel.pods.firstIndex(where: { $0.id == pod.id }) {
+                        homeViewModel.pods.remove(at: index)
+                        homeViewModel.totalPods -= 1
                     }
-                }
-            } else {
-                Menu {
-                    Button("Edit") {
-                        isEditing = true
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundColor(.primary)
+                    presentationMode.wrappedValue.dismiss()
+                } else {
+                    print("Failed to delete pod: \(message ?? "Unknown error")")
                 }
             }
         }
+    }
+    
+    private var trailingNavigationBarItem: some View {
+
+            Button(action: {
+                        showPodOptionsSheet = true
+                    }) {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(.primary)
+                    }
     }
     
     private func refreshPodItems() {

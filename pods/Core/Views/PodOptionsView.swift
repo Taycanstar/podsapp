@@ -9,166 +9,123 @@ import SwiftUI
 
 struct PodOptionsView: View {
     @Binding var showPodOptionsSheet: Bool
-    @Binding var showingVideoCreationScreen: Bool
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteConfirmation = false
+     var onDeletePod: () -> Void
+     var podName: String
     
     var body: some View {
         VStack(spacing: 0) {
             Capsule()
-                           .fill(Color.secondary.opacity(0.6))
-                           .frame(width: 35, height: 4)
-                           .padding(.top, 10)
+                .fill(Color.secondary.opacity(0.6))
+                .frame(width: 35, height: 4)
+                .padding(.top, 10)
             
             HStack {
                 Spacer()
-                Image(systemName: "xmark")
-                    .font(.system(size: 20))
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 18))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .foregroundColor(.primary)
+                    
+                }
             }
-          
             
-            VStack(alignment: .leading, spacing: 7) {
-                Button(action: {
+            VStack(alignment: .leading, spacing: 0) {
+                MenuItemView(iconName: "square.and.arrow.up", text: "Share", action: {
                     print("Tapped Share")
                     showPodOptionsSheet = false
-                }) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 20))
-                        Text("Share")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                }, color: .primary)
+                
+                MenuItemView(iconName: "person.2", text: "Pod members", action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        print("Tapped pod members")
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    
-                    dismiss() // This will dismiss the current sheet
-                                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                      print("Tapped pod members")
-                                  }
-                }) {
-                    HStack {
-                        Image(systemName: "person.2")
-                            .font(.system(size: 20))
-                        Text("Pod members")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                }, color: .primary)
+                
+                MenuItemView(iconName: "info.circle", text: "Pod info", action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        print("Tapped pod info")
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    
-                    dismiss() // This will dismiss the current sheet
-                                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                      print("Tapped pod info")
-                                  }
-                }) {
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 20))
-                        Text("Pod info")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                }, color: .primary)
+                
+                MenuItemView(iconName: "bubble", text: "Pod Chat", action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        print("Tapped Pod chat")
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    dismiss()  // This will dismiss the sheet
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        print("Tapped Pod chat")
-                                    }
-                }) {
-                    HStack {
-                        Image(systemName: "bubble")
-                            .font(.system(size: 20))
-                        Text("Pod Chat")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                }, color: .primary)
+                
+                MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        print("Tapped Pod activity")
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    dismiss()  // This will dismiss the sheet
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        print("Tapped Pod activity")
-                                    }
-                }) {
-                    HStack {
-                        Image(systemName: "bolt.horizontal.circle")
-                            .font(.system(size: 20))
-                        Text("Activity Log")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                }, color: .primary)
+                
+                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        print("Tapped Progress")
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    dismiss()  // This will dismiss the sheet
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        print("Tapped Progress")
-                                    }
-                }) {
-                    HStack {
-                        Image(systemName: "gauge.with.needle")
-                            .font(.system(size: 20))
-                        Text("Progress Tracker")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
-                    }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    dismiss()  // This will dismiss the sheet
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        print("Tapped delete")
-                                    }
-                }) {
-                    HStack {
-                        Image(systemName: "trash")
-                            .font(.system(size: 20))
-                            .foregroundColor(.red)
-                        Text("Delete Pod")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
-                            .foregroundColor(.red)
-                    }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                }, color: .primary)
+                
+                Divider().padding(.vertical, 5)
+                
+                MenuItemView(iconName: "trash", text: "Delete Pod", action: {
+              
+                        showDeleteConfirmation = true
+                 
+                }, color: .red)
             }
-            .padding(.horizontal, 15)
-            .padding(.top, 10)
+            .padding(.horizontal, 25)
+            .padding(.top, 20)
             .padding(.bottom, 15)
+        
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(UIColor.systemBackground))
         .cornerRadius(20)
-    
+        .confirmationDialog("Delete \"\(podName)\"? ",
+                                isPresented: $showDeleteConfirmation,
+                                titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    onDeletePod()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+    }
+}
+
+
+struct MenuItemView: View {
+    let iconName: String
+    let text: String
+    let action: () -> Void
+    let color: Color
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 20) {
+                Image(systemName: iconName)
+                    .font(.system(size: 20))
+                    .frame(width: 24, alignment: .center)  // Fixed width for all icons
+                    .foregroundColor(color)
+                
+                Text(text)
+                    .font(.system(size: 15))
+                    .foregroundColor(color)
+                
+                Spacer()
+            }
+            .padding(.vertical, 17)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
