@@ -21,66 +21,7 @@ struct HomeView: View {
     @State private var isAnyItemEditing: Bool = false
     
     @State private var showSheet = false
-    
-//    var body: some View {
-//        NavigationView {
-//            ScrollView {
-//                GeometryReader { geometry in
-//                                        Color.clear.preference(key: ScrollOffsetPreferenceKey.self, value: geometry.frame(in: .named("scroll")).origin.y)
-//                                    }
-//                                    .frame(height: 0)
-//                LazyVStack(spacing: 0) {
-//                    RecentlyVisitedHeader(showSheet: $showSheet)
-//                    
-//                    ForEach(homeViewModel.pods) { pod in
-//                        PodCard(pod: pod)
-//                        if pod.id != homeViewModel.pods.last?.id {
-//                            Divider().padding(.horizontal)
-//                        }
-//                    }
-//                    .onMove(perform: movePod)
-//                    .onDelete(perform: deletePod)
-//                }
-//                      
-//                .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white)
-//                .cornerRadius(10)
-//                .overlay(
-//                               RoundedRectangle(cornerRadius: 10)
-//                                .stroke(colorScheme == .dark ? Color(rgb: 70,70,70) : Color(rgb: 220, 220, 220), lineWidth: 0.3)
-//                           )
-////                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-//                .padding(.horizontal)
-//                .padding(.top)
-//                
-//                // Load More button
-//                if shouldShowLoadMoreButton {
-//                    Button(action: loadMorePods) {
-//                        Text("Load More")
-//                            .foregroundColor(.blue)
-//                    }
-//                    .padding()
-//                }
-//            }
-//            
-////            .coordinateSpace(name: "scroll")
-//            .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
-////                            .scrollIndicators(.hidden)
-////                            .padding(.bottom, 50)
-////
-////            .navigationTitle("Pods")
-////            .navigationBarTitleDisplayMode(.inline)
-//            .onAppear {
-//                fetchPodsAndWorkspacesIfNeeded()
-//                    }
-//            .refreshable {
-//                await refreshPods()
-//            }
-//            .sheet(isPresented: $showSheet) {
-//                           RecentlyVisitedSheet(showSheet: $showSheet, workspaces: homeViewModel.workspaces)  // Pass workspaces here
-//                       }
-//        }
-//        
-//    }
+    @State private var selectedHeaderOption = "Recently visited"
     
     var body: some View {
            NavigationView {
@@ -89,7 +30,7 @@ struct HomeView: View {
          
                        
                        LazyVStack(spacing: 0) {
-                           RecentlyVisitedHeader(showSheet: $showSheet)
+                           RecentlyVisitedHeader(showSheet: $showSheet, headerTitle: $selectedHeaderOption)
                            ForEach(homeViewModel.pods) { pod in
                                PodCard(pod: pod)
                                if pod.id != homeViewModel.pods.last?.id {
@@ -129,7 +70,7 @@ struct HomeView: View {
                    await refreshPods()
                }
                            .sheet(isPresented: $showSheet) {
-                                          RecentlyVisitedSheet(showSheet: $showSheet, workspaces: homeViewModel.workspaces)  // Pass workspaces here
+                                          RecentlyVisitedSheet(showSheet: $showSheet, workspaces: homeViewModel.workspaces, selectedOption: $selectedHeaderOption)  // Pass workspaces here
                                       }
            }
        }
@@ -454,12 +395,13 @@ extension Color {
 }
 
 struct RecentlyVisitedHeader: View {
-    @Binding var showSheet: Bool  // Binding to control the sheet presentation
+    @Binding var showSheet: Bool
+    @Binding var headerTitle: String
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        HStack(spacing: 5) {  // Adjust spacing to bring chevron closer to the title
-            Text("Recently visited")
+        HStack(spacing: 5) {
+            Text(headerTitle)
                 .font(.headline)
                 .foregroundColor(colorScheme == .light ? .black : .white)
             Image(systemName: "chevron.down")
@@ -473,7 +415,7 @@ struct RecentlyVisitedHeader: View {
         .padding()
         .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color.white)
         .onTapGesture {
-            showSheet = true  // Trigger the sheet when the header is tapped
+            showSheet = true
             HapticFeedback.generateLigth()
         }
     }
@@ -482,9 +424,10 @@ struct RecentlyVisitedHeader: View {
 
 struct RecentlyVisitedSheet: View {
     @Environment(\.colorScheme) var colorScheme
-    @Binding var showSheet: Bool  // Binding to control the sheet presentation
-    var workspaces: [Workspace]  // Add this line
-
+    @Binding var showSheet: Bool
+    var workspaces: [Workspace]
+    @Binding var selectedOption: String
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -512,32 +455,25 @@ struct RecentlyVisitedSheet: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 5)
+                
                 VStack(spacing: 15) {
-                    HStack {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .foregroundColor(.gray)
-                        Text("Recently visited")
-                            .fontWeight(.medium)
-                            .font(.system(size: 14))
-                        Spacer()
+                    Button(action: {
+                        selectedOption = "Recently visited"
+                        showSheet = false
+                        HapticFeedback.generateRigid()
+                    }) {
+                        optionView(title: "Recently visited", imageName: "clock.arrow.circlepath")
                     }
-                  
-                    .padding()
-                    .background(colorScheme == .dark ? Color("container") : Color("container"))
-                    .cornerRadius(15)
+                    .buttonStyle(PlainButtonStyle())
                     
-                    HStack {
-                        Image(systemName: "star")
-                            .foregroundColor(.gray)
-                        Text("Favorites")
-                            .fontWeight(.medium)
-                            .font(.system(size: 14))
-                        Spacer()
+                    Button(action: {
+                        selectedOption = "Favorites"
+                        showSheet = false
+                        HapticFeedback.generateRigid()
+                    }) {
+                        optionView(title: "Favorites", imageName: "star")
                     }
-                    
-                    .padding()
-                    .background(colorScheme == .dark ? Color("container") : Color("container"))
-                    .cornerRadius(15)
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .padding(.horizontal, 15)
                 
@@ -552,36 +488,15 @@ struct RecentlyVisitedSheet: View {
                 
                 ScrollView {
                     VStack(spacing: 1) {
-                        // Add your workspace list here
-                        // Example:
                         ForEach(workspaces) { workspace in
-                            HStack {
-                                AsyncImage(url: workspace.icon) { phase in
-                                    if let image = phase.image {
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 30, height: 30)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    } else if phase.error != nil {
-                                        Color.gray // Placeholder for error state
-                                    } else {
-                                        ProgressView() // Loading state
-                                    }
-                                }
-                                .frame(width: 30, height: 30)
-                                
-//                                    .foregroundColor(.gray)
-                                Text(workspace.name)
-                                    .fontWeight(.medium)
-                                    .font(.system(size: 14))
-                                Spacer()
+                            Button(action: {
+                                selectedOption = workspace.name
+                                showSheet = false
+                                HapticFeedback.generateRigid()
+                            }) {
+                                workspaceView(workspace: workspace)
                             }
-                            
-                            .padding()
-                            
-                            .background(colorScheme == .dark ? Color("container") : Color("container"))
-                            .cornerRadius(15)
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
@@ -589,9 +504,73 @@ struct RecentlyVisitedSheet: View {
             }
         }
     }
+    
+    private func optionView(title: String, imageName: String) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15)
+                .fill(colorScheme == .dark ? Color("container") : Color("container"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(selectedOption == title ? Color.accentColor.opacity(0.15) : Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(selectedOption == title ? Color.accentColor : Color.clear, lineWidth: 3)
+                )
+            
+            HStack {
+                Image(systemName: imageName)
+                    .foregroundColor(.gray)
+                Text(title)
+                    .fontWeight(.medium)
+                    .font(.system(size: 14))
+                Spacer()
+            }
+            .padding(.vertical, 4)
+            .padding()
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    
+    private func workspaceView(workspace: Workspace) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15)
+                .fill(colorScheme == .dark ? Color("container") : Color("container"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(selectedOption == workspace.name ? Color.accentColor.opacity(0.15) : Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(selectedOption == workspace.name ? Color.accentColor : Color.clear, lineWidth: 3)
+                )
+            
+            HStack {
+                AsyncImage(url: workspace.icon) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 30, height: 30)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else if phase.error != nil {
+                        Color.gray // Placeholder for error state
+                    } else {
+                        ProgressView() // Loading state
+                    }
+                }
+                .frame(width: 30, height: 30)
+                
+                Text(workspace.name)
+                    .fontWeight(.medium)
+                    .font(.system(size: 14))
+                Spacer()
+            }
+            .padding()
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
 }
-
-
 
 
 struct HapticFeedback {
@@ -602,6 +581,10 @@ struct HapticFeedback {
     
     static func generateLigth() {
         let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+    static func generateRigid() {
+        let generator = UIImpactFeedbackGenerator(style: .rigid)
         generator.impactOccurred()
     }
 }
