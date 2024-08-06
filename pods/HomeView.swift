@@ -31,9 +31,9 @@ struct HomeView: View {
                        
                        LazyVStack(spacing: 0) {
                            RecentlyVisitedHeader(showSheet: $showSheet, headerTitle: $selectedHeaderOption)
-                           ForEach(homeViewModel.pods) { pod in
+                           ForEach(podsToDisplay) { pod in
                                PodCard(pod: pod)
-                               if pod.id != homeViewModel.pods.last?.id {
+                               if pod.id != podsToDisplay.last?.id {
                                    Divider().padding(.horizontal)
                                }
                            }
@@ -75,6 +75,30 @@ struct HomeView: View {
            }
        }
     
+    private var favoritePods: [Pod] {
+        homeViewModel.pods.filter { $0.isFavorite ?? false }
+    }
+
+    private var recentlyVisitedPods: [Pod] {
+        // Assuming you have a property to track recently visited pods
+        // You might need to implement this logic based on your app's behavior
+        homeViewModel.pods.filter { $0.lastVisited != nil }.sorted { $0.lastVisited! > $1.lastVisited! }
+    }
+
+    private var workspacePods: [Pod] {
+        homeViewModel.pods.filter { $0.workspace == selectedHeaderOption }
+    }
+
+    private var podsToDisplay: [Pod] {
+        switch selectedHeaderOption {
+        case "Favorites":
+            return favoritePods
+        case "Recently visited":
+            return recentlyVisitedPods
+        default:
+            return workspacePods
+        }
+    }
     
     private func fetchPodsAndWorkspacesIfNeeded() {
           if homeViewModel.pods.isEmpty {
@@ -595,6 +619,13 @@ struct PodCard: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isPressed = false
     @State private var isActive = false
+    @EnvironmentObject var homeViewModel: HomeViewModel
+  
+    
+    init(pod: Pod) {
+        self.pod = pod
+        _isFavorite = State(initialValue: pod.isFavorite ?? false)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -631,8 +662,15 @@ struct PodCard: View {
                     NetworkManager().toggleFavorite(podId: pod.id, isFavorite: isFavorite) { success, error in
                                    if success {
                                        print("Favorite status updated successfully.")
+                                       print("Favorite status updated successfully.")
+                                                                DispatchQueue.main.async {
+                                                                    homeViewModel.updatePodFavoriteStatus(podId: pod.id, isFavorite: isFavorite)
+                                                                }
                                    } else {
                                        print("Failed to update favorite status: \(error ?? "Unknown error")")
+                                       DispatchQueue.main.async {
+                                                                      isFavorite.toggle()
+                                                                  }
                                    }
                                }
                 }) {

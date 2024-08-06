@@ -132,4 +132,18 @@ class HomeViewModel: ObservableObject {
             self.totalPods += 1
         }
     }
+    
+    
+    func updatePodFavoriteStatus(podId: Int, isFavorite: Bool) {
+         if let index = pods.firstIndex(where: { $0.id == podId }) {
+             pods[index].isFavorite = isFavorite
+             objectWillChange.send()
+         }
+     }
+
+    func updatePodLastVisited(_ pod: Pod) {
+        if let index = pods.firstIndex(where: { $0.id == pod.id }) {
+            pods[index].lastVisited = Date()
+        }
+    }
 }
