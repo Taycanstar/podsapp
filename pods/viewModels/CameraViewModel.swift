@@ -49,13 +49,6 @@ struct PodItem: Identifiable {
     var uuid: String?
     var player: AVPlayer?
     var notes: String
-    //new
-//    mutating func preparePlayer() {
-//            guard player == nil, let url = videoURL else { return }
-//            let asset = AVAsset(url: url)
-//            let playerItem = AVPlayerItem(asset: asset)
-//            player = AVPlayer(playerItem: playerItem)
-//        }
     
 }
 

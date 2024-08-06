@@ -66,13 +66,13 @@ struct PodOptionsView: View {
                         print("Tapped Pod activity")
                     }
                 }, color: .primary)
-                
-                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
-                    dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        print("Tapped Progress")
-                    }
-                }, color: .primary)
+//                
+//                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
+//                    dismiss()
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+//                        print("Tapped Progress")
+//                    }
+//                }, color: .primary)
                 
                 Divider().padding(.vertical, 5)
                 

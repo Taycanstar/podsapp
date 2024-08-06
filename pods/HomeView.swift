@@ -502,46 +502,86 @@ struct RecentlyVisitedSheet: View {
                     Text("") // Placeholder to center the title
                 }
                 .padding()
-                .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color.white)
+                .background(colorScheme == .dark ? Color(UIColor.systemBackground) : Color.white)
 
-                Text("Quick access from all products")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal)
-                    .padding(.bottom, 10)
-                
-                VStack(spacing: 1) {
+                HStack {
+                    Text("Quick access from all products")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 5)
+                VStack(spacing: 15) {
                     HStack {
                         Image(systemName: "clock.arrow.circlepath")
                             .foregroundColor(.gray)
                         Text("Recently visited")
+                            .fontWeight(.medium)
+                            .font(.system(size: 14))
                         Spacer()
                     }
+                  
                     .padding()
                     .background(colorScheme == .dark ? Color("container") : Color("container"))
+                    .cornerRadius(15)
                     
                     HStack {
                         Image(systemName: "star")
                             .foregroundColor(.gray)
                         Text("Favorites")
+                            .fontWeight(.medium)
+                            .font(.system(size: 14))
                         Spacer()
                     }
+                    
                     .padding()
                     .background(colorScheme == .dark ? Color("container") : Color("container"))
+                    .cornerRadius(15)
                 }
+                .padding(.horizontal, 15)
                 
-                Text("My workspaces")
-                    .font(.subheadline)
-                    .padding(.top, 10)
+                HStack {
+                    Text("My workspaces")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 5)
                 
                 ScrollView {
                     VStack(spacing: 1) {
                         // Add your workspace list here
                         // Example:
                         ForEach(workspaces) { workspace in
-                            Text(workspace.name)
-                                .padding()
-                                .background(colorScheme == .dark ? Color("container") : Color("container"))
+                            HStack {
+                                AsyncImage(url: workspace.icon) { phase in
+                                    if let image = phase.image {
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 30, height: 30)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    } else if phase.error != nil {
+                                        Color.gray // Placeholder for error state
+                                    } else {
+                                        ProgressView() // Loading state
+                                    }
+                                }
+                                .frame(width: 30, height: 30)
+                                
+//                                    .foregroundColor(.gray)
+                                Text(workspace.name)
+                                    .fontWeight(.medium)
+                                    .font(.system(size: 14))
+                                Spacer()
+                            }
+                            
+                            .padding()
+                            
+                            .background(colorScheme == .dark ? Color("container") : Color("container"))
+                            .cornerRadius(15)
                         }
                     }
                 }
