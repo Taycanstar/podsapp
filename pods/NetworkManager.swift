@@ -11,6 +11,13 @@ class NetworkManager {
     let baseUrl = "http://192.168.1.67:8000"
     
 
+    enum NetworkError: Error {
+        case invalidURL
+        case invalidResponse
+        case decodingError
+        case serverError(String)
+        case unknownError
+    }
     
     func determineUserLocation() {
         let url = URL(string: "https://ipapi.co/json/")!
@@ -1878,6 +1885,35 @@ class NetworkManager {
         }.resume()
     }
 
+    func updatePodLastVisited(podId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+         guard let url = URL(string: "\(baseUrl)/update-pod-last-visited/\(podId)/") else {
+             completion(.failure(NetworkError.invalidURL))
+             return
+         }
 
+         var request = URLRequest(url: url)
+         request.httpMethod = "POST"
+
+         URLSession.shared.dataTask(with: request) { data, response, error in
+             if let error = error {
+                 completion(.failure(error))
+                 return
+             }
+
+             guard let httpResponse = response as? HTTPURLResponse else {
+                 completion(.failure(NetworkError.invalidResponse))
+                 return
+             }
+
+             switch httpResponse.statusCode {
+             case 200...299:
+                 completion(.success(()))
+             case 404:
+                 completion(.failure(NetworkError.serverError("Pod not found")))
+             default:
+                 completion(.failure(NetworkError.serverError("Unexpected server response: \(httpResponse.statusCode)")))
+             }
+         }.resume()
+     }
 }
 

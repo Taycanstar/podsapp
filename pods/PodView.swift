@@ -144,6 +144,9 @@ struct PodView: View {
             uploadViewModel.addItemCompletion = {
                 refreshPodItems()
             }
+     
+                     homeViewModel.updatePodLastVisited(podId: pod.id)
+               
         }
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
