@@ -10,7 +10,6 @@ class NetworkManager {
 
     let baseUrl = "http://192.168.1.67:8000"
     
-
     enum NetworkError: Error {
         case invalidURL
         case invalidResponse

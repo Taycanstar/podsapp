@@ -20,21 +20,21 @@ struct CustomTabBar: View {
                 
                 HStack {
                     // Pass the action directly to avoid confusion with parameter labels
-                    TabBarButton(iconName: "house", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
+                    TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                         .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                     Spacer()
-                    TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
+                    TabBarButton(iconName: "plus.app", label: "Add", isSelected: selectedTab == 1, iconSize: 20) {
                         // Directly trigger the video creation screen without changing the selectedTab
 //                        showVideoCreationScreen = true
                         AddOptionsSheet = true
                     }
                         .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
                     Spacer()
-                    TabBarButton(iconName: "person", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
+                    TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
                         .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
                 }
-                .padding(.horizontal, 35)
-                .padding(.vertical, 11)
+                .padding(.horizontal, 45)
+                .padding(.top, 11)
                 .background(tabBarBackgroundColor)
                 
             }
@@ -78,15 +78,21 @@ struct CustomTabBar: View {
 // Custom tab button
 struct TabBarButton: View {
     var iconName: String
+    var label: String
     var isSelected: Bool
     var iconSize: CGFloat = UIFont.preferredFont(forTextStyle: .title1).pointSize
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: isSelected ? iconName + ".fill" : iconName)
-                .imageScale(.large)
-                .font(.system(size: iconSize))
+            VStack {
+                Image(systemName: isSelected ? iconName + ".fill" : iconName)
+                    .imageScale(.large)
+                    .font(.system(size: iconSize))
+                Text(label)
+                    .font(.caption)
+                    .padding(.top, 0.5 )
+            }
         }
     }
 }
