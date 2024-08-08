@@ -23,6 +23,8 @@ struct QuickPodView: View {
         case workout = "Workout"
     }
     
+    var onPodCreated: (Pod) -> Void
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -92,6 +94,7 @@ struct QuickPodView: View {
                     print("New pod created with mode: \(newPod.mode)")
                     self.homeViewModel.appendNewPod(newPod)
                     self.isPresented = false
+                    self.onPodCreated(newPod)
                 } else {
                     print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
                     self.errorMessage = podIdString

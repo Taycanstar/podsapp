@@ -37,7 +37,8 @@ struct ContentView: View {
             // You could update some UI state here if needed
         }
     }
-    
+    @State private var shouldNavigateToNewPod = false
+        @State private var newPodId: Int?
 
     var body: some View {
         Group {
@@ -50,7 +51,8 @@ struct ContentView: View {
                             Group {
                                 switch selectedTab {
                                 case 0:
-                                    HomeView()
+                                    HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
+
                                 
                                 case 2:
                                     //                            ProfileView() // Assuming you have a ProfileView
@@ -83,16 +85,24 @@ struct ContentView: View {
                                 CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                                     .background(Color.black.edgesIgnoringSafeArea(.all))
                             }
+//                            .sheet(isPresented: $showQuickPodView) {
+//                                                QuickPodView(isPresented: $showQuickPodView)
+//                                    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+//                                            }
                             .sheet(isPresented: $showQuickPodView) {
-                                                QuickPodView(isPresented: $showQuickPodView)
-                                    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                                                QuickPodView(isPresented: $showQuickPodView) { newPod in
+                                                    self.newPodId = newPod.id
+                                                 
+                                                    self.selectedTab = 0
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                         // Switch to HomeView tab
+                                                        self.shouldNavigateToNewPod = true
+                                                    }
+                                                }
+                                                .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                                             }
-                        
-                        
-                    }
-                  
-                  
-                  
+                                        }
+         
                 
             } else {
                 MainOnboardingView(isAuthenticated:$isAuthenticated, showTourView: $showTourView)

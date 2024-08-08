@@ -22,7 +22,8 @@ struct HomeView: View {
     
     @State private var showSheet = false
     @State private var selectedHeaderOption = "Recently visited"
-    
+    @Binding var shouldNavigateToNewPod: Bool
+       @Binding var newPodId: Int?
     var body: some View {
            NavigationView {
                ZStack(alignment: .top) {
@@ -48,6 +49,7 @@ struct HomeView: View {
                        )
                        .padding(.horizontal)
                        .padding(.top, 60) // Add padding for the header
+                       .padding(.bottom, 80)
                        
                        if shouldShowLoadMoreButton {
                            Button(action: loadMorePods) {
@@ -62,17 +64,34 @@ struct HomeView: View {
                    
                    HomeHeaderView()
                }
+        
                .navigationBarHidden(true)
                .onAppear {
                    fetchPodsAndWorkspacesIfNeeded()
                }
                .refreshable {
-                   await refreshPods()
+                    refreshPods()
                }
                            .sheet(isPresented: $showSheet) {
                                           RecentlyVisitedSheet(showSheet: $showSheet, workspaces: homeViewModel.workspaces, selectedOption: $selectedHeaderOption)  // Pass workspaces here
                                       }
+                           .background(
+                                           NavigationLink(
+                                               destination: Group {
+                                                   if let podId = newPodId, let pod = homeViewModel.pods.first(where: { $0.id == podId }) {
+                                                       PodView(pod: .constant(pod), needsRefresh: .constant(false))
+                                                   }
+                                               },
+                                               isActive: $shouldNavigateToNewPod,
+                                               label: { EmptyView() }
+                                           )
+                                       )
            }
+           .onChange(of: shouldNavigateToNewPod) { newValue in
+                       if newValue, let podId = newPodId {
+                           print("Attempting to navigate to new pod with ID: \(podId)")
+                       }
+                   }
        }
     
     private var favoritePods: [Pod] {
