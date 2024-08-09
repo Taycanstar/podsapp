@@ -116,7 +116,7 @@ class HomeViewModel: ObservableObject {
             recentlyVisitedPodIds.remove(at: index)
         }
         recentlyVisitedPodIds.insert(podId, at: 0)
-        if recentlyVisitedPodIds.count > 5 {
+        if recentlyVisitedPodIds.count > 8 {
             recentlyVisitedPodIds.removeLast()
         }
         saveRecentlyVisitedPods()

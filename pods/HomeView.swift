@@ -49,7 +49,7 @@ struct HomeView: View {
                        )
                        .padding(.horizontal)
                        .padding(.top, 60) // Add padding for the header
-                       .padding(.bottom, 80)
+                      
                        
                        if shouldShowLoadMoreButton {
                            Button(action: loadMorePods) {
@@ -59,11 +59,13 @@ struct HomeView: View {
                            .padding()
                        }
                    }
+                   .padding(.bottom, 80)
                    .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
               
                    
                    HomeHeaderView()
                }
+               
         
                .navigationBarHidden(true)
                .onAppear {
@@ -586,29 +588,26 @@ struct RecentlyVisitedSheet: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 15)
                         .stroke(selectedOption == workspace.name ? Color.accentColor : Color.clear, lineWidth: 3)
+                        .padding(1)
                 )
+         
             
             HStack {
-                AsyncImage(url: workspace.icon) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 30, height: 30)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else if phase.error != nil {
-                        Color.gray // Placeholder for error state
-                    } else {
-                        ProgressView() // Loading state
-                    }
+
+                if workspace.isMain {
+                    Image("m1")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .frame(width: 30, height: 30)
                 
                 Text(workspace.name)
                     .fontWeight(.medium)
                     .font(.system(size: 14))
                 Spacer()
             }
+//            .padding(.vertical, 4)
             .padding()
         }
         .fixedSize(horizontal: false, vertical: true)
