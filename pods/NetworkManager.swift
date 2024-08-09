@@ -1694,7 +1694,7 @@ class NetworkManager {
             }.resume()
         }
     
-    func createQuickPod(podTitle: String, podMode: String, email: String, completion: @escaping (Bool, String?) -> Void) {
+    func createQuickPod(podTitle: String, templateId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
             completion(false, "Invalid URL")
             return
@@ -1702,7 +1702,7 @@ class NetworkManager {
 
         let body: [String: Any] = [
             "title": podTitle,
-            "mode": podMode,
+            "templateId": templateId,
             "email": email
         ]
 

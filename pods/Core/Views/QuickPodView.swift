@@ -10,7 +10,7 @@ import SwiftUI
 struct QuickPodView: View {
     @Binding var isPresented: Bool
     @State private var podName: String = ""
-    @State private var podMode: PodMode = .standard
+    @State private var podTemplate: PodTemplate = .standard
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var viewModel: OnboardingViewModel
     var networkManager: NetworkManager = NetworkManager()
@@ -18,11 +18,29 @@ struct QuickPodView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
     
-    enum PodMode: String, CaseIterable {
+    enum PodTemplate: String, CaseIterable {
         case standard = "Standard"
         case workout = "Workout"
+        
+        var id: Int {
+            switch self {
+            case .standard:
+                return 0
+            case .workout:
+                return 1
+            }
+        }
+        
+        var displayText: String {
+            switch self {
+            case .standard:
+                return "From scratch"
+            case .workout:
+                return "Workout"
+            }
+        }
     }
-    
+
     var onPodCreated: (Pod) -> Void
     
     var body: some View {
@@ -42,11 +60,11 @@ struct QuickPodView: View {
                 HStack {
                     Image(systemName: "list.bullet")
                         .foregroundColor(.blue)
-                    Text("Pod Mode")
+                    Text("Pod Template")
                     Spacer()
-                    Picker("Pod Mode", selection: $podMode) {
-                        ForEach(PodMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
+                    Picker("Pod Template", selection: $podTemplate) {
+                        ForEach(PodTemplate.allCases, id: \.self) { template in
+                            Text(template.displayText)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
@@ -86,12 +104,12 @@ struct QuickPodView: View {
             return
         }
         
-        networkManager.createQuickPod(podTitle: podName, podMode: podMode.rawValue, email: viewModel.email) { [self] success, podIdString in
+        networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email) { [self] success, podIdString in
             DispatchQueue.main.async {
                 if success, let podIdString = podIdString, let podId = Int(podIdString) {
                     print("Quick Pod created successfully with ID: \(podId)")
-                    let newPod = Pod(id: podId, items: [], title: self.podName , mode: self.podMode.rawValue)
-                    print("New pod created with mode: \(newPod.mode)")
+                    let newPod = Pod(id: podId, items: [], title: self.podName , templateId: self.podTemplate.id)
+                    print("New pod created with mode: \(newPod.templateId)")
                     self.homeViewModel.appendNewPod(newPod)
                     self.isPresented = false
                     self.onPodCreated(newPod)

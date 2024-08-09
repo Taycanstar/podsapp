@@ -585,7 +585,7 @@ struct PodCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             // Image column
-            Image(pod.mode == "workout" ? (colorScheme == .dark ? "wkout-dark" : "wkout") : (colorScheme == .dark ? "st-dark" : "st"))
+            Image(pod.templateId == 1 ? (colorScheme == .dark ? "wkout-dark" : "wkout") : (colorScheme == .dark ? "st-dark" : "st"))
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 45, height: 45)

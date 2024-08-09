@@ -58,7 +58,7 @@ struct Pod: Identifiable {
     var id: Int
     var items: [PodItem] = []
     var title: String
-    var mode: String?
+    var templateId: Int?
     var workspace: String?
     var isFavorite: Bool?
     var lastVisited: Date?
@@ -71,7 +71,7 @@ struct PodJSON: Codable {
     let title: String
     let created_at: String
     let items: [PodItemJSON]
-    let mode: String?
+    var templateId: Int?
     let workspace: String?
     var isFavorite: Bool?
     var lastVisited: Date?
@@ -99,7 +99,7 @@ extension Pod {
         self.id = podJSON.id
         self.title = podJSON.title
         self.items = podJSON.items.map { PodItem(from: $0) }
-        self.mode = podJSON.mode
+        self.templateId = podJSON.templateId
         self.workspace = podJSON.workspace ?? "Main workspace"
         self.isFavorite = podJSON.isFavorite
         self.lastVisited = podJSON.lastVisited
