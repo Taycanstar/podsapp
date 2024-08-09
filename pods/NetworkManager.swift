@@ -686,8 +686,8 @@ class NetworkManager {
           }.resume()
       }
     
-// og fetch
-//    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
+
+//    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
 //        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")?page=\(page)&pageSize=7"
 //        if let workspaceId = workspaceId {
 //            urlString += "&workspaceId=\(workspaceId)"
@@ -695,6 +695,14 @@ class NetworkManager {
 //        if showFavorites {
 //            urlString += "&favorites=true"
 //        }
+//        
+//        if showRecentlyVisited {
+//              urlString += "&recentlyVisited=true"
+//          }
+//        
+//        if showRecentlyVisited {
+//               urlString += "&recentlyVisited=true"
+//           }
 //        
 //        guard let url = URL(string: urlString) else {
 //            completion(false, nil, 0, "Invalid URL")
@@ -712,28 +720,49 @@ class NetworkManager {
 //            
 //            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
 //                do {
-//                    let podResponse = try JSONDecoder().decode(PodResponse.self, from: data)
+//                    let decoder = JSONDecoder()
+//                    decoder.dateDecodingStrategy = .custom { decoder in
+//                        let container = try decoder.singleValueContainer()
+//                        let dateString = try container.decode(String.self)
+//                        
+//                        let formatter = ISO8601DateFormatter()
+//                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+//                        
+//                        if let date = formatter.date(from: dateString) {
+//                            return date
+//                        }
+//                        
+//                        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+//                    }
+//                    
+//                    let podResponse = try decoder.decode(PodResponse.self, from: data)
 //                    let pods = podResponse.pods.map { Pod(from: $0) }
 //                    completion(true, pods, podResponse.totalPods, nil)
 //                } catch {
-//                    completion(false, nil, 0, "Failed to decode pods")
+//                    print("Decoding error: \(error)")
+//                    completion(false, nil, 0, "Failed to decode pods: \(error.localizedDescription)")
 //                }
 //            } else {
 //                completion(false, nil, 0, "Failed to fetch pods")
 //            }
 //        }.resume()
 //    }
-    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, page: Int, completion: @escaping (Bool, [Pod]?, Int, String?) -> Void) {
-        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")?page=\(page)&pageSize=7"
+    
+    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        
         if let workspaceId = workspaceId {
             urlString += "&workspaceId=\(workspaceId)"
         }
         if showFavorites {
             urlString += "&favorites=true"
         }
+        if showRecentlyVisited {
+            urlString += "&recentlyVisited=true"
+        }
         
         guard let url = URL(string: urlString) else {
-            completion(false, nil, 0, "Invalid URL")
+            completion(false, nil, "Invalid URL")
             return
         }
         
@@ -742,7 +771,7 @@ class NetworkManager {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {
-                completion(false, nil, 0, "Network request failed")
+                completion(false, nil, "Network request failed")
                 return
             }
             
@@ -765,13 +794,13 @@ class NetworkManager {
                     
                     let podResponse = try decoder.decode(PodResponse.self, from: data)
                     let pods = podResponse.pods.map { Pod(from: $0) }
-                    completion(true, pods, podResponse.totalPods, nil)
+                    completion(true, pods, nil)
                 } catch {
                     print("Decoding error: \(error)")
-                    completion(false, nil, 0, "Failed to decode pods: \(error.localizedDescription)")
+                    completion(false, nil, "Failed to decode pods: \(error.localizedDescription)")
                 }
             } else {
-                completion(false, nil, 0, "Failed to fetch pods")
+                completion(false, nil, "Failed to fetch pods")
             }
         }.resume()
     }
@@ -1220,137 +1249,7 @@ class NetworkManager {
         }.resume()
     }
     
- //old start item addition
-//    func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, email: String, completion: @escaping (Bool, String?) -> Void) {
-//        let dispatchGroup = DispatchGroup()
-//        var uploadErrors = [String]()
-//
-//        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
-//                       else {
-//                    print("Missing configuration values for container")
-//                    completion(false, "No container name found.")
-//                    return
-//                }
-//
-//        var uploadedVideoURL: String?
-//        var uploadedImageURL: String?
-//        var uploadedThumbnailURL: String?
-//
-//        if let videoURL = videoURL {
-//            let videoBlobName = UUID().uuidString + ".mp4"
-//            do {
-//                let videoData = try Data(contentsOf: videoURL)
-//                dispatchGroup.enter()
-//                uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
-//                    if success, let videoUrl = videoUrlString {
-//                        uploadedVideoURL = videoUrl
-//                    } else {
-//                        uploadErrors.append("Failed to upload video")
-//                    }
-//                    dispatchGroup.leave()
-//                }
-//            } catch {
-//                uploadErrors.append("Failed to load video data for URL: \(videoURL)")
-//            }
-//        }
-//
-//        if let image = image {
-//            let imageBlobName = UUID().uuidString + ".jpg"
-//            if let imageData = image.jpegData(compressionQuality: 0.8) {
-//                dispatchGroup.enter()
-//                uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
-//                    if success, let imageUrl = imageUrlString {
-//                        uploadedImageURL = imageUrl
-//                    } else {
-//                        uploadErrors.append("Failed to upload image")
-//                    }
-//                    dispatchGroup.leave()
-//                }
-//            } else {
-//                uploadErrors.append("Failed to convert image to data")
-//            }
-//        }
-//
-//        if let thumbnail = thumbnail, let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
-//            let thumbnailBlobName = UUID().uuidString + ".jpg"
-//            dispatchGroup.enter()
-//            uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
-//                if success, let thumbnailUrl = thumbnailUrlString {
-//                    uploadedThumbnailURL = thumbnailUrl
-//                } else {
-//                    uploadErrors.append("Failed to upload thumbnail")
-//                }
-//                dispatchGroup.leave()
-//            }
-//        }
-//
-//        dispatchGroup.notify(queue: .main) {
-//            if !uploadErrors.isEmpty {
-//                completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
-//                return
-//            }
-//
-//            self.sendAddItemRequest(podId: podId, itemType: itemType, videoURL: uploadedVideoURL, imageURL: uploadedImageURL, label: label, thumbnail: uploadedThumbnailURL, email: email, completion: completion)
-//        }
-//    }
-//
-//    private func sendAddItemRequest(podId: Int, itemType: String, videoURL: String?, imageURL: String?, label: String, thumbnail: String?, email: String, completion: @escaping (Bool, String?) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/add-pod-item/") else {
-//            completion(false, "Invalid URL")
-//            return
-//        }
-//
-//        let body: [String: Any] = [
-//            "pod_id": podId,
-//            "itemType": itemType,
-//            "videoURL": videoURL ?? "",
-//            "imageURL": imageURL ?? "",
-//            "label": label,
-//            "thumbnail": thumbnail ?? "",
-//            "email": email
-//        ]
-//
-//        do {
-//            var request = URLRequest(url: url)
-//            request.httpMethod = "POST"
-//            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-//
-//            URLSession.shared.dataTask(with: request) { data, response, error in
-//                if let error = error {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Network error: \(error.localizedDescription)")
-//                    }
-//                    return
-//                }
-//
-//                guard let httpResponse = response as? HTTPURLResponse else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "No response from server")
-//                    }
-//                    return
-//                }
-//
-//                if httpResponse.statusCode == 201 {
-//                    DispatchQueue.main.async {
-//                        completion(true, "Item added to pod successfully.")
-//                    }
-//                } else {
-//                    var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
-//                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
-//                        errorMessage += ", Response: \(responseString)"
-//                    }
-//                    DispatchQueue.main.async {
-//                        completion(false, errorMessage)
-//                    }
-//                }
-//            }.resume()
-//        } catch {
-//            completion(false, "Failed to encode request body")
-//        }
-//    }
-//end
-    
+
     func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, notes: String, email: String, completion: @escaping (Bool, String?) -> Void) {
         let dispatchGroup = DispatchGroup()
         var uploadErrors = [String]()

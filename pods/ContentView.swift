@@ -31,7 +31,7 @@ struct ContentView: View {
     
  
     private func fetchInitialPods() {
-        homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+        homeViewModel.fetchPodsForUser(email: viewModel.email) {
             // This closure is called after the fetch operation completes
             print("Initial pods fetch completed")
             // You could update some UI state here if needed

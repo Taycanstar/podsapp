@@ -272,7 +272,6 @@
 		368A27352B977F320001BBCA /* onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				368A27362B977F5A0001BBCA /* LandingView.swift */,
 				368A27382B9818330001BBCA /* InfoView.swift */,
 				3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */,
 				3696B9622B99990E00D211D7 /* MainOnboardingView.swift */,
@@ -286,6 +285,7 @@
 			children = (
 				3696B9582B98306C00D211D7 /* SignupView.swift */,
 				3642C2232B9BD8AC00D059B9 /* LoginView.swift */,
+				368A27362B977F5A0001BBCA /* LandingView.swift */,
 			);
 			path = auth;
 			sourceTree = "<group>";

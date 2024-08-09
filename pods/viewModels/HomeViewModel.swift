@@ -1,3 +1,4 @@
+
 import Foundation
 
 class HomeViewModel: ObservableObject {
@@ -6,41 +7,19 @@ class HomeViewModel: ObservableObject {
     private var networkManager = NetworkManager()
     @Published var shouldUseDarkTheme: Bool = false
     @Published var isItemViewActive: Bool = false
-    var currentPage = 0
-    var totalPages = 1
-    var totalPods = 0
-    var isLoading = false
+    @Published var isLoading = false
     @Published var recentlyVisitedPodIds: [Int] = []
+    @Published var totalPods: Int = 0
     
-    init() {
-            loadRecentlyVisitedPods()
-        }
-        
-
-    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, page: Int, completion: @escaping () -> Void) {
-        guard page <= totalPages else {
-            completion()
-            return
-        }
-        
+    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
         isLoading = true
         
-        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, page: page) { [weak self] success, newPods, totalPods, errorMessage in
+        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited) { [weak self] success, newPods, errorMessage in
             DispatchQueue.main.async {
                 if success, let newPods = newPods {
-                    if page == 1 {
-                        self?.pods = newPods
-                    } else {
-                        self?.pods.append(contentsOf: newPods)
-                    }
-                    self?.currentPage = page
-                    self?.totalPods = totalPods
-                    self?.totalPages = (totalPods / 7) + (totalPods % 7 > 0 ? 1 : 0)
-       
-                                    self?.recentlyVisitedPodIds = self?.recentlyVisitedPodIds.filter { podId in
-                                        newPods.contains { $0.id == podId }
-                                    } ?? []
-                                    self?.objectWillChange.send()
+                    self?.pods = newPods
+                    self?.totalPods = newPods.count
+                    self?.objectWillChange.send()
                 } else {
                     print("Error fetching pods: \(errorMessage ?? "Unknown error")")
                 }
@@ -50,15 +29,9 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    func refreshPods(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, completion: @escaping () -> Void) {
+    func refreshPods(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
         self.pods = []  // Clear existing pods
-        self.currentPage = 0
-        self.totalPages = 1
-        self.totalPods = 0
-        
-        fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, page: 1) {
-            completion()
-        }
+        fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited, completion: completion)
     }
     
     func fetchWorkspacesForUser(email: String) {
@@ -76,10 +49,8 @@ class HomeViewModel: ObservableObject {
     func appendNewPod(_ pod: Pod) {
         DispatchQueue.main.async {
             self.pods.append(pod)
-            self.totalPods += 1
         }
     }
-    
     
     func updatePodFavoriteStatus(podId: Int, isFavorite: Bool) {
          if let index = pods.firstIndex(where: { $0.id == podId }) {
@@ -87,7 +58,6 @@ class HomeViewModel: ObservableObject {
              objectWillChange.send()
          }
      }
-
 
     func updatePodLastVisited(podId: Int) {
         NetworkManager().updatePodLastVisited(podId: podId) { [weak self] result in
@@ -106,9 +76,7 @@ class HomeViewModel: ObservableObject {
     }
 
     var recentlyVisitedPods: [Pod] {
-        return recentlyVisitedPodIds.compactMap { podId in
-            pods.first { $0.id == podId }
-        }
+        return pods.filter { $0.lastVisited != nil }.sorted { $0.lastVisited! > $1.lastVisited! }
     }
     
     private func updateRecentlyVisitedPods(podId: Int) {
@@ -131,4 +99,4 @@ class HomeViewModel: ObservableObject {
             recentlyVisitedPodIds = savedIds
         }
     }
-    }
+}

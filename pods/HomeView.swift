@@ -38,8 +38,6 @@ struct HomeView: View {
                                    Divider().padding(.horizontal)
                                }
                            }
-                           .onMove(perform: movePod)
-                           .onDelete(perform: deletePod)
                        }
                        .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white)
                        .cornerRadius(10)
@@ -48,18 +46,11 @@ struct HomeView: View {
                                .stroke(colorScheme == .dark ? Color(rgb: 70,70,70) : Color(rgb: 220, 220, 220), lineWidth: 0.3)
                        )
                        .padding(.horizontal)
+                       .padding(.bottom, 150)
                        .padding(.top, 60) // Add padding for the header
-                      
-                       
-                       if shouldShowLoadMoreButton {
-                           Button(action: loadMorePods) {
-                               Text("Load More")
-                                   .foregroundColor(.blue)
-                           }
-                           .padding()
-                       }
+                    
                    }
-                   .padding(.bottom, 80)
+
                    .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
               
                    
@@ -123,24 +114,16 @@ struct HomeView: View {
     
     private func fetchPodsAndWorkspacesIfNeeded() {
           if homeViewModel.pods.isEmpty {
-              homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) { }
+              homeViewModel.fetchPodsForUser(email: viewModel.email) { }
           }
           homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
       }
     
-    private func loadMorePods() {
-        homeViewModel.fetchPodsForUser(email: viewModel.email, page: homeViewModel.currentPage + 1) { }
-    }
 
-
-    
-    private var shouldShowLoadMoreButton: Bool {
-        return homeViewModel.pods.count < homeViewModel.totalPods
-    }
     
     private func refreshPods() {
         DispatchQueue.global(qos: .background).async {
-            homeViewModel.fetchPodsForUser(email: viewModel.email, page: 1) {
+            homeViewModel.fetchPodsForUser(email: viewModel.email) {
                 // Additional actions after refresh if needed
             }
         }
@@ -201,53 +184,7 @@ struct HomeView: View {
         }
     }
 
-    func movePod(from source: IndexSet, to destination: Int) {
-        let podsToMove = source.map { homeViewModel.pods[$0] }
-        
-        homeViewModel.pods.move(fromOffsets: source, toOffset: destination)
-        
-        if editMode == .active {
-            editingPods.move(fromOffsets: source, toOffset: destination)
-        }
-        
-        let orderedPodIds = homeViewModel.pods.map { $0.id }
-        networkManager.reorderPods(email: viewModel.email, podIds: orderedPodIds) { [self] success, errorMessage in
-            DispatchQueue.main.async {
-                if success {
-                    print("Pods reordered successfully in the backend.")
-                    self.podsReordered = true
-                    self.homeViewModel.objectWillChange.send()
-                } else {
-                    print("Failed to reorder pods in the backend: \(errorMessage ?? "Unknown error")")
-                    self.homeViewModel.pods = podsToMove
-                    self.homeViewModel.objectWillChange.send()
-                }
-            }
-        }
-    }
 
-    func deletePod(at offsets: IndexSet) {
-        let indicesToDelete = Array(offsets)
-        let sortedIndices = indicesToDelete.sorted().reversed()
-        
-        for index in sortedIndices {
-            let podId = homeViewModel.pods[index].id
-            networkManager.deletePod(podId: podId) { [self] success, message in
-                DispatchQueue.main.async {
-                    if success {
-                        print("Pod deleted successfully.")
-                        self.homeViewModel.pods.remove(at: index)
-                        if self.editMode == .active {
-                            self.editingPods.remove(at: index)
-                        }
-                        self.homeViewModel.totalPods -= 1
-                    } else {
-                        print("Failed to delete pod: \(message ?? "Unknown error")")
-                    }
-                }
-            }
-        }
-    }
 }
 
 
@@ -665,7 +602,7 @@ struct PodCard: View {
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                 
                 Text(pod.workspace ?? "Unknown workspace")
-                    .font(.system(size: 14))
+                    .font(.system(size: 12))
                     .foregroundColor(colorScheme == .dark ? .gray : .secondary)
             }
             
