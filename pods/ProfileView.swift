@@ -41,6 +41,14 @@ struct ProfileView: View {
                         Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                             .foregroundColor(iconColor)
                     }
+                    NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                        Label("My team", systemImage: "person.2")
+                            .foregroundColor(iconColor)
+                    }
+                    NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                        Label("My workspace", systemImage: "sparkles.rectangle.stack")
+                            .foregroundColor(iconColor)
+                    }
 
                 }
                 

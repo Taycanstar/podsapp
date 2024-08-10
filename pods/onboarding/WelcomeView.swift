@@ -142,7 +142,7 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeTeamName in
                 DispatchQueue.main.async {
                     isLoading = false // Stop loading animation
                     if success {
@@ -157,6 +157,14 @@ struct WelcomeView: View {
                             UserDefaults.standard.set(username, forKey: "username")
                             viewModel.username = username
                         }
+                        if let activeTeamId = activeTeamId {
+                                       self.viewModel.activeTeamId = activeTeamId
+                                       UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                                   }
+                       if let activeTeamName = activeTeamName {
+                                       self.viewModel.activeTeamName = activeTeamName
+                                       UserDefaults.standard.set(activeTeamName, forKey: "activeTeamName")
+                                   }
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing
                     } else {

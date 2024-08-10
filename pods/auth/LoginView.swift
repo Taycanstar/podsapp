@@ -138,7 +138,7 @@ struct LoginView: View {
     }
 
     private func authenticateUser() {
-         NetworkManager().login(identifier: identifier, password: password) { success, error, email, username in
+         NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeTeamName in
              if success {
                  DispatchQueue.main.async {
                      self.isAuthenticated = true
@@ -152,6 +152,14 @@ struct LoginView: View {
                          self.viewModel.username = username
                          UserDefaults.standard.set(username, forKey: "username")
                      }
+                     if let activeTeamId = activeTeamId {
+                                    self.viewModel.activeTeamId = activeTeamId
+                                    UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                                }
+                    if let activeTeamName = activeTeamName {
+                                    self.viewModel.activeTeamName = activeTeamName
+                                    UserDefaults.standard.set(activeTeamName, forKey: "activeTeamName")
+                                }
                      isLoading = false
                  }
              } else {
