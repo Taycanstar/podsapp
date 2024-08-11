@@ -179,7 +179,7 @@ struct PodView: View {
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
            }
-        .padding(.top, 15)
+//        .padding(.top, 15)
         .background(
             NavigationLink(
                 destination: selection.map { index in
