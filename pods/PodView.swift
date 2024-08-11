@@ -26,6 +26,7 @@ struct PodView: View {
 
     
     var body: some View {
+        PodViewHeaderSection()
         List {
             ForEach(reorderedItems.indices, id: \.self) { index in
                 VStack(alignment: .leading, spacing: 0) {
@@ -128,9 +129,36 @@ struct PodView: View {
             }
             .onMove(perform: moveItem)
             .onDelete(perform: deleteItem)
+            
+            Button(action: {
+                print("tapped add")
+            }) {
+                HStack(spacing: 5) { // Adjust the spacing between the icon and label
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .regular))
+                    Text("Add item")
+                        .font(.system(size: 14, weight: .regular))
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemBackground)) // Background depends on light/dark mode
+                .foregroundColor(.accentColor) // Text color is the accent color
+                .cornerRadius(10)
+                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 70)
+            .padding(.horizontal, 15)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+
+
+
         }
       
         .padding(.horizontal, 5)
+        
+        .padding(.vertical, 20)
         
         .scrollIndicators(.hidden)
         .listStyle(PlainListStyle())
@@ -360,3 +388,73 @@ struct PodView: View {
     }
 }
 
+
+
+struct PodViewHeaderSection: View {
+    @State private var selectedView: String = "Table"
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            // View Options Section
+            viewSection
+            
+            // Filter Section
+            filterSection
+            Spacer()
+            // Search Section
+            searchSection
+        }
+        .padding(.horizontal)
+        .padding(.top,15)
+        .padding(.bottom, -10)
+    }
+    
+    private var viewSection: some View {
+        HStack {
+            Image(systemName: "square.grid.2x2")
+            Text(selectedView)
+            Image(systemName: "chevron.down")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+    }
+    
+    private var filterSection: some View {
+        HStack {
+            Image(systemName: "line.3.horizontal.decrease")
+            Text("Filter")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+    }
+    
+    private var searchSection: some View {
+        Image(systemName: "magnifyingglass")
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+    }
+}
+
+
+struct AddItemButton: View {
+    @Environment(\.colorScheme) var colorScheme
+    var accentColor: Color = .blue  // Set your accent color here
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: "plus")
+                Text("Add Item")
+                    .fontWeight(.bold)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(colorScheme == .light ? Color.white : Color.black)
+            .foregroundColor(accentColor)
+            .cornerRadius(10)
+            .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 5)
+        }
+        .padding(.horizontal)
+    }
+}

@@ -96,7 +96,9 @@ struct ProfileView: View {
                                       }
                    
                 }
+                
             }
+            .padding(.bottom, 70)
             .navigationBarTitle("Settings and privacy", displayMode: .inline)
             .sheet(isPresented: $showingMail) {
                 MailView(isPresented: self.$showingMail)

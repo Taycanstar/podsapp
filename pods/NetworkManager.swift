@@ -7,8 +7,11 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
+//
+//    let baseUrl = "http://192.168.1.67:8000"
+//    let baseUrl = "http://10.161.140.235:8000"
+    let baseUrl = "http://172.20.10.2:8000"
 
-    let baseUrl = "http://192.168.1.67:8000"
     
     enum NetworkError: Error {
         case invalidURL
@@ -741,6 +744,62 @@ class NetworkManager {
 //        }.resume()
 //    }
     
+//    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
+//        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+//        
+//        if let workspaceId = workspaceId {
+//            urlString += "&workspaceId=\(workspaceId)"
+//        }
+//        if showFavorites {
+//            urlString += "&favorites=true"
+//        }
+//        if showRecentlyVisited {
+//            urlString += "&recentlyVisited=true"
+//        }
+//        
+//        guard let url = URL(string: urlString) else {
+//            completion(false, nil, "Invalid URL")
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "GET"
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            guard let data = data, error == nil else {
+//                completion(false, nil, "Network request failed")
+//                return
+//            }
+//            
+//            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+//                do {
+//                    let decoder = JSONDecoder()
+//                    decoder.dateDecodingStrategy = .custom { decoder in
+//                        let container = try decoder.singleValueContainer()
+//                        let dateString = try container.decode(String.self)
+//                        
+//                        let formatter = ISO8601DateFormatter()
+//                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+//                        
+//                        if let date = formatter.date(from: dateString) {
+//                            return date
+//                        }
+//                        
+//                        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+//                    }
+//                    
+//                    let podResponse = try decoder.decode(PodResponse.self, from: data)
+//                    let pods = podResponse.pods.map { Pod(from: $0) }
+//                    completion(true, pods, nil)
+//                } catch {
+//                    print("Decoding error: \(error)")
+//                    completion(false, nil, "Failed to decode pods: \(error.localizedDescription)")
+//                }
+//            } else {
+//                completion(false, nil, "Failed to fetch pods")
+//            }
+//        }.resume()
+//    }
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping (Bool, [Pod]?, String?) -> Void) {
         var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
         
@@ -775,14 +834,19 @@ class NetworkManager {
                         let container = try decoder.singleValueContainer()
                         let dateString = try container.decode(String.self)
                         
-                        let formatter = ISO8601DateFormatter()
-                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        let formatterWithFractionalSeconds = ISO8601DateFormatter()
+                        formatterWithFractionalSeconds.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                         
-                        if let date = formatter.date(from: dateString) {
+                        let formatterWithoutFractionalSeconds = ISO8601DateFormatter()
+                        formatterWithoutFractionalSeconds.formatOptions = [.withInternetDateTime]
+                        
+                        if let date = formatterWithFractionalSeconds.date(from: dateString) {
                             return date
+                        } else if let date = formatterWithoutFractionalSeconds.date(from: dateString) {
+                            return date
+                        } else {
+                            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
                         }
-                        
-                        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
                     }
                     
                     let podResponse = try decoder.decode(PodResponse.self, from: data)
@@ -797,6 +861,7 @@ class NetworkManager {
             }
         }.resume()
     }
+
 
     func fetchWorkspacesForUser(email: String, completion: @escaping (Bool, [Workspace]?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/get-user-workspaces/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else {
