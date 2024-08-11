@@ -465,6 +465,7 @@ struct PodView: View {
                 }
             }
         }
+        .edgesIgnoringSafeArea(.bottom)
     }
 
     private func deletePod() {
