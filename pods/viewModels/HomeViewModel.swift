@@ -10,6 +10,7 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var recentlyVisitedPodIds: [Int] = []
     @Published var totalPods: Int = 0
+    @Published var teams: [Team] = []
     
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
         isLoading = true
@@ -39,8 +40,22 @@ class HomeViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if success, let workspaces = workspaces {
                     self?.workspaces = workspaces
+                    print(workspaces, "user workspaces")
                 } else {
                     print("Error fetching workspaces: \(errorMessage ?? "Unknown error")")
+                }
+            }
+        }
+    }
+    
+    func fetchTeamsForUser(email: String) {
+        networkManager.fetchTeamsForUser(email: email) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let teams):
+                    self?.teams = teams
+                case .failure(let error):
+                    print("Error fetching teams: \(error)")
                 }
             }
         }

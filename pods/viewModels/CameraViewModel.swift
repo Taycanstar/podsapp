@@ -6,6 +6,21 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+struct Team: Identifiable, Codable {
+    var id: Int
+    var name: String
+    var isPersonal: Bool
+    var profileInitial: String?
+    var profileColor: String?
+    
+    init(id: Int, name: String, isPersonal: Bool, profileInitial: String?, profileColor: String?) {
+        self.id = id
+        self.name = name
+        self.isPersonal = isPersonal
+        self.profileInitial = profileInitial
+        self.profileColor = profileColor
+    }
+}
 struct Workspace: Identifiable, Codable {
     var id: Int
     var name: String
@@ -13,14 +28,18 @@ struct Workspace: Identifiable, Codable {
     var coverPhoto: URL?
     var icon: URL?
     var isMain: Bool
+    let profileInitial: String?
+    let profileColor: String?
     
-    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool) {
+    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool, profileInitial: String?, profileColor: String?) {
         self.id = id
         self.name = name
         self.description = description
         self.coverPhoto = coverPhoto
         self.icon = icon
         self.isMain = isMain
+        self.profileInitial = profileInitial
+        self.profileColor = profileColor
     }
 }
 

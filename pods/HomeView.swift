@@ -531,13 +531,12 @@ struct RecentlyVisitedSheet: View {
             
             HStack {
 
-                if workspace.isMain {
-                    Image("m1")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 30, height: 30)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
+                DefaultProfilePicture(
+                    initial: workspace.profileInitial ?? "",
+                    color: workspace.profileColor ?? "",
+                              size: 30
+                          )
+           
                 
                 Text(workspace.name)
                     .fontWeight(.medium)

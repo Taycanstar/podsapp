@@ -142,7 +142,7 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeTeamName in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor in
                 DispatchQueue.main.async {
                     isLoading = false // Stop loading animation
                     if success {
@@ -161,10 +161,20 @@ struct WelcomeView: View {
                                        self.viewModel.activeTeamId = activeTeamId
                                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
                                    }
-                       if let activeTeamName = activeTeamName {
-                                       self.viewModel.activeTeamName = activeTeamName
-                                       UserDefaults.standard.set(activeTeamName, forKey: "activeTeamName")
-                                   }
+                        if let activeWorkspaceId = activeWorkspaceId {
+                            self.viewModel.activeWorkspaceId = activeWorkspaceId
+                            UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
+                        }
+        
+                        if let profileInitial = profileInitial {
+                            self.viewModel.profileInitial = profileInitial
+                                     UserDefaults.standard.set(profileInitial, forKey: "profileInitial")
+                                 }
+                                 if let profileColor = profileColor {
+                                     self.viewModel.profileColor = profileColor
+                                     UserDefaults.standard.set(profileColor, forKey: "profileColor")
+                                 }
+
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing
                     } else {

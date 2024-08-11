@@ -41,11 +41,11 @@ struct ProfileView: View {
                         Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                             .foregroundColor(iconColor)
                     }
-                    NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                    NavigationLink(destination: MyTeamsView()) {
                         Label("My team", systemImage: "person.2")
                             .foregroundColor(iconColor)
                     }
-                    NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                    NavigationLink(destination: MyWorkspacesView()) {
                         Label("My workspace", systemImage: "sparkles.rectangle.stack")
                             .foregroundColor(iconColor)
                     }
@@ -97,7 +97,7 @@ struct ProfileView: View {
                    
                 }
             }
-            .navigationBarTitle("Settings and privacy")
+            .navigationBarTitle("Settings and privacy", displayMode: .inline)
             .sheet(isPresented: $showingMail) {
                 MailView(isPresented: self.$showingMail)
                      }
@@ -238,5 +238,109 @@ struct MailView: UIViewControllerRepresentable {
 
     static func dismantleUIViewController(_ uiViewController: MFMailComposeViewController, coordinator: Coordinator) {
         uiViewController.dismiss(animated: true)
+    }
+}
+
+struct MyTeamsView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var homeViewModel: HomeViewModel
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                ForEach(homeViewModel.teams) { team in
+                    teamView(team: team)
+                }
+            }
+            .padding()
+        }
+        .navigationBarTitle("My team", displayMode: .inline)
+        .onAppear {
+            homeViewModel.fetchTeamsForUser(email: viewModel.email)
+        }
+    }
+
+    private func teamView(team: Team) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15)
+                .fill(colorScheme == .dark ? Color("container") : Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            
+            HStack {
+                DefaultProfilePicture(
+                    initial: team.profileInitial ?? "",
+                    color: team.profileColor ?? "",
+                    size: 30
+                )
+                
+                Text(team.name)
+                    .fontWeight(.medium)
+                    .font(.system(size: 14))
+                Spacer()
+                
+                if team.id == viewModel.activeTeamId {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding()
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
+        )
+    }
+}
+
+struct MyWorkspacesView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var homeViewModel: HomeViewModel
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                ForEach(homeViewModel.workspaces) { workspace in
+                    workspaceView(workspace: workspace)
+                }
+            }
+            .padding()
+        }
+        .navigationBarTitle("My workspace", displayMode: .inline)
+        .onAppear {
+            homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
+        }
+    }
+
+    private func workspaceView(workspace: Workspace) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15)
+                .fill(colorScheme == .dark ? Color("container") : Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            
+            HStack {
+                DefaultProfilePicture(
+                    initial: workspace.profileInitial ?? "",
+                    color: workspace.profileColor ?? "",
+                    size: 30
+                )
+                
+                Text(workspace.name)
+                    .fontWeight(.medium)
+                    .font(.system(size: 14))
+                Spacer()
+                
+                if workspace.id == viewModel.activeWorkspaceId {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding()
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(workspace.id == viewModel.activeWorkspaceId ? Color.accentColor : Color.clear, lineWidth: 3)
+        )
     }
 }

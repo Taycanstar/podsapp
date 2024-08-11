@@ -226,35 +226,24 @@ class NetworkManager {
             }
         }.resume()
     }
-    
-    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, String?) -> Void) {
+    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
             print("Invalid URL for login endpoint")
-            completion(false, "Invalid URL", nil, nil, nil, nil)
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil)
             return
         }
 
         let body: [String: Any] = ["username": identifier, "password": password]
-        var finalBody: Data? = nil
-        do {
-            finalBody = try JSONSerialization.data(withJSONObject: body)
-            print("Sending login request with body: \(String(data: finalBody!, encoding: .utf8) ?? "")")
-        } catch {
-            print("Error serializing login request body: \(error)")
-            completion(false, "Error creating request body", nil, nil, nil, nil)
-            return
-        }
-        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = finalBody
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Login request failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil)
+                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
@@ -262,7 +251,7 @@ class NetworkManager {
             guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
                 print("No response or data received from login request")
                 DispatchQueue.main.async {
-                    completion(false, "No response from server", nil, nil, nil, nil)
+                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
@@ -276,24 +265,26 @@ class NetworkManager {
                     if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
                         let email = json["email"] as? String
                         let username = json["username"] as? String
-                        let activeTeamId = json["active_team_id"] as? Int
-                        let activeTeamName = json["active_team_name"] as? String
+                        let activeTeamId = json["activeTeamId"] as? Int
+                        let activeWorkspaceId = json["activeWorkspaceId"] as? Int
+                        let profileColor = json["profileColor"] as? String
+                        let profileInitial = json["profileInitial"] as? String
                         DispatchQueue.main.async {
-                            completion(true, nil, email, username, activeTeamId, activeTeamName)
+                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor)
                         }
                     } else {
                         DispatchQueue.main.async {
-                            completion(false, "Invalid response format", nil, nil, nil, nil)
+                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil)
                         }
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        completion(false, "Failed to parse response", nil, nil, nil, nil)
+                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil)
                     }
                 }
             } else {
                 DispatchQueue.main.async {
-                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil)
+                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil)
                 }
             }
         }.resume()
@@ -830,7 +821,8 @@ class NetworkManager {
             if let data = data {
                 if httpResponse.statusCode == 200 {
                     do {
-                        let workspaces = try JSONDecoder().decode([Workspace].self, from: data)
+                        let decoder = JSONDecoder()
+                        let workspaces = try decoder.decode([Workspace].self, from: data)
                         completion(true, workspaces, nil)
                     } catch {
                         let responseString = String(data: data, encoding: .utf8) ?? "Unable to parse response"
@@ -845,7 +837,32 @@ class NetworkManager {
             }
         }.resume()
     }
-   
+    
+    func fetchTeamsForUser(email: String, completion: @escaping (Result<[Team], Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/get-user-teams/\(email)") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+            
+            do {
+                let teams = try JSONDecoder().decode([Team].self, from: data)
+                completion(.success(teams))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
     func deletePod(podId: Int, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/delete-pod/\(podId)/") else {

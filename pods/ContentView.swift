@@ -127,6 +127,14 @@ struct ContentView: View {
             if let storedUsername = UserDefaults.standard.string(forKey: "username") {
                                        viewModel.username = storedUsername
                                    }
+            if let activeTeamId = UserDefaults.standard.object(forKey: "activeTeamId") as? Int {
+                      viewModel.activeTeamId = activeTeamId
+                  }
+                  if let activeWorkspaceId = UserDefaults.standard.object(forKey: "activeWorkspaceId") as? Int {
+                      viewModel.activeWorkspaceId = activeWorkspaceId
+                  }
+                  viewModel.profileInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
+                  viewModel.profileColor = UserDefaults.standard.string(forKey: "profileColor") ?? ""
                           }
                           .onChange(of: isAuthenticated) {_, newValue in
                               // Persist the authentication state

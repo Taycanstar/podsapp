@@ -17,5 +17,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var username: String = ""
     @Published var password: String = ""
     @Published var activeTeamId: Int?
-        @Published var activeTeamName: String = ""
+    @Published var activeWorkspaceId: Int?
+    @Published var profileInitial: String = ""
+    @Published var profileColor: String = ""
 }
