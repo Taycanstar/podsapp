@@ -245,6 +245,8 @@ struct PodView: View {
     @Binding var needsRefresh: Bool
     @State private var showPodOptionsSheet = false
     @EnvironmentObject var homeViewModel: HomeViewModel
+    
+    @Environment(\.isTabBarVisible) var isTabBarVisible
 
     var body: some View {
         ZStack {
@@ -391,6 +393,10 @@ struct PodView: View {
                         refreshPodItems()
                     }
                     homeViewModel.updatePodLastVisited(podId: pod.id)
+                    isTabBarVisible.wrappedValue = false
+                }
+                .onDisappear{
+                    isTabBarVisible.wrappedValue = true
                 }
                 .sheet(isPresented: $showPodOptionsSheet) {
                     PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
