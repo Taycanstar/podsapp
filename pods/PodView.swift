@@ -693,14 +693,14 @@ struct PodView: View {
         .sheet(isPresented: $showColumnEditSheet) {
                    if let selectedColumn = selectedColumnForEdit,
                       let itemIndex = selectedItemIndex {
-                       ColumnEditView(columnName: selectedColumn.name,
+                       ColumnEditView(columnName: selectedColumn.name,  columnType: pod.columns[selectedColumn.index].type,
                                       value: (reorderedItems[itemIndex].columnValues?[selectedColumn.name] ?? "") ?? "",
                                       onSave: { newValue in
                                           updateColumnValue(itemIndex: itemIndex,
                                                             columnName: selectedColumn.name,
                                                             newValue: newValue)
                                       })
-                       .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                       .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
                    }
                }
        
@@ -1110,31 +1110,56 @@ struct PodViewHeaderSection: View {
     }
 }
 
+
+
 struct ColumnEditView: View {
     let columnName: String
+    let columnType: String
     @State private var value: String
     let onSave: (String) -> Void
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
+    @FocusState private var isFocused: Bool
 
-    init(columnName: String, value: String, onSave: @escaping (String) -> Void) {
+    init(columnName: String, columnType: String, value: String, onSave: @escaping (String) -> Void) {
         self.columnName = columnName
+        self.columnType = columnType
         self._value = State(initialValue: value)
         self.onSave = onSave
     }
 
     var body: some View {
+        NavigationView {
         ZStack {
-            (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
-                .edgesIgnoringSafeArea(.all)
+            backgroundColor.edgesIgnoringSafeArea(.all)
+
             
-            NavigationView {
+          
                 VStack {
-                    TextEditor(text: $value)
-                        .background(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        .padding(.horizontal)
+                    if columnType == "text" {
+//                        TextEditor(text: $value)
+//                            .background(backgroundColor)
+//                            .padding(.horizontal)
+//                            .focused($isFocused)
+                        CustomTextEditorWrapper(text: $value, isFocused: $isFocused, backgroundColor: backgroundColor)
+                                                    .padding(.horizontal)
+                                                    .focused($isFocused)
+            
+                    } else {
+                        TextField("", text: $value)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.accentColor, lineWidth: 2)
+                            )
+                            .padding(.horizontal)
+                            .focused($isFocused)
+                    }
                     Spacer()
                 }
+                .background(backgroundColor)
                 .navigationBarTitle("\(columnName)", displayMode: .inline)
                 .navigationBarItems(
                     leading: Button(action: {
@@ -1150,10 +1175,71 @@ struct ColumnEditView: View {
                 )
             }
         }
+        .onAppear {
+
+                isFocused = true
+
+        }
     }
+    
+     private var backgroundColor: Color {
+         colorScheme == .dark ? Color(rgb: 44,44,44) : .white
+     }
 }
 
+struct CustomTextEditorWrapper: UIViewRepresentable {
+    @Binding var text: String
+    @FocusState.Binding var isFocused: Bool
+    let backgroundColor: Color
 
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.backgroundColor = UIColor(backgroundColor)
+        textView.font = UIFont.preferredFont(forTextStyle: .body)
+        textView.isScrollEnabled = true
+        textView.isEditable = true
+        textView.isUserInteractionEnabled = true
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        uiView.text = text
+        uiView.backgroundColor = UIColor(backgroundColor)
+        
+        if isFocused && !uiView.isFirstResponder {
+            DispatchQueue.main.async {
+                uiView.becomeFirstResponder()
+            }
+        } else if !isFocused && uiView.isFirstResponder {
+            uiView.resignFirstResponder()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        var parent: CustomTextEditorWrapper
+
+        init(_ parent: CustomTextEditorWrapper) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.isFocused = true
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.isFocused = false
+        }
+    }
+}
 struct CardDetailView: View {
     let item: PodItem
 
