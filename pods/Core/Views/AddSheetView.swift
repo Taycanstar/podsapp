@@ -12,82 +12,87 @@ struct AddSheetView: View {
     @Binding var showingVideoCreationScreen: Bool
     @Environment(\.dismiss) private var dismiss
     @Binding var showQuickPodView: Bool
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                           .fill(Color.secondary.opacity(0.6))
-                           .frame(width: 35, height: 4)
-                           .padding(.top, 10)
-            Text("Add")
-                .font(.system(size: 16, weight: .bold))
-                .padding(.top, 15)
-                .padding(.bottom, 10)
-            Divider()
+        ZStack {
+            (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                .edgesIgnoringSafeArea(.all)
             
-            VStack(alignment: .leading, spacing: 7) {
-                Button(action: {
-                    print("Tapped New Item")
-                    showAddSheet = false
-                }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
-                        Text("New Item")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
-                    }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.6))
+                    .frame(width: 35, height: 4)
+                    .padding(.top, 10)
+                Text("Add")
+                    .font(.system(size: 16, weight: .bold))
+                    .padding(.top, 15)
+                    .padding(.bottom, 10)
                 Divider()
-                Button(action: {
-                    dismiss() // This will dismiss the current sheet
-                                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                      showQuickPodView = true
-                                  }
-                }) {
-                    HStack {
-                        Image(systemName: "text.badge.plus")
-                            .font(.system(size: 20))
-                        Text("Quick Pod")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                
+                VStack(alignment: .leading, spacing: 7) {
+                    Button(action: {
+                        print("Tapped New Item")
+                        showAddSheet = false
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                            Text("New Item")
+                                .padding(.horizontal, 10)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.vertical, 8)
+                        .foregroundColor(Color(UIColor.label))
+                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Divider()
-                Button(action: {
-                    dismiss()  // This will dismiss the sheet
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        showingVideoCreationScreen = true
-                                    }
-                }) {
-                    HStack {
-                        Image(systemName: "video.badge.plus")
-                            .font(.system(size: 20))
-                        Text("Standard Pod")
-                            .padding(.horizontal, 10)
-                            .font(.system(size: 15))
+                    Divider()
+                    Button(action: {
+                        dismiss() // This will dismiss the current sheet
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showQuickPodView = true
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "text.badge.plus")
+                                .font(.system(size: 20))
+                            Text("Quick Pod")
+                                .padding(.horizontal, 10)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.vertical, 8)
+                        .foregroundColor(Color(UIColor.label))
+                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.vertical, 8)
-                    .foregroundColor(Color(UIColor.label))
-                    .background(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Divider()
+                    Button(action: {
+                        dismiss()  // This will dismiss the sheet
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingVideoCreationScreen = true
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "video.badge.plus")
+                                .font(.system(size: 20))
+                            Text("Standard Pod")
+                                .padding(.horizontal, 10)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.vertical, 8)
+                        .foregroundColor(Color(UIColor.label))
+                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
+                .padding(.horizontal, 15)
+                .padding(.top, 10)
+                .padding(.bottom, 15)
             }
-            .padding(.horizontal, 15)
-            .padding(.top, 10)
-            .padding(.bottom, 15)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+            .cornerRadius(20)
+            
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(UIColor.systemBackground))
-        .cornerRadius(20)
-    
     }
 }

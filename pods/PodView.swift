@@ -560,6 +560,12 @@ struct PodView: View {
     @State private var selectedView: ViewType = .list
     
     @State private var keyboardOffset: CGFloat = 0
+    
+    @State private var selectedColumnForEdit: (index: Int, name: String)?
+    @State private var showColumnEditSheet = false
+    @State private var showCardSheet = false
+    @State private var showBubbleSheet = false
+    @State private var selectedItemIndex: Int?
 
     
     enum ViewType: String, CaseIterable {
@@ -683,70 +689,76 @@ struct PodView: View {
                 EmptyView()
             }
         )
-   
+        .sheet(isPresented: $showColumnEditSheet) {
+                   if let selectedColumn = selectedColumnForEdit,
+                      let itemIndex = selectedItemIndex {
+                       ColumnEditView(columnName: selectedColumn.name,
+                                      value: (reorderedItems[itemIndex].columnValues?[selectedColumn.name] ?? "") ?? "",
+                                      onSave: { newValue in
+                                          updateColumnValue(itemIndex: itemIndex,
+                                                            columnName: selectedColumn.name,
+                                                            newValue: newValue)
+                                      })
+                   }
+               }
+               .sheet(isPresented: $showCardSheet) {
+                   if let index = selectedItemIndex {
+                       CardDetailView(item: reorderedItems[index])
+                   }
+               }
+               .sheet(isPresented: $showBubbleSheet) {
+                   if let index = selectedItemIndex {
+                       BubbleActionView(item: reorderedItems[index])
+                   }
+               }
     }
-//
-//    private var listView: some View {
-//        ForEach(reorderedItems.indices, id: \.self) { index in
-//            VStack(alignment: .leading, spacing: 8) {
-//                Text(reorderedItems[index].metadata)
-//                    .font(.system(size: 14))
-//                    .fontWeight(.regular)
-//                    .padding(.bottom, 4)
-//                
-//                HStack {
-//                    ForEach(pod.columns, id: \.name) { column in
-//                        columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
-//                    }
-//                }
-//            }
-//            .padding()
-//            .frame(maxWidth: .infinity, alignment: .leading)
-//            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
-//            .cornerRadius(10)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 10)
-//                    .stroke(borderColor, lineWidth: 1)
-//            )
-//            .onTapGesture {
-//                if !isEditing {
-//                    self.selection = (0, index)
-//                }
-//            }
-//            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
-//        }
-//        
-//        .padding(.horizontal, 15)
-//    }
+
     private var listView: some View {
-        ForEach(reorderedItems.indices, id: \.self) { index in
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(reorderedItems[index].metadata)
-                        .font(.system(size: 14))
-                        .fontWeight(.regular)
-                        .padding(.bottom, 4)
-                    
-                    HStack {
-                        ForEach(pod.columns, id: \.name) { column in
-                            columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
+            ForEach(reorderedItems.indices, id: \.self) { index in
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(reorderedItems[index].metadata)
+                            .font(.system(size: 14))
+                            .fontWeight(.regular)
+                            .padding(.bottom, 4)
+                        
+                        HStack {
+                            ForEach(Array(pod.columns.enumerated()), id: \.element.name) { columnIndex, column in
+                                columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
+                                    .onTapGesture {
+                                        selectedColumnForEdit = (columnIndex, column.name)
+                                        selectedItemIndex = index
+                                        showColumnEditSheet = true
+                                    }
+                            }
                         }
                     }
-                }
-                .padding()
-                
-                Spacer()
-                
-                VStack() {
-                    iconView(for: reorderedItems[index])
+                    .padding()
+                    .onTapGesture {
+                        selectedItemIndex = index
+                        showCardSheet = true
+                    }
+                    
                     Spacer()
-                    Image(systemName: "plus.bubble")
-                        .font(.system(size: 20))
-                        .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                    
+                    VStack {
+                        iconView(for: reorderedItems[index])
+                            .onTapGesture {
+                                if reorderedItems[index].videoURL != nil || reorderedItems[index].imageURL != nil {
+                                    self.selection = (0, index)
+                                }
+                            }
+                        Spacer()
+                        Image(systemName: "plus.bubble")
+                            .font(.system(size: 20))
+                            .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                            .onTapGesture {
+                                selectedItemIndex = index
+                                showBubbleSheet = true
+                            }
+                    }
+                    .padding(10)
                 }
-                .padding(10)
-//                .padding(.vertical, 5)
-            }
 //            .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
@@ -795,6 +807,11 @@ struct PodView: View {
         .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
         .cornerRadius(4)
     }
+    private func updateColumnValue(itemIndex: Int, columnName: String, newValue: String) {
+            reorderedItems[itemIndex].columnValues?[columnName] = newValue
+            // Here you would also update the backend with the new value
+        }
+    
     private func getColumnValues(for item: PodItem) -> [String: String?]? {
         return item.columnValues
     }
@@ -1045,7 +1062,7 @@ struct PodViewHeaderSection: View {
             searchSection
         }
         .padding(.horizontal)
-        .padding(.top, 15)
+        .padding(.top, 10)
         .padding(.bottom, 15)
     }
     
@@ -1059,8 +1076,11 @@ struct PodViewHeaderSection: View {
         } label: {
             HStack {
                 Image(systemName: "square.grid.2x2")
+                    .foregroundColor(.primary)
                 Text(selectedView.rawValue)
+                    .foregroundColor(.primary)
                 Image(systemName: "chevron.down")
+                    .foregroundColor(.primary)
             }
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247)))
@@ -1080,5 +1100,65 @@ struct PodViewHeaderSection: View {
         Image(systemName: "magnifyingglass")
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247)))
+    }
+}
+
+struct ColumnEditView: View {
+    let columnName: String
+    @State private var value: String
+    let onSave: (String) -> Void
+
+    init(columnName: String, value: String, onSave: @escaping (String) -> Void) {
+        self.columnName = columnName
+        self._value = State(initialValue: value)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField(columnName, text: $value)
+            }
+            .navigationBarTitle("Edit \(columnName)", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Save") {
+                onSave(value)
+            })
+        }
+    }
+}
+
+struct CardDetailView: View {
+    let item: PodItem
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Details")) {
+                    Text("Metadata: \(item.metadata)")
+              
+                    // Add more details as needed
+                }
+            }
+            .navigationBarTitle("Item Details", displayMode: .inline)
+        }
+    }
+}
+
+struct BubbleActionView: View {
+    let item: PodItem
+
+    var body: some View {
+        NavigationView {
+            List {
+                Button("Edit") {
+                    // Implement edit action
+                }
+                Button("Delete") {
+                    // Implement delete action
+                }
+                // Add more actions as needed
+            }
+            .navigationBarTitle("Actions", displayMode: .inline)
+        }
     }
 }

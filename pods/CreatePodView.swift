@@ -24,10 +24,7 @@ struct CreatePodView: View {
     @FocusState private var focusedField: String?
     @State private var showNotesPlaceholder: [Int: Bool] = [:]
     var body: some View {
-        
   
-            
-            
             VStack {
                 header
                 if selectedOption == "Create pod" {

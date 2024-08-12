@@ -163,7 +163,7 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
-    
+
     @State private var showAddSheet = false
     @State private var showQuickPodView = false
     
@@ -211,6 +211,7 @@ struct ContentView: View {
                     AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
+             
                 .fullScreenCover(isPresented: $showingVideoCreationScreen) {
                     CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                         .background(Color.black.edgesIgnoringSafeArea(.all))
