@@ -699,18 +699,24 @@ struct PodView: View {
                                                             columnName: selectedColumn.name,
                                                             newValue: newValue)
                                       })
+                       .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                    }
                }
+       
                .sheet(isPresented: $showCardSheet) {
                    if let index = selectedItemIndex {
                        CardDetailView(item: reorderedItems[index])
+                           .presentationDetents([.height(UIScreen.main.bounds.height / 1.5)])
                    }
                }
+          
                .sheet(isPresented: $showBubbleSheet) {
                    if let index = selectedItemIndex {
                        BubbleActionView(item: reorderedItems[index])
+                           .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
                    }
                }
+              
     }
 
     private var listView: some View {
@@ -768,9 +774,8 @@ struct PodView: View {
                     .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
             )
             .onTapGesture {
-                if !isEditing {
-                    self.selection = (0, index)
-                }
+                selectedItemIndex = index
+                showCardSheet = true
             }
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
         }
