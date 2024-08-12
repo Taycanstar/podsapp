@@ -570,6 +570,8 @@ struct PodView: View {
 
     var body: some View {
         ZStack {
+            (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+                            .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
                 PodViewHeaderSection(selectedView: $selectedView)
                
@@ -586,8 +588,10 @@ struct PodView: View {
                             
                             if isCreatingNewItem {
                                 newItemInputView
+                                    .padding(.bottom, 45)
                             } else {
                                 addItemButton
+                                    .padding(.bottom, 45)
                             }
                         }
                
@@ -625,6 +629,7 @@ struct PodView: View {
                 }
             }
         }
+     
         .edgesIgnoringSafeArea(.bottom)
         .onAppear {
             self.reorderedItems = self.pod.items
@@ -648,6 +653,7 @@ struct PodView: View {
                      keyboardOffset = 0
                  }
              }
+
         }
         .onDisappear {
             isTabBarVisible.wrappedValue = true
@@ -677,30 +683,61 @@ struct PodView: View {
                 EmptyView()
             }
         )
+   
     }
-    
+
     private var listView: some View {
-      
-            ForEach(reorderedItems.indices, id: \.self) { index in
+        ForEach(reorderedItems.indices, id: \.self) { index in
+            VStack(alignment: .leading, spacing: 8) {
                 Text(reorderedItems[index].metadata)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(borderColor, lineWidth: 1)
-                    )
-                    .onTapGesture {
-                        if !isEditing {
-                            self.selection = (0, index)
-                        }
+                    .font(.system(size: 14))
+                    .fontWeight(.regular)
+                    .padding(.bottom, 4)
+                
+                HStack {
+                    ForEach(pod.columns, id: \.name) { column in
+                        columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
                     }
+                }
             }
-            .padding(.horizontal, 15)
-    
-    
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .onTapGesture {
+                if !isEditing {
+                    self.selection = (0, index)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+        }
+        
+        .padding(.horizontal, 15)
     }
+
+    private func columnView(name: String, value: String?) -> some View {
+        VStack {
+            if let value = value, !value.isEmpty {
+                Text("\(value) \(name)")
+                    .font(.system(size: 14))
+            } else {
+                Text(name)
+                    .font(.system(size: 14))
+            }
+        }
+        .padding(.horizontal,6)
+        .padding(.vertical,4)
+        .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
+        .cornerRadius(6)
+    }
+    private func getColumnValues(for item: PodItem) -> [String: String?]? {
+        return item.columnValues
+    }
+    
     
     private var borderColor: Color {
         colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 230, 230, 230)
@@ -734,7 +771,7 @@ struct PodView: View {
             }
             .disabled(newItemText.isEmpty)
         }
-//        .padding(8)
+
         .padding(.vertical, 10)
         .padding(.horizontal, 5)
       
@@ -745,7 +782,7 @@ struct PodView: View {
         .padding(.top, 10)
         
         .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
-//        .padding(.bottom, keyboardOffset)
+
     }
     
     private var addItemButton: some View {
@@ -930,6 +967,7 @@ struct PodView: View {
 
 struct PodViewHeaderSection: View {
     @Binding var selectedView: PodView.ViewType
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         HStack(spacing: 10) {
@@ -957,7 +995,7 @@ struct PodViewHeaderSection: View {
                 Image(systemName: "chevron.down")
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+            .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247)))
         }
     }
     
@@ -967,12 +1005,12 @@ struct PodViewHeaderSection: View {
             Text("Filter")
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247)))
     }
     
     private var searchSection: some View {
         Image(systemName: "magnifyingglass")
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+            .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247)))
     }
 }

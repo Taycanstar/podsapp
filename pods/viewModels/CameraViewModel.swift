@@ -43,6 +43,12 @@ struct Workspace: Identifiable, Codable {
     }
 }
 
+struct PodColumn: Codable, Identifiable {
+    var id: String { name }
+    var name: String
+    var type: String
+}
+
 
 struct PodItem: Identifiable {
     var id: Int // Correctly declare the type of `id`
@@ -68,6 +74,7 @@ struct PodItem: Identifiable {
     var uuid: String?
     var player: AVPlayer?
     var notes: String
+    var columnValues: [String: String?]?
     
 }
 
@@ -81,6 +88,7 @@ struct Pod: Identifiable {
     var workspace: String?
     var isFavorite: Bool?
     var lastVisited: Date?
+    var columns: [PodColumn] = []
 }
 
 
@@ -94,6 +102,7 @@ struct PodJSON: Codable {
     let workspace: String?
     var isFavorite: Bool?
     var lastVisited: Date?
+    var columns: [PodColumn]
 }
 
 struct PodItemJSON: Codable {
@@ -104,6 +113,7 @@ struct PodItemJSON: Codable {
     let thumbnail: String
     let itemType: String?
     let notes: String?
+    let columnValues: [String: String?]?
    
 }
 
@@ -122,6 +132,7 @@ extension Pod {
         self.workspace = podJSON.workspace ?? "Main workspace"
         self.isFavorite = podJSON.isFavorite
         self.lastVisited = podJSON.lastVisited
+        self.columns = podJSON.columns
     }
 }
 
@@ -150,6 +161,7 @@ extension PodItem {
                   
                }
         self.notes = itemJSON.notes ?? ""
+        self.columnValues = itemJSON.columnValues ?? [:]
     }
 }
 
