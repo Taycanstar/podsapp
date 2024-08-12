@@ -35,7 +35,9 @@ struct CustomTabBar: View {
                 }
                 .padding(.horizontal, 45)
                 .padding(.top, 11)
-                .background(tabBarBackgroundColor)
+                .background(
+                    Material.ultraThin)
+//                .background(tabBarBackgroundColor)
                 
             }
            
@@ -48,6 +50,7 @@ struct CustomTabBar: View {
     // Updated the background color to adapt to light/dark mode
     var tabBarBackgroundColor: Color {
         if sharedViewModel.isItemViewActive { // Check if ItemView is active
+            
             return .black
         } else if selectedTab == 1 { // Camera tab is selected
             return .black

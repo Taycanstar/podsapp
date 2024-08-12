@@ -1,229 +1,6 @@
 import SwiftUI
 import AVFoundation
 
-//struct PodView: View {
-//    @Binding var pod: Pod
-//    @Environment(\.presentationMode) var presentationMode
-//    @State private var isEditing = false
-//    @State private var reorderedItems: [PodItem] = []
-//    @State private var deletedItemIDs: [Int] = []
-//    @State private var showMenu = false
-//    @State private var showAddItemView = false
-//    @State private var isAnyItemEditing: Bool = false
-//    @State private var showDoneButton = false
-//    @State private var editingItemId: Int?
-//    @State private var selection: (podIndex: Int, itemIndex: Int)?
-//    var networkManager: NetworkManager = NetworkManager()
-//    @EnvironmentObject var uploadViewModel: UploadViewModel
-//    
-//    @FocusState private var focusedField: String?
-//    @State private var showNotesPlaceholder: [Int: Bool] = [:]
-//    
-//    @Binding var needsRefresh: Bool
-//    @State private var showPodOptionsSheet = false
-//    @EnvironmentObject var homeViewModel: HomeViewModel
-//
-//
-//    
-//    var body: some View {
-//        PodViewHeaderSection()
-//        List {
-//            ForEach(reorderedItems.indices, id: \.self) { index in
-//                VStack(alignment: .leading, spacing: 0) {
-//                    HStack {
-//                        TextField("", text: $reorderedItems[index].metadata)
-//                            .focused($focusedField, equals: "metadata_\(reorderedItems[index].id)")
-//                            .font(.body)
-//                            .onTapGesture {
-//                                if !isEditing {
-//                                    withAnimation(.easeInOut(duration: 0.3)) {
-//                                        focusedField = "metadata_\(reorderedItems[index].id)"
-//                                        showDoneButton = true
-//                                        isAnyItemEditing = true
-//                                        editingItemId = reorderedItems[index].id
-//                                        showNotesPlaceholder[reorderedItems[index].id] = true
-//                                    }
-//                                }
-//                            }
-//                        
-//                        Spacer()
-//                        
-//                        HStack(spacing: 5) {
-//                            if let thumbnailURL = reorderedItems[index].thumbnailURL {
-//                                AsyncImage(url: thumbnailURL) { phase in
-//                                    switch phase {
-//                                    case .empty:
-//                                        ProgressView()
-//                                    case .success(let image):
-//                                        image.resizable()
-//                                    case .failure(_):
-//                                        Image(systemName: "photo")
-//                                    @unknown default:
-//                                        EmptyView()
-//                                    }
-//                                }
-//                                .aspectRatio(contentMode: .fill)
-//                                .frame(width: 30, height: 30)
-//                                .clipShape(RoundedRectangle(cornerRadius: 8))
-//                            }
-//                            if !isEditing {
-//                                Image(systemName: "chevron.right")
-//                                    .foregroundColor(.gray)
-//                                    .font(.system(size: 14))
-//                            }
-//                        }
-//                        .onTapGesture {
-//                            if !isEditing {
-//                                self.selection = (0, index)
-//                            }
-//                        }
-//                    }
-//
-//                    if !reorderedItems[index].notes.isEmpty || showNotesPlaceholder[reorderedItems[index].id] == true {
-//                        ZStack(alignment: .topLeading) {
-//                            TextEditor(text: $reorderedItems[index].notes)
-//                                .focused($focusedField, equals: "notes_\(reorderedItems[index].id)")
-//                                .font(.footnote)
-//                                .foregroundColor(.gray)
-//                                .frame(height: max(20, calculateHeight(for: reorderedItems[index].notes)))
-//                                .background(Color.clear)
-//                                .opacity(reorderedItems[index].notes.isEmpty ? 0.6 : 1)
-//                                .onTapGesture {
-//                                    if !isEditing {
-//                                        withAnimation(.easeInOut(duration: 0.3)) {
-//                                            focusedField = "notes_\(reorderedItems[index].id)"
-//                                            showDoneButton = true
-//                                            isAnyItemEditing = true
-//                                            editingItemId = reorderedItems[index].id
-//                                        }
-//                                    }
-//                                }
-//                            
-//                            if reorderedItems[index].notes.isEmpty {
-//                                Text("Add note")
-//                                    .font(.footnote)
-//                                    .foregroundColor(.gray)
-//                                    .padding(.top, 7)
-//                                    .padding(.leading, 5)
-//                                    .allowsHitTesting(false)
-//                            }
-//                        }
-//                        .padding(.top, 0)
-//                        .padding(.leading, -5)
-//                        .transition(.opacity.combined(with: .move(edge: .top)))
-//                    }
-//                  
-//                }
-//
-//                .padding(.vertical, 3)
-//                .padding(.horizontal, 15)
-//                .contentShape(Rectangle())
-//                .listRowInsets(EdgeInsets())
-//                .listRowSeparator(.hidden)
-//                if index < reorderedItems.count - 1 {
-//                                Divider()
-//                                    .padding(.leading, 0) // Adjust padding as needed
-//                                    .padding(.vertical, 0)
-//                                    .padding(.trailing, -25)
-//                            }
-//            }
-//            .onMove(perform: moveItem)
-//            .onDelete(perform: deleteItem)
-//            
-//            Button(action: {
-//                print("tapped add")
-//            }) {
-//                HStack(spacing: 5) { // Adjust the spacing between the icon and label
-//                    Image(systemName: "plus")
-//                        .font(.system(size: 14, weight: .regular))
-//                    Text("Add item")
-//                        .font(.system(size: 14, weight: .regular))
-//                }
-//                .padding()
-//                .frame(maxWidth: .infinity)
-//                .background(Color(.systemBackground)) // Background depends on light/dark mode
-//                .foregroundColor(.accentColor) // Text color is the accent color
-//                .cornerRadius(10)
-//                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
-//            }
-//            .padding(.top, 20)
-//            .padding(.bottom, 70)
-//            .padding(.horizontal, 15)
-//            .listRowInsets(EdgeInsets())
-//            .listRowSeparator(.hidden)
-//
-//
-//
-//        }
-//      
-//        .padding(.horizontal, 5)
-//        
-//        .padding(.vertical, 20)
-//        
-//        .scrollIndicators(.hidden)
-//        .listStyle(PlainListStyle())
-//        .environment(\.defaultMinListRowHeight, 1)
-//        .navigationTitle(pod.title)
-//        .navigationBarTitleDisplayMode(.inline)
-//        .navigationBarItems(trailing: trailingNavigationBarItem)
-//        .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
-//        .onAppear {
-//            self.reorderedItems = self.pod.items
-//            uploadViewModel.addItemCompletion = {
-//                refreshPodItems()
-//            }
-//     
-//                     homeViewModel.updatePodLastVisited(podId: pod.id)
-//               
-//        }
-//        .sheet(isPresented: $showPodOptionsSheet) {
-//            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
-//           }
-////        .padding(.top, 15)
-//        .background(
-//            NavigationLink(
-//                destination: selection.map { index in
-//                    PlayerContainerView(
-//                        items: reorderedItems,
-//                        initialIndex: index.itemIndex
-//                    )
-//                },
-//                isActive: Binding(
-//                    get: { selection != nil },
-//                    set: { if !$0 { selection = nil } }
-//                )
-//            ) {
-//                EmptyView()
-//            }
-//        )
-//  
-//
-//        .actionSheet(isPresented: $showMenu) {
-//            ActionSheet(title: Text("Options"), buttons: [
-//                .default(Text("Edit")) {
-//                    isEditing.toggle()
-//                },
-//                .cancel()
-//            ])
-//        }
-//        .fullScreenCover(isPresented: $showAddItemView) {
-//            AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
-//        }
-//        .onChange(of: focusedField) { newValue in
-//            if newValue == nil {
-//                withAnimation(.easeInOut(duration: 0.3)) {
-//                    for (id, _) in showNotesPlaceholder {
-//                        if let index = reorderedItems.firstIndex(where: { $0.id == id }),
-//                           reorderedItems[index].notes.isEmpty {
-//                            showNotesPlaceholder[id] = false
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        
-//       
-//    }
 struct PodView: View {
     @Binding var pod: Pod
     @Environment(\.presentationMode) var presentationMode
@@ -247,6 +24,10 @@ struct PodView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     
     @Environment(\.isTabBarVisible) var isTabBarVisible
+    
+    @State private var isCreatingNewItem = false
+       @State private var newItemText = ""
+       @FocusState private var isNewItemFocused: Bool
 
     var body: some View {
         ZStack {
@@ -354,28 +135,71 @@ struct PodView: View {
                     }
                     .onMove(perform: moveItem)
                     .onDelete(perform: deleteItem)
-                    
-                    Button(action: {
-                        showAddItemView = true
-                    }) {
-                        HStack(spacing: 5) { // Adjust the spacing between the icon and label
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .regular))
-                            Text("Add item")
-                                .font(.system(size: 14, weight: .regular))
+                    // Conditional rendering of the input field
+                    if isCreatingNewItem {
+                        HStack {
+                            TextField("Add item", text: $newItemText)
+                                .font(.system(size: 14))
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 5)
+                                .background(Color(.systemBackground))
+                                .focused($isNewItemFocused)
+                             
+                            Button(action: {
+                                // Handle adding the new item
+                                if !newItemText.isEmpty {
+                                    // Add the new item logic here
+                                    // Reset the state
+                                    isCreatingNewItem = false
+                                    newItemText = ""
+                                }
+                            }) {
+                                Text("Add")
+                                    .fontWeight(.regular)
+                                    .font(.system(size: 14))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentColor)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(6)
+                            }
+                            .disabled(newItemText.isEmpty)
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemBackground)) // Background depends on light/dark mode
-                        .foregroundColor(.accentColor) // Text color is the accent color
-                        .cornerRadius(10)
+                        .padding(8)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 10)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
                         .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+                      
+                    } else {
+                        // "Add Item" button
+                        Button(action: {
+                            isCreatingNewItem = true
+                            isNewItemFocused = true // Automatically focus the new item field
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 14, weight: .regular))
+                                Text("Add item")
+                                    .font(.system(size: 14, weight: .regular))
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemBackground)) // Background depends on light/dark mode
+                            .foregroundColor(.accentColor) // Text color is the accent color
+                            .cornerRadius(10)
+                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+                        }
+                        .padding(.top, 20)
+                        .padding(.bottom, 70)
+                        .padding(.horizontal, 10)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
                     }
-                    .padding(.top, 20)
-                    .padding(.bottom, 70)
-                    .padding(.horizontal, 15)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
+
                 }
               
                 .padding(.horizontal, 5)
@@ -453,7 +277,7 @@ struct PodView: View {
                         HStack {
                             Image(systemName: "plus")
                             Text("Add Item")
-                                .fontWeight(.bold)
+                                .fontWeight(.medium)
                         }
                         .padding()
                         .background(Color.accentColor)
@@ -461,7 +285,8 @@ struct PodView: View {
                         .cornerRadius(10)
                         .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 5)
                     }
-                    .padding([.trailing, .bottom], 40) // Position the button a bit higher to avoid tab bar overlap
+                    .padding(.bottom, 40)
+                    .padding(.trailing, 15)
                 }
             }
         }

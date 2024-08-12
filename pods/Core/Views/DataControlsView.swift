@@ -11,6 +11,7 @@ struct DataControlsView: View {
     @State private var showingSuccessMessage = false
     @State private var successMessage = ""
     @Binding var isAuthenticated: Bool
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ZStack {
@@ -58,6 +59,7 @@ struct DataControlsView: View {
                     }
                 }
             }
+            .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
             .navigationTitle("Data Controls")
             .navigationBarTitleDisplayMode(.inline)
             .disabled(isLoading)

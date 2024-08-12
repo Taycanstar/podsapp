@@ -39,45 +39,52 @@ class ThemeManager: ObservableObject {
 
 struct ColorThemeView: View {
     @EnvironmentObject var themeManager: ThemeManager
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
-        VStack {
-            HStack {
-                Spacer()
-                themeOptionView(option: .light, imageName: "sun.max.fill")
-                Spacer()
-                themeOptionView(option: .dark, imageName: "moon.fill")
-                Spacer()
-            }
-            .padding()
-            
-            VStack(alignment: .leading) { // Align contents to the leading edge
-                Toggle(isOn: Binding(
-                    get: { themeManager.currentTheme == .system },
-                    set: { isOn in themeManager.setTheme(isOn ? .system : (themeManager.currentTheme == .dark ? .dark : .light)) }
-                )) {
-                    Text("Use device settings")
-                        .foregroundColor(iconColor)
+        ZStack {
+            formBackgroundColor.edgesIgnoringSafeArea(.all)
+            VStack {
+                HStack {
+                    Spacer()
+                    themeOptionView(option: .light, imageName: "sun.max.fill")
+                    Spacer()
+                    themeOptionView(option: .dark, imageName: "moon.fill")
+                    Spacer()
                 }
-                .padding(.bottom, 2) // Add some spacing between the toggle and the text
+                .padding()
                 
-                Text("Match appearance to your device’s Display & Brightness settings.")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
+                VStack(alignment: .leading) { // Align contents to the leading edge
+                    Toggle(isOn: Binding(
+                        get: { themeManager.currentTheme == .system },
+                        set: { isOn in themeManager.setTheme(isOn ? .system : (themeManager.currentTheme == .dark ? .dark : .light)) }
+                    )) {
+                        Text("Use device settings")
+                            .foregroundColor(colorScheme ==  .dark ? .white : .black)
+                    }
+                    .padding(.bottom, 2) // Add some spacing between the toggle and the text
+                    
+                    Text("Match appearance to your device’s Display & Brightness settings.")
+                        .font(.footnote)
+                        .foregroundColor(.gray)
+                }
+                .padding()
             }
-            .padding()
+            .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Display")
+            
         }
-        .background(Color(UIColor.systemBackground))
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Display")
     }
-    
+    private var formBackgroundColor: Color {
+           colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
+       }
+
     private func themeOptionView(option: ThemeOption, imageName: String) -> some View {
         VStack {
             Image(systemName: imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(height: 50) // Adjust this value to make the icon smaller
+                .frame(height: 30) // Adjust this value to make the icon smaller
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 8)
@@ -85,7 +92,7 @@ struct ColorThemeView: View {
                 )
             Text(option.rawValue)
                 .font(.headline)
-                .foregroundColor(iconColor)
+                .foregroundColor(colorScheme ==  .dark ? .white : .black)
         }
         .onTapGesture {
             themeManager.setTheme(option)

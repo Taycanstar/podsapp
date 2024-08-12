@@ -20,88 +20,91 @@ struct ProfileView: View {
     var body: some View {
         
         NavigationView {
-            VStack {
-                Form {
-                    Section(header: Text("Account")) {
-                        HStack {
-                            Label("Email", systemImage: "envelope")
-                                .foregroundColor(iconColor)
-                            Spacer()
-                            Text(viewModel.email)
-                                .foregroundColor(iconColor)
+            ZStack {
+                formBackgroundColor.edgesIgnoringSafeArea(.all)
+                    Form {
+                        Section(header: Text("Account")) {
+                            HStack {
+                                Label("Email", systemImage: "envelope")
+                                    .foregroundColor(iconColor)
+                                Spacer()
+                                Text(viewModel.email)
+                                    .foregroundColor(iconColor)
+                            }
+                            HStack {
+                                Label("Username", systemImage: "person")
+                                    .foregroundColor(iconColor)
+                                Spacer()
+                                Text(viewModel.username)
+                                    .foregroundColor(iconColor)
+                            }
+                            NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                                Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
+                                    .foregroundColor(iconColor)
+                            }
+                            NavigationLink(destination: MyTeamsView()) {
+                                Label("My team", systemImage: "person.2")
+                                    .foregroundColor(iconColor)
+                            }
+                            NavigationLink(destination: MyWorkspacesView()) {
+                                Label("My workspace", systemImage: "sparkles.rectangle.stack")
+                                    .foregroundColor(iconColor)
+                            }
+                            
                         }
-                        HStack {
-                            Label("Username", systemImage: "person")
-                                .foregroundColor(iconColor)
-                            Spacer()
-                            Text(viewModel.username)
-                                .foregroundColor(iconColor)
+                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                        
+                        Section(header: Text("Content & Display")) {
+                            
+                            NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
+                                Label("Color theme", systemImage: "moon")
+                                    .foregroundColor(iconColor)
+                            }
+                            
                         }
-                        NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
-                            Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
-                                .foregroundColor(iconColor)
+                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                        Section(header: Text("Support & About")) {
+                            Button(action: {
+                                self.showingMail = true
+                            }) {
+                                Label("Send feedback", systemImage: "message")
+                                    .foregroundColor(iconColor)
+                            }
+                            Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
+                                Label("Terms of Use", systemImage: "doc.plaintext")
+                                    .foregroundColor(iconColor)
+                            }
+                            Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
+                                Label("Privacy Policy", systemImage: "lock")
+                                    .foregroundColor(iconColor)
+                            }
+                            Button(action: {
+                                self.showTourView = true
+                            }) {
+                                Label("App tour guide", systemImage: "safari")
+                                    .foregroundColor(iconColor)
+                            }
                         }
-                        NavigationLink(destination: MyTeamsView()) {
-                            Label("My team", systemImage: "person.2")
-                                .foregroundColor(iconColor)
+                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                        
+                        Section() {
+                            
+                            Button(action: {
+                                logOut()
+                            }) {
+                                Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    .foregroundColor(iconColor)
+                                    .foregroundColor(.red)
+                            }
+                            
                         }
-                        NavigationLink(destination: MyWorkspacesView()) {
-                            Label("My workspace", systemImage: "sparkles.rectangle.stack")
-                                .foregroundColor(iconColor)
-                        }
+                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         
                     }
-                    
-                    Section(header: Text("Content & Display")) {
-                        //                    NavigationLink(destination: NotificationsView()) {
-                        //                        Label("Notifications", systemImage: "bell")
-                        //                            .foregroundColor(iconColor)
-                        //                    }
-                        NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
-                            Label("Color theme", systemImage: "moon")
-                                .foregroundColor(iconColor)
-                        }
-                        
-                    }
-                    Section(header: Text("Support & About")) {
-                        Button(action: {
-                            self.showingMail = true
-                        }) {
-                            Label("Send feedback", systemImage: "message")
-                                .foregroundColor(iconColor)
-                        }
-                        Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
-                            Label("Terms of Use", systemImage: "doc.plaintext")
-                                .foregroundColor(iconColor)
-                        }
-                        Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
-                            Label("Privacy Policy", systemImage: "lock")
-                                .foregroundColor(iconColor)
-                        }
-                        Button(action: {
-                            self.showTourView = true
-                        }) {
-                            Label("App tour guide", systemImage: "safari")
-                                .foregroundColor(iconColor)
-                        }
-                    }
-                    
-                    Section() {
-                        
-                        Button(action: {
-                            logOut()
-                        }) {
-                            Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
-                                .foregroundColor(iconColor)
-                                .foregroundColor(.red)
-                        }
-                        
-                    }
-                    
-                }
-         
-                .padding(.bottom, 70)
+                    .scrollContentBackground(.hidden)
+                    .padding(.bottom, 50)
             }
+         
             .navigationBarTitle("Settings and privacy", displayMode: .inline)
             .sheet(isPresented: $showingMail) {
                 MailView(isPresented: self.$showingMail)
@@ -113,6 +116,10 @@ struct ProfileView: View {
     private var iconColor: Color {
         colorScheme == .dark ? .white : .black
     }
+    
+    private var formBackgroundColor: Color {
+           colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
+       }
 
        
     
@@ -262,6 +269,7 @@ struct MyTeamsView: View {
             }
             .padding()
         }
+        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
         .navigationBarTitle("My team", displayMode: .inline)
         .onAppear {
             homeViewModel.fetchTeamsForUser(email: viewModel.email)
@@ -271,7 +279,7 @@ struct MyTeamsView: View {
     private func teamView(team: Team) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
-                .fill(colorScheme == .dark ? Color("container") : Color.white)
+                .fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color.white)
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             
             HStack {
@@ -314,6 +322,7 @@ struct MyWorkspacesView: View {
             }
             .padding()
         }
+        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
         .navigationBarTitle("My workspace", displayMode: .inline)
         .onAppear {
             homeViewModel.fetchWorkspacesForUser(email: viewModel.email)

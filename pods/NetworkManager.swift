@@ -8,9 +8,9 @@ class NetworkManager {
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
 //
-//    let baseUrl = "http://192.168.1.67:8000"
-//    let baseUrl = "http://10.161.140.235:8000"
-    let baseUrl = "http://172.20.10.2:8000"
+    let baseUrl = "http://192.168.1.67:8000"
+
+//    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
