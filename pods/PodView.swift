@@ -594,6 +594,7 @@ struct PodView: View {
                             
                             if isCreatingNewItem {
                                 newItemInputView
+                       
                                     .padding(.bottom, 45)
                             } else {
                                 addItemButton
@@ -833,7 +834,7 @@ struct PodView: View {
                 .font(.system(size: 14))
                 .padding(.vertical, 8)
                 .padding(.horizontal, 5)
-                .background(Color(.systemBackground))
+                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
                 .focused($isNewItemFocused)
              
             Button(action: {
@@ -857,17 +858,18 @@ struct PodView: View {
 
         .padding(.vertical, 10)
         .padding(.horizontal, 5)
+        
+        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+//        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 1)
+        )
       
-        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
-        .cornerRadius(12)
         .padding(.horizontal, 15)
         .padding(.bottom, 20)
         .padding(.top, 10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+
 
     }
     
@@ -1112,6 +1114,8 @@ struct ColumnEditView: View {
     let columnName: String
     @State private var value: String
     let onSave: (String) -> Void
+    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var colorScheme
 
     init(columnName: String, value: String, onSave: @escaping (String) -> Void) {
         self.columnName = columnName
@@ -1120,17 +1124,35 @@ struct ColumnEditView: View {
     }
 
     var body: some View {
-        NavigationView {
-            Form {
-                TextField(columnName, text: $value)
+        ZStack {
+            (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                .edgesIgnoringSafeArea(.all)
+            
+            NavigationView {
+                VStack {
+                    TextEditor(text: $value)
+                        .background(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                        .padding(.horizontal)
+                    Spacer()
+                }
+                .navigationBarTitle("\(columnName)", displayMode: .inline)
+                .navigationBarItems(
+                    leading: Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    },
+                    trailing: Button("Save") {
+                        onSave(value)
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                )
             }
-            .navigationBarTitle("Edit \(columnName)", displayMode: .inline)
-            .navigationBarItems(trailing: Button("Save") {
-                onSave(value)
-            })
         }
     }
 }
+
 
 struct CardDetailView: View {
     let item: PodItem
