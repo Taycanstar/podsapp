@@ -685,28 +685,75 @@ struct PodView: View {
         )
    
     }
-
+//
+//    private var listView: some View {
+//        ForEach(reorderedItems.indices, id: \.self) { index in
+//            VStack(alignment: .leading, spacing: 8) {
+//                Text(reorderedItems[index].metadata)
+//                    .font(.system(size: 14))
+//                    .fontWeight(.regular)
+//                    .padding(.bottom, 4)
+//                
+//                HStack {
+//                    ForEach(pod.columns, id: \.name) { column in
+//                        columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
+//                    }
+//                }
+//            }
+//            .padding()
+//            .frame(maxWidth: .infinity, alignment: .leading)
+//            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+//            .cornerRadius(10)
+//            .overlay(
+//                RoundedRectangle(cornerRadius: 10)
+//                    .stroke(borderColor, lineWidth: 1)
+//            )
+//            .onTapGesture {
+//                if !isEditing {
+//                    self.selection = (0, index)
+//                }
+//            }
+//            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+//        }
+//        
+//        .padding(.horizontal, 15)
+//    }
     private var listView: some View {
         ForEach(reorderedItems.indices, id: \.self) { index in
-            VStack(alignment: .leading, spacing: 8) {
-                Text(reorderedItems[index].metadata)
-                    .font(.system(size: 14))
-                    .fontWeight(.regular)
-                    .padding(.bottom, 4)
-                
-                HStack {
-                    ForEach(pod.columns, id: \.name) { column in
-                        columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(reorderedItems[index].metadata)
+                        .font(.system(size: 14))
+                        .fontWeight(.regular)
+                        .padding(.bottom, 4)
+                    
+                    HStack {
+                        ForEach(pod.columns, id: \.name) { column in
+                            columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
+                        }
                     }
                 }
+                .padding()
+                
+                Spacer()
+                
+                VStack() {
+                    iconView(for: reorderedItems[index])
+                    Spacer()
+                    Image(systemName: "plus.bubble")
+                        .font(.system(size: 20))
+                        .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                }
+                .padding(10)
+//                .padding(.vertical, 5)
             }
-            .padding()
+//            .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(borderColor, lineWidth: 1)
+                    .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
             )
             .onTapGesture {
                 if !isEditing {
@@ -715,8 +762,21 @@ struct PodView: View {
             }
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
         }
-        
         .padding(.horizontal, 15)
+    }
+
+    private func iconView(for item: PodItem) -> some View {
+        Group {
+            if item.videoURL != nil || item.imageURL != nil {
+                Image(systemName: "play")
+                    .font(.system(size: 20))
+                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+            } else {
+                Image(systemName: "video.badge.plus")
+                    .font(.system(size: 20))
+                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+            }
+        }
     }
 
     private func columnView(name: String, value: String?) -> some View {
@@ -731,8 +791,9 @@ struct PodView: View {
         }
         .padding(.horizontal,6)
         .padding(.vertical,4)
+        .cornerRadius(4)
         .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
-        .cornerRadius(6)
+        .cornerRadius(4)
     }
     private func getColumnValues(for item: PodItem) -> [String: String?]? {
         return item.columnValues
@@ -775,12 +836,15 @@ struct PodView: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 5)
       
-        .background(Color(.systemBackground))
+        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
         .cornerRadius(12)
         .padding(.horizontal, 15)
         .padding(.bottom, 20)
         .padding(.top, 10)
-        
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
+        )
         .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
 
     }
@@ -798,9 +862,13 @@ struct PodView: View {
             }
             .padding(.vertical, 20)
             .frame(maxWidth: .infinity)
-            .background(Color(.systemBackground))
+            .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
             .foregroundColor(.accentColor)
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
+            )
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
