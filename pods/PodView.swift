@@ -879,10 +879,8 @@ struct PodView: View {
              
             Button(action: {
                 if !newItemText.isEmpty {
-                    // Add the new item logic here
-                    isCreatingNewItem = false
-                    newItemText = ""
-                }
+                               createNewPodItem()
+                           }
             }) {
                 Text("Add")
                     .fontWeight(.regular)
@@ -911,6 +909,34 @@ struct PodView: View {
         .padding(.top, 10)
 
 
+    }
+    
+    private func createNewPodItem() {
+        let newItemColumnValues: [String: ColumnValue] = pod.columns.reduce(into: [:]) { result, column in
+            result[column.name] = .null  // Initialize all columns with null values
+        }
+        
+        networkManager.createPodItem(
+            podId: pod.id,
+            label: newItemText,
+            itemType: nil,  // We're not setting an item type for now
+            notes: "",
+            columnValues: newItemColumnValues
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let newItem):
+                    self.reorderedItems.append(newItem)
+                    self.pod.items.append(newItem)
+                    self.newItemText = ""
+                    self.isCreatingNewItem = false
+                    self.needsRefresh = true
+                case .failure(let error):
+                    print("Failed to create new pod item: \(error)")
+                    // You might want to show an alert to the user here
+                }
+            }
+        }
     }
     
     private var addItemButton: some View {

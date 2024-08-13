@@ -1977,16 +1977,15 @@ class NetworkManager {
         }.resume()
     }
    
- 
-        func createPodItem(podId: Int, label: String, itemType: String, notes: String, columnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
-            guard let url = URL(string: "\(baseUrl)/api/pods/\(podId)/create-item/") else {
+    
+        func createPodItem(podId: Int, label: String, itemType: String?, notes: String, columnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
                 completion(.failure(NetworkError.invalidURL))
                 return
             }
 
-            let body: [String: Any] = [
+            var body: [String: Any] = [
                 "label": label,
-                "itemType": itemType,
                 "notes": notes,
                 "columnValues": columnValues.mapValues { value -> Any in
                     switch value {
@@ -1996,6 +1995,10 @@ class NetworkManager {
                     }
                 }
             ]
+            
+            if let itemType = itemType {
+                body["itemType"] = itemType
+            }
 
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
@@ -2015,23 +2018,29 @@ class NetworkManager {
                 }
 
                 guard let data = data else {
-                    completion(.failure(NetworkError.decodingError))
+                    completion(.failure(NetworkError.decodingError
+                                       ))
                     return
                 }
+                if let responseString = String(data: data, encoding: .utf8) {
+                          print("Raw response: \(responseString)")
+                      }
 
                 do {
                     if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                  
                        let itemData = json["item"] as? [String: Any] {
+                        print("Parsed JSON: \(json)")
                         let id = itemData["id"] as? Int ?? 0
                         let label = itemData["label"] as? String ?? ""
-                        let itemType = itemData["itemType"] as? String ?? ""
+                        let itemType = itemData["itemType"] as? String
                         let notes = itemData["notes"] as? String ?? ""
                         let columnValues = (itemData["columnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
                             if let stringValue = value as? String {
                                 return .string(stringValue)
                             } else if let intValue = value as? Int {
                                 return .number(intValue)
-                            }  else if value is NSNull {
+                            } else if value is NSNull {
                                 return .null
                             }
                             return nil
@@ -2040,13 +2049,16 @@ class NetworkManager {
                         let newItem = PodItem(id: id, metadata: label, itemType: itemType, notes: notes, columnValues: columnValues)
                         completion(.success(newItem))
                     } else {
+                        print("Failed to parse JSON")
                         completion(.failure(NetworkError.decodingError))
                     }
                 } catch {
+                    print("JSON parsing error: \(error)")
                     completion(.failure(NetworkError.decodingError))
                 }
             }.resume()
         }
+    
     
     
 }

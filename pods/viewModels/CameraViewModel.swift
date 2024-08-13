@@ -115,7 +115,7 @@ struct PodItemJSON: Codable {
     let videoURL: String?
     let imageURL: String?
     let label: String
-    let thumbnail: String
+    let thumbnail: String?
     let itemType: String?
     let notes: String?
 //    let columnValues: [String: String?]?
@@ -183,7 +183,7 @@ extension PodItem {
                     self.videoURL = nil // Assign nil if the string is nil
                 } // Consider safer unwrapping
         self.metadata = itemJSON.label
-        self.thumbnailURL = URL(string: itemJSON.thumbnail) // Consider safer unwrapping
+        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "") // Consider safer unwrapping
         if let imageString = itemJSON.imageURL {
                    self.imageURL = URL(string: imageString)
                } else {
