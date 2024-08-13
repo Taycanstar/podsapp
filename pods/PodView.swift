@@ -690,19 +690,31 @@ struct PodView: View {
                 EmptyView()
             }
         )
+
         .sheet(isPresented: $showColumnEditSheet) {
-                   if let selectedColumn = selectedColumnForEdit,
-                      let itemIndex = selectedItemIndex {
-                       ColumnEditView(columnName: selectedColumn.name,  columnType: pod.columns[selectedColumn.index].type,
-                                      value: (reorderedItems[itemIndex].columnValues?[selectedColumn.name] ?? "") ?? "",
-                                      onSave: { newValue in
-                                          updateColumnValue(itemIndex: itemIndex,
-                                                            columnName: selectedColumn.name,
-                                                            newValue: newValue)
-                                      })
-                       .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
-                   }
-               }
+            if let selectedColumn = selectedColumnForEdit,
+               let itemIndex = selectedItemIndex,
+               itemIndex < reorderedItems.count {
+                let item = reorderedItems[itemIndex]
+                
+                ColumnEditView(
+                    itemId: item.id,
+                    columnName: selectedColumn.name,
+                    columnType: pod.columns[selectedColumn.index].type,
+                    value: Binding(
+                        get: { item.columnValues?[selectedColumn.name] ?? .null },
+                        set: { newValue in
+                            updateColumnValue(itemIndex: itemIndex,
+                                              columnName: selectedColumn.name,
+                                              newValue: newValue)
+                        }
+                    ),
+                    onSave: { _ in /* This closure is now empty as we handle the update in the binding */ },
+                    networkManager: networkManager
+                )
+                .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+            }
+        }
        
                .sheet(isPresented: $showCardSheet) {
                    if let index = selectedItemIndex {
@@ -719,6 +731,27 @@ struct PodView: View {
                }
               
     }
+
+    private func updateColumnValue(itemIndex: Int, columnName: String, newValue: ColumnValue) {
+        guard itemIndex < reorderedItems.count else { return }
+        
+        if reorderedItems[itemIndex].columnValues == nil {
+            reorderedItems[itemIndex].columnValues = [:]
+        }
+        reorderedItems[itemIndex].columnValues?[columnName] = newValue
+        
+        // Update the pod binding
+        pod.items = reorderedItems
+        
+        // Trigger a refresh
+        needsRefresh = true
+    }
+
+        private func addNewItem(_ item: PodItem) {
+            reorderedItems.append(item)
+            pod.items = reorderedItems
+            needsRefresh = true
+        }
 
     private var listView: some View {
             ForEach(reorderedItems.indices, id: \.self) { index in
@@ -797,11 +830,21 @@ struct PodView: View {
         }
     }
 
-    private func columnView(name: String, value: String?) -> some View {
+
+    private func columnView(name: String, value: ColumnValue?) -> some View {
         VStack {
-            if let value = value, !value.isEmpty {
-                Text("\(value) \(name)")
-                    .font(.system(size: 14))
+            if let value = value {
+                switch value {
+                case .string(let stringValue):
+                    Text("\(stringValue) \(name)")
+                        .font(.system(size: 14))
+                case .number(let numberValue):
+                    Text("\(numberValue, specifier: "%.2f") \(name)")
+                        .font(.system(size: 14))
+                case .null:
+                    Text(name)
+                        .font(.system(size: 14))
+                }
             } else {
                 Text(name)
                     .font(.system(size: 14))
@@ -813,12 +856,9 @@ struct PodView: View {
         .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
         .cornerRadius(4)
     }
-    private func updateColumnValue(itemIndex: Int, columnName: String, newValue: String) {
-            reorderedItems[itemIndex].columnValues?[columnName] = newValue
-            // Here you would also update the backend with the new value
-        }
+
     
-    private func getColumnValues(for item: PodItem) -> [String: String?]? {
+    private func getColumnValues(for item: PodItem) -> [String: Any?]? {
         return item.columnValues
     }
     
@@ -1110,44 +1150,34 @@ struct PodViewHeaderSection: View {
     }
 }
 
-
-
 struct ColumnEditView: View {
+    let itemId: Int
     let columnName: String
     let columnType: String
-    @State private var value: String
-    let onSave: (String) -> Void
+    @Binding var value: ColumnValue
+    let onSave: (ColumnValue) -> Void
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
     @FocusState private var isFocused: Bool
-
-    init(columnName: String, columnType: String, value: String, onSave: @escaping (String) -> Void) {
-        self.columnName = columnName
-        self.columnType = columnType
-        self._value = State(initialValue: value)
-        self.onSave = onSave
-    }
+    @State private var showingError = false
+    @State private var errorMessage = ""
+    @State private var textValue: String = ""
+    
+    let networkManager: NetworkManager
 
     var body: some View {
         NavigationView {
-        ZStack {
-            backgroundColor.edgesIgnoringSafeArea(.all)
-
-            
-          
+            ZStack {
+                backgroundColor.edgesIgnoringSafeArea(.all)
+                
                 VStack {
                     if columnType == "text" {
-//                        TextEditor(text: $value)
-//                            .background(backgroundColor)
-//                            .padding(.horizontal)
-//                            .focused($isFocused)
-                        CustomTextEditorWrapper(text: $value, isFocused: $isFocused, backgroundColor: backgroundColor)
-                                                    .padding(.horizontal)
-                                                    .focused($isFocused)
-            
+                        CustomTextEditorWrapper(text: $textValue, isFocused: $isFocused, backgroundColor: backgroundColor)
+                            .padding(.horizontal)
+                            .focused($isFocused)
                     } else {
-                        TextField("", text: $value)
-                            .keyboardType(.numberPad)
+                        TextField("", text: $textValue)
+                            .keyboardType(.decimalPad)
                             .textFieldStyle(PlainTextFieldStyle())
                             .padding()
                             .background(
@@ -1169,23 +1199,68 @@ struct ColumnEditView: View {
                             .foregroundColor(.primary)
                     },
                     trailing: Button("Save") {
-                        onSave(value)
-                        presentationMode.wrappedValue.dismiss()
+                        saveValue()
                     }
                 )
             }
         }
         .onAppear {
-
-                isFocused = true
-
+            isFocused = true
+            textValue = stringValue(from: value)
+        }
+        .alert(isPresented: $showingError) {
+            Alert(title: Text("Error"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+        }
+        .onSubmit {
+            saveValue()
         }
     }
     
-     private var backgroundColor: Color {
-         colorScheme == .dark ? Color(rgb: 44,44,44) : .white
-     }
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color(rgb: 44,44,44) : .white
+    }
+
+    private func saveValue() {
+        let newValue: ColumnValue
+        if columnType == "text" {
+            newValue = .string(textValue)
+        } else if let numberValue = Double(textValue) {
+            newValue = .number(numberValue)
+        } else {
+            newValue = .null
+        }
+        
+        networkManager.updatePodItemColumnValue(itemId: itemId, columnName: columnName, value: newValue) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self.value = newValue  // Update the binding
+                    self.onSave(newValue)
+                    self.presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    self.showError("Failed to update column value: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func showError(_ message: String) {
+        errorMessage = message
+        showingError = true
+    }
+    
+    private func stringValue(from columnValue: ColumnValue) -> String {
+        switch columnValue {
+        case .string(let value):
+            return value
+        case .number(let value):
+            return String(value)
+        case .null:
+            return ""
+        }
+    }
 }
+
 
 struct CustomTextEditorWrapper: UIViewRepresentable {
     @Binding var text: String

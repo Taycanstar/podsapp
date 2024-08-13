@@ -17,6 +17,7 @@ class NetworkManager {
         case invalidURL
         case invalidResponse
         case decodingError
+        case encodingError
         case serverError(String)
         case unknownError
     }
@@ -1914,6 +1915,107 @@ class NetworkManager {
             } else {
                 DispatchQueue.main.async {
                     completion(false, nil, nil, "Switch team failed with statusCode: \(httpResponse.statusCode)")
+                }
+            }
+        }.resume()
+    }
+    
+//    func updatePodItemColumnValue(itemId: Int, columnName: String, value: Any, completion: @escaping (Result<Void, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/update-column-value/\(itemId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "column_name": columnName,
+//            "value": value
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.decodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                completion(.failure(NetworkError.invalidResponse))
+//                return
+//            }
+//
+//            switch httpResponse.statusCode {
+//            case 200:
+//                completion(.success(()))
+//            default:
+//                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                    completion(.failure(NetworkError.serverError(errorMessage)))
+//                } else {
+//                    completion(.failure(NetworkError.unknownError))
+//                }
+//            }
+//        }.resume()
+//    }
+    func updatePodItemColumnValue(itemId: Int, columnName: String, value: ColumnValue, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/update-column-value/\(itemId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let jsonValue: Any
+        switch value {
+        case .string(let stringValue):
+            jsonValue = stringValue
+        case .number(let numberValue):
+            jsonValue = numberValue
+        case .null:
+            jsonValue = NSNull()
+        }
+
+        let body: [String: Any] = [
+            "column_name": columnName,
+            "value": jsonValue
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            switch httpResponse.statusCode {
+            case 200:
+                completion(.success(()))
+            default:
+                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
                 }
             }
         }.resume()

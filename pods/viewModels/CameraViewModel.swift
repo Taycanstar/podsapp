@@ -74,9 +74,11 @@ struct PodItem: Identifiable {
     var uuid: String?
     var player: AVPlayer?
     var notes: String
-    var columnValues: [String: String?]?
+//    var columnValues: [String: String?]?
+    var columnValues: [String: ColumnValue]?
     
 }
+
 
 struct Pod: Identifiable {
    
@@ -105,6 +107,9 @@ struct PodJSON: Codable {
     var columns: [PodColumn]
 }
 
+
+
+
 struct PodItemJSON: Codable {
     let id: Int
     let videoURL: String?
@@ -113,8 +118,40 @@ struct PodItemJSON: Codable {
     let thumbnail: String
     let itemType: String?
     let notes: String?
-    let columnValues: [String: String?]?
-   
+//    let columnValues: [String: String?]?
+    let columnValues: [String: ColumnValue]?
+
+}
+
+enum ColumnValue: Codable {
+    case string(String)
+    case number(Double)
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let stringValue = try? container.decode(String.self) {
+            self = .string(stringValue)
+        } else if let doubleValue = try? container.decode(Double.self) {
+            self = .number(doubleValue)
+        } else {
+            throw DecodingError.typeMismatch(ColumnValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected String, Double, or null"))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .number(let value):
+            try container.encode(value)
+        case .null:
+            try container.encodeNil()
+        }
+    }
 }
 
 

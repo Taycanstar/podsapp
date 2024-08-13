@@ -113,9 +113,11 @@ struct HomeView: View {
     }
     
     private func fetchPodsAndWorkspacesIfNeeded() {
-          if homeViewModel.pods.isEmpty {
-              homeViewModel.fetchPodsForUser(email: viewModel.email) { }
-          }
+      
+              homeViewModel.fetchPodsForUser(email: viewModel.email) { 
+                  
+              }
+        
           homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
       }
     
