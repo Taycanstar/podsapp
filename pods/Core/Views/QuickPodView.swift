@@ -45,58 +45,73 @@ struct QuickPodView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                // Pod Name Input
-                HStack {
-                    TextField("Pod Name", text: $podName)
-                }
-                .padding()
-                .background(Color(UIColor.secondarySystemBackground))
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Pod Mode Selection
-                HStack {
-                    Image(systemName: "list.bullet")
-                        .foregroundColor(.blue)
-                    Text("Pod Template")
-                    Spacer()
-                    Picker("Pod Template", selection: $podTemplate) {
-                        ForEach(PodTemplate.allCases, id: \.self) { template in
-                            Text(template.displayText)
+            ZStack {
+                (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+                    .edgesIgnoringSafeArea(.all)
+                VStack(spacing: 20) {
+                    // Pod Name Input
+                    HStack {
+                        TextField("Pod Name", text: $podName)
+                    }
+                    .padding()
+                    .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                    )
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.top)
+                    
+                    // Pod Mode Selection
+                    HStack {
+                        Image(systemName: "list.bullet")
+                            .foregroundColor(.blue)
+                        Text("Pod Template")
+                        Spacer()
+                        Picker("Pod Template", selection: $podTemplate) {
+                            ForEach(PodTemplate.allCases, id: \.self) { template in
+                                Text(template.displayText)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
                     }
-                    .pickerStyle(MenuPickerStyle())
+                    .padding()
+                    .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                    )
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    
+                    Spacer()
                 }
-                .padding()
-                .background(Color(UIColor.secondarySystemBackground))
-                .cornerRadius(10)
-                .padding(.horizontal)
-                
-                Spacer()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("New Pod")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        isPresented = false
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("New Pod")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            isPresented = false
+                        }
+                        .foregroundColor(.blue)
                     }
-                    .foregroundColor(.blue)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        // Handle pod creation here
-                        createQuickPod()
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            // Handle pod creation here
+                            createQuickPod()
+                        }
+                        .disabled(podName.isEmpty)
+                        .foregroundColor(podName.isEmpty ? .gray : .blue)
                     }
-                    .disabled(podName.isEmpty)
-                    .foregroundColor(podName.isEmpty ? .gray : .blue)
                 }
             }
         }
         .accentColor(.blue)
         .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+    private var borderColor: Color {
+        colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
     private func createQuickPod() {
         guard !podName.isEmpty else {
