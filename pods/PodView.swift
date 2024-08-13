@@ -719,8 +719,12 @@ struct PodView: View {
        
                .sheet(isPresented: $showCardSheet) {
                    if let index = selectedItemIndex {
-                       CardDetailView(item: reorderedItems[index])
-                           .presentationDetents([.height(UIScreen.main.bounds.height / 1.5)])
+//                       CardDetailView(item: reorderedItems[index])
+                       CardDetailView(item: Binding<PodItem>(
+                           get: { self.reorderedItems[index] },
+                           set: { self.reorderedItems[index] = $0 }
+                       ))
+                         
                    }
                }
           
@@ -1347,26 +1351,101 @@ struct CustomTextEditorWrapper: UIViewRepresentable {
         }
     }
 }
+
 struct CardDetailView: View {
-    let item: PodItem
+    @Binding var item: PodItem
+    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.presentationMode) var presentationMode
+    @State private var itemName: String
+    @State private var columnValues: [String: String]
+    
+    init(item: Binding<PodItem>) {
+        self._item = item
+        self._itemName = State(initialValue: item.wrappedValue.metadata)
+        self._columnValues = State(initialValue: item.wrappedValue.columnValues?.mapValues { value in
+            switch value {
+            case .string(let str): return str
+            case .number(let num): return String(num)
+            case .null: return ""
+            }
+        } ?? [:])
+    }
 
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Details")) {
-                    Text("Metadata: \(item.metadata)")
-              
-                    // Add more details as needed
+            ZStack {
+                (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+                    .edgesIgnoringSafeArea(.all)
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        TextField("Item Name", text: $itemName)
+                            .font(.system(size: 18)).bold()
+                        
+                            .background(Color.clear)
+                        
+                        ForEach(Array(columnValues.keys.sorted()), id: \.self) { columnName in
+                            VStack(alignment: .leading) {
+                                Text(columnName)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 5)
+                                    .kerning(0.2)
+                                    
+                                
+                                TextField("\(columnName)", text: Binding(
+                                    get: { self.columnValues[columnName] ?? "" },
+                                    set: { self.columnValues[columnName] = $0 }
+                                ))
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                    )
+//                                    .padding(.horizontal)
+                              
+                            }
+                        }
+                    }
+                    .padding()
                 }
             }
-            .navigationBarTitle("Item Details", displayMode: .inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                },
+                trailing: Button("Save") {
+                    saveChanges()
+                }
+            )
+            .navigationBarTitle("Edit Item", displayMode: .inline)
         }
+    }
+    
+    private func saveChanges() {
+        item.metadata = itemName
+        item.columnValues = columnValues.mapValues { value in
+            if let intValue = Int(value) {
+                return .number(intValue)
+            } else if value.isEmpty {
+                return .null
+            } else {
+                return .string(value)
+            }
+        }
+        // Here you would typically call a function to update the item in your data source
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
 struct BubbleActionView: View {
     let item: PodItem
-
+    @Environment(\.presentationMode) var presentationMode
     var body: some View {
         NavigationView {
             List {
@@ -1378,7 +1457,17 @@ struct BubbleActionView: View {
                 }
                 // Add more actions as needed
             }
-            .navigationBarTitle("Actions", displayMode: .inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                },
+                trailing: Button("Save") {
+                   print("")
+                }
+            )
         }
     }
 }
