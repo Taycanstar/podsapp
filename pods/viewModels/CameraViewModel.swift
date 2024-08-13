@@ -125,7 +125,7 @@ struct PodItemJSON: Codable {
 
 enum ColumnValue: Codable {
     case string(String)
-    case number(Double)
+    case number(Int)
     case null
 
     init(from decoder: Decoder) throws {
@@ -134,8 +134,8 @@ enum ColumnValue: Codable {
             self = .null
         } else if let stringValue = try? container.decode(String.self) {
             self = .string(stringValue)
-        } else if let doubleValue = try? container.decode(Double.self) {
-            self = .number(doubleValue)
+        } else if let intValue = try? container.decode(Int.self) {
+            self = .number(intValue)
         } else {
             throw DecodingError.typeMismatch(ColumnValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected String, Double, or null"))
         }

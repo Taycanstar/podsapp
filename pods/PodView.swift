@@ -839,7 +839,7 @@ struct PodView: View {
                     Text("\(stringValue) \(name)")
                         .font(.system(size: 14))
                 case .number(let numberValue):
-                    Text("\(numberValue, specifier: "%.2f") \(name)")
+                    Text("\(numberValue) \(name)")
                         .font(.system(size: 14))
                 case .null:
                     Text(name)
@@ -1224,7 +1224,7 @@ struct ColumnEditView: View {
         let newValue: ColumnValue
         if columnType == "text" {
             newValue = .string(textValue)
-        } else if let numberValue = Double(textValue) {
+        } else if let numberValue = Int(textValue) {
             newValue = .number(numberValue)
         } else {
             newValue = .null
