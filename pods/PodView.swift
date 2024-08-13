@@ -618,7 +618,8 @@ struct PodView: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        showAddItemView = true
+                        isCreatingNewItem = true
+                        isNewItemFocused = true
                     }) {
                         HStack {
                             Image(systemName: "plus")
@@ -876,6 +877,11 @@ struct PodView: View {
                 .padding(.horizontal, 5)
                 .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
                 .focused($isNewItemFocused)
+                .onSubmit {
+                    if !newItemText.isEmpty {
+                        createNewPodItem()
+                    }
+                }
              
             Button(action: {
                 if !newItemText.isEmpty {
