@@ -319,14 +319,14 @@ struct PodTitleRow: View {
 
     var body: some View {
         HStack {
-            ZStack{
-                NavigationLink(destination: PodView(pod: $pod, needsRefresh: $needsRefresh)){ EmptyView() }.opacity(0.0)
-                    .padding(.trailing, -5).frame(width:0, height:0)
-                Text(pod.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .padding(.leading, 0) // Apply padding to the text element itself
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
-            }
+//            ZStack{
+//                NavigationLink(destination: PodView(pod: $pod, needsRefresh: $needsRefresh)){ EmptyView() }.opacity(0.0)
+//                    .padding(.trailing, -5).frame(width:0, height:0)
+//                Text(pod.title)
+//                    .font(.system(size: 16, weight: .bold, design: .rounded))
+//                    .padding(.leading, 0) // Apply padding to the text element itself
+//                    .foregroundColor(colorScheme == .dark ? .white : .black)
+//            }
             Spacer()
             Button(action: onExpandCollapseTapped) {
                 HStack {
