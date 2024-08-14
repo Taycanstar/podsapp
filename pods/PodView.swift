@@ -566,6 +566,16 @@ struct PodView: View {
     @State private var showCardSheet = false
     @State private var showBubbleSheet = false
     @State private var selectedItemIndex: Int?
+    
+    @State private var podColumns: [PodColumn]
+    
+    
+    init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
+        self._pod = pod
+        self._needsRefresh = needsRefresh
+        self._podColumns = State(initialValue: pod.wrappedValue.columns)
+    
+    }
 
     
     enum ViewType: String, CaseIterable {
@@ -717,37 +727,14 @@ struct PodView: View {
             }
         }
        
-               .sheet(isPresented: $showCardSheet) {
-                   if let index = selectedItemIndex {
-//                       CardDetailView(item: reorderedItems[index])
-//                       CardDetailView(item: Binding<PodItem>(
-//                           get: { self.reorderedItems[index] },
-//                           set: { self.reorderedItems[index] = $0 }
-//                       ))
-                       CardDetailView(item: Binding<PodItem>(
-                           get: { self.reorderedItems[index] },
-                           set: { self.reorderedItems[index] = $0 }
-                       ), podId: pod.id, initialColumns: pod.columns, networkManager: networkManager, onColumnsUpdated: { updatedColumns in
-                           self.pod.columns = updatedColumns
-                                          // Update all items to include the new column
-                                          for i in 0..<self.reorderedItems.count {
-                                              if self.reorderedItems[i].columnValues == nil {
-                                                  self.reorderedItems[i].columnValues = [:]
-                                              }
-                                              for column in updatedColumns {
-                                                  if self.reorderedItems[i].columnValues?[column.name] == nil {
-                                                      self.reorderedItems[i].columnValues?[column.name] = .null
-                                                  }
-                                              }
-                                          }
-                                          // Update the pod's items
-                                          self.pod.items = self.reorderedItems
-                                        self.needsRefresh = true
-                       }
-                       )
-                         
-                   }
-               }
+        .sheet(isPresented: $showCardSheet) {
+            if let index = selectedItemIndex {
+                CardDetailView(item: Binding<PodItem>(
+                    get: { self.reorderedItems[index] },
+                    set: { self.reorderedItems[index] = $0 }
+                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager)
+            }
+        }
           
                .sheet(isPresented: $showBubbleSheet) {
                    if let index = selectedItemIndex {
@@ -789,13 +776,8 @@ struct PodView: View {
                             .padding(.bottom, 4)
                         
                         HStack {
-                            ForEach(Array(pod.columns.enumerated()), id: \.element.name) { columnIndex, column in
-//                                columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? nil)
-//                                    .onTapGesture {
-//                                        selectedColumnForEdit = (columnIndex, column.name)
-//                                        selectedItemIndex = index
-//                                        showColumnEditSheet = true
-//                                    }
+                            ForEach(Array(podColumns.enumerated()), id: \.element.name) { columnIndex, column in
+
                                 columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
                                                             .onTapGesture {
                                                                 selectedColumnForEdit = (columnIndex, column.name)
@@ -1381,44 +1363,43 @@ struct CustomTextEditorWrapper: UIViewRepresentable {
 
 
 struct CardDetailView: View {
-    @Binding var item: PodItem
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.presentationMode) var presentationMode
-    @State private var itemName: String
-    @State private var columnValues: [String: String]
-    @State private var allColumns: [PodColumn]  // Change to @State
-    let networkManager: NetworkManager
-    @State private var showAddColumn = false
-    @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
-    
-    @State private var isAddingColumn = false
-    @State private var newColumnName = ""
-    @State private var newColumnType = ""
-    let podId: Int
-    var onColumnsUpdated: ([PodColumn]) -> Void
 
-    init(item: Binding<PodItem>, podId: Int, initialColumns: [PodColumn], networkManager: NetworkManager, onColumnsUpdated: @escaping ([PodColumn]) -> Void) {
-        self._item = item
-        self._itemName = State(initialValue: item.wrappedValue.metadata)
-        self._allColumns = State(initialValue: initialColumns)  // Initialize with @State
-        self.networkManager = networkManager
-        
-        var initialColumnValues: [String: String] = [:]
-        for column in initialColumns {
-            if let value = item.wrappedValue.columnValues?[column.name] {
-                switch value {
-                case .string(let str): initialColumnValues[column.name] = str
-                case .number(let num): initialColumnValues[column.name] = String(num)
-                case .null: initialColumnValues[column.name] = ""
-                }
-            } else {
-                initialColumnValues[column.name] = ""
-            }
-        }
-        self._columnValues = State(initialValue: initialColumnValues)
-        self.podId = podId
-        self.onColumnsUpdated = onColumnsUpdated
-    }
+    @Binding var item: PodItem
+      @Binding var podColumns: [PodColumn] // Change this to a binding
+      @Environment(\.colorScheme) var colorScheme
+      @Environment(\.presentationMode) var presentationMode
+      @State private var itemName: String
+      @State private var columnValues: [String: String]
+      let networkManager: NetworkManager
+      @State private var showAddColumn = false
+      @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
+      
+      @State private var isAddingColumn = false
+      @State private var newColumnName = ""
+      @State private var newColumnType = ""
+      let podId: Int
+
+      init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
+          self._item = item
+          self._itemName = State(initialValue: item.wrappedValue.metadata)
+          self._podColumns = podColumns
+          self.networkManager = networkManager
+          
+          var initialColumnValues: [String: String] = [:]
+          for column in podColumns.wrappedValue {
+              if let value = item.wrappedValue.columnValues?[column.name] {
+                  switch value {
+                  case .string(let str): initialColumnValues[column.name] = str
+                  case .number(let num): initialColumnValues[column.name] = String(num)
+                  case .null: initialColumnValues[column.name] = ""
+                  }
+              } else {
+                  initialColumnValues[column.name] = ""
+              }
+          }
+          self._columnValues = State(initialValue: initialColumnValues)
+          self.podId = podId
+      }
 
     var body: some View {
         NavigationView {
@@ -1432,7 +1413,7 @@ struct CardDetailView: View {
                             .font(.system(size: 18)).bold()
                             .background(Color.clear)
                         
-                        ForEach(allColumns, id: \.name) { column in
+                        ForEach(podColumns, id: \.name) { column in
                             VStack(alignment: .leading) {
                                 Text(column.name)
                                     .font(.system(size: 15))
@@ -1500,36 +1481,35 @@ struct CardDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
-    
+
     private func addNewColumn(title: String, type: String) {
-        newColumnName = title
-        newColumnType = type
-        isAddingColumn = true
-        showAddColumn = false
-        
-        networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
-            DispatchQueue.main.async {
-                isAddingColumn = false
-                switch result {
-                case .success:
-                    let newColumn = PodColumn(name: newColumnName, type: newColumnType)
-                    allColumns.append(newColumn)  // Now this is allowed
-                    
-                    columnValues[newColumnName] = ""
-                    
-                    if item.columnValues == nil {
-                        item.columnValues = [:]
-                    }
-                    item.columnValues?[newColumnName] = .null
-                    onColumnsUpdated(allColumns)
-                    print("New column added successfully")
-                case .failure(let error):
-                    print("Failed to add new column: \(error)")
-                    // Here you might want to show an alert to the user
-                }
-            }
-        }
-    }
+          newColumnName = title
+          newColumnType = type
+          isAddingColumn = true
+          showAddColumn = false
+          
+          networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
+              DispatchQueue.main.async {
+                  isAddingColumn = false
+                  switch result {
+                  case .success:
+                      let newColumn = PodColumn(name: newColumnName, type: newColumnType)
+                      podColumns.append(newColumn)
+                      
+                      columnValues[newColumnName] = ""
+                      
+                      if item.columnValues == nil {
+                          item.columnValues = [:]
+                      }
+                      item.columnValues?[newColumnName] = .null
+                      print("New column added successfully")
+                  case .failure(let error):
+                      print("Failed to add new column: \(error)")
+                      // Here you might want to show an alert to the user
+                  }
+              }
+          }
+      }
 
     
     private func saveChanges() {
