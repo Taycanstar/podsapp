@@ -1364,6 +1364,9 @@ struct CardDetailView: View {
     @State private var columnValues: [String: String]
     let allColumns: [PodColumn]  // Add this to store all possible columns
     let networkManager: NetworkManager
+    @State private var showAddColumn = false
+    @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
+
     
     init(item: Binding<PodItem>, allColumns: [PodColumn], networkManager: NetworkManager) {
         self._item = item
@@ -1420,9 +1423,16 @@ struct CardDetailView: View {
                                     )
                             }
                         }
+                        addColumnButton
                     }
                     .padding()
                 }
+                GeometryReader { geometry in
+                                    AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
+//                                        .frame(height: 250)
+                                        .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
+                                        .animation(.snappy)
+                                }
             }
             .navigationBarItems(
                 leading: Button(action: {
@@ -1438,6 +1448,40 @@ struct CardDetailView: View {
             .navigationBarTitle("Edit Item", displayMode: .inline)
         }
     }
+    
+    private var addColumnButton: some View {
+        HStack {
+            Button(action: {
+                print("add column tapped")
+                showAddColumn = true
+                                addColumnOffset = UIScreen.main.bounds.height - 250
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .regular))
+                    Text("Add column")
+                        .font(.system(size: 14, weight: .regular))
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 15) // Add horizontal padding for better touch target size
+                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+                .foregroundColor(.accentColor)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .frame(maxWidth: .infinity, alignment: .center) // Center the button horizontally
+
+    }
+    
+    private func addNewColumn(title: String, type: String) {
+           // Implement the logic to add a new column
+           // This might involve updating the pod's columns and the local state
+           print("Adding new column: \(title) of type \(type)")
+           // You'll need to implement the actual logic to add the column to the pod
+           // and update the UI accordingly
+       }
+   
+
     
     private func saveChanges() {
         let updatedColumnValues = columnValues.mapValues { value in
@@ -1463,6 +1507,60 @@ struct CardDetailView: View {
                 }
             }
         }
+    }
+}
+
+struct AddColumnView: View {
+    @Binding var isPresented: Bool
+    @Environment(\.colorScheme) var colorScheme
+    var onAddColumn: (String, String) -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                }
+                Spacer()
+                Text("Create a new column")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+            
+            Divider()
+            
+            HStack(spacing: 20) {
+                columnTypeButton(title: "Number", icon: "number", type: "number")
+                columnTypeButton(title: "Text", icon: "textformat", type: "text")
+            }
+            .padding()
+            
+            Spacer()
+        }
+        .frame(height: 400)
+        .background(Color("mdBg"))
+        .cornerRadius(16)
+        .shadow(radius: 10)
+    }
+    
+    private func columnTypeButton(title: String, icon: String, type: String) -> some View {
+        Button(action: {
+            onAddColumn(title, type)
+            isPresented = false
+        }) {
+            VStack {
+                Image(systemName: icon)
+                    .font(.system(size: 30))
+                Text(title)
+                    .font(.caption)
+            }
+            .frame(width: 100, height: 100)
+            .background(Color("ltBg"))
+            .cornerRadius(10)
+        }
+        .foregroundColor(.primary)
     }
 }
 struct BubbleActionView: View {
