@@ -1609,8 +1609,8 @@ struct AddColumnView: View {
                 
                 // Pod Mode Selection
                 HStack {
-                    Image(systemName: "textformat")
-                        .foregroundColor(.blue)
+                    Image(systemName: (columnType == .number ? "number" :"textformat"))
+                        .foregroundColor(.accentColor)
                     Text("Column Type")
                     Spacer()
                     Picker("Column Type", selection: $columnType) {
