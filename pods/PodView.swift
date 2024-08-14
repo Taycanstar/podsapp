@@ -1543,6 +1543,23 @@ struct AddColumnView: View {
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) var colorScheme
     var onAddColumn: (String, String) -> Void
+    @State private var columnType: ColumnType = .number
+    @State private var columnName: String = ""
+    
+    
+    enum ColumnType: String, CaseIterable {
+        case number = "number"
+        case text = "text"
+        
+        var displayText: String {
+            switch self {
+            case .number:
+                return "Number"
+            case .text:
+                return "Text"
+            }
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1555,16 +1572,65 @@ struct AddColumnView: View {
                 Text("Create a new column")
                     .font(.headline)
                 Spacer()
+                Button(action: {
+                    onAddColumn(columnName, columnType.rawValue)
+                    isPresented = false
+                }) {
+                    Text("Save")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 18))
+                }
+         
             }
             .padding()
             
             Divider()
             
-            HStack(spacing: 20) {
-                columnTypeButton(title: "Number", icon: "number", type: "number")
-                columnTypeButton(title: "Text", icon: "textformat", type: "text")
+//            HStack(spacing: 20) {
+//                columnTypeButton(title: "Number", icon: "number", type: "number")
+//                columnTypeButton(title: "Text", icon: "textformat", type: "text")
+//            }
+//            .padding()
+            
+            VStack(spacing: 20) {
+                // Pod Name Input
+                HStack {
+                    TextField("Column Name", text: $columnName)
+                }
+                .padding()
+                .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                )
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .padding(.top)
+                
+                // Pod Mode Selection
+                HStack {
+                    Image(systemName: "textformat")
+                        .foregroundColor(.blue)
+                    Text("Column Type")
+                    Spacer()
+                    Picker("Column Type", selection: $columnType) {
+                        ForEach(ColumnType.allCases, id: \.self) { type in
+                            Text(type.displayText)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                .padding()
+                .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                )
+                .cornerRadius(10)
+                .padding(.horizontal)
+                
+                Spacer()
             }
-            .padding()
             
             Spacer()
         }
@@ -1572,6 +1638,10 @@ struct AddColumnView: View {
         .background(Color("mdBg"))
         .cornerRadius(16)
         .shadow(radius: 10)
+    }
+    
+    private var borderColor: Color {
+        colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
     
     private func columnTypeButton(title: String, icon: String, type: String) -> some View {
