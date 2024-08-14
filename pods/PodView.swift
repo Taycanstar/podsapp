@@ -720,10 +720,14 @@ struct PodView: View {
                .sheet(isPresented: $showCardSheet) {
                    if let index = selectedItemIndex {
 //                       CardDetailView(item: reorderedItems[index])
+//                       CardDetailView(item: Binding<PodItem>(
+//                           get: { self.reorderedItems[index] },
+//                           set: { self.reorderedItems[index] = $0 }
+//                       ))
                        CardDetailView(item: Binding<PodItem>(
                            get: { self.reorderedItems[index] },
                            set: { self.reorderedItems[index] = $0 }
-                       ))
+                       ), allColumns: pod.columns, networkManager: networkManager)
                          
                    }
                }
@@ -1358,17 +1362,29 @@ struct CardDetailView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var itemName: String
     @State private var columnValues: [String: String]
+    let allColumns: [PodColumn]  // Add this to store all possible columns
+    let networkManager: NetworkManager
     
-    init(item: Binding<PodItem>) {
+    init(item: Binding<PodItem>, allColumns: [PodColumn], networkManager: NetworkManager) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
-        self._columnValues = State(initialValue: item.wrappedValue.columnValues?.mapValues { value in
-            switch value {
-            case .string(let str): return str
-            case .number(let num): return String(num)
-            case .null: return ""
+        self.allColumns = allColumns
+        self.networkManager = networkManager
+        
+        // Initialize columnValues with all possible columns
+        var initialColumnValues: [String: String] = [:]
+        for column in allColumns {
+            if let value = item.wrappedValue.columnValues?[column.name] {
+                switch value {
+                case .string(let str): initialColumnValues[column.name] = str
+                case .number(let num): initialColumnValues[column.name] = String(num)
+                case .null: initialColumnValues[column.name] = ""
+                }
+            } else {
+                initialColumnValues[column.name] = ""
             }
-        } ?? [:])
+        }
+        self._columnValues = State(initialValue: initialColumnValues)
     }
 
     var body: some View {
@@ -1381,21 +1397,19 @@ struct CardDetailView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         TextField("Item Name", text: $itemName)
                             .font(.system(size: 18)).bold()
-                        
                             .background(Color.clear)
                         
-                        ForEach(Array(columnValues.keys.sorted()), id: \.self) { columnName in
+                        ForEach(allColumns, id: \.name) { column in
                             VStack(alignment: .leading) {
-                                Text(columnName)
+                                Text(column.name)
                                     .font(.system(size: 15))
                                     .foregroundColor(.primary)
                                     .padding(.horizontal, 5)
                                     .kerning(0.2)
-                                    
                                 
-                                TextField("\(columnName)", text: Binding(
-                                    get: { self.columnValues[columnName] ?? "" },
-                                    set: { self.columnValues[columnName] = $0 }
+                                TextField("", text: Binding(
+                                    get: { self.columnValues[column.name] ?? "" },
+                                    set: { self.columnValues[column.name] = $0 }
                                 ))
                                     .textFieldStyle(PlainTextFieldStyle())
                                     .padding(.vertical, 12)
@@ -1404,8 +1418,6 @@ struct CardDetailView: View {
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
                                     )
-//                                    .padding(.horizontal)
-                              
                             }
                         }
                     }
@@ -1428,21 +1440,31 @@ struct CardDetailView: View {
     }
     
     private func saveChanges() {
-        item.metadata = itemName
-        item.columnValues = columnValues.mapValues { value in
+        let updatedColumnValues = columnValues.mapValues { value in
             if let intValue = Int(value) {
-                return .number(intValue)
+                return ColumnValue.number(intValue)
             } else if value.isEmpty {
-                return .null
+                return ColumnValue.null
             } else {
-                return .string(value)
+                return ColumnValue.string(value)
             }
         }
-        // Here you would typically call a function to update the item in your data source
-        presentationMode.wrappedValue.dismiss()
+        
+        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self.item.metadata = self.itemName
+                    self.item.columnValues = updatedColumnValues
+                    self.presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    // Handle the error, maybe show an alert to the user
+                    print("Failed to update pod item: \(error)")
+                }
+            }
+        }
     }
 }
-
 struct BubbleActionView: View {
     let item: PodItem
     @Environment(\.presentationMode) var presentationMode
