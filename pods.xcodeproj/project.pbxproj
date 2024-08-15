@@ -15,6 +15,7 @@
 		3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
+		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
@@ -104,6 +105,7 @@
 		3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPodView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
+		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
@@ -268,6 +270,7 @@
 				3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */,
 				3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */,
 				362125EE2C6041F3009D3E7C /* PodOptionsView.swift */,
+				362516642C6E5D26009CA5B0 /* PodColumnsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -694,6 +697,7 @@
 				3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */,
 				3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */,
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,
+				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,

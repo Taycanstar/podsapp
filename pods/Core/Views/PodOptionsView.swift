@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PodOptionsView: View {
     @Binding var showPodOptionsSheet: Bool
+    @Binding var showPodColumnsView: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
      var onDeletePod: () -> Void
@@ -44,6 +45,13 @@ struct PodOptionsView: View {
                         showPodOptionsSheet = false
                     }, color: .primary)
                     
+                    MenuItemView(iconName: "info.circle", text: "Pod info", action: {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            print("Tapped pod info")
+                        }
+                    }, color: .primary)
+                    
                     MenuItemView(iconName: "person.2", text: "Pod members", action: {
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -51,10 +59,11 @@ struct PodOptionsView: View {
                         }
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "info.circle", text: "Pod info", action: {
+                    MenuItemView(iconName: "table", text: "Pod columns", action: {
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            print("Tapped pod info")
+                            showPodColumnsView = true
+                            print("tapped pod columns")
                         }
                     }, color: .primary)
                     

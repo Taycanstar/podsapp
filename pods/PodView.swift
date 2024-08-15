@@ -568,6 +568,7 @@ struct PodView: View {
     @State private var selectedItemIndex: Int?
     
     @State private var podColumns: [PodColumn]
+    @State private var showPodColumnsView = false
     
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
@@ -680,8 +681,16 @@ struct PodView: View {
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
         .sheet(isPresented: $showPodOptionsSheet) {
-            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, onDeletePod: deletePod, podName: pod.title)
+            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title)
         }
+        .sheet(isPresented: $showPodColumnsView) {
+                PodColumnsView(
+                    podColumns: $podColumns,
+                    isPresented: $showPodColumnsView,
+                    podId: pod.id,
+                    networkManager: networkManager
+                )
+            }
         .fullScreenCover(isPresented: $showAddItemView) {
             AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
         }
@@ -1482,6 +1491,7 @@ struct CardDetailView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
+
     private func addNewColumn(title: String, type: String) {
           newColumnName = title
           newColumnType = type
@@ -1586,11 +1596,6 @@ struct AddColumnView: View {
             
             Divider()
             
-//            HStack(spacing: 20) {
-//                columnTypeButton(title: "Number", icon: "number", type: "number")
-//                columnTypeButton(title: "Text", icon: "textformat", type: "text")
-//            }
-//            .padding()
             
             VStack(spacing: 20) {
                 // Pod Name Input
