@@ -11,7 +11,7 @@ struct PodColumnsView: View {
     @Binding var podColumns: [PodColumn]
     @Binding var isPresented: Bool
     @State private var showAddColumn = false
-    @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
+    @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 300
     @Environment(\.colorScheme) var colorScheme
     var podId: Int
     var networkManager: NetworkManager
@@ -24,53 +24,38 @@ struct PodColumnsView: View {
             ZStack {
                 Color("mdBg").edgesIgnoringSafeArea(.all)
                 
-                VStack {
-                    List {
-                        ForEach(podColumns, id: \.name) { column in
-                            HStack {
-                                Text(column.name)
-                                Spacer()
-                                Button(action: {
-                                    columnToDelete = column
-                                    showDeleteConfirmation = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                VStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(podColumns, id: \.name) { column in
+                                HStack {
+                                    Text(column.name)
+                                    Spacer()
+                                    Button(action: {
+                                        columnToDelete = column
+                                        showDeleteConfirmation = true
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
                                 }
+                                .padding(.horizontal)
+                                .padding(.vertical)
+                                .background(Color("ltBg").cornerRadius(10))
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical)
-                            .background(Color("ltBg").cornerRadius(10)) // Rounded corners for each row
-                                     .listRowSeparator(.hidden) // Hide the default separators
-                                     .padding(.vertical, -5)
+                            
+                            addColumnButton
+                                .padding(.top, 10)
                         }
-                        .listRowBackground(Color.clear)
-                       
+                        .padding(.horizontal, 15)
+                        .padding(.top, 15)
                     }
-//                    .padding()
-                    .listStyle(PlainListStyle())
-               
-                    .background(Color("mdBg"))
-                    
-                    Button(action: {
-                        showAddColumn = true
-                        addColumnOffset = UIScreen.main.bounds.height - 250
-                    }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add Column")
-                        }
-                    }
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .padding(.bottom)
                 }
+                .background(Color("mdBg"))
                 
                 GeometryReader { geometry in
                     AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
-                        .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
+                        .offset(y: showAddColumn ? geometry.size.height - 300 : geometry.size.height + 300)
                         .animation(.snappy)
                 }
             }
@@ -81,7 +66,7 @@ struct PodColumnsView: View {
         }
         .background(Color("mdBg"))
         .confirmationDialog(
-            "Are you sure you want to delete this column?",
+            "Delete \(columnToDelete?.name ?? "")?",
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
@@ -94,6 +79,28 @@ struct PodColumnsView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+    }
+    
+    private var addColumnButton: some View {
+        Button(action: {
+            print("add column tapped")
+            showAddColumn = true
+            addColumnOffset = UIScreen.main.bounds.height - 300
+        }) {
+            HStack(spacing: 5) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .regular))
+                Text("Add column")
+                    .font(.system(size: 14, weight: .regular))
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 15)
+            .background(Color("mdBg"))
+            .foregroundColor(.accentColor)
+            .cornerRadius(10)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func deleteColumn(_ column: PodColumn) {
