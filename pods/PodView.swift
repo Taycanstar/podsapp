@@ -711,25 +711,51 @@ struct PodView: View {
             }
         )
 
+//        .sheet(isPresented: $showColumnEditSheet) {
+//            if let selectedColumn = selectedColumnForEdit,
+//               let itemIndex = selectedItemIndex,
+//               itemIndex < reorderedItems.count {
+//                let item = reorderedItems[itemIndex]
+//                
+//                ColumnEditView(
+//                    itemId: item.id,
+//                    columnName: selectedColumn.name,
+//                    columnType: pod.columns[selectedColumn.index].type,
+//                    value: Binding(
+//                        get: { item.columnValues?[selectedColumn.name] ?? .null },
+//                        set: { newValue in
+//                            updateColumnValue(itemIndex: itemIndex,
+//                                              columnName: selectedColumn.name,
+//                                              newValue: newValue)
+//                        }
+//                    ),
+//                    onSave: { _ in /* This closure is now empty as we handle the update in the binding */ },
+//                    networkManager: networkManager
+//                )
+//                .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+//            }
+//        }
         .sheet(isPresented: $showColumnEditSheet) {
             if let selectedColumn = selectedColumnForEdit,
                let itemIndex = selectedItemIndex,
-               itemIndex < reorderedItems.count {
+               itemIndex < reorderedItems.count,
+               selectedColumn.index < podColumns.count {
                 let item = reorderedItems[itemIndex]
+                let column = podColumns[selectedColumn.index]
                 
                 ColumnEditView(
                     itemId: item.id,
-                    columnName: selectedColumn.name,
-                    columnType: pod.columns[selectedColumn.index].type,
+                    columnName: column.name,
+                    columnType: column.type, // Make sure this is correct
                     value: Binding(
-                        get: { item.columnValues?[selectedColumn.name] ?? .null },
+                        get: { item.columnValues?[column.name] ?? .null },
                         set: { newValue in
                             updateColumnValue(itemIndex: itemIndex,
-                                              columnName: selectedColumn.name,
+                                              columnName: column.name,
                                               newValue: newValue)
                         }
                     ),
-                    onSave: { _ in /* This closure is now empty as we handle the update in the binding */ },
+                    onSave: { _ in },
                     networkManager: networkManager
                 )
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
@@ -1229,7 +1255,7 @@ struct ColumnEditView: View {
                         CustomTextEditorWrapper(text: $textValue, isFocused: $isFocused, backgroundColor: backgroundColor)
                             .padding(.horizontal)
                             .focused($isFocused)
-                    } else {
+                    } else if columnType == "number" {
                         TextField("", text: $textValue)
                             .keyboardType(.decimalPad)
                             .textFieldStyle(PlainTextFieldStyle())
@@ -1275,14 +1301,22 @@ struct ColumnEditView: View {
     }
 
     private func saveValue() {
+//        let newValue: ColumnValue
+//        if columnType == "text" {
+//            newValue = .string(textValue)
+//        } else if let numberValue = Int(textValue) {
+//            newValue = .number(numberValue)
+//        } else {
+//            newValue = .null
+//        }
         let newValue: ColumnValue
-        if columnType == "text" {
-            newValue = .string(textValue)
-        } else if let numberValue = Int(textValue) {
-            newValue = .number(numberValue)
-        } else {
-            newValue = .null
-        }
+           if columnType == "text" {
+               newValue = .string(textValue)
+           } else if columnType == "number", let numberValue = Int(textValue) {
+               newValue = .number(numberValue)
+           } else {
+               newValue = .null
+           }
         
         networkManager.updatePodItemColumnValue(itemId: itemId, columnName: columnName, value: newValue) { result in
             DispatchQueue.main.async {
@@ -1371,44 +1405,220 @@ struct CustomTextEditorWrapper: UIViewRepresentable {
 }
 
 
+//struct CardDetailView: View {
+//
+//    @Binding var item: PodItem
+//      @Binding var podColumns: [PodColumn] // Change this to a binding
+//      @Environment(\.colorScheme) var colorScheme
+//      @Environment(\.presentationMode) var presentationMode
+//      @State private var itemName: String
+//      @State private var columnValues: [String: String]
+//      let networkManager: NetworkManager
+//      @State private var showAddColumn = false
+//      @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
+//      
+//      @State private var isAddingColumn = false
+//      @State private var newColumnName = ""
+//      @State private var newColumnType = ""
+//      let podId: Int
+//
+//      init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
+//          self._item = item
+//          self._itemName = State(initialValue: item.wrappedValue.metadata)
+//          self._podColumns = podColumns
+//          self.networkManager = networkManager
+//          
+//          var initialColumnValues: [String: String] = [:]
+//          for column in podColumns.wrappedValue {
+//              if let value = item.wrappedValue.columnValues?[column.name] {
+//                  switch value {
+//                  case .string(let str): initialColumnValues[column.name] = str
+//                  case .number(let num): initialColumnValues[column.name] = String(num)
+//                  case .null: initialColumnValues[column.name] = ""
+//                  }
+//              } else {
+//                  initialColumnValues[column.name] = ""
+//              }
+//          }
+//          self._columnValues = State(initialValue: initialColumnValues)
+//          self.podId = podId
+//      }
+//
+//    var body: some View {
+//        NavigationView {
+//            ZStack {
+//                (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+//                    .edgesIgnoringSafeArea(.all)
+//                
+//                ScrollView {
+//                    VStack(alignment: .leading, spacing: 20) {
+//                        TextField("Item Name", text: $itemName)
+//                            .font(.system(size: 18)).bold()
+//                            .background(Color.clear)
+//                        
+//                        ForEach(podColumns, id: \.name) { column in
+//                            VStack(alignment: .leading) {
+//                                Text(column.name)
+//                                    .font(.system(size: 15))
+//                                    .foregroundColor(.primary)
+//                                    .padding(.horizontal, 5)
+//                                    .kerning(0.2)
+//                                
+//                                TextField("", text: Binding(
+//                                    get: { self.columnValues[column.name] ?? "" },
+//                                    set: { self.columnValues[column.name] = $0 }
+//                                ))
+//                                    .textFieldStyle(PlainTextFieldStyle())
+//                                    .padding(.vertical, 12)
+//                                    .padding(.horizontal)
+//                                    .background(
+//                                        RoundedRectangle(cornerRadius: 12)
+//                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+//                                    )
+//                            }
+//                        }
+//                        addColumnButton
+//                    }
+//                    .padding()
+//                }
+//                GeometryReader { geometry in
+//                    AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
+//                        .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
+//                        .animation(.snappy)
+//                }
+//            }
+//            .navigationBarItems(
+//                leading: Button(action: {
+//                    presentationMode.wrappedValue.dismiss()
+//                }) {
+//                    Image(systemName: "xmark")
+//                        .foregroundColor(.primary)
+//                },
+//                trailing: Button("Save") {
+//                    saveChanges()
+//                }
+//            )
+//            .navigationBarTitle("Edit Item", displayMode: .inline)
+//        }
+//    }
+//    
+//    private var addColumnButton: some View {
+//        HStack {
+//            Button(action: {
+//                print("add column tapped")
+//                showAddColumn = true
+//                addColumnOffset = UIScreen.main.bounds.height - 250
+//            }) {
+//                HStack(spacing: 5) {
+//                    Image(systemName: "plus")
+//                        .font(.system(size: 14, weight: .regular))
+//                    Text("Add column")
+//                        .font(.system(size: 14, weight: .regular))
+//                }
+//                .padding(.vertical, 10)
+//                .padding(.horizontal, 15)
+//                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+//                .foregroundColor(.accentColor)
+//            }
+//            .buttonStyle(PlainButtonStyle())
+//        }
+//        .frame(maxWidth: .infinity, alignment: .center)
+//    }
+//
+//
+//    private func addNewColumn(title: String, type: String) {
+//          newColumnName = title
+//          newColumnType = type
+//          isAddingColumn = true
+//          showAddColumn = false
+//          
+//          networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
+//              DispatchQueue.main.async {
+//                  isAddingColumn = false
+//                  switch result {
+//                  case .success:
+//                      let newColumn = PodColumn(name: newColumnName, type: newColumnType)
+//                      podColumns.append(newColumn)
+//                      
+//                      columnValues[newColumnName] = ""
+//                      
+//                      if item.columnValues == nil {
+//                          item.columnValues = [:]
+//                      }
+//                      item.columnValues?[newColumnName] = .null
+//                      print("New column added successfully")
+//                  case .failure(let error):
+//                      print("Failed to add new column: \(error)")
+//                      // Here you might want to show an alert to the user
+//                  }
+//              }
+//          }
+//      }
+//
+//    
+//    private func saveChanges() {
+//        let updatedColumnValues = columnValues.mapValues { value in
+//            if let intValue = Int(value) {
+//                return ColumnValue.number(intValue)
+//            } else if value.isEmpty {
+//                return ColumnValue.null
+//            } else {
+//                return ColumnValue.string(value)
+//            }
+//        }
+//        
+//        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success:
+//                    self.item.metadata = self.itemName
+//                    self.item.columnValues = updatedColumnValues
+//                    self.presentationMode.wrappedValue.dismiss()
+//                case .failure(let error):
+//                    // Handle the error, maybe show an alert to the user
+//                    print("Failed to update pod item: \(error)")
+//                }
+//            }
+//        }
+//    }
+//}
 struct CardDetailView: View {
-
     @Binding var item: PodItem
-      @Binding var podColumns: [PodColumn] // Change this to a binding
-      @Environment(\.colorScheme) var colorScheme
-      @Environment(\.presentationMode) var presentationMode
-      @State private var itemName: String
-      @State private var columnValues: [String: String]
-      let networkManager: NetworkManager
-      @State private var showAddColumn = false
-      @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
-      
-      @State private var isAddingColumn = false
-      @State private var newColumnName = ""
-      @State private var newColumnType = ""
-      let podId: Int
+    @Binding var podColumns: [PodColumn]
+    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.presentationMode) var presentationMode
+    @State private var itemName: String
+    @State private var columnValues: [String: String]
+    let networkManager: NetworkManager
+    @State private var showAddColumn = false
+    @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
+    
+    @State private var isAddingColumn = false
+    @State private var newColumnName = ""
+    @State private var newColumnType = ""
+    let podId: Int
 
-      init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
-          self._item = item
-          self._itemName = State(initialValue: item.wrappedValue.metadata)
-          self._podColumns = podColumns
-          self.networkManager = networkManager
-          
-          var initialColumnValues: [String: String] = [:]
-          for column in podColumns.wrappedValue {
-              if let value = item.wrappedValue.columnValues?[column.name] {
-                  switch value {
-                  case .string(let str): initialColumnValues[column.name] = str
-                  case .number(let num): initialColumnValues[column.name] = String(num)
-                  case .null: initialColumnValues[column.name] = ""
-                  }
-              } else {
-                  initialColumnValues[column.name] = ""
-              }
-          }
-          self._columnValues = State(initialValue: initialColumnValues)
-          self.podId = podId
-      }
+    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
+        self._item = item
+        self._itemName = State(initialValue: item.wrappedValue.metadata)
+        self._podColumns = podColumns
+        self.networkManager = networkManager
+        
+        var initialColumnValues: [String: String] = [:]
+        for column in podColumns.wrappedValue {
+            if let value = item.wrappedValue.columnValues?[column.name] {
+                switch value {
+                case .string(let str): initialColumnValues[column.name] = str
+                case .number(let num): initialColumnValues[column.name] = String(num)
+                case .null: initialColumnValues[column.name] = ""
+                }
+            } else {
+                initialColumnValues[column.name] = ""
+            }
+        }
+        self._columnValues = State(initialValue: initialColumnValues)
+        self.podId = podId
+    }
 
     var body: some View {
         NavigationView {
@@ -1491,37 +1701,62 @@ struct CardDetailView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
-
+//    private func addNewColumn(title: String, type: String) {
+//        newColumnName = title
+//        newColumnType = type // This should be "number" or "text"
+//        isAddingColumn = true
+//        showAddColumn = false
+//        
+//        networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
+//            DispatchQueue.main.async {
+//                isAddingColumn = false
+//                switch result {
+//                case .success:
+//                    let newColumn = PodColumn(name: newColumnName, type: newColumnType)
+//                    podColumns.append(newColumn)
+//                    
+//                    columnValues[newColumnName] = ""
+//                    
+//                    if item.columnValues == nil {
+//                        item.columnValues = [:]
+//                    }
+//                    item.columnValues?[newColumnName] = .null
+//                    print("New column added successfully")
+//                case .failure(let error):
+//                    print("Failed to add new column: \(error)")
+//                    // Here you might want to show an alert to the user
+//                }
+//            }
+//        }
+//    }
     private func addNewColumn(title: String, type: String) {
-          newColumnName = title
-          newColumnType = type
-          isAddingColumn = true
-          showAddColumn = false
-          
-          networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
-              DispatchQueue.main.async {
-                  isAddingColumn = false
-                  switch result {
-                  case .success:
-                      let newColumn = PodColumn(name: newColumnName, type: newColumnType)
-                      podColumns.append(newColumn)
-                      
-                      columnValues[newColumnName] = ""
-                      
-                      if item.columnValues == nil {
-                          item.columnValues = [:]
-                      }
-                      item.columnValues?[newColumnName] = .null
-                      print("New column added successfully")
-                  case .failure(let error):
-                      print("Failed to add new column: \(error)")
-                      // Here you might want to show an alert to the user
-                  }
-              }
-          }
-      }
+        newColumnName = title
+        newColumnType = type // This should be "number" or "text"
+        isAddingColumn = true
+        showAddColumn = false
+        
+        networkManager.addColumnToPod(podId: podId, columnName: newColumnName, columnType: newColumnType) { result in
+            DispatchQueue.main.async {
+                isAddingColumn = false
+                switch result {
+                case .success:
+                    let newColumn = PodColumn(name: newColumnName, type: newColumnType)
+                    podColumns.append(newColumn)
+                    
+                    columnValues[newColumnName] = ""
+                    
+                    if item.columnValues == nil {
+                        item.columnValues = [:]
+                    }
+                    item.columnValues?[newColumnName] = .null
+                    print("New column added successfully with type: \(newColumnType)")
+                case .failure(let error):
+                    print("Failed to add new column: \(error)")
+                }
+            }
+        }
+    }
 
-    
     private func saveChanges() {
         let updatedColumnValues = columnValues.mapValues { value in
             if let intValue = Int(value) {
