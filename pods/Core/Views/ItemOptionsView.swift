@@ -101,54 +101,61 @@ struct ItemOptionsView: View {
                 
                 // Pod Selection View
                 GeometryReader { geometry in
-                               VStack(spacing: 0) {
-                                   HStack {
-                                       Text("Select Pod")
-                                           .font(.headline)
-                                       Spacer()
-                                       Button(action: {
-                                           withAnimation(.spring()) {
-                                               showPodSelection = false
-                                               podSelectionOffset = geometry.size.height
-                                           }
-                                       }) {
-                                           Image(systemName: "xmark")
-                                               .foregroundColor(.primary)
-                                       }
-                                   }
-                                   .padding()
-                                   .background(Color("mdBg"))
-                                   
-                                   if isLoadingPods {
-                                       Spacer()
-                                       ProgressView()
-                                       Spacer()
-                                   } else {
-                                       ScrollView {
-                                           LazyVStack(spacing: 10) {
-                                               ForEach(pods.filter { $0.id != currentPodId }, id: \.id) { pod in
-                                                   Button(action: {
-                                                       onMoveItem(pod.id)
-                                                       showItemOptionsSheet = false
-                                                       dismissCardDetailView() 
-                                                   }) {
-                                                       Text(pod.title)
-                                                           .foregroundColor(.primary)
-                                                           .frame(maxWidth: .infinity, alignment: .leading)
-                                                           .padding()
-                                                           .background(Color("ltBg"))
-                                                           .cornerRadius(8)
-                                                   }
-                                               }
-                                           }
-                                           .padding()
-                                       }
-                                   }
-                               }
-                               .frame(maxWidth: .infinity, maxHeight: .infinity)
-                               .background(Color("mdBg"))
-                               .cornerRadius(20)
-                               .offset(y: podSelectionOffset)                }
+                             VStack(spacing: 0) {
+                                 HStack {
+                                     Spacer()
+                                     Text("Select Pod")
+                                         .font(.headline)
+                                     Spacer()
+                                 }
+                                 .overlay(
+                                     HStack {
+                                         Spacer()
+                                         Button(action: {
+                                             withAnimation(.spring()) {
+                                                 showPodSelection = false
+                                                 podSelectionOffset = geometry.size.height
+                                             }
+                                         }) {
+                                             Image(systemName: "xmark")
+                                                 .foregroundColor(.primary)
+                                         }
+                                     }
+                                  
+                                 )
+                                 .padding()
+                                 .background(Color("mdBg"))
+                                 
+                                 if isLoadingPods {
+                                     Spacer()
+                                     ProgressView()
+                                     Spacer()
+                                 } else {
+                                     ScrollView {
+                                         LazyVStack(spacing: 10) {
+                                             ForEach(pods.filter { $0.id != currentPodId }, id: \.id) { pod in
+                                                 Button(action: {
+                                                     onMoveItem(pod.id)
+                                                     showItemOptionsSheet = false
+                                                     dismissCardDetailView()
+                                                 }) {
+                                                     Text(pod.title)
+                                                         .foregroundColor(.primary)
+                                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                                         .padding()
+                                                         .background(Color("ltBg"))
+                                                         .cornerRadius(8)
+                                                 }
+                                             }
+                                         }
+                                         .padding()
+                                     }
+                                 }
+                             }
+                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                             .background(Color("mdBg"))
+                             .cornerRadius(20)
+                             .offset(y: podSelectionOffset)              }
 
         }
         

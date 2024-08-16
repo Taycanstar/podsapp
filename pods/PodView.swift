@@ -1398,6 +1398,7 @@ struct CardDetailView: View {
     @State private var newColumnName = ""
     @State private var newColumnType = ""
     let podId: Int
+    @State private var itemOptionsOffset: CGFloat = UIScreen.main.bounds.height
     
     @FocusState private var isItemNameFocused: Bool
 
@@ -1500,13 +1501,22 @@ struct CardDetailView: View {
                                 onDuplicateItem: duplicateItem,  onMoveItem: moveItemToPod, currentPodId: podId,
                                 dismissCardDetailView: { presentationMode.wrappedValue.dismiss()})
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .offset(y: showItemOptions ? 0  : geometry.size.height)
-                    .animation(.snappy)
+//                    .offset(y: showItemOptions ? 0  : geometry.size.height)
+//                    .animation(.snappy)
+                    .offset(y: itemOptionsOffset)
+                                   .onChange(of: showItemOptions) { newValue in
+                                       withAnimation(.snappy()) {
+                                           itemOptionsOffset = newValue ? 0 : geometry.size.height
+                                       }
+                                   }
                 
                 
             }
             .edgesIgnoringSafeArea(.all)
         }
+        .onAppear {
+                   itemOptionsOffset = UIScreen.main.bounds.height
+               }
     }
     
     
