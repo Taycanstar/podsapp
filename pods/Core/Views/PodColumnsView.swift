@@ -18,6 +18,9 @@ struct PodColumnsView: View {
     
     @State private var columnToDelete: PodColumn?
     @State private var showDeleteConfirmation = false
+    
+
+    @Binding var visibleColumns: [String]
 
     var body: some View {
         NavigationView {
@@ -29,6 +32,14 @@ struct PodColumnsView: View {
                         LazyVStack(spacing: 10) {
                             ForEach(podColumns, id: \.name) { column in
                                 HStack {
+                                    Button(action: {
+                                        toggleColumnVisibility(column.name)
+                                    }) {
+                                        Image(systemName: visibleColumns.contains(column.name) ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(visibleColumns.contains(column.name) ? .accentColor : .gray)
+                                    }
+                                    .disabled(visibleColumns.count == 3 && !visibleColumns.contains(column.name))
+                                    
                                     Text(column.name)
                                     Spacer()
                                     Button(action: {
@@ -44,12 +55,18 @@ struct PodColumnsView: View {
                                 .background(Color("ltBg").cornerRadius(10))
                             }
                             
+                            Text("Select up to 3 columns to display in the list view")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.horizontal)
+                                .padding(.top, 10)
                             addColumnButton
                                 .padding(.top, 10)
                         }
                         .padding(.horizontal, 15)
                         .padding(.top, 15)
                     }
+                  
                 }
                 .background(Color("mdBg"))
                 
@@ -60,9 +77,14 @@ struct PodColumnsView: View {
                 }
             }
             .navigationBarTitle("Pod Columns", displayMode: .inline)
-            .navigationBarItems(leading: Button("Close") {
-                isPresented = false
-            })
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    isPresented = false
+                },
+                trailing: Button("Save") {
+                    saveChanges()
+                }
+            )
         }
         .background(Color("mdBg"))
         .confirmationDialog(
@@ -79,7 +101,30 @@ struct PodColumnsView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+    
     }
+    
+    private func toggleColumnVisibility(_ columnName: String) {
+            if visibleColumns.contains(columnName) {
+                visibleColumns.removeAll { $0 == columnName }
+            } else if visibleColumns.count < 3 {
+                visibleColumns.append(columnName)
+            }
+        }
+        
+        private func saveChanges() {
+            networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        isPresented = false
+                    case .failure(let error):
+                        print("Failed to update visible columns: \(error)")
+                        // Here you might want to show an alert to the user
+                    }
+                }
+            }
+        }
     
     private var addColumnButton: some View {
         Button(action: {

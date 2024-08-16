@@ -2207,5 +2207,51 @@ class NetworkManager {
            }.resume()
        }
     
+ 
+        func updateVisibleColumns(podId: Int, columns: [String], completion: @escaping (Result<Void, Error>) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/update-visible-columns/\(podId)/") else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+
+            let body: [String: Any] = [
+                "visible_columns": columns
+            ]
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                completion(.failure(NetworkError.encodingError))
+                return
+            }
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+
+                switch httpResponse.statusCode {
+                case 200:
+                    completion(.success(()))
+                default:
+                    if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    } else {
+                        completion(.failure(NetworkError.unknownError))
+                    }
+                }
+            }.resume()
+        }
+    
 }
 

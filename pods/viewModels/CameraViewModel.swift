@@ -91,6 +91,7 @@ struct Pod: Identifiable {
     var isFavorite: Bool?
     var lastVisited: Date?
     var columns: [PodColumn] = []
+    var visibleColumns: [String] = []
 }
 
 
@@ -105,6 +106,7 @@ struct PodJSON: Codable {
     var isFavorite: Bool?
     var lastVisited: Date?
     var columns: [PodColumn]
+    var visibleColumns: [String]
 }
 
 
@@ -170,6 +172,7 @@ extension Pod {
         self.isFavorite = podJSON.isFavorite
         self.lastVisited = podJSON.lastVisited
         self.columns = podJSON.columns
+        self.visibleColumns = podJSON.visibleColumns
     }
 }
 

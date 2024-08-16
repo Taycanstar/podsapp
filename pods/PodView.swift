@@ -570,12 +570,14 @@ struct PodView: View {
     @State private var podColumns: [PodColumn]
     @State private var showPodColumnsView = false
     
+    @State private var visibleColumns: [String] = []
+    
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
         self._pod = pod
         self._needsRefresh = needsRefresh
         self._podColumns = State(initialValue: pod.wrappedValue.columns)
-    
+        self._visibleColumns = State(initialValue: pod.wrappedValue.visibleColumns)
     }
 
     
@@ -652,6 +654,7 @@ struct PodView: View {
         .edgesIgnoringSafeArea(.bottom)
         .onAppear {
             self.reorderedItems = self.pod.items
+       
             uploadViewModel.addItemCompletion = {
                 refreshPodItems()
             }
@@ -683,14 +686,16 @@ struct PodView: View {
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title)
         }
+
         .sheet(isPresented: $showPodColumnsView) {
-                PodColumnsView(
-                    podColumns: $podColumns,
-                    isPresented: $showPodColumnsView,
-                    podId: pod.id,
-                    networkManager: networkManager
-                )
-            }
+            PodColumnsView(
+                podColumns: $podColumns,
+                isPresented: $showPodColumnsView,
+                podId: pod.id,
+                networkManager: networkManager, visibleColumns: $visibleColumns
+            )
+        }
+
         .fullScreenCover(isPresented: $showAddItemView) {
             AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
         }
@@ -778,26 +783,26 @@ struct PodView: View {
         }
 
     private var listView: some View {
-            ForEach(reorderedItems.indices, id: \.self) { index in
-                HStack(alignment: .top, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(reorderedItems[index].metadata)
-                            .font(.system(size: 14))
-                            .fontWeight(.regular)
-                            .padding(.bottom, 4)
-                        
-                        HStack {
-                            ForEach(Array(podColumns.enumerated()), id: \.element.name) { columnIndex, column in
 
-                                columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
-                                                            .onTapGesture {
-                                                                selectedColumnForEdit = (columnIndex, column.name)
-                                                                selectedItemIndex = index
-                                                                showColumnEditSheet = true
-                                                            }
-                            }
-                        }
-                    }
+        ForEach(reorderedItems.indices, id: \.self) { index in
+               HStack(alignment: .top, spacing: 10) {
+                   VStack(alignment: .leading, spacing: 8) {
+                       Text(reorderedItems[index].metadata)
+                           .font(.system(size: 14))
+                           .fontWeight(.regular)
+                           .padding(.bottom, 4)
+                       
+                       HStack {
+                           ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
+                               columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
+                                   .onTapGesture {
+                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
+                                       selectedItemIndex = index
+                                       showColumnEditSheet = true
+                                   }
+                           }
+                       }
+                   }
                     .padding()
                     .onTapGesture {
                         selectedItemIndex = index
