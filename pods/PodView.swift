@@ -1497,7 +1497,8 @@ struct CardDetailView: View {
                 ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
                     isItemNameFocused = true
                 }, itemName: "test",
-                                onDuplicateItem: duplicateItem)
+                                onDuplicateItem: duplicateItem,  onMoveItem: moveItemToPod, currentPodId: podId,
+                                dismissCardDetailView: { presentationMode.wrappedValue.dismiss()})
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(y: showItemOptions ? 0  : geometry.size.height)
                     .animation(.snappy)
@@ -1507,6 +1508,26 @@ struct CardDetailView: View {
             .edgesIgnoringSafeArea(.all)
         }
     }
+    
+    
+    private func moveItemToPod(_ toPodId: Int) {
+          networkManager.moveItemToPod(itemId: item.id, fromPodId: podId, toPodId: toPodId) { result in
+              DispatchQueue.main.async {
+                  switch result {
+                  case .success:
+                      // Remove the item from the current pod's items
+                      if let index = allItems.firstIndex(where: { $0.id == item.id }) {
+                          allItems.remove(at: index)
+                      }
+                      presentationMode.wrappedValue.dismiss()
+                      // You might want to show a success message or update UI here
+                  case .failure(let error):
+                      print("Failed to move item: \(error)")
+                      // You might want to show an error message to the user here
+                  }
+              }
+          }
+      }
     
     private func duplicateItem() {
         let newItem = PodItem(

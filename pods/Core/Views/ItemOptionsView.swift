@@ -9,6 +9,8 @@
 import SwiftUI
 
 struct ItemOptionsView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    var networkManager: NetworkManager = NetworkManager()
     @Binding var showItemOptionsSheet: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
@@ -16,6 +18,13 @@ struct ItemOptionsView: View {
     var onEditName: () -> Void
      var itemName: String
     var onDuplicateItem: () -> Void
+    @State private var showPodSelection = false
+     @State private var pods: [Pod] = []
+     @State private var isLoadingPods = false
+    @State private var podSelectionOffset: CGFloat = UIScreen.main.bounds.height
+    var onMoveItem: (Int) -> Void
+       var currentPodId: Int
+    var dismissCardDetailView: () -> Void
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -55,10 +64,12 @@ struct ItemOptionsView: View {
                         }, color: .primary)
                         
                         MenuItemView(iconName: "arrow.forward.square", text: "Move to Pod", action: {
-                            showItemOptionsSheet = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                print("Tapped move to pod")
-                            }
+//                            showItemOptionsSheet = false
+                            fetchPods()
+                                                    withAnimation(.spring()) {
+                                                        showPodSelection = true
+                                                        podSelectionOffset = 0
+                                                    }
                         }, color: .primary)
                         
                         
@@ -87,8 +98,73 @@ struct ItemOptionsView: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 }
+                
+                // Pod Selection View
+                GeometryReader { geometry in
+                               VStack(spacing: 0) {
+                                   HStack {
+                                       Text("Select Pod")
+                                           .font(.headline)
+                                       Spacer()
+                                       Button(action: {
+                                           withAnimation(.spring()) {
+                                               showPodSelection = false
+                                               podSelectionOffset = geometry.size.height
+                                           }
+                                       }) {
+                                           Image(systemName: "xmark")
+                                               .foregroundColor(.primary)
+                                       }
+                                   }
+                                   .padding()
+                                   .background(Color("mdBg"))
+                                   
+                                   if isLoadingPods {
+                                       Spacer()
+                                       ProgressView()
+                                       Spacer()
+                                   } else {
+                                       ScrollView {
+                                           LazyVStack(spacing: 10) {
+                                               ForEach(pods.filter { $0.id != currentPodId }, id: \.id) { pod in
+                                                   Button(action: {
+                                                       onMoveItem(pod.id)
+                                                       showItemOptionsSheet = false
+                                                       dismissCardDetailView() 
+                                                   }) {
+                                                       Text(pod.title)
+                                                           .foregroundColor(.primary)
+                                                           .frame(maxWidth: .infinity, alignment: .leading)
+                                                           .padding()
+                                                           .background(Color("ltBg"))
+                                                           .cornerRadius(8)
+                                                   }
+                                               }
+                                           }
+                                           .padding()
+                                       }
+                                   }
+                               }
+                               .frame(maxWidth: .infinity, maxHeight: .infinity)
+                               .background(Color("mdBg"))
+                               .cornerRadius(20)
+                               .offset(y: podSelectionOffset)                }
 
         }
         
+        
+        
     }
+    private func fetchPods() {
+         isLoadingPods = true
+        networkManager.fetchPodsForUser(email: viewModel.email) { success, fetchedPods, error in
+             isLoadingPods = false
+             if success, let fetchedPods = fetchedPods {
+                 self.pods = fetchedPods
+             } else {
+                 // Handle error (you might want to show an alert here)
+                 print("Failed to fetch pods: \(error ?? "Unknown error")")
+             }
+         }
+     }
 }
