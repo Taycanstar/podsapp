@@ -1472,6 +1472,7 @@ struct CardDetailView: View {
                 .navigationBarItems(
                     leading: Button(action: {
                         presentationMode.wrappedValue.dismiss()
+                        saveChanges()
                     }) {
                         Image(systemName: "xmark")
                             .foregroundColor(.primary)
@@ -1487,10 +1488,7 @@ struct CardDetailView: View {
                 .allowsHitTesting(!showItemOptions)
             }
             GeometryReader { geometry in
-//                AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
-//                    .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
-//                    .animation(.snappy)
-//                
+
                 ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
                     isItemNameFocused = true
                 }, itemName: "test")
