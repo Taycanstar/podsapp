@@ -13,6 +13,7 @@ struct ItemOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
      var onDeleteItem: () -> Void
+    var onEditName: () -> Void
      var itemName: String
     @Environment(\.colorScheme) var colorScheme
     
@@ -44,6 +45,7 @@ struct ItemOptionsView: View {
                         MenuItemView(iconName: "square.and.pencil", text: "Edit name", action: {
                             print("Tapped edit name")
                             showItemOptionsSheet = false
+                            onEditName()
                         }, color: .primary)
                         
                         MenuItemView(iconName: "doc.on.doc", text: "Duplicate item", action: {

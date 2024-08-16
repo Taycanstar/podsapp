@@ -1394,6 +1394,8 @@ struct CardDetailView: View {
     @State private var newColumnName = ""
     @State private var newColumnType = ""
     let podId: Int
+    
+    @FocusState private var isItemNameFocused: Bool
 
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
         self._item = item
@@ -1429,6 +1431,7 @@ struct CardDetailView: View {
                             TextField("Item Name", text: $itemName)
                                 .font(.system(size: 18)).bold()
                                 .background(Color.clear)
+                                .focused($isItemNameFocused)
                             
                             ForEach(podColumns, id: \.name) { column in
                                 VStack(alignment: .leading) {
@@ -1488,7 +1491,9 @@ struct CardDetailView: View {
 //                    .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
 //                    .animation(.snappy)
 //                
-                ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, itemName: "test")
+                ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
+                    isItemNameFocused = true
+                }, itemName: "test")
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(y: showItemOptions ? 0  : geometry.size.height)
                     .animation(.snappy)
@@ -1697,7 +1702,7 @@ struct AddColumnView: View {
                     .font(.system(size: 16))
             }
             .padding(10)
-//            .frame(width: 100, height: 100)
+
             .background(Color("ltBg"))
             .cornerRadius(10)
         }
