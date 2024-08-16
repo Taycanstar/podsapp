@@ -748,7 +748,11 @@ struct PodView: View {
                 CardDetailView(item: Binding<PodItem>(
                     get: { self.reorderedItems[index] },
                     set: { self.reorderedItems[index] = $0 }
-                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager)
+                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager,
+                               allItems: Binding<[PodItem]>(
+                                                get: { self.reorderedItems },
+                                                set: { self.reorderedItems = $0 }
+                                            ))
             }
         }
           
@@ -1389,7 +1393,7 @@ struct CardDetailView: View {
     @State private var showAddColumn = false
     @State private var showItemOptions = false
     @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
-    
+    @Binding var allItems: [PodItem]
     @State private var isAddingColumn = false
     @State private var newColumnName = ""
     @State private var newColumnType = ""
@@ -1397,11 +1401,12 @@ struct CardDetailView: View {
     
     @FocusState private var isItemNameFocused: Bool
 
-    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager) {
+    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
         self._podColumns = podColumns
         self.networkManager = networkManager
+        self._allItems = allItems
         
         var initialColumnValues: [String: String] = [:]
         for column in podColumns.wrappedValue {
@@ -1491,7 +1496,8 @@ struct CardDetailView: View {
 
                 ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
                     isItemNameFocused = true
-                }, itemName: "test")
+                }, itemName: "test",
+                                onDuplicateItem: duplicateItem)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(y: showItemOptions ? 0  : geometry.size.height)
                     .animation(.snappy)
@@ -1501,6 +1507,34 @@ struct CardDetailView: View {
             .edgesIgnoringSafeArea(.all)
         }
     }
+    
+    private func duplicateItem() {
+        let newItem = PodItem(
+            id: 0, // The server will assign the actual ID
+            metadata: "\(itemName) (Copy)",
+            itemType: item.itemType,
+            notes: item.notes,
+            columnValues: item.columnValues
+        )
+        
+        networkManager.createPodItem(podId: podId, label: newItem.metadata, itemType: newItem.itemType, notes: newItem.notes, columnValues: newItem.columnValues ?? [:]) { result in
+            switch result {
+            case .success(let createdItem):
+                DispatchQueue.main.async {
+                    if let index = allItems.firstIndex(where: { $0.id == item.id }) {
+                        allItems.insert(createdItem, at: index + 1)
+                    } else {
+                        allItems.append(createdItem)
+                    }
+                    print("Item duplicated successfully")
+                }
+            case .failure(let error):
+                print("Failed to duplicate item: \(error)")
+                // You might want to show an alert to the user here
+            }
+        }
+    }
+
     
     private var addColumnButton: some View {
         HStack {

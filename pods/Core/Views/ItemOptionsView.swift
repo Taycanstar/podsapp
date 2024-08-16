@@ -15,6 +15,7 @@ struct ItemOptionsView: View {
      var onDeleteItem: () -> Void
     var onEditName: () -> Void
      var itemName: String
+    var onDuplicateItem: () -> Void
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -50,9 +51,7 @@ struct ItemOptionsView: View {
                         
                         MenuItemView(iconName: "doc.on.doc", text: "Duplicate item", action: {
                             showItemOptionsSheet = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                print("Tapped duplicate item")
-                            }
+                            onDuplicateItem()
                         }, color: .primary)
                         
                         MenuItemView(iconName: "arrow.forward.square", text: "Move to Pod", action: {
