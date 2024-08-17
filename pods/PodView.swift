@@ -1401,6 +1401,8 @@ struct CardDetailView: View {
     @State private var itemOptionsOffset: CGFloat = UIScreen.main.bounds.height
     
     @FocusState private var isItemNameFocused: Bool
+    
+    @State private var showDeleteConfirmation = false
 
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
@@ -1497,12 +1499,10 @@ struct CardDetailView: View {
 
                 ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
                     isItemNameFocused = true
-                }, itemName: "test",
+                }, itemName: item.metadata,
                                 onDuplicateItem: duplicateItem,  onMoveItem: moveItemToPod, currentPodId: podId,
                                 dismissCardDetailView: { presentationMode.wrappedValue.dismiss()})
                     .frame(width: geometry.size.width, height: geometry.size.height)
-//                    .offset(y: showItemOptions ? 0  : geometry.size.height)
-//                    .animation(.snappy)
                     .offset(y: itemOptionsOffset)
                                    .onChange(of: showItemOptions) { newValue in
                                        withAnimation(.snappy()) {
@@ -1517,6 +1517,15 @@ struct CardDetailView: View {
         .onAppear {
                    itemOptionsOffset = UIScreen.main.bounds.height
                }
+        .alert(isPresented: $showDeleteConfirmation) {
+            Alert(
+                title: Text("Delete Item"),
+                message: Text("Delete \(item.metadata)?"),
+                primaryButton: .destructive(Text("Delete")) {
+                    deleteItem()
+                },
+                secondaryButton: .cancel())}
+                
     }
     
     
@@ -1590,7 +1599,22 @@ struct CardDetailView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
     
-    private func deleteItem(){}
+    private func deleteItem() {
+           networkManager.deletePodItem(itemId: item.id) { success, errorMessage in
+               DispatchQueue.main.async {
+                   if success {
+                       if let index = allItems.firstIndex(where: { $0.id == item.id }) {
+                           allItems.remove(at: index)
+                       }
+                       presentationMode.wrappedValue.dismiss()
+                   
+                   } else {
+                       print("Failed to delete item: \(errorMessage ?? "Unknown error")")
+                       // You might want to show an error alert to the user here
+                   }
+               }
+           }
+       }
 
 
     private func addNewColumn(title: String, type: String) {
