@@ -47,7 +47,7 @@ struct LandingView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 20) // Adjust based on your design needs
                                 
-                                Text("Sign in with Google")
+                                Text("Continue with Google")
                                     .foregroundColor(.black) // Set text color
                             }
                         }
@@ -116,10 +116,14 @@ struct LandingView: View {
             GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController,  hint: nil,  additionalScopes: ["profile", "https://www.googleapis.com/auth/user.birthday.read"]) { signInResult, error in
                 if let error = error {
                     print(error.localizedDescription)
+                    print("Google Sign-In error: \(error.localizedDescription)")
                     return
                 }
                 
-                guard let result = signInResult else { return }
+                guard let result = signInResult else {
+                         print("No sign-in result")
+                         return
+                     }
                 
                 guard let idToken = result.user.idToken?.tokenString else {
                     print("Error: No ID token found")

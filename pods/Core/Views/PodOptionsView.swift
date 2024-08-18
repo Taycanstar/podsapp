@@ -12,10 +12,15 @@ struct PodOptionsView: View {
     @Binding var showPodColumnsView: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
+    @State private var isSharePresented = false
+    @State private var shareURL: URL?
      var onDeletePod: () -> Void
      var podName: String
+    var podId: Int
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
     
+    @State private var shareItem: ActivityItem?
     var body: some View {
         ZStack {
             (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
@@ -42,7 +47,8 @@ struct PodOptionsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     MenuItemView(iconName: "square.and.arrow.up", text: "Share", action: {
                         print("Tapped Share")
-                        showPodOptionsSheet = false
+//                        showPodOptionsSheet = false
+                        generateShareLink()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "info.circle", text: "Pod info", action: {
@@ -114,9 +120,46 @@ struct PodOptionsView: View {
                 Button("Cancel", role: .cancel) {}
             }
         }
+        .sheet(isPresented: $isSharePresented, content: {
+                    if let url = shareURL {
+                        ActivityViewController(activityItems: [url])
+                    }
+                })
+    }
+    
+    
+    
+    private func generateShareLink() {
+        NetworkManager().sharePod(podId: podId, userEmail: viewModel.email) { result in
+            switch result {
+            case .success(let deepLink):
+                self.shareURL = URL(string: deepLink)
+                self.isSharePresented = true
+            case .failure(let error):
+                print("Failed to generate share link: \(error)")
+                // Handle error (show alert, etc.)
+            }
+        }
     }
 }
 
+struct ActivityItem: Identifiable {
+    let id = UUID()
+    let items: [Any]
+    let activities: [UIActivity]? = nil
+}
+
+struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: UIViewControllerRepresentableContext<ActivityViewController>) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: UIViewControllerRepresentableContext<ActivityViewController>) {}
+}
 
 struct MenuItemView: View {
     let iconName: String

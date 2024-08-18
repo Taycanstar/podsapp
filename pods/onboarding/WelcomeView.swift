@@ -142,7 +142,7 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor in
                 DispatchQueue.main.async {
                     isLoading = false // Stop loading animation
                     if success {

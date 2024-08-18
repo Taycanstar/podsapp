@@ -7,7 +7,6 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-//
     let baseUrl = "http://192.168.1.67:8000"
 
 //    let baseUrl = "http://172.20.10.2:8000"
@@ -71,20 +70,7 @@ class NetworkManager {
     }
 
     
-//    func getStorageAccountCredentials(for region: String) -> (accountName: String, sasToken: String)? {
-//           let accountNameKey = "BLOB_NAME_\(region.uppercased())"
-//           let sasTokenKey = "SAS_TOKEN_\(region.uppercased())"
-//           
-//           guard let accountName = ProcessInfo.processInfo.environment[accountNameKey],
-//                 let sasToken = ProcessInfo.processInfo.environment[sasTokenKey] else {
-//               print("Missing environment variables for region \(region)")
-//               return nil
-//           }
-//           
-//        print(accountName, sasToken, "hot shit")
-//           return (accountName, sasToken)
-//       }
-    
+
     func getStorageAccountCredentials(for region: String) -> (accountName: String, sasToken: String)? {
            let accountNameKey = "BLOB_NAME_\(region.uppercased())"
            let sasTokenKey = "SAS_TOKEN_\(region.uppercased())"
@@ -2299,6 +2285,103 @@ class NetworkManager {
              }
          }.resume()
      }
+    
+
+        func sharePod(podId: Int, userEmail: String, completion: @escaping (Result<String, Error>) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/share-pod/") else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+
+            let body: [String: Any] = [
+                "pod_id": podId,
+                "user_email": userEmail
+            ]
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                completion(.failure(NetworkError.encodingError))
+                return
+            }
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                guard let data = data else {
+                    completion(.failure(NetworkError.decodingError))
+                    return
+                }
+
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                       let deepLink = json["shareUrl"] as? String {
+                        completion(.success(deepLink))
+                    } else {
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                } catch {
+                    completion(.failure(error))
+                }
+            }.resume()
+        }
+    
+
+    func acceptPodInvitation(podId: Int, token: String, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/accept-pod-invitation/") else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+
+            let body: [String: Any] = [
+                "pod_id": podId,
+                "token": token,
+                "user_email": userEmail  // Assuming you have a userEmail property in NetworkManager
+            ]
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                completion(.failure(NetworkError.encodingError))
+                return
+            }
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+
+                switch httpResponse.statusCode {
+                case 200...299:
+                    completion(.success(()))
+                default:
+                    if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    } else {
+                        completion(.failure(NetworkError.unknownError))
+                    }
+                }
+            }.resume()
+        }
+    
+    
     
 }
 

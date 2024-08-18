@@ -6,6 +6,12 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+struct PodInvitation: Identifiable {
+    let id: Int
+    let podId: Int
+    let token: String
+}
+
 struct Team: Identifiable, Codable {
     var id: Int
     var name: String
