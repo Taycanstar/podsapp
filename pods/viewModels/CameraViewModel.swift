@@ -90,8 +90,6 @@ struct PodItem: Identifiable {
 
 
 struct Pod: Identifiable {
-   
-    
     var id: Int
     var items: [PodItem] = []
     var title: String
@@ -101,6 +99,7 @@ struct Pod: Identifiable {
     var lastVisited: Date?
     var columns: [PodColumn] = []
     var visibleColumns: [String] = []
+    var role: String?
 }
 
 
@@ -116,6 +115,7 @@ struct PodJSON: Codable {
     var lastVisited: Date?
     var columns: [PodColumn]
     var visibleColumns: [String]
+    var role: String?
 }
 
 
@@ -182,6 +182,7 @@ extension Pod {
         self.lastVisited = podJSON.lastVisited
         self.columns = podJSON.columns
         self.visibleColumns = podJSON.visibleColumns
+        self.role = podJSON.role
     }
 }
 
