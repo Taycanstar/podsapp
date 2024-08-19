@@ -30,6 +30,8 @@ class HomeViewModel: ObservableObject {
         }
     }
     
+    
+    
     func refreshPods(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
         self.pods = []  // Clear existing pods
         fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited, completion: completion)

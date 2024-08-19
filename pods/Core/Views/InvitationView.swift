@@ -19,6 +19,7 @@ struct InvitationView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @EnvironmentObject var homeViewModel: HomeViewModel
 
     var body: some View {
         ZStack {
@@ -115,18 +116,34 @@ struct InvitationView: View {
         }
     }
 
+//    private func acceptInvitation() {
+//            isLoading = true
+//            NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email) { result in
+//                DispatchQueue.main.async {
+//                    isLoading = false
+//                    switch result {
+//                    case .success:
+//                        presentationMode.wrappedValue.dismiss()
+//                    case .failure(let error):
+//                        errorMessage = error.localizedDescription
+//                    }
+//                }
+//            }
+//        }
     private func acceptInvitation() {
-            isLoading = true
-            NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email) { result in
-                DispatchQueue.main.async {
-                    isLoading = false
-                    switch result {
-                    case .success:
+        isLoading = true
+        NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                switch result {
+                case .success:
+                    homeViewModel.refreshPods(email: viewModel.email) {
                         presentationMode.wrappedValue.dismiss()
-                    case .failure(let error):
-                        errorMessage = error.localizedDescription
                     }
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
                 }
             }
         }
+    }
 }
