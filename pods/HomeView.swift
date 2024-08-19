@@ -24,6 +24,7 @@ struct HomeView: View {
     @State private var selectedHeaderOption = "Recently visited"
     @Binding var shouldNavigateToNewPod: Bool
        @Binding var newPodId: Int?
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     var body: some View {
            NavigationView {
                ZStack(alignment: .top) {
@@ -61,6 +62,8 @@ struct HomeView: View {
                .navigationBarHidden(true)
                .onAppear {
                    fetchPodsAndWorkspacesIfNeeded()
+                   isTabBarVisible.wrappedValue = true
+
                }
                .refreshable {
                     refreshPods()

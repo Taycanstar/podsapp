@@ -23,6 +23,7 @@
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
 		36411D2F2C32867D0034E36D /* app1.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D2E2C32867D0034E36D /* app1.mp4 */; };
 		36411D312C3286890034E36D /* app2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D302C3286890034E36D /* app2.mp4 */; };
+		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
 		3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */; };
@@ -116,6 +117,7 @@
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
 		36411D2E2C32867D0034E36D /* app1.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app1.mp4; path = pods/Assets.xcassets/app1.dataset/app1.mp4; sourceTree = "<group>"; };
 		36411D302C3286890034E36D /* app2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app2.mp4; path = pods/Assets.xcassets/app2.dataset/app2.mp4; sourceTree = "<group>"; };
+		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
@@ -280,6 +282,7 @@
 				362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */,
 				36D0440D2C70078500B01998 /* SelectPodView.swift */,
 				36D0440F2C71196900B01998 /* InvitationView.swift */,
+				3641F5112C73A13500256E85 /* PodInfoView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -690,6 +693,7 @@
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
 				362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,

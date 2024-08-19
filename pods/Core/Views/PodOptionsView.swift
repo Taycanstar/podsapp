@@ -19,6 +19,7 @@ struct PodOptionsView: View {
     var podId: Int
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
+    var onPodInfoSelected: () -> Void
     
     @State private var shareItem: ActivityItem?
     var body: some View {
@@ -49,20 +50,21 @@ struct PodOptionsView: View {
                         print("Tapped Share")
 //                        showPodOptionsSheet = false
                         generateShareLink()
+                        onPodInfoSelected()
+                        HapticFeedback.generate()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "info.circle", text: "Pod info", action: {
                         dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            print("Tapped pod info")
-                        }
+                        HapticFeedback.generate()
+                       onPodInfoSelected()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "person.2", text: "Pod members", action: {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                       
                             print("Tapped pod members")
-                        }
+                        HapticFeedback.generate()
+                       
                     }, color: .primary)
                     
                     MenuItemView(iconName: "table", text: "Pod columns", action: {
@@ -71,6 +73,7 @@ struct PodOptionsView: View {
                             showPodColumnsView = true
                             print("tapped pod columns")
                         }
+                        HapticFeedback.generate()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "bubble", text: "Pod Chat", action: {
@@ -78,6 +81,7 @@ struct PodOptionsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             print("Tapped Pod chat")
                         }
+                        HapticFeedback.generate()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
@@ -85,6 +89,7 @@ struct PodOptionsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             print("Tapped Pod activity")
                         }
+                        HapticFeedback.generate()
                     }, color: .primary)
                     //                
                     //                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
@@ -99,6 +104,7 @@ struct PodOptionsView: View {
                     MenuItemView(iconName: "trash", text: "Delete Pod", action: {
                         
                         showDeleteConfirmation = true
+                        HapticFeedback.generate()
                         
                     }, color: .red)
                 }

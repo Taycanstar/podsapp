@@ -572,6 +572,9 @@ struct PodView: View {
     
     @State private var visibleColumns: [String] = []
     
+    @State private var navigateToPodInfo = false
+   
+    
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
         self._pod = pod
@@ -588,6 +591,7 @@ struct PodView: View {
     }
 
     var body: some View {
+       
         ZStack {
             (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
                             .edgesIgnoringSafeArea(.all)
@@ -678,13 +682,18 @@ struct PodView: View {
 
         }
         .onDisappear {
-            isTabBarVisible.wrappedValue = true
+//            isTabBarVisible.wrappedValue = true
             
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
         .sheet(isPresented: $showPodOptionsSheet) {
-            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id)
+            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,      onPodInfoSelected: {
+                showPodOptionsSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    navigateToPodInfo = true
+                }
+            })
         }
 
         .sheet(isPresented: $showPodColumnsView) {
@@ -699,22 +708,51 @@ struct PodView: View {
         .fullScreenCover(isPresented: $showAddItemView) {
             AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
         }
+//        .background(
+//            NavigationLink(
+//                destination: selection.map { index in
+//                    PlayerContainerView(
+//                        items: reorderedItems,
+//                        initialIndex: index.itemIndex
+//                    )
+//                },
+//                isActive: Binding(
+//                    get: { selection != nil },
+//                    set: { if !$0 { selection = nil } }
+//                )
+//            ) {
+//                EmptyView()
+//            }
+//        )
         .background(
-            NavigationLink(
-                destination: selection.map { index in
-                    PlayerContainerView(
-                        items: reorderedItems,
-                        initialIndex: index.itemIndex
-                    )
-                },
-                isActive: Binding(
-                    get: { selection != nil },
-                    set: { if !$0 { selection = nil } }
-                )
-            ) {
-                EmptyView()
-            }
-        )
+                   Group {
+                       NavigationLink(
+                           destination: selection.map { index in
+                               PlayerContainerView(
+                                   items: reorderedItems,
+                                   initialIndex: index.itemIndex
+                               )
+                           },
+                           isActive: Binding(
+                               get: { selection != nil },
+                               set: { if !$0 { selection = nil } }
+                           )
+                       ) {
+                           EmptyView()
+                       }
+                       
+                       NavigationLink(
+                           destination: PodInfoView(pod: $pod)
+                            .onAppear {
+                                       isTabBarVisible.wrappedValue = false 
+                                   }
+                           ,
+                           isActive: $navigateToPodInfo
+                       ) {
+                           EmptyView()
+                       }
+                   }
+               )
 
         .sheet(isPresented: $showColumnEditSheet) {
             if let selectedColumn = selectedColumnForEdit,

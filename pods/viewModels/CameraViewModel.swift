@@ -100,6 +100,8 @@ struct Pod: Identifiable {
     var columns: [PodColumn] = []
     var visibleColumns: [String] = []
     var role: String?
+    var description: String?
+    var type: String?
 }
 
 
@@ -116,6 +118,8 @@ struct PodJSON: Codable {
     var columns: [PodColumn]
     var visibleColumns: [String]
     var role: String?
+    var description: String?
+    var type: String?
 }
 
 
@@ -183,6 +187,8 @@ extension Pod {
         self.columns = podJSON.columns
         self.visibleColumns = podJSON.visibleColumns
         self.role = podJSON.role
+        self.description = podJSON.description
+        self.type = podJSON.type
     }
 }
 
