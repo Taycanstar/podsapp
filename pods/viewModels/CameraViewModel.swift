@@ -10,6 +10,9 @@ struct PodInvitation: Identifiable {
     let id: Int
     let podId: Int
     let token: String
+    let userName: String
+    let userEmail: String
+    let podName: String
 }
 
 struct Team: Identifiable, Codable {

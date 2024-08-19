@@ -53,17 +53,27 @@ class DeepLinkHandler: ObservableObject {
 
     func handle(url: URL) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
-              components.path == "/product/podstack/invite",
-              let podIdString = components.queryItems?.first(where: { $0.name == "podId" })?.value,
-              let invitationToken = components.queryItems?.first(where: { $0.name == "invitationToken" })?.value,
-              let podId = Int(podIdString) else {
+              components.path == "/pods/invite",
+              let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
             return
         }
+        
+        fetchInvitationDetails(token: token)
+    }
 
-        activeInvitation = PodInvitation(id: 0, podId: podId, token: invitationToken)
+    private func fetchInvitationDetails(token: String) {
+        NetworkManager().fetchInvitationDetails(token: token) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let invitation):
+                    self.activeInvitation = invitation
+                case .failure(let error):
+                    print("Failed to fetch invitation details: \(error)")
+                }
+            }
+        }
     }
 }
-
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
@@ -86,13 +96,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         if let incomingURL = userActivity.webpageURL,
            let components = URLComponents(url: incomingURL, resolvingAgainstBaseURL: true),
            components.path == "/product/podstack/invite",
-           let podId = components.queryItems?.first(where: { $0.name == "podId" })?.value,
-           let invitationToken = components.queryItems?.first(where: { $0.name == "invitationToken" })?.value {
+           let podIdString = components.queryItems?.first(where: { $0.name == "podId" })?.value,
+           let invitationToken = components.queryItems?.first(where: { $0.name == "invitationToken" })?.value,
+           let userName = components.queryItems?.first(where: { $0.name == "userName" })?.value,
+           let userEmail = components.queryItems?.first(where: { $0.name == "userEmail" })?.value,
+           let podName = components.queryItems?.first(where: { $0.name == "podName" })?.value,
+           let podId = Int(podIdString) {
             
-            if let podIdInt = Int(podId) {
-                let deepLinkHandler = DeepLinkHandler.shared
-                deepLinkHandler.activeInvitation = PodInvitation(id: 0, podId: podIdInt, token: invitationToken)
-            }
+            let deepLinkHandler = DeepLinkHandler.shared
+            deepLinkHandler.activeInvitation = PodInvitation(id: 0, podId: podId, token: invitationToken, userName: userName, userEmail: userEmail, podName: podName)
             return true
         }
         return false
@@ -101,6 +113,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         if url.scheme == "podstack" {
             // Handle your deep link
+            DeepLinkHandler.shared.handle(url: url)
             return true
         } else {
             // Handle Google Sign-In

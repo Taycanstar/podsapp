@@ -2287,51 +2287,56 @@ class NetworkManager {
      }
     
 
-        func sharePod(podId: Int, userEmail: String, completion: @escaping (Result<String, Error>) -> Void) {
-            guard let url = URL(string: "\(baseUrl)/share-pod/") else {
-                completion(.failure(NetworkError.invalidURL))
+    func sharePod(podId: Int, userEmail: String, completion: @escaping (Result<PodInvitation, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/share-pod/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = [
+            "pod_id": podId,
+            "user_email": userEmail
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
                 return
             }
 
-            let body: [String: Any] = [
-                "pod_id": podId,
-                "user_email": userEmail
-            ]
-
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            guard let data = data else {
+                completion(.failure(NetworkError.decodingError))
+                return
+            }
 
             do {
-                request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            } catch {
-                completion(.failure(NetworkError.encodingError))
-                return
-            }
-
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-
-                guard let data = data else {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let shareUrl = json["shareUrl"] as? String,
+                   let podId = json["podId"] as? Int,
+                   let userName = json["userName"] as? String,
+                   let userEmail = json["userEmail"] as? String,
+                   let podName = json["podName"] as? String {
+                    let invitation = PodInvitation(id: 0, podId: podId, token: shareUrl, userName: userName, userEmail: userEmail, podName: podName)
+                    completion(.success(invitation))
+                } else {
                     completion(.failure(NetworkError.decodingError))
-                    return
                 }
-
-                do {
-                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                       let deepLink = json["shareUrl"] as? String {
-                        completion(.success(deepLink))
-                    } else {
-                        completion(.failure(NetworkError.decodingError))
-                    }
-                } catch {
-                    completion(.failure(error))
-                }
-            }.resume()
-        }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
     
 
     func acceptPodInvitation(podId: Int, token: String, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -2381,7 +2386,39 @@ class NetworkManager {
             }.resume()
         }
     
-    
+    func fetchInvitationDetails(token: String, completion: @escaping (Result<PodInvitation, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/get-invitation-details/\(token)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.decodingError))
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let podId = json["podId"] as? Int,
+                   let podName = json["podName"] as? String,
+                   let inviterName = json["inviterName"] as? String,
+                   let inviterEmail = json["inviterEmail"] as? String {
+                    let invitation = PodInvitation(id: 0, podId: podId, token: token, userName: inviterName, userEmail: inviterEmail, podName: podName)
+                    completion(.success(invitation))
+                } else {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
     
 }
 

@@ -91,10 +91,15 @@ struct ContentView: View {
                     }
                     .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                 }
+//        
+//
+//                .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
+//                    InvitationView(podId: invitation.podId, token: invitation.token, userEmail: invitation.userEmail, userName: invitation.userName, podName: invitation.podName)
+//                }
+                .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
+                    InvitationView(invitation: invitation)
+                }
                 .environment(\.isTabBarVisible, $isTabBarVisible)
-                .sheet(item: $deepLinkHandler.activeInvitation) { invitation in
-                                 InvitationView(podId: invitation.podId, token: invitation.token)
-                             }
             } else {
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }

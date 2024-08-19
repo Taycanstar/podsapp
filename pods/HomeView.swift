@@ -689,7 +689,7 @@ struct HomeHeaderView: View {
                 Spacer()
             }
             .padding(.horizontal, 25)
-//            .padding(.vertical)
+
         }
         .frame(height: 44)
 

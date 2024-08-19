@@ -123,21 +123,21 @@ struct PodOptionsView: View {
         .sheet(isPresented: $isSharePresented, content: {
                     if let url = shareURL {
                         ActivityViewController(activityItems: [url])
+                            .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
                     }
                 })
+        
     }
-    
     
     
     private func generateShareLink() {
         NetworkManager().sharePod(podId: podId, userEmail: viewModel.email) { result in
             switch result {
-            case .success(let deepLink):
-                self.shareURL = URL(string: deepLink)
+            case .success(let invitation):
+                self.shareURL = URL(string: invitation.token)  // The token now contains the full shareUrl
                 self.isSharePresented = true
             case .failure(let error):
                 print("Failed to generate share link: \(error)")
-                // Handle error (show alert, etc.)
             }
         }
     }
