@@ -11,6 +11,10 @@ struct PodInfoView: View {
     @Binding var pod: Pod // Assuming you have a Pod model to pass as data
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Environment(\.isTabBarVisible) var isTabBarVisible
+    @Environment(\.colorScheme) var colorScheme
+    @State private var showPodTypeOptions = false
+       @State private var selectedPodType: PodType = .main
+    
     
     var body: some View {
         ZStack {
@@ -23,12 +27,10 @@ struct PodInfoView: View {
                     Section(header: Text("Pod Name").font(.system(size: 14))) {
                         TextField("Enter Pod Name", text: $pod.title)
                             .font(.system(size: 16))
-                            .fontWeight(.bold)
-//                            .padding()
+                            .fontWeight(.semibold)
                             .background(Color("mxdBg"))
                           
                     }
-                    .padding(.top)
                     
                     Divider()
                     
@@ -36,27 +38,48 @@ struct PodInfoView: View {
                     Section(header: Text("Pod Description").font(.system(size: 14))) {
                         TextField("Enter pod description", text: .constant(pod.description ?? ""))
                             .font(.system(size: 16))
-                            .fontWeight(.bold)
-//                            .padding()
+                            .fontWeight(.semibold)
                             .background(Color("mxdBg"))
                     }
                     
                     
                     Divider()
-                    
-                    // Pod Type Section
-                    Section(header: Text("Pod Type").font(.headline)) {
-                        Picker("Pod Type", selection: $pod.type) {
-                            Text("Main").tag("main")
-                            Text("Shareable").tag("shareable")
-                            Text("Private").tag("private")
+
+                    Button(action: {
+                        print("tapped pod type")
+                        showPodTypeOptions = true
+                    }, label: {
+                        HStack {
+                            Image(systemName: selectedPodType.iconName)
+                                .foregroundColor(.primary)
+                            
+                            VStack(alignment: .leading){
+                                Text("Pod Type")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.primary)
+                                Text(selectedPodType.rawValue)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal, 10)
+                            Spacer()
+                            
+                            Image(systemName: showPodTypeOptions ? "chevron.up" : "chevron.down")
+                                .foregroundColor(.primary)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
                         .padding(.horizontal)
-                    }
+                        .padding(.vertical, 10)
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(borderColor, lineWidth: 1)
+                        )
+                    })
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.vertical, 20)
+//                    .padding(.horizontal, 15)
                     
-                    Divider()
-                    
+                   
                     // Created by Section
                     Section(header: Text("Created by").font(.headline)) {
                         ZStack {
@@ -116,12 +139,134 @@ struct PodInfoView: View {
                 .padding()
                   }
               }
-              .navigationTitle("Pod Info")
+        .navigationBarItems(
+            trailing: Button(action: {
+                presentationMode.wrappedValue.dismiss()            }) {
+                Text("Save")
+                    .foregroundColor(.accentColor)
+            }
+        )
+              .navigationTitle("Pod info")
               .navigationBarTitleDisplayMode(.inline)
               .onAppear {
-                         isTabBarVisible.wrappedValue = false // Hide the TabBar when this view appears
+                         isTabBarVisible.wrappedValue = false
+                  updateSelectedPodType()
+
+                  
+                  print("pod type", pod.type)
                      }
+              .sheet(isPresented: $showPodTypeOptions) {
+                         PodTypeOptions(selectedType: $selectedPodType, isPresented: $showPodTypeOptions)
+                      .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                     }
+        
+              .onChange(of: selectedPodType) { _ in
+                       updatePodType()
+                   }
 
           }
     
+    private func updateSelectedPodType() {
+        if let podType = pod.type {
+            selectedPodType = PodType(rawValue: podType.lowercased()) ?? .main
+        } else {
+            selectedPodType = .main
+        }
+        print("Updated selectedPodType to: \(selectedPodType.rawValue)")
+    }
+    
+    private func updatePodType() {
+        pod.type = selectedPodType.rawValue.lowercased()
+        print("Updated pod.type to: \(pod.type ?? "nil")")
+    }
+    
+    private func savePodChanges() {
+            // Implement the logic to save pod changes
+            // This might involve calling an API or updating a database
+            print("Saving pod changes. Type: \(pod.type ?? "nil")")
+        }
+    
+    
+    private var borderColor: Color {
+        colorScheme == .dark ? Color(rgb: 71, 71, 71) : Color(rgb: 219, 223, 236)
+    }
+    
       }
+
+
+
+struct PodTypeOptions: View {
+    @Binding var selectedType: PodType
+    @Binding var isPresented: Bool
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        NavigationView {
+            List(PodType.allCases) { type in
+                Button(action: {
+                    selectedType = type
+                    isPresented = false
+                }) {
+                    HStack {
+                        Image(systemName: selectedType == type ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(selectedType == type ? .accentColor : .gray)
+                        
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Image(systemName: type.iconName)
+                                Text(type.rawValue)
+                                    .font(.headline)
+                            }
+                            Text(type.description)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .listStyle(PlainListStyle())
+            .navigationBarItems(
+                leading: Button(action: {
+                    isPresented = false
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                }
+            )
+            .navigationBarTitle("Pod Type", displayMode: .inline)
+        }
+    }
+}
+
+enum PodType: String, CaseIterable, Identifiable {
+    case main = "Main"
+    case shareable = "Shareable"
+    case privateType = "Private"
+    
+    var id: String { self.rawValue }
+    
+    init?(rawValue: String) {
+        switch rawValue.lowercased() {
+        case "main": self = .main
+        case "shareable": self = .shareable
+        case "private": self = .privateType
+        default: return nil
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .main: return "square.leadingthird.inset.filled"
+        case .shareable: return "point.bottomleft.forward.to.point.topright.scurvepath.fill"
+        case .privateType: return "lock"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .main: return "Visible to your entire team"
+        case .shareable: return "Share with guests outside your team"
+        case .privateType: return "For working privately - alone or with selected members"
+        }
+    }
+}
