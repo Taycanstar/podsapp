@@ -59,7 +59,7 @@ struct CreatePodView: View {
                     .environmentObject(viewModel)
                 
             }
-            .onChange(of: focusedField) { newValue in
+            .onChange(of: focusedField) { oldValue, newValue in
                 if newValue == nil {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         for (id, _) in showNotesPlaceholder {

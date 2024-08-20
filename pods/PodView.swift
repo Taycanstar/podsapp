@@ -1542,7 +1542,7 @@ struct CardDetailView: View {
                                 dismissCardDetailView: { presentationMode.wrappedValue.dismiss()})
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(y: itemOptionsOffset)
-                                   .onChange(of: showItemOptions) { newValue in
+                                   .onChange(of: showItemOptions) { oldValue, newValue in
                                        withAnimation(.snappy()) {
                                            itemOptionsOffset = newValue ? 0 : geometry.size.height
                                        }

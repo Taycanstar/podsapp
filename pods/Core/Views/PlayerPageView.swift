@@ -247,7 +247,7 @@ struct PlayerView: View {
                 player.pause()
             }
         }
-        .onChange(of: currentIndex) { newIndex in
+        .onChange(of: currentIndex) { oldIndex, newIndex in
             for (index, player) in players {
                 if index == newIndex {
                     player.seek(to: .zero)

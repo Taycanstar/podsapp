@@ -83,7 +83,7 @@ struct HomeView: View {
                                            )
                                        )
            }
-           .onChange(of: shouldNavigateToNewPod) { newValue in
+           .onChange(of: shouldNavigateToNewPod) { oldValue, newValue in
                        if newValue, let podId = newPodId {
                            print("Attempting to navigate to new pod with ID: \(podId)")
                        }
@@ -282,14 +282,14 @@ struct ItemRow: View {
         .padding(.leading, 15)
         .contentShape(Rectangle())
         .disabled(isEditing)
-        .onChange(of: isMetadataFocused) { focused in
+        .onChange(of: isMetadataFocused) {_,  focused in
             if !focused && item.notes.isEmpty {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     showNotesPlaceholder = false
                 }
             }
         }
-        .onChange(of: isNotesFocused) { focused in
+        .onChange(of: isNotesFocused) { _, focused in
             if focused {
                 showNotesPlaceholder = true
             } else if !focused && item.notes.isEmpty {

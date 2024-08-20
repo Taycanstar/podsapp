@@ -59,7 +59,7 @@ struct ContentView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .onChange(of: selectedTab) { _ in
+                        .onChange(of: selectedTab) {_, _ in
                             if selectedTab == 1 {
                                 showingVideoCreationScreen = true
                             }

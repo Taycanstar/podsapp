@@ -107,7 +107,7 @@ struct VideoContentView: View {
             .onDisappear {
                 cleanupPlayer()
             }
-            .onChange(of: isActive) { newValue in
+            .onChange(of: isActive) { oldValue, newValue in
                 if newValue {
                     player.play()
                 } else {

@@ -88,15 +88,15 @@ struct PodInfoView: View {
                                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                             
                             HStack {
-        //                        DefaultProfilePicture(
-        //                            initial: pod.user.profileInitial ?? "",
-        //                            color: pod.user.profileColor ?? "",
-        //                            size: 30
-        //                        )
-        //
-        //                        Text(pod.user.name)
-        //                            .fontWeight(.medium)
-        //                            .font(.system(size: 14))
+//                                DefaultProfilePicture(
+//                                    initial: pod.user.profileInitial ?? "",
+//                                    color: pod.user.profileColor ?? "",
+//                                    size: 30
+//                                )
+//        
+//                                Text(pod.user.name)
+//                                    .fontWeight(.medium)
+//                                    .font(.system(size: 14))
                                 Spacer()
                             }
                             .padding()
@@ -117,15 +117,15 @@ struct PodInfoView: View {
                                 )
                             
                             HStack {
-        //                        DefaultProfilePicture(
-        //                            initial: pod.workspace?.profileInitial ?? "",
-        //                            color: pod.workspace?.profileColor ?? "",
-        //                            size: 30
-        //                        )
-        //
-        //                        Text(pod.workspace?.name ?? "No Workspace")
-        //                            .fontWeight(.medium)
-        //                            .font(.system(size: 14))
+//                                DefaultProfilePicture(
+//                                    initial: pod.workspace?.profileInitial ?? "",
+//                                    color: pod.workspace?.profileColor ?? "",
+//                                    size: 30
+//                                )
+//        
+//                                Text(pod.workspace?.name ?? "No Workspace")
+//                                    .fontWeight(.medium)
+//                                    .font(.system(size: 14))
                                 Spacer()
                             }
                             .padding()
@@ -160,9 +160,9 @@ struct PodInfoView: View {
                       .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                      }
         
-              .onChange(of: selectedPodType) { _ in
-                       updatePodType()
-                   }
+              .onChange(of: selectedPodType) { oldValue, newValue in
+                  updatePodType()
+              }
 
           }
     
