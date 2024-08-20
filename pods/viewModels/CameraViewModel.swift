@@ -6,6 +6,24 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+
+struct PodDetails: Codable {
+    let creator: UserDetails
+    let workspace: WorkspaceDetails
+}
+
+struct UserDetails: Codable {
+    let name: String
+    let profileInitial: String
+    let profileColor: String
+}
+
+struct WorkspaceDetails: Codable {
+    let name: String
+    let profileInitial: String
+    let profileColor: String
+}
+
 struct PodInvitation: Identifiable {
     let id: Int
     let podId: Int

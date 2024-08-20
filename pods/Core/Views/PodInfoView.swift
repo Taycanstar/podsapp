@@ -14,7 +14,21 @@ struct PodInfoView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var showPodTypeOptions = false
        @State private var selectedPodType: PodType = .main
+    @State private var podDetails: PodDetails?
+      @State private var isLoading = true
+      @State private var errorMessage: String?
+   
     
+    @State private var podTitle: String
+    @State private var podDescription: String
+       
+       init(pod: Binding<Pod>) {
+           self._pod = pod
+           self._podTitle = State(initialValue: pod.wrappedValue.title)
+           self._podDescription = State(initialValue: pod.wrappedValue.description ?? "")
+           self._selectedPodType = State(initialValue: PodType(rawValue: pod.wrappedValue.type?.lowercased() ?? "main") ?? .main)
+       }
+       
     
     var body: some View {
         ZStack {
@@ -25,7 +39,7 @@ struct PodInfoView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Pod Name Section
                     Section(header: Text("Pod Name").font(.system(size: 14))) {
-                        TextField("Enter Pod Name", text: $pod.title)
+                        TextField("Enter Pod Name", text: $podTitle)
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .background(Color("mxdBg"))
@@ -36,7 +50,7 @@ struct PodInfoView: View {
                     
                     // Pod Description Section
                     Section(header: Text("Pod Description").font(.system(size: 14))) {
-                        TextField("Enter pod description", text: .constant(pod.description ?? ""))
+                        TextField("Enter pod description", text: $podDescription)
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .background(Color("mxdBg"))
@@ -81,58 +95,62 @@ struct PodInfoView: View {
                     
                    
                     // Created by Section
-                    Section(header: Text("Created by").font(.headline)) {
+                    Section(header: Text("Created by").font(.system(size: 14))) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 15)
-                                .fill(Color(UIColor.secondarySystemBackground))
-                                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                                .fill(Color("mxdBg"))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(borderColor, lineWidth: 1)
+                                )
+                        
                             
                             HStack {
-//                                DefaultProfilePicture(
-//                                    initial: pod.user.profileInitial ?? "",
-//                                    color: pod.user.profileColor ?? "",
-//                                    size: 30
-//                                )
-//        
-//                                Text(pod.user.name)
-//                                    .fontWeight(.medium)
-//                                    .font(.system(size: 14))
+                                DefaultProfilePicture(
+                                    initial: podDetails?.creator.profileInitial ?? "Y",
+                                    color: podDetails?.creator.profileColor ?? "blue",
+                                    size: 30
+                                )
+        
+                                Text(podDetails?.creator.name ?? "No creator")
+                                    .fontWeight(.medium)
+                                    .font(.system(size: 14))
                                 Spacer()
                             }
                             .padding()
                         }
                     }
-                    .padding(.horizontal)
+          
                     
                     Divider()
                     
                     // Workspace Section
-                    Section(header: Text("Workspace").font(.headline)) {
+                    Section(header: Text("Workspace").font(.system(size: 14))) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 15)
-                                .fill(Color("container"))
+                                .fill(Color("mxdBg"))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(Color.accentColor.opacity(0.15))
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(borderColor, lineWidth: 1)
                                 )
                             
                             HStack {
-//                                DefaultProfilePicture(
-//                                    initial: pod.workspace?.profileInitial ?? "",
-//                                    color: pod.workspace?.profileColor ?? "",
-//                                    size: 30
-//                                )
-//        
-//                                Text(pod.workspace?.name ?? "No Workspace")
-//                                    .fontWeight(.medium)
-//                                    .font(.system(size: 14))
+                                DefaultProfilePicture(
+                                    initial: podDetails?.workspace.profileInitial ?? "X",
+                                    color: podDetails?.workspace.profileColor ?? "pink",
+                                    size: 30
+                                )
+        
+                                Text(podDetails?.workspace.name ?? "No name")
+                                    .fontWeight(.medium)
+                                    .font(.system(size: 14))
                                 Spacer()
                             }
                             .padding()
                         }
                         .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.horizontal)
+
                     
                     Spacer()
                 }
@@ -141,7 +159,10 @@ struct PodInfoView: View {
               }
         .navigationBarItems(
             trailing: Button(action: {
-                presentationMode.wrappedValue.dismiss()            }) {
+                savePodChanges()
+                presentationMode.wrappedValue.dismiss()
+                
+            }) {
                 Text("Save")
                     .foregroundColor(.accentColor)
             }
@@ -151,7 +172,7 @@ struct PodInfoView: View {
               .onAppear {
                          isTabBarVisible.wrappedValue = false
                   updateSelectedPodType()
-
+                loadPodDetails()
                   
                   print("pod type", pod.type)
                      }
@@ -165,6 +186,21 @@ struct PodInfoView: View {
               }
 
           }
+    
+    private func loadPodDetails() {
+           isLoading = true
+           NetworkManager().fetchPodDetails(podId: pod.id) { result in
+               DispatchQueue.main.async {
+                   isLoading = false
+                   switch result {
+                   case .success(let details):
+                       self.podDetails = details
+                   case .failure(let error):
+                       self.errorMessage = error.localizedDescription
+                   }
+               }
+           }
+       }
     
     private func updateSelectedPodType() {
         if let podType = pod.type {
@@ -181,10 +217,27 @@ struct PodInfoView: View {
     }
     
     private func savePodChanges() {
-            // Implement the logic to save pod changes
-            // This might involve calling an API or updating a database
-            print("Saving pod changes. Type: \(pod.type ?? "nil")")
+        isLoading = true
+        NetworkManager().updatePodDetails(
+            podId: pod.id,
+            title: podTitle,
+            description: podDescription,
+            type: selectedPodType.rawValue.lowercased()
+        ) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                switch result {
+                case .success(let updatedPod):
+                    self.pod.title = updatedPod.title
+                    self.pod.description = updatedPod.description
+                    self.pod.type = updatedPod.type
+                    self.presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                        print("error", error)
+                }
+            }
         }
+    }
     
     
     private var borderColor: Color {

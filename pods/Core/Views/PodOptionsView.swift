@@ -50,7 +50,6 @@ struct PodOptionsView: View {
                         print("Tapped Share")
 //                        showPodOptionsSheet = false
                         generateShareLink()
-                        onPodInfoSelected()
                         HapticFeedback.generate()
                     }, color: .primary)
                     
