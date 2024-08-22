@@ -1,13 +1,6 @@
-//
-//  PodMembersView.swift
-//  Podstack
-//
-//  Created by Dimi Nunez on 8/21/24.
-//
 
 
 import SwiftUI
-
 
 struct PodMembersView: View {
     let podId: Int
@@ -17,24 +10,47 @@ struct PodMembersView: View {
     @State private var members: [PodMember] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-
+    @State private var role: String = ""
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var selectedMember: PodMember?
+    
+    private var canAddMembers: Bool {
+        role.lowercased() == "owner" || role.lowercased() == "admin"
+    }
+    
     var body: some View {
         ZStack {
             Color("mxdBg").edgesIgnoringSafeArea(.all)
             
-            if isLoading {
-                ProgressView()
-            } else if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-            } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        ForEach(members) { member in
-                            MemberRowView(member: member)
-                        }
+            VStack(alignment: .leading) {
+                if canAddMembers {
+                    Button(action: {
+                        print("Add pod members tapped")
+                    }) {
+                        Text("Add pod members")
+                            .foregroundColor(.accentColor)
+                            .font(.system(size: 16, weight: .regular))
+                            .padding(.horizontal, 20)
                     }
-                    .padding()
+                    .padding(.top, 20)
+                }
+                if isLoading {
+                    ProgressView()
+                } else if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(members) { member in
+                                MemberRowView(member: member)
+                                    .onTapGesture {
+                                        self.selectedMember = member
+                                    }
+                            }
+                        }
+                        .padding()
+                    }
                 }
             }
         }
@@ -44,15 +60,40 @@ struct PodMembersView: View {
             isTabBarVisible.wrappedValue = false
             loadPodMembers()
         }
+        .sheet(item: $selectedMember) { member in
+            MemberRoleOptions(
+                currentRole: PodMemberRole(rawValue: member.role.lowercased()) ?? .member,
+                onRoleChange: { newRole in
+                    updateMemberRole(member: member, newRole: newRole)
+                }
+            )
+            .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
+        }
+    }
+    
+    private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
+        if let index = members.firstIndex(where: { $0.id == member.id }) {
+            let updatedMember = PodMember(
+                id: member.id,
+                name: member.name,
+                email: member.email,
+                profileInitial: member.profileInitial,
+                profileColor: member.profileColor,
+                role: newRole.rawValue
+            )
+            members[index] = updatedMember
+            selectedMember = nil // Dismiss the sheet
+        }
     }
 
     private func loadPodMembers() {
-        NetworkManager().fetchPodMembers(podId: podId) { result in
+        NetworkManager().fetchPodMembers(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
-                case .success(let fetchedMembers):
+                case .success(let (fetchedMembers, fetchedUserRole)):
                     self.members = fetchedMembers
+                    self.role = fetchedUserRole
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -66,54 +107,48 @@ struct MemberRowView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        HStack(spacing: 15) {
-            DefaultProfilePicture(
-                initial: member.profileInitial,
-                color: member.profileColor,
-                size: 40
-            )
+        VStack {
+            HStack(spacing: 15) {
+                DefaultProfilePicture(
+                    initial: member.profileInitial,
+                    color: member.profileColor,
+                    size: 30
+                )
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(member.name)
-                    .font(.system(size: 16, weight: .semibold))
-                Text(member.email)
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(member.name)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(member.email)
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Text(member.role.capitalized)
+                    .font(.system(size: 14, weight: .medium))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(roleColor(for: member.role))
+                    .foregroundColor(.white)
+                    .cornerRadius(15)
             }
+            .padding()
+            .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
 
-            Spacer()
-
-            Text(member.role.capitalized)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(roleColor(for: member.role))
-                .foregroundColor(.white)
-                .cornerRadius(10)
+            Divider()
+                .background(borderColor)
         }
-        .padding()
-        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(borderColor, lineWidth: 1)
-        )
     }
 
     private func roleColor(for role: String) -> Color {
         switch role.lowercased() {
-        case "owner":
-            return .blue
-        case "admin":
-            return .green
-        case "member":
-            return .orange
-        case "viewer":
-            return .purple
-        case "guest":
-            return .gray
-        default:
-            return .gray
+        case "owner": return .blue
+        case "admin": return .green
+        case "member": return .orange
+        case "viewer": return .purple
+        case "guest": return .gray
+        default: return .gray
         }
     }
 
@@ -121,3 +156,101 @@ struct MemberRowView: View {
         colorScheme == .dark ? Color(rgb: 71, 71, 71) : Color(rgb: 219, 223, 236)
     }
 }
+
+struct MemberRoleOptions: View {
+    let currentRole: PodMemberRole
+    @State private var selectedRole: PodMemberRole
+    let onRoleChange: (PodMemberRole) -> Void
+    @Environment(\.presentationMode) var presentationMode
+    
+    init(currentRole: PodMemberRole, onRoleChange: @escaping (PodMemberRole) -> Void) {
+        self.currentRole = currentRole
+        self.onRoleChange = onRoleChange
+        self._selectedRole = State(initialValue: currentRole)
+    }
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(PodMemberRole.allCases, id: \.self) { role in
+                    Button(action: {
+                        selectedRole = role
+                        onRoleChange(role)
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: selectedRole == role ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(selectedRole == role ? .accentColor : .gray)
+                            
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack {
+                                    Image(systemName: role.iconName)
+                                    Text(role.rawValue)
+                                        .font(.headline)
+                                }
+                                Text(role.description)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(PlainListStyle())
+            .navigationBarItems(
+                leading: Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                }
+            )
+            .navigationBarTitle("Member Role", displayMode: .inline)
+        }
+    }
+}
+
+// PodMemberRole enum remains the same
+
+enum PodMemberRole: String, CaseIterable, Identifiable {
+    case owner = "Owner"
+    case admin = "Admin"
+    case member = "Member"
+    case viewer = "Viewer"
+    case guest = "Guest"
+    
+    var id: String { self.rawValue }
+    
+    init?(rawValue: String) {
+        switch rawValue.lowercased() {
+        case "owner": self = .owner
+        case "admin": self = .admin
+        case "member": self = .member
+        case "viewer": self = .viewer
+        case "guest": self = .guest
+        default: return nil
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .owner: return "crown.fill"
+        case .admin: return "person.badge.key"
+        case .member: return "person.badge.shield.checkmark"
+        case .viewer: return "person.wave.2"
+        case .guest: return "person.badge.clock"
+    
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .owner: return "Has total control of the pod"
+        case .admin: return "Can create & edit content, manage security"
+        case .member: return "Can create & edit content"
+        case .viewer: return "Can read only but cannot edit"
+        case .guest: return "Can only access Shareable pods via invitation"
+        }
+    }
+}
+

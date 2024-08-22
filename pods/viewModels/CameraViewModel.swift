@@ -14,6 +14,7 @@ struct PodMember: Identifiable, Codable {
     let profileInitial: String
     let profileColor: String
     let role: String
+    
 }
 
 struct PodDetails: Codable {

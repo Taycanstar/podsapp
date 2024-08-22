@@ -54,6 +54,7 @@ struct PodInfoView: View {
                     }
                     
                     Divider()
+                        .background(borderColor)
                     
                     // Pod Description Section
                     Section(header: Text("Pod Description").font(.system(size: 14))) {
@@ -66,6 +67,7 @@ struct PodInfoView: View {
                     
                     
                     Divider()
+                        .background(borderColor)
 
                     Button(action: {
                         print("tapped pod type")
@@ -133,6 +135,7 @@ struct PodInfoView: View {
           
                     
                     Divider()
+                        .background(borderColor)
                     
                     // Workspace Section
                     Section(header: Text("Workspace").font(.system(size: 14))) {
