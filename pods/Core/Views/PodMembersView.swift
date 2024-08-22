@@ -67,24 +67,10 @@ struct PodMembersView: View {
                     updateMemberRole(member: member, newRole: newRole)
                 }
             )
-            .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
+            .presentationDetents([.height(UIScreen.main.bounds.height / 1.7)])
         }
     }
-    
-//    private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
-//        if let index = members.firstIndex(where: { $0.id == member.id }) {
-//            let updatedMember = PodMember(
-//                id: member.id,
-//                name: member.name,
-//                email: member.email,
-//                profileInitial: member.profileInitial,
-//                profileColor: member.profileColor,
-//                role: newRole.rawValue
-//            )
-//            members[index] = updatedMember
-//            selectedMember = nil // Dismiss the sheet
-//        }
-//    }
+
     private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
        
         NetworkManager().updatePodMembership(podId: podId, memberId: member.id, newRole: newRole.rawValue) { result in
@@ -195,28 +181,42 @@ struct MemberRoleOptions: View {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(PodMemberRole.allCases, id: \.self) { role in
-                    Button(action: {
-                        selectedRole = role
-                        onRoleChange(role)
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        HStack {
-                            Image(systemName: selectedRole == role ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(selectedRole == role ? .accentColor : .gray)
-                            
-                            VStack(alignment: .leading, spacing: 5) {
-                                HStack {
-                                    Image(systemName: role.iconName)
-                                    Text(role.rawValue)
-                                        .font(.headline)
+            VStack {
+                List {
+                    ForEach(PodMemberRole.allCases, id: \.self) { role in
+                        Button(action: {
+                            selectedRole = role
+                            onRoleChange(role)
+                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            HStack {
+                                Image(systemName: selectedRole == role ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedRole == role ? .accentColor : .gray)
+                                
+                                VStack(alignment: .leading, spacing: 5) {
+                                    HStack {
+                                        Image(systemName: role.iconName)
+                                        Text(role.rawValue)
+                                            .font(.headline)
+                                    }
+                                    Text(role.description)
+                                        .font(.system(size: 12))
+                                        .fontWeight(.regular)
+                                        .foregroundColor(.secondary)
                                 }
-                                Text(role.description)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
                             }
                         }
+                    }
+                    // Add the "Remove member" label below the list
+                    Button(action: {
+                        // Add action to remove member here
+                        print("tapped remove")
+                    }) {
+                        Text("Remove member")
+                            .foregroundColor(.red)
+                            .fontWeight(.regular)
+                            .padding()
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
