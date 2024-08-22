@@ -20,6 +20,7 @@ struct PodOptionsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
     var onPodInfoSelected: () -> Void
+    var onPodMembersSelected: () -> Void
     
     @State private var shareItem: ActivityItem?
     var body: some View {
@@ -60,9 +61,12 @@ struct PodOptionsView: View {
                     }, color: .primary)
                     
                     MenuItemView(iconName: "person.2", text: "Pod members", action: {
-                       
+                        dismiss()
                             print("Tapped pod members")
                         HapticFeedback.generate()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                             onPodMembersSelected()
+                         }
                        
                     }, color: .primary)
                     

@@ -7,11 +7,13 @@ import CommonCrypto
 import Combine
 
 
-struct PodEssentials: Codable {
+struct PodMember: Identifiable, Codable {
     let id: Int
-    let title: String
-    let description: String?
-    let type: String
+    let name: String
+    let email: String
+    let profileInitial: String
+    let profileColor: String
+    let role: String
 }
 
 struct PodDetails: Codable {

@@ -28,6 +28,7 @@
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
 		3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
+		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
 		367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
 		3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8662BBAE45200B350E2 /* PodItemView.swift */; };
@@ -122,6 +123,7 @@
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
+		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
 		3682C8662BBAE45200B350E2 /* PodItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemView.swift; sourceTree = "<group>"; };
 		3682C8682BBAE68C00B350E2 /* PodItemCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCell.swift; sourceTree = "<group>"; };
@@ -283,6 +285,7 @@
 				36D0440D2C70078500B01998 /* SelectPodView.swift */,
 				36D0440F2C71196900B01998 /* InvitationView.swift */,
 				3641F5112C73A13500256E85 /* PodInfoView.swift */,
+				367540F02C76E99900B066A9 /* PodMembersView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -685,6 +688,7 @@
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
 				3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */,
+				367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */,
 				364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */,
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,

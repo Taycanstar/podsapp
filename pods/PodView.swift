@@ -44,6 +44,7 @@ struct PodView: View {
     @State private var visibleColumns: [String] = []
     
     @State private var navigateToPodInfo = false
+    @State private var navigateToPodMembers = false
     @State private var refreshID = UUID()
     @State private var forceUpdate = false
     
@@ -180,6 +181,11 @@ struct PodView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     navigateToPodInfo = true
                 }
+            },  onPodMembersSelected: {
+                showPodOptionsSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    navigateToPodMembers = true
+                }
             })
         }
 
@@ -211,18 +217,7 @@ struct PodView: View {
                        ) {
                            EmptyView()
                        }
-                       
-//                       NavigationLink(
-//                           destination: PodInfoView(pod: $pod, needsRefresh: $needsRefresh)
-//                            .onAppear {
-//                                       isTabBarVisible.wrappedValue = false 
-//                                   }
-//                           ,
-//                           isActive: $navigateToPodInfo
-//                       ) {
-//                           EmptyView()
-//                       }
-                       
+
                        NavigationLink(
                            destination: PodInfoView(pod: $pod,
                                currentTitle: $currentTitle,
@@ -236,6 +231,13 @@ struct PodView: View {
                                }
                            ),
                            isActive: $navigateToPodInfo
+                       ) {
+                           EmptyView()
+                       }
+                       
+                       NavigationLink(
+                           destination: PodMembersView(podId: pod.id),
+                           isActive: $navigateToPodMembers
                        ) {
                            EmptyView()
                        }
