@@ -71,21 +71,45 @@ struct PodMembersView: View {
         }
     }
     
+//    private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
+//        if let index = members.firstIndex(where: { $0.id == member.id }) {
+//            let updatedMember = PodMember(
+//                id: member.id,
+//                name: member.name,
+//                email: member.email,
+//                profileInitial: member.profileInitial,
+//                profileColor: member.profileColor,
+//                role: newRole.rawValue
+//            )
+//            members[index] = updatedMember
+//            selectedMember = nil // Dismiss the sheet
+//        }
+//    }
     private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
-        if let index = members.firstIndex(where: { $0.id == member.id }) {
-            let updatedMember = PodMember(
-                id: member.id,
-                name: member.name,
-                email: member.email,
-                profileInitial: member.profileInitial,
-                profileColor: member.profileColor,
-                role: newRole.rawValue
-            )
-            members[index] = updatedMember
-            selectedMember = nil // Dismiss the sheet
+       
+        NetworkManager().updatePodMembership(podId: podId, memberId: member.id, newRole: newRole.rawValue) { result in
+            DispatchQueue.main.async {
+           
+                switch result {
+                case .success:
+                    if let index = members.firstIndex(where: { $0.id == member.id }) {
+                        let updatedMember = PodMember(
+                            id: member.id,
+                            name: member.name,
+                            email: member.email,
+                            profileInitial: member.profileInitial,
+                            profileColor: member.profileColor,
+                            role: newRole.rawValue
+                        )
+                        members[index] = updatedMember
+                    }
+                    selectedMember = nil // Dismiss the sheet
+                case .failure(let error):
+                   print("errpr")
+                }
+            }
         }
     }
-
     private func loadPodMembers() {
         NetworkManager().fetchPodMembers(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
