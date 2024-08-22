@@ -8,26 +8,32 @@
 import SwiftUI
 
 struct PodInfoView: View {
-    @Binding var pod: Pod // Assuming you have a Pod model to pass as data
+    @Binding var pod: Pod
+    @Binding var currentTitle: String
+        @Binding var currentDescription: String
+        @Binding var currentType: String
+    let onSave: (String, String, String) -> Void
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Environment(\.isTabBarVisible) var isTabBarVisible
     @Environment(\.colorScheme) var colorScheme
     @State private var showPodTypeOptions = false
-       @State private var selectedPodType: PodType = .main
+    @State private var selectedPodType: PodType
     @State private var podDetails: PodDetails?
       @State private var isLoading = true
       @State private var errorMessage: String?
-   
     
-    @State private var podTitle: String
-    @State private var podDescription: String
-       
-       init(pod: Binding<Pod>) {
-           self._pod = pod
-           self._podTitle = State(initialValue: pod.wrappedValue.title)
-           self._podDescription = State(initialValue: pod.wrappedValue.description ?? "")
-           self._selectedPodType = State(initialValue: PodType(rawValue: pod.wrappedValue.type?.lowercased() ?? "main") ?? .main)
-       }
+    private var canEditPod: Bool {
+        pod.role == "owner" || pod.role == "admin"
+    }
+
+    init(pod: Binding<Pod>,currentTitle: Binding<String>, currentDescription: Binding<String>, currentType: Binding<String>, onSave: @escaping (String, String, String) -> Void) {
+        self._pod = pod
+          self._currentTitle = currentTitle
+          self._currentDescription = currentDescription
+          self._currentType = currentType
+          self.onSave = onSave
+          self._selectedPodType = State(initialValue: PodType(rawValue: currentType.wrappedValue.lowercased()) ?? .main)
+      }
        
     
     var body: some View {
@@ -39,10 +45,11 @@ struct PodInfoView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Pod Name Section
                     Section(header: Text("Pod Name").font(.system(size: 14))) {
-                        TextField("Enter Pod Name", text: $podTitle)
+                        TextField("Enter Pod Name", text: $currentTitle)
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .background(Color("mxdBg"))
+                            .disabled(!canEditPod)
                           
                     }
                     
@@ -50,10 +57,11 @@ struct PodInfoView: View {
                     
                     // Pod Description Section
                     Section(header: Text("Pod Description").font(.system(size: 14))) {
-                        TextField("Enter pod description", text: $podDescription)
+                        TextField("Enter pod description", text: $currentDescription)
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .background(Color("mxdBg"))
+                            .disabled(!canEditPod)
                     }
                     
                     
@@ -89,6 +97,8 @@ struct PodInfoView: View {
                                 .stroke(borderColor, lineWidth: 1)
                         )
                     })
+                    .disabled(!canEditPod)
+                  
                     .buttonStyle(PlainButtonStyle())
                     .padding(.vertical, 20)
 //                    .padding(.horizontal, 15)
@@ -166,6 +176,8 @@ struct PodInfoView: View {
                 Text("Save")
                     .foregroundColor(.accentColor)
             }
+                .disabled(!canEditPod)
+                .opacity(canEditPod ? 1 : 0)
         )
               .navigationTitle("Pod info")
               .navigationBarTitleDisplayMode(.inline)
@@ -174,7 +186,7 @@ struct PodInfoView: View {
                   updateSelectedPodType()
                 loadPodDetails()
                   
-                  print("pod type", pod.type)
+                 
                      }
               .sheet(isPresented: $showPodTypeOptions) {
                          PodTypeOptions(selectedType: $selectedPodType, isPresented: $showPodTypeOptions)
@@ -203,42 +215,33 @@ struct PodInfoView: View {
        }
     
     private func updateSelectedPodType() {
-        if let podType = pod.type {
-            selectedPodType = PodType(rawValue: podType.lowercased()) ?? .main
-        } else {
-            selectedPodType = .main
-        }
+        selectedPodType = PodType(rawValue: currentType.lowercased()) ?? .main
         print("Updated selectedPodType to: \(selectedPodType.rawValue)")
     }
     
     private func updatePodType() {
-        pod.type = selectedPodType.rawValue.lowercased()
-        print("Updated pod.type to: \(pod.type ?? "nil")")
+        currentType = selectedPodType.rawValue
     }
-    
+
+
     private func savePodChanges() {
-        isLoading = true
         NetworkManager().updatePodDetails(
             podId: pod.id,
-            title: podTitle,
-            description: podDescription,
-            type: selectedPodType.rawValue.lowercased()
+            title: currentTitle,
+            description: currentDescription,
+            type: currentType.lowercased()
         ) { result in
             DispatchQueue.main.async {
-                self.isLoading = false
                 switch result {
-                case .success(let updatedPod):
-                    self.pod.title = updatedPod.title
-                    self.pod.description = updatedPod.description
-                    self.pod.type = updatedPod.type
+                case .success(let (updatedTitle, updatedDescription, updatedType)):
+                    self.onSave(updatedTitle, updatedDescription, updatedType)
                     self.presentationMode.wrappedValue.dismiss()
                 case .failure(let error):
-                        print("error", error)
+                    print("Failed to update pod: \(error)")
                 }
             }
         }
     }
-    
     
     private var borderColor: Color {
         colorScheme == .dark ? Color(rgb: 71, 71, 71) : Color(rgb: 219, 223, 236)

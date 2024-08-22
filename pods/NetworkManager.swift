@@ -2448,60 +2448,137 @@ class NetworkManager {
         }.resume()
     }
     
+//    
+//    func updatePodDetails(podId: Int, title: String, description: String, type: String, completion: @escaping (Result<Pod, Error>) -> Void) {
+//          guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
+//              completion(.failure(NetworkError.invalidURL))
+//              return
+//          }
+//          
+//          var request = URLRequest(url: url)
+//          request.httpMethod = "PUT"
+//          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//          
+//          let body: [String: Any] = [
+//              "title": title,
+//              "description": description,
+//              "type": type
+//          ]
+//          
+//          do {
+//              request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//          } catch {
+//              completion(.failure(error))
+//              return
+//          }
+//          
+//          URLSession.shared.dataTask(with: request) { data, response, error in
+//              if let error = error {
+//                  completion(.failure(error))
+//                  return
+//              }
+//              
+//              guard let data = data else {
+//                  completion(.failure(NetworkError.noData))
+//                  return
+//              }
+//              
+//              do {
+//                  if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+//                     let podData = json["pod"] as? [String: Any],
+//                     let id = podData["id"] as? Int,
+//                     let title = podData["title"] as? String {
+//                      
+//                      let description = podData["description"] as? String
+//                      let type = podData["type"] as? String
+//                      
+//                      let updatedPod = Pod(id: id, title: title, description: description, type: type)
+//                      completion(.success(updatedPod))
+//                  } else {
+//                      completion(.failure(NetworkError.decodingError))
+//                  }
+//              } catch {
+//                  completion(.failure(error))
+//              }
+//          }.resume()
+//      }
     
-    func updatePodDetails(podId: Int, title: String, description: String, type: String, completion: @escaping (Result<Pod, Error>) -> Void) {
-          guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
-              completion(.failure(NetworkError.invalidURL))
-              return
-          }
-          
-          var request = URLRequest(url: url)
-          request.httpMethod = "PUT"
-          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-          
-          let body: [String: Any] = [
-              "title": title,
-              "description": description,
-              "type": type
-          ]
-          
-          do {
-              request.httpBody = try JSONSerialization.data(withJSONObject: body)
-          } catch {
-              completion(.failure(error))
-              return
-          }
-          
-          URLSession.shared.dataTask(with: request) { data, response, error in
-              if let error = error {
-                  completion(.failure(error))
-                  return
-              }
-              
-              guard let data = data else {
-                  completion(.failure(NetworkError.noData))
-                  return
-              }
-              
-              do {
-                  if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                     let podData = json["pod"] as? [String: Any],
-                     let id = podData["id"] as? Int,
-                     let title = podData["title"] as? String {
-                      
-                      let description = podData["description"] as? String
-                      let type = podData["type"] as? String
-                      
-                      let updatedPod = Pod(id: id, title: title, description: description, type: type)
-                      completion(.success(updatedPod))
-                  } else {
-                      completion(.failure(NetworkError.decodingError))
-                  }
-              } catch {
-                  completion(.failure(error))
-              }
-          }.resume()
-      }
+    func updatePodDetails(podId: Int, title: String, description: String, type: String, completion: @escaping (Result<(String, String, String), Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "title": title,
+            "description": description,
+            "type": type
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let podData = json["pod"] as? [String: Any],
+                   let updatedTitle = podData["title"] as? String,
+                   let updatedDescription = podData["description"] as? String,
+                   let updatedType = podData["type"] as? String {
+                    completion(.success((updatedTitle, updatedDescription, updatedType)))
+                } else {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func fetchEssentialPodDetails(podId: Int, completion: @escaping (Result<PodEssentials, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/get-essential-pod-details/\(podId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let podDetails = try decoder.decode(PodEssentials.self, from: data)
+                completion(.success(podDetails))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
     
 }
 
