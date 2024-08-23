@@ -236,7 +236,7 @@ struct PodView: View {
                        }
                        
                        NavigationLink(
-                           destination: PodMembersView(podId: pod.id),
+                        destination: PodMembersView(podId: pod.id, teamId: pod.teamId),
                            isActive: $navigateToPodMembers
                        ) {
                            EmptyView()

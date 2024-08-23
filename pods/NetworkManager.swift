@@ -777,6 +777,7 @@ class NetworkManager {
                     
                     let podResponse = try decoder.decode(PodResponse.self, from: data)
                     let pods = podResponse.pods.map { Pod(from: $0) }
+
                     completion(true, pods, nil)
                 } catch {
                     print("Decoding error: \(error)")
@@ -2637,6 +2638,35 @@ class NetworkManager {
 
               completion(.success(()))
           }.resume()
+      }
+    
+    
+    func fetchTeamMembers(teamId: Int, completion: @escaping (Result<[TeamMember], Error>) -> Void) {
+          guard let url = URL(string: "\(baseUrl)/get-team-members/\(teamId)/") else {
+              completion(.failure(NetworkError.invalidURL))
+              return
+          }
+
+          let task = URLSession.shared.dataTask(with: url) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+
+              guard let data = data else {
+                  completion(.failure(NetworkError.noData))
+                  return
+              }
+
+              do {
+                  let teamMembers = try JSONDecoder().decode(TeamMembersResponse.self, from: data)
+                  completion(.success(teamMembers.members))
+              } catch {
+                  completion(.failure(error))
+              }
+          }
+
+          task.resume()
       }
     
 }

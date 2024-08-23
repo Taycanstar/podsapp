@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PodMembersView: View {
     let podId: Int
+    let teamId: Int?
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Environment(\.isTabBarVisible) var isTabBarVisible
     @Environment(\.colorScheme) var colorScheme
@@ -13,9 +14,10 @@ struct PodMembersView: View {
     @State private var role: String = ""
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedMember: PodMember?
-    
+    @State private var teamMembers: [TeamMember] = []
     @State private var memberToRemove: PodMember?
     @State private var showingRemoveConfirmation = false
+    @State private var showingTeamMembersSheet = false
     
     private var canAddMembers: Bool {
         role.lowercased() == "owner" || role.lowercased() == "admin"
@@ -29,10 +31,12 @@ struct PodMembersView: View {
                 if canAddMembers {
                     Button(action: {
                         print("Add pod members tapped")
+                        loadTeamMembers()
+                                            showingTeamMembersSheet = true
                     }) {
-                        Text("Add pod members")
+                        Text("Add pod subscribers")
                             .foregroundColor(.accentColor)
-                            .font(.system(size: 16, weight: .regular))
+                            .font(.system(size: 14, weight: .regular))
                             .padding(.horizontal, 20)
                     }
                     .padding(.top, 20)
@@ -55,6 +59,31 @@ struct PodMembersView: View {
                         .padding()
                     }
                 }
+                HStack {
+                    Spacer()
+                    if canAddMembers {
+                        Button(action: {
+                            print("Invite tapped")
+                        
+                        }) {
+                            HStack {
+                                Image(systemName: "plus")
+                                    .foregroundColor(.accentColor)
+                                    .fontWeight(.semibold)
+                                Text("Invite members")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.accentColor)
+                            }
+                              
+                        }
+                        .padding(.top, 20)
+                    }
+                    
+                    Spacer()
+                }
+              
+                
+                
             }
         }
         .navigationTitle("Pod Members")
@@ -79,6 +108,10 @@ struct PodMembersView: View {
             )
             .presentationDetents([.height(UIScreen.main.bounds.height / 1.7)])
         }
+        
+        .sheet(isPresented: $showingTeamMembersSheet) {
+                   TeamMembersView(teamMembers: teamMembers, podMembers: $members)
+               }
         .alert(isPresented: $showingRemoveConfirmation) {
             Alert(
                 title: Text("Remove Member"),
@@ -92,6 +125,23 @@ struct PodMembersView: View {
             )
         }
     }
+    
+    private func loadTeamMembers() {
+        guard let teamId = teamId else {
+                  print("No team ID available")
+                  return
+              }
+        NetworkManager().fetchTeamMembers(teamId: teamId) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let fetchedMembers):
+                        self.teamMembers = fetchedMembers
+                    case .failure(let error):
+                        print("Error fetching team members: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
     
     private func removeMember(_ member: PodMember) {
         NetworkManager().removePodMember(podId: podId, memberId: member.id) { result in
@@ -321,3 +371,81 @@ enum PodMemberRole: String, CaseIterable, Identifiable {
     }
 }
 
+
+struct TeamMembersView: View {
+    let teamMembers: [TeamMember]
+    @Binding var podMembers: [PodMember]
+    @Environment(\.presentationMode) var presentationMode
+
+    var body: some View {
+         NavigationView {
+             ZStack {
+                 Color("mdBg")
+                     .ignoresSafeArea(.all)
+
+                 List(teamMembers) { member in
+                     TeamMemberRowView(member: member, isSelected: isPodMember(member))
+                         .onTapGesture {
+                             toggleMemberSelection(member)
+                         }
+                         .listRowInsets(EdgeInsets())
+                         .listRowBackground(Color.clear) // Make the List row background transparent
+                 }
+            
+                 .background(Color("mdBg")) // Set the List background color
+                 .scrollContentBackground(.hidden) // Hide the default List background
+             }
+            
+             .navigationTitle("Team Members")
+             .navigationBarTitleDisplayMode(.inline)
+             .navigationBarItems(trailing: Button("Done") {
+                 presentationMode.wrappedValue.dismiss()
+             })
+         }
+     }
+
+    private func isPodMember(_ member: TeamMember) -> Bool {
+        podMembers.contains { $0.id == member.id }
+    }
+
+    private func toggleMemberSelection(_ member: TeamMember) {
+        if let index = podMembers.firstIndex(where: { $0.id == member.id }) {
+            podMembers.remove(at: index)
+        } else {
+            let newPodMember = PodMember(id: member.id, name: member.name, email: member.email, profileInitial: member.profileInitial, profileColor: member.profileColor, role: "member")
+            podMembers.append(newPodMember)
+        }
+    }
+}
+
+struct TeamMemberRowView: View {
+    let member: TeamMember
+    let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack {
+            DefaultProfilePicture(
+                initial: member.profileInitial,
+                color: member.profileColor,
+                size: 30
+            )
+            
+            VStack(alignment: .leading) {
+                Text(member.name)
+                    .font(.system(size: 14))
+                    .fontWeight(.medium)
+    
+            }
+            
+            Spacer()
+            
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.vertical, 3.5)
+        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+    }
+}

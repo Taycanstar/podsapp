@@ -6,6 +6,18 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+struct TeamMembersResponse: Codable {
+    let members: [TeamMember]
+}
+
+struct TeamMember: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let email: String
+    let role: String
+    let profileInitial: String
+    let profileColor: String
+}
 
 struct PodMember: Identifiable, Codable {
     let id: Int
@@ -130,6 +142,7 @@ struct Pod: Identifiable {
     var role: String?
     var description: String?
     var type: String?
+    var teamId: Int?
 }
 
 
@@ -148,6 +161,7 @@ struct PodJSON: Codable {
     var role: String?
     var description: String?
     var type: String?
+    var teamId: Int?
 }
 
 
@@ -217,6 +231,7 @@ extension Pod {
         self.role = podJSON.role
         self.description = podJSON.description
         self.type = podJSON.type
+        self.teamId = podJSON.teamId
     }
 }
 
