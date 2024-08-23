@@ -14,6 +14,9 @@ struct PodMembersView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedMember: PodMember?
     
+    @State private var memberToRemove: PodMember?
+    @State private var showingRemoveConfirmation = false
+    
     private var canAddMembers: Bool {
         role.lowercased() == "owner" || role.lowercased() == "admin"
     }
@@ -65,9 +68,45 @@ struct PodMembersView: View {
                 currentRole: PodMemberRole(rawValue: member.role.lowercased()) ?? .member,
                 onRoleChange: { newRole in
                     updateMemberRole(member: member, newRole: newRole)
+                },     onRemoveMember: {
+                    selectedMember = nil  // Dismiss the sheet
+                    memberToRemove = member
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showingRemoveConfirmation = true
+                                        }
                 }
             )
             .presentationDetents([.height(UIScreen.main.bounds.height / 1.7)])
+        }
+        .alert(isPresented: $showingRemoveConfirmation) {
+            Alert(
+                title: Text("Remove Member"),
+                message: Text("Are you sure you want to remove this member from the pod?"),
+                primaryButton: .destructive(Text("Remove")) {
+                    if let member = memberToRemove {
+                        removeMember(member)
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+    
+    private func removeMember(_ member: PodMember) {
+        NetworkManager().removePodMember(podId: podId, memberId: member.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    if let index = members.firstIndex(where: { $0.id == member.id }) {
+                        members.remove(at: index)
+                    }
+                    selectedMember = nil
+                case .failure(let error):
+                    print("Error removing member: \(error.localizedDescription)")
+                    // You might want to show an error alert here
+                }
+            }
         }
     }
 
@@ -172,12 +211,14 @@ struct MemberRoleOptions: View {
     @State private var selectedRole: PodMemberRole
     let onRoleChange: (PodMemberRole) -> Void
     @Environment(\.presentationMode) var presentationMode
+    let onRemoveMember: () -> Void
     
-    init(currentRole: PodMemberRole, onRoleChange: @escaping (PodMemberRole) -> Void) {
-        self.currentRole = currentRole
-        self.onRoleChange = onRoleChange
-        self._selectedRole = State(initialValue: currentRole)
-    }
+    init(currentRole: PodMemberRole, onRoleChange: @escaping (PodMemberRole) -> Void, onRemoveMember: @escaping () -> Void) {
+            self.currentRole = currentRole
+            self.onRoleChange = onRoleChange
+            self.onRemoveMember = onRemoveMember
+            self._selectedRole = State(initialValue: currentRole)
+        }
     
     var body: some View {
         NavigationView {
@@ -207,17 +248,19 @@ struct MemberRoleOptions: View {
                             }
                         }
                     }
-                    // Add the "Remove member" label below the list
-                    Button(action: {
-                        // Add action to remove member here
-                        print("tapped remove")
-                    }) {
-                        Text("Remove member")
-                            .foregroundColor(.red)
-                            .fontWeight(.regular)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                    }
+              
+                }
+                // Add the "Remove member" label below the list
+                Button(action: {
+                    // Add action to remove member here
+                    onRemoveMember()
+                    print("tapped remove")
+                }) {
+                    Text("Remove member")
+                        .foregroundColor(.red)
+                        .fontWeight(.regular)
+                        .padding()
+                        .frame(maxWidth: .infinity)
                 }
             }
             .listStyle(PlainListStyle())

@@ -2614,5 +2614,30 @@ class NetworkManager {
         }.resume()
     }
     
+    func removePodMember(podId: Int, memberId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+          guard let url = URL(string: "\(baseUrl)/remove-pod-member/\(podId)/\(memberId)") else {
+              completion(.failure(NetworkError.invalidURL))
+              return
+          }
+
+          var request = URLRequest(url: url)
+          request.httpMethod = "DELETE"
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+
+              guard let httpResponse = response as? HTTPURLResponse,
+                    (200...299).contains(httpResponse.statusCode) else {
+                  completion(.failure(NetworkError.invalidResponse))
+                  return
+              }
+
+              completion(.success(()))
+          }.resume()
+      }
+    
 }
 
