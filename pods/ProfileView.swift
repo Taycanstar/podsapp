@@ -255,94 +255,96 @@ struct MailView: UIViewControllerRepresentable {
     }
 }
 
-//struct MyTeamsView: View {
+
+struct MyTeamsView: View {
 //    @EnvironmentObject var viewModel: OnboardingViewModel
 //    @EnvironmentObject var homeViewModel: HomeViewModel
 //    @Environment(\.colorScheme) var colorScheme
+//    @State private var isUpdating = false
 //
 //    var body: some View {
 //        ScrollView {
 //            VStack(spacing: 15) {
 //                ForEach(homeViewModel.teams) { team in
 //                    teamView(team: team)
+//                        .onTapGesture {
+//                            updateActiveTeam(teamId: team.id)
+//                        }
 //                }
 //            }
 //            .padding()
 //        }
-//        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
+//        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
 //        .navigationBarTitle("My team", displayMode: .inline)
 //        .onAppear {
 //            homeViewModel.fetchTeamsForUser(email: viewModel.email)
 //        }
-//    }
-//
-//    private func teamView(team: Team) -> some View {
-//        ZStack {
-//            RoundedRectangle(cornerRadius: 15)
-//                .fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color.white)
-//                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-//            
-//            HStack {
-//                DefaultProfilePicture(
-//                    initial: team.profileInitial ?? "",
-//                    color: team.profileColor ?? "",
-//                    size: 30
-//                )
-//                
-//                Text(team.name)
-//                    .fontWeight(.medium)
-//                    .font(.system(size: 14))
-//                Spacer()
-//                
-//                if team.id == viewModel.activeTeamId {
-//                    Image(systemName: "checkmark.circle.fill")
-//                        .foregroundColor(.accentColor)
+//        .overlay(
+//            Group {
+//                if isUpdating {
+//                    ProgressView()
+//                        .scaleEffect(1.5)
+//                        .frame(width: 60, height: 60)
+//                        .background(Color.black.opacity(0.4))
+//                        .cornerRadius(10)
 //                }
 //            }
-//            .padding()
-//        }
-//        .overlay(
-//            RoundedRectangle(cornerRadius: 15)
-//                .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
 //        )
 //    }
-//}
-
-struct MyTeamsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @EnvironmentObject var homeViewModel: HomeViewModel
-    @Environment(\.colorScheme) var colorScheme
-    @State private var isUpdating = false
+     @EnvironmentObject var homeViewModel: HomeViewModel
+     @Environment(\.colorScheme) var colorScheme
+     @State private var isUpdating = false
+     @State private var isLoading = true
 
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 15) {
-                ForEach(homeViewModel.teams) { team in
-                    teamView(team: team)
-                        .onTapGesture {
-                            updateActiveTeam(teamId: team.id)
-                        }
-                }
-            }
-            .padding()
-        }
-        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
-        .navigationBarTitle("My team", displayMode: .inline)
-        .onAppear {
-            homeViewModel.fetchTeamsForUser(email: viewModel.email)
-        }
-        .overlay(
-            Group {
-                if isUpdating {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(width: 60, height: 60)
-                        .background(Color.black.opacity(0.4))
-                        .cornerRadius(10)
-                }
-            }
-        )
-    }
+     var body: some View {
+         ZStack {
+             backgroundColorForTheme
+                 .edgesIgnoringSafeArea(.all)
+             
+             if isLoading {
+                 ProgressView()
+                     .scaleEffect(1.5)
+             } else {
+                 ScrollView {
+                     VStack(spacing: 15) {
+                         ForEach(homeViewModel.teams) { team in
+                             teamView(team: team)
+                                 .onTapGesture {
+                                     updateActiveTeam(teamId: team.id)
+                                 }
+                         }
+                     }
+                     .padding()
+                 }
+             }
+         }
+         .navigationBarTitle("My team", displayMode: .inline)
+         .onAppear {
+            fetchTeams()
+         }
+         .overlay(
+             Group {
+                 if isUpdating {
+                     ProgressView()
+                         .scaleEffect(1.5)
+                         .frame(width: 60, height: 60)
+                         .background(Color.black.opacity(0.4))
+                         .cornerRadius(10)
+                 }
+             }
+         )
+     }
+    
+    private func fetchTeams() {
+          isLoading = true
+          homeViewModel.fetchTeamsForUser(email: viewModel.email)
+          isLoading = false
+      }
+
+     private var backgroundColorForTheme: Color {
+         colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
+     }
 
     private func teamView(team: Team) -> some View {
         ZStack {

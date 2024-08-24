@@ -95,8 +95,9 @@ struct PodMembersView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             isTabBarVisible.wrappedValue = false
-            loadPodMembers()
             loadTeamMembers()
+            loadPodMembers()
+          
         }
         .sheet(item: $selectedMember) { member in
             MemberRoleOptions(
@@ -216,44 +217,24 @@ struct PodMembersView: View {
     }
 
     private func loadPodMembers() {
-        NetworkManager().fetchPodMembers(podId: podId, userEmail: viewModel.email) { result in
-            DispatchQueue.main.async {
-                isLoading = false
-                switch result {
-                case .success(let (fetchedMembers, fetchedUserRole, fetchedPodType)):
-                    self.members = fetchedMembers
-                    self.role = fetchedUserRole
-                    self.podType = fetchedPodType
-                    self.combineMembers()
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+            NetworkManager().fetchPodMembers(podId: podId, userEmail: viewModel.email) { result in
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    switch result {
+                    case .success(let (fetchedMembers, fetchedUserRole, fetchedPodType)):
+                        self.members = fetchedMembers
+                        self.role = fetchedUserRole
+                        self.podType = fetchedPodType
+                        self.combineMembers()
+                    case .failure(let error):
+                        self.errorMessage = error.localizedDescription
+                    }
                 }
             }
         }
-    }
     
+
     
-//    private func combineMembers() {
-//        var combined = members
-//
-//        if podType == "main" || podType == "shareable" {
-//            for teamMember in teamMembers {
-//                if !combined.contains(where: { $0.id == teamMember.id }) {
-//                    let podMember = PodMember(
-//                        id: teamMember.id,
-//                        name: teamMember.name,
-//                        email: teamMember.email,
-//                        profileInitial: teamMember.profileInitial,
-//                        profileColor: teamMember.profileColor,
-//                        role: "member"  // Default role for team members not explicitly in the pod
-//                    )
-//                    combined.append(podMember)
-//                }
-//            }
-//        }
-//        
-//        self.combinedMembers = combined.sorted { $0.name < $1.name }
-//    }
     private func combineMembers() {
         var combined = members
 
@@ -266,14 +247,13 @@ struct PodMembersView: View {
                         email: teamMember.email,
                         profileInitial: teamMember.profileInitial,
                         profileColor: teamMember.profileColor,
-                        role: "member"  // Default role for team members not explicitly in the pod
+                        role: "member"
                     )
                     combined.append(podMember)
                 }
             }
         }
 
-        // Define role priorities
         let rolePriority: [String: Int] = [
             "owner": 0,
             "admin": 1,
@@ -282,7 +262,6 @@ struct PodMembersView: View {
             "guest": 4
         ]
 
-        // Sort members by role priority and then by name
         self.combinedMembers = combined.sorted {
             let role1 = rolePriority[$0.role.lowercased()] ?? Int.max
             let role2 = rolePriority[$1.role.lowercased()] ?? Int.max
