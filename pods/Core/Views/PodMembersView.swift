@@ -21,6 +21,7 @@ struct PodMembersView: View {
     @State private var combinedMembers: [PodMember] = []
     
     @State private var podType: String = ""
+    @State private var showingInviteSheet = false
     
     private var canAddMembers: Bool {
         role.lowercased() == "owner" || role.lowercased() == "admin"
@@ -68,13 +69,14 @@ struct PodMembersView: View {
             
                         Button(action: {
                             print("Invite tapped")
+                            showingInviteSheet = true
                         
                         }) {
                             HStack {
                                 Image(systemName: "plus")
                                     .foregroundColor(.accentColor)
                                     .fontWeight(.semibold)
-                                Text("Invite members")
+                                Text("Invite new member")
                                     .fontWeight(.semibold)
                                     .foregroundColor(.accentColor)
                             }
@@ -82,9 +84,10 @@ struct PodMembersView: View {
                         }
                         .padding(.top, 5)
                         .padding(.bottom, 20)
+                    Spacer()
                     }
                     
-                    Spacer()
+               
                 }
               
                 
@@ -118,6 +121,10 @@ struct PodMembersView: View {
         
         .sheet(isPresented: $showingTeamMembersSheet) {
                    TeamMembersView(teamMembers: teamMembers, podMembers: $members)
+               }
+        
+        .sheet(isPresented: $showingInviteSheet) {
+            InvitePodMemberView(podId: podId, isPresented: $showingInviteSheet)
                }
         .alert(isPresented: $showingRemoveConfirmation) {
             Alert(
@@ -308,7 +315,7 @@ struct MemberRowView: View {
                     .cornerRadius(15)
             }
             .padding(8)
-            .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+            .background(Color("mxdBg"))
 
             Divider()
                 .background(borderColor)
@@ -522,5 +529,136 @@ struct TeamMemberRowView: View {
         }
         .padding(.vertical, 3.5)
         .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+    }
+}
+
+struct InvitePodMemberView: View {
+    let podId: Int
+    @State private var email: String = ""
+    @State private var selectedRole: PodMemberRole = .member
+    @Binding var isPresented: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Invite via email")
+                        .foregroundColor(.primary)
+                        .fontWeight(.bold)
+
+                    HStack {
+                        TextField("Enter email address", text: $email)
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
+                    }
+                    .padding()
+                    .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                    )
+                    .cornerRadius(10)
+                    .padding(.top)
+                    
+                    HStack {
+                        Text("User role")
+                        Spacer()
+                        Picker("User Role", selection: $selectedRole) {
+                            ForEach(PodMemberRole.allCases, id: \.self) { role in
+                                Text(role.rawValue).tag(role)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                    .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                    )
+                    .cornerRadius(10)
+                    
+                    Button(action: {
+                        sendInvite()
+                    }) {
+                        HStack(spacing: 5) {
+                            Text("Send invite")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.accentColor)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                        )
+                    }
+                    .disabled(email.isEmpty)
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.vertical, 10)
+                }
+                .padding(.horizontal, 15)
+                .padding(.top, 35)
+            }
+            .background(Color("mdBg").edgesIgnoringSafeArea(.all))
+            .navigationTitle("Invite a new pod member")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    isPresented = false
+                }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                }
+            )
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .background(Color("mdBg").edgesIgnoringSafeArea(.all))
+    }
+    
+    private var borderColor: Color {
+        colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
+    }
+    
+    private func sendInvite() {
+        // Implement the invite functionality here
+        print("Sending invite to \(email) with role \(selectedRole.rawValue)")
+        // After sending the invite, dismiss the sheet
+        isPresented = false
+    }
+}
+
+
+struct RolePickerView: View {
+    @Binding var selectedRole: PodMemberRole
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationView {
+            List(PodMemberRole.allCases, id: \.self) { role in
+                Button(action: {
+                    selectedRole = role
+                    isPresented = false
+                }) {
+                    HStack {
+                        Text(role.rawValue)
+                        Spacer()
+                        if role == selectedRole {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Select Role")
+            .navigationBarItems(trailing: Button("Cancel") {
+                isPresented = false
+            })
+        }
     }
 }
