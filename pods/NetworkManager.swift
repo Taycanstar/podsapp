@@ -2779,5 +2779,47 @@ class NetworkManager {
            }.resume()
        }
     
+    func invitePodMember(podId: Int, inviterEmail: String, inviteeEmail: String, role: String, completion: @escaping (Result<Void, Error>) -> Void) {
+           guard let url = URL(string: "\(baseUrl)/invite-pod-member/") else {
+               completion(.failure(NetworkError.invalidURL))
+               return
+           }
+
+           let body: [String: Any] = [
+               "pod_id": podId,
+               "inviter_email": inviterEmail,
+               "invitee_email": inviteeEmail,
+               "role": role
+           ]
+
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+          do {
+              request.httpBody = try JSONSerialization.data(withJSONObject: body)
+          } catch {
+              completion(.failure(NetworkError.encodingError))
+              return
+          }
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+
+              guard let httpResponse = response as? HTTPURLResponse else {
+                  completion(.failure(NetworkError.invalidResponse))
+                  return
+              }
+
+              if (200...299).contains(httpResponse.statusCode) {
+                  completion(.success(()))
+              } else {
+                  completion(.failure(NetworkError.decodingError))
+              }
+          }.resume()
+      }
 }
 

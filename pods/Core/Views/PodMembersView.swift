@@ -538,6 +538,10 @@ struct InvitePodMemberView: View {
     @State private var selectedRole: PodMemberRole = .member
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) var colorScheme
+    @State private var isLoading = false
+        @State private var errorMessage: String?
+        @State private var showAlert = false
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     var body: some View {
         NavigationView {
@@ -601,6 +605,17 @@ struct InvitePodMemberView: View {
                     .disabled(email.isEmpty)
                     .buttonStyle(PlainButtonStyle())
                     .padding(.vertical, 10)
+                    
+                    if let errorMessage = errorMessage {
+                                          Text(errorMessage)
+                                              .foregroundColor(.red)
+                                              .font(.caption)
+                                      }
+                    if showAlert {
+                        Text("Pod invite sent successfully")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                    }
                 }
                 .padding(.horizontal, 15)
                 .padding(.top, 35)
@@ -626,39 +641,30 @@ struct InvitePodMemberView: View {
     }
     
     private func sendInvite() {
-        // Implement the invite functionality here
-        print("Sending invite to \(email) with role \(selectedRole.rawValue)")
-        // After sending the invite, dismiss the sheet
-        isPresented = false
-    }
+         isLoading = true
+         errorMessage = nil
+         
+         NetworkManager().invitePodMember(
+             podId: podId,
+             inviterEmail: viewModel.email,
+             inviteeEmail: email,
+             role: selectedRole.rawValue
+         ) { result in
+             DispatchQueue.main.async {
+                 isLoading = false
+                 switch result {
+                 case .success:
+                     showAlert = true
+                     DispatchQueue.main.asyncAfter(deadline: .now() + 4){
+                         showAlert = false
+                     }
+                 case .failure(let error):
+                     errorMessage = error.localizedDescription
+                 }
+             }
+         }
+     }
 }
 
 
-struct RolePickerView: View {
-    @Binding var selectedRole: PodMemberRole
-    @Binding var isPresented: Bool
-    
-    var body: some View {
-        NavigationView {
-            List(PodMemberRole.allCases, id: \.self) { role in
-                Button(action: {
-                    selectedRole = role
-                    isPresented = false
-                }) {
-                    HStack {
-                        Text(role.rawValue)
-                        Spacer()
-                        if role == selectedRole {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.accentColor)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Select Role")
-            .navigationBarItems(trailing: Button("Cancel") {
-                isPresented = false
-            })
-        }
-    }
-}
+
