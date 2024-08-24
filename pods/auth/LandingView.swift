@@ -130,32 +130,64 @@ struct LandingView: View {
                     return
                 }
                 
-                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username in
-                             if success {
-                                 print("Token sent successfully")
-                                 if isNewUser {
-                                     // Update view model and navigate to welcome view
-                                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                                     UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
-                                     UserDefaults.standard.set(username, forKey: "username")
-                                    viewModel.email = result.user.profile?.email ?? ""
-                                     viewModel.username = username ?? ""
-                                    
-                                    viewModel.currentStep = .welcome
-                                                   } else {
-                                                       viewModel.currentStep = .landing
-                                                       UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                                                       UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
-                                                      viewModel.email = result.user.profile?.email ?? ""
-                                                       UserDefaults.standard.set(username, forKey: "username")
-                                                       viewModel.username = username ?? ""
-                                                       self.isAuthenticated = true
-                                                   }
-                                 
-                             } else {
-                                 print("Failed to send token: \(message ?? "Unknown error")")
-                             }
-                         }
+//                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username in
+//                             if success {
+//                                 print("Token sent successfully")
+//                                 if isNewUser {
+//                                     // Update view model and navigate to welcome view
+//                                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                                     UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
+//                                     UserDefaults.standard.set(username, forKey: "username")
+//                                    viewModel.email = result.user.profile?.email ?? ""
+//                                     viewModel.username = username ?? ""
+//                                    
+//                                    viewModel.currentStep = .welcome
+//                                                   } else {
+//                                                       viewModel.currentStep = .landing
+//                                                       UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                                                       UserDefaults.standard.set(result.user.profile?.email, forKey: "userEmail")
+//                                                      viewModel.email = result.user.profile?.email ?? ""
+//                                                       UserDefaults.standard.set(username, forKey: "username")
+//                                                       viewModel.username = username ?? ""
+//                                                       self.isAuthenticated = true
+//                                                   }
+//                             
+//                             } else {
+//                                 print("Failed to send token: \(message ?? "Unknown error")")
+//                             }
+//                         }
+                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId in
+                    if success {
+                        print("Token sent successfully")
+                        if isNewUser {
+                            // Update view model and navigate to welcome view
+                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                            UserDefaults.standard.set(email, forKey: "userEmail")
+                            UserDefaults.standard.set(username, forKey: "username")
+                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                            
+                            viewModel.email = email ?? ""
+                            viewModel.username = username ?? ""
+                            viewModel.activeTeamId = activeTeamId
+                            
+                            viewModel.currentStep = .welcome
+                        } else {
+                            viewModel.currentStep = .landing
+                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                            UserDefaults.standard.set(email, forKey: "userEmail")
+                            UserDefaults.standard.set(username, forKey: "username")
+                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                            
+                            viewModel.email = email ?? ""
+                            viewModel.username = username ?? ""
+                            viewModel.activeTeamId = activeTeamId
+                            
+                            self.isAuthenticated = true
+                        }
+                    } else {
+                        print("Failed to send token: \(message ?? "Unknown error")")
+                    }
+                }
             }
         }
     

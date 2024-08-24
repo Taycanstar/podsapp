@@ -255,25 +255,93 @@ struct MailView: UIViewControllerRepresentable {
     }
 }
 
+//struct MyTeamsView: View {
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//    @EnvironmentObject var homeViewModel: HomeViewModel
+//    @Environment(\.colorScheme) var colorScheme
+//
+//    var body: some View {
+//        ScrollView {
+//            VStack(spacing: 15) {
+//                ForEach(homeViewModel.teams) { team in
+//                    teamView(team: team)
+//                }
+//            }
+//            .padding()
+//        }
+//        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
+//        .navigationBarTitle("My team", displayMode: .inline)
+//        .onAppear {
+//            homeViewModel.fetchTeamsForUser(email: viewModel.email)
+//        }
+//    }
+//
+//    private func teamView(team: Team) -> some View {
+//        ZStack {
+//            RoundedRectangle(cornerRadius: 15)
+//                .fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color.white)
+//                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+//            
+//            HStack {
+//                DefaultProfilePicture(
+//                    initial: team.profileInitial ?? "",
+//                    color: team.profileColor ?? "",
+//                    size: 30
+//                )
+//                
+//                Text(team.name)
+//                    .fontWeight(.medium)
+//                    .font(.system(size: 14))
+//                Spacer()
+//                
+//                if team.id == viewModel.activeTeamId {
+//                    Image(systemName: "checkmark.circle.fill")
+//                        .foregroundColor(.accentColor)
+//                }
+//            }
+//            .padding()
+//        }
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 15)
+//                .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
+//        )
+//    }
+//}
+
 struct MyTeamsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
     @Environment(\.colorScheme) var colorScheme
+    @State private var isUpdating = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
                 ForEach(homeViewModel.teams) { team in
                     teamView(team: team)
+                        .onTapGesture {
+                            updateActiveTeam(teamId: team.id)
+                        }
                 }
             }
             .padding()
         }
-        .background( colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
+        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
         .navigationBarTitle("My team", displayMode: .inline)
         .onAppear {
             homeViewModel.fetchTeamsForUser(email: viewModel.email)
         }
+        .overlay(
+            Group {
+                if isUpdating {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .frame(width: 60, height: 60)
+                        .background(Color.black.opacity(0.4))
+                        .cornerRadius(10)
+                }
+            }
+        )
     }
 
     private func teamView(team: Team) -> some View {
@@ -305,6 +373,23 @@ struct MyTeamsView: View {
             RoundedRectangle(cornerRadius: 15)
                 .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
         )
+    }
+
+    private func updateActiveTeam(teamId: Int) {
+        isUpdating = true
+        NetworkManager().updateActiveTeam(email: viewModel.email, teamId: teamId) { result in
+            DispatchQueue.main.async {
+                isUpdating = false
+                switch result {
+                case .success(let newActiveTeamId):
+                    viewModel.activeTeamId = newActiveTeamId
+                    UserDefaults.standard.set(newActiveTeamId, forKey: "activeTeamId")
+                case .failure(let error):
+                    print("Failed to update active team: \(error.localizedDescription)")
+                    // You might want to show an alert here
+                }
+            }
+        }
     }
 }
 
