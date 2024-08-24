@@ -18,6 +18,9 @@ struct PodMembersView: View {
     @State private var memberToRemove: PodMember?
     @State private var showingRemoveConfirmation = false
     @State private var showingTeamMembersSheet = false
+    @State private var combinedMembers: [PodMember] = []
+    
+    @State private var podType: String = ""
     
     private var canAddMembers: Bool {
         role.lowercased() == "owner" || role.lowercased() == "admin"
@@ -28,19 +31,18 @@ struct PodMembersView: View {
             Color("mxdBg").edgesIgnoringSafeArea(.all)
             
             VStack(alignment: .leading) {
-                if canAddMembers {
-                    Button(action: {
-                        print("Add pod members tapped")
-                        loadTeamMembers()
-                                            showingTeamMembersSheet = true
-                    }) {
-                        Text("Add pod subscribers")
-                            .foregroundColor(.accentColor)
-                            .font(.system(size: 14, weight: .regular))
-                            .padding(.horizontal, 20)
-                    }
-                    .padding(.top, 20)
-                }
+//                if canAddMembers {
+//                    Button(action: {
+//                        print("Add pod members tapped")
+//                                            showingTeamMembersSheet = true
+//                    }) {
+//                        Text("Add pod subscribers")
+//                            .foregroundColor(.accentColor)
+//                            .font(.system(size: 14, weight: .regular))
+//                            .padding(.horizontal, 20)
+//                    }
+//                    .padding(.top, 20)
+//                }
                 if isLoading {
                     ProgressView()
                 } else if let error = errorMessage {
@@ -49,19 +51,21 @@ struct PodMembersView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(members) { member in
+                            ForEach(combinedMembers) { member in
                                 MemberRowView(member: member)
                                     .onTapGesture {
                                         self.selectedMember = member
                                     }
                             }
+                            .disabled(!canAddMembers)
                         }
                         .padding()
                     }
                 }
+                if canAddMembers {
                 HStack {
                     Spacer()
-                    if canAddMembers {
+            
                         Button(action: {
                             print("Invite tapped")
                         
@@ -76,7 +80,8 @@ struct PodMembersView: View {
                             }
                               
                         }
-                        .padding(.top, 20)
+                        .padding(.top, 5)
+                        .padding(.bottom, 20)
                     }
                     
                     Spacer()
@@ -91,6 +96,7 @@ struct PodMembersView: View {
         .onAppear {
             isTabBarVisible.wrappedValue = false
             loadPodMembers()
+            loadTeamMembers()
         }
         .sheet(item: $selectedMember) { member in
             MemberRoleOptions(
@@ -142,6 +148,7 @@ struct PodMembersView: View {
                 }
             }
         }
+
     
     private func removeMember(_ member: PodMember) {
         NetworkManager().removePodMember(podId: podId, memberId: member.id) { result in
@@ -159,7 +166,7 @@ struct PodMembersView: View {
             }
         }
     }
-
+//
     private func updateMemberRole(member: PodMember, newRole: PodMemberRole) {
        
         NetworkManager().updatePodMembership(podId: podId, memberId: member.id, newRole: newRole.rawValue) { result in
@@ -167,7 +174,7 @@ struct PodMembersView: View {
            
                 switch result {
                 case .success:
-                    if let index = members.firstIndex(where: { $0.id == member.id }) {
+                    if let index = combinedMembers.firstIndex(where: { $0.id == member.id }) {
                         let updatedMember = PodMember(
                             id: member.id,
                             name: member.name,
@@ -176,7 +183,8 @@ struct PodMembersView: View {
                             profileColor: member.profileColor,
                             role: newRole.rawValue
                         )
-                        members[index] = updatedMember
+                        combinedMembers[index] = updatedMember
+                        self.sortCombinedMembers()
                     }
                     selectedMember = nil // Dismiss the sheet
                 case .failure(let error):
@@ -185,20 +193,108 @@ struct PodMembersView: View {
             }
         }
     }
+    
+    private func sortCombinedMembers() {
+        let rolePriority: [String: Int] = [
+            "owner": 0,
+            "admin": 1,
+            "member": 2,
+            "viewer": 3,
+            "guest": 4
+        ]
+        
+        combinedMembers.sort { member1, member2 in
+            let role1 = rolePriority[member1.role.lowercased()] ?? Int.max
+            let role2 = rolePriority[member2.role.lowercased()] ?? Int.max
+            
+            if role1 != role2 {
+                return role1 < role2
+            } else {
+                return member1.name < member2.name
+            }
+        }
+    }
+
     private func loadPodMembers() {
         NetworkManager().fetchPodMembers(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
-                case .success(let (fetchedMembers, fetchedUserRole)):
+                case .success(let (fetchedMembers, fetchedUserRole, fetchedPodType)):
                     self.members = fetchedMembers
                     self.role = fetchedUserRole
+                    self.podType = fetchedPodType
+                    self.combineMembers()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
             }
         }
     }
+    
+    
+//    private func combineMembers() {
+//        var combined = members
+//
+//        if podType == "main" || podType == "shareable" {
+//            for teamMember in teamMembers {
+//                if !combined.contains(where: { $0.id == teamMember.id }) {
+//                    let podMember = PodMember(
+//                        id: teamMember.id,
+//                        name: teamMember.name,
+//                        email: teamMember.email,
+//                        profileInitial: teamMember.profileInitial,
+//                        profileColor: teamMember.profileColor,
+//                        role: "member"  // Default role for team members not explicitly in the pod
+//                    )
+//                    combined.append(podMember)
+//                }
+//            }
+//        }
+//        
+//        self.combinedMembers = combined.sorted { $0.name < $1.name }
+//    }
+    private func combineMembers() {
+        var combined = members
+
+        if podType == "main" || podType == "shareable" {
+            for teamMember in teamMembers {
+                if !combined.contains(where: { $0.id == teamMember.id }) {
+                    let podMember = PodMember(
+                        id: teamMember.id,
+                        name: teamMember.name,
+                        email: teamMember.email,
+                        profileInitial: teamMember.profileInitial,
+                        profileColor: teamMember.profileColor,
+                        role: "member"  // Default role for team members not explicitly in the pod
+                    )
+                    combined.append(podMember)
+                }
+            }
+        }
+
+        // Define role priorities
+        let rolePriority: [String: Int] = [
+            "owner": 0,
+            "admin": 1,
+            "member": 2,
+            "viewer": 3,
+            "guest": 4
+        ]
+
+        // Sort members by role priority and then by name
+        self.combinedMembers = combined.sorted {
+            let role1 = rolePriority[$0.role.lowercased()] ?? Int.max
+            let role2 = rolePriority[$1.role.lowercased()] ?? Int.max
+            
+            if role1 != role2 {
+                return role1 < role2
+            } else {
+                return $0.name < $1.name
+            }
+        }
+    }
+
 }
 
 struct MemberRowView: View {
@@ -232,7 +328,7 @@ struct MemberRowView: View {
                     .foregroundColor(.white)
                     .cornerRadius(15)
             }
-            .padding()
+            .padding(8)
             .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
 
             Divider()
