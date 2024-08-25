@@ -8,11 +8,6 @@
 import SwiftUI
 
 struct InvitationView: View {
-//    let podId: Int
-//    let token: String
-//    let userEmail: String
-//    let userName: String
-//    let podName: String
     let invitation: PodInvitation
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.presentationMode) var presentationMode
@@ -52,18 +47,7 @@ struct InvitationView: View {
 
                 // Content
                 VStack(alignment: .leading, spacing: 15) {
-//                    Text("You've been invited to a Pod")
-//                        .font(.system(size: 24))
-//                        .foregroundColor(.primary)
-//                        .fontWeight(.bold)
-//                    Text("\(userName)")
-//                        .bold() +
-//                    Text("(\(userEmail)) has invited you to use Podstack together, in a pod called ")
-//                        .foregroundColor(.primary) +
-//                    Text("\(podName)")
-//                        .foregroundColor(.primary)
-//                        .bold()
-                    
+
                     Text("You've been invited to a Pod")
                                           .font(.system(size: 24))
                                           .foregroundColor(.primary)
@@ -116,23 +100,9 @@ struct InvitationView: View {
         }
     }
 
-//    private func acceptInvitation() {
-//            isLoading = true
-//            NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email) { result in
-//                DispatchQueue.main.async {
-//                    isLoading = false
-//                    switch result {
-//                    case .success:
-//                        presentationMode.wrappedValue.dismiss()
-//                    case .failure(let error):
-//                        errorMessage = error.localizedDescription
-//                    }
-//                }
-//            }
-//        }
     private func acceptInvitation() {
         isLoading = true
-        NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email) { result in
+        NetworkManager().acceptPodInvitation(podId: invitation.podId, token: invitation.token, userEmail: viewModel.email, invitationType: invitation.invitationType) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {

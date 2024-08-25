@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
-    let baseUrl = "http://172.20.10.2:8000"
+//    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -2379,8 +2379,9 @@ class NetworkManager {
                    let podId = json["podId"] as? Int,
                    let userName = json["userName"] as? String,
                    let userEmail = json["userEmail"] as? String,
+                   let invitationType = json["invitationType"] as? String,
                    let podName = json["podName"] as? String {
-                    let invitation = PodInvitation(id: 0, podId: podId, token: shareUrl, userName: userName, userEmail: userEmail, podName: podName)
+                    let invitation = PodInvitation(id: 0, podId: podId, token: shareUrl, userName: userName, userEmail: userEmail, podName: podName, invitationType: invitationType)
                     completion(.success(invitation))
                 } else {
                     completion(.failure(NetworkError.decodingError))
@@ -2392,17 +2393,29 @@ class NetworkManager {
     }
     
 
-    func acceptPodInvitation(podId: Int, token: String, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
-            guard let url = URL(string: "\(baseUrl)/accept-pod-invitation/") else {
-                completion(.failure(NetworkError.invalidURL))
-                return
-            }
+//    func acceptPodInvitation(podId: Int, token: String, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//            guard let url = URL(string: "\(baseUrl)/accept-pod-invitation/") else {
+//                completion(.failure(NetworkError.invalidURL))
+//                return
+//            }
+//
+//            let body: [String: Any] = [
+//                "pod_id": podId,
+//                "token": token,
+//                "user_email": userEmail  // Assuming you have a userEmail property in NetworkManager
+//            ]
+    func acceptPodInvitation(podId: Int, token: String, userEmail: String, invitationType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/accept-pod-invitation/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
 
-            let body: [String: Any] = [
-                "pod_id": podId,
-                "token": token,
-                "user_email": userEmail  // Assuming you have a userEmail property in NetworkManager
-            ]
+        let body: [String: Any] = [
+            "pod_id": podId,
+            "token": token,
+            "user_email": userEmail,
+            "invitation_type": invitationType
+        ]
 
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
@@ -2461,8 +2474,9 @@ class NetworkManager {
                    let podId = json["podId"] as? Int,
                    let podName = json["podName"] as? String,
                    let inviterName = json["inviterName"] as? String,
+                    let invitationType = json["invitationType"] as? String,
                    let inviterEmail = json["inviterEmail"] as? String {
-                    let invitation = PodInvitation(id: 0, podId: podId, token: token, userName: inviterName, userEmail: inviterEmail, podName: podName)
+                    let invitation = PodInvitation(id: 0, podId: podId, token: token, userName: inviterName, userEmail: inviterEmail, podName: podName, invitationType: invitationType)
                     completion(.success(invitation))
                 } else {
                     completion(.failure(NetworkError.decodingError))

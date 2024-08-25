@@ -101,10 +101,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
            let userName = components.queryItems?.first(where: { $0.name == "userName" })?.value,
            let userEmail = components.queryItems?.first(where: { $0.name == "userEmail" })?.value,
            let podName = components.queryItems?.first(where: { $0.name == "podName" })?.value,
+           let invitationType = components.queryItems?.first(where: { $0.name == "invitationType" })?.value,
            let podId = Int(podIdString) {
             
             let deepLinkHandler = DeepLinkHandler.shared
-            deepLinkHandler.activeInvitation = PodInvitation(id: 0, podId: podId, token: invitationToken, userName: userName, userEmail: userEmail, podName: podName)
+            deepLinkHandler.activeInvitation = PodInvitation(id: 0, podId: podId, token: invitationToken, userName: userName, userEmail: userEmail, podName: podName, invitationType: invitationType)
             return true
         }
         return false
