@@ -51,6 +51,8 @@ struct PodView: View {
     @State private var currentTitle: String
     @State private var currentDescription: String
     @State private var currentType: String
+    @State private var itemsWithRecentActivity: Set<Int> = Set()
+
    
     
     
@@ -283,18 +285,39 @@ struct PodView: View {
                                             ))
             }
         }
-          
+
         .sheet(isPresented: $showLogActivitySheet) {
-                 if let index = selectedItemIndex {
-                     LogActivityView(
-                         item: reorderedItems[index],
-                         podColumns: podColumns,
-                         podId: pod.id
-                     )
-                     .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
-                 }
-             }
+            if let index = selectedItemIndex {
+                LogActivityView(
+                    item: reorderedItems[index],
+                    podColumns: podColumns,
+                    podId: pod.id,
+                    onActivityLogged: {
+                        showTemporaryCheckmark(for: reorderedItems[index].id)
+                    }
+                )
+                .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
+            }
+        }
+        
+
               
+    }
+    
+    private func checkForRecentActivity(itemId: Int) {
+        showTemporaryCheckmark(for: itemId)
+    }
+    
+    private func showTemporaryCheckmark(for itemId: Int) {
+        withAnimation {
+            _ = itemsWithRecentActivity.insert(itemId)
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                _ = self.itemsWithRecentActivity.remove(itemId)
+            }
+        }
     }
     
     func updatePod(title: String, description: String, type: String) {
@@ -364,17 +387,32 @@ struct PodView: View {
                                 }
                             }
                         Spacer()
-                        Image(systemName: "plus.bubble")
-                            .font(.system(size: 20))
-                            .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-                            .onTapGesture {
-                                selectedItemIndex = index
-                                showLogActivitySheet = true
-                            }
+                        
+//                        Image(systemName: "plus.bubble")
+//                            .font(.system(size: 20))
+//                            .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+//                            .onTapGesture {
+//                                selectedItemIndex = index
+//                                showLogActivitySheet = true
+//                            }
+                        if itemsWithRecentActivity.contains(reorderedItems[index].id) {
+                                              Image(systemName: "checkmark.circle.fill")
+                                                    .font(.system(size: 20))
+                                                  .foregroundColor(.green)
+                                                  .transition(.opacity)
+                                          } else {
+                                              Image(systemName: "plus.bubble")
+                                                  .font(.system(size: 20))
+                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                                                  .onTapGesture {
+                                                      selectedItemIndex = index
+                                                      showLogActivitySheet = true
+                                                  }
+                                          }
                     }
                     .padding(10)
                 }
-//            .padding()
+
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
             .cornerRadius(10)
@@ -1373,12 +1411,19 @@ struct LogActivityView: View {
     @State private var columnValues: [String: ColumnValue]
     @State private var activityNote: String = ""
     @State private var expandedColumn: String?
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var showNotesInput = false
+    var onActivityLogged: () -> Void
 
-    init(item: PodItem, podColumns: [PodColumn], podId: Int) {
+    init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping () -> Void) {
         self.item = item
         self.podColumns = podColumns
         self.podId = podId
+        self.onActivityLogged = onActivityLogged
         _columnValues = State(initialValue: item.columnValues ?? [:])
+        
     }
 
     var body: some View {
@@ -1440,6 +1485,38 @@ struct LogActivityView: View {
                             }
                         }
                     }
+                    if showNotesInput {
+                                            VStack(alignment: .leading, spacing: 5) {
+                                                Text("Notes")
+                                                    .font(.system(size: 15))
+                                                    .foregroundColor(.primary)
+                                                    .padding(.horizontal, 5)
+                                                    .kerning(0.2)
+                                                
+                                                TextEditor(text: $activityNote)
+                                                    .frame(height: 100)
+                                                    .padding(.vertical, 8)
+                                                    .padding(.horizontal)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                                    )
+                                            }
+                                        } else {
+                                            Button(action: {
+                                                withAnimation {
+                                                    showNotesInput = true
+                                                }
+                                            }) {
+                                                Text("+ Add notes")
+                                                    .foregroundColor(.accentColor)
+                                            }
+                                        }
+                    
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                    }
                 }
                 .padding()
             }
@@ -1477,10 +1554,32 @@ struct LogActivityView: View {
     }
 
     private func submitActivity() {
-        print("Activity Note: \(activityNote)")
-        print("Column Values: \(columnValues)")
-        presentationMode.wrappedValue.dismiss()
+        isSubmitting = true
+        NetworkManager().createActivityLog(
+            itemId: item.id,
+            podId: podId,
+            userEmail: viewModel.email,
+            columnValues: columnValues,
+            podColumns: podColumns,
+            notes: activityNote
+        ) { result in
+            DispatchQueue.main.async {
+                isSubmitting = false
+                switch result {
+                case .success(let loggedAt):
+                    print("Activity logged successfully at: \(loggedAt)")
+                    onActivityLogged()
+                    presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    print("Failed to log activity: \(error)")
+              
+                        errorMessage = error.localizedDescription
+                    
+                }
+            }
+        }
     }
+
 }
 
 struct InlineNumberPicker: View {

@@ -2835,5 +2835,97 @@ class NetworkManager {
               }
           }.resume()
       }
+    
+    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<Date, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let serializedColumnData = podColumns.compactMap { column -> [String: Any]? in
+            guard let value = columnValues[column.name] else { return nil }
+            
+            let serializedValue: Any
+            switch value {
+            case .string(let str):
+                serializedValue = str
+            case .number(let num):
+                serializedValue = num
+            case .null:
+                serializedValue = NSNull()
+            }
+            
+            return [
+                "name": column.name,
+                "type": column.type,
+                "value": serializedValue
+            ]
+        }
+
+        let body: [String: Any] = [
+            "itemId": itemId,
+            "podId": podId,
+            "userEmail": userEmail,
+            "columnData": serializedColumnData,
+            "notes": notes
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Network error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                print("No data received from server")
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    print("Received JSON: \(json)")
+                    
+                    // Check if 'success' is 1 (true) as an integer
+                    let success = (json["success"] as? Int) == 1
+                    
+                    if success,
+                       let loggedAtString = json["loggedAt"] as? String {
+                        // Create a custom date formatter to handle the server's date format
+                        let dateFormatter = ISO8601DateFormatter()
+                        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        
+                        if let loggedAt = dateFormatter.date(from: loggedAtString) {
+                            completion(.success(loggedAt))
+                        } else {
+                            print("Failed to parse date: \(loggedAtString)")
+                            completion(.failure(NetworkError.decodingError))
+                        }
+                    } else {
+                        print("Failed to parse success or loggedAt from JSON")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                } else {
+                    print("Failed to parse JSON")
+                    completion(.failure(NetworkError.decodingError))
+                }
+            } catch {
+                print("JSON parsing error: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 }
 
