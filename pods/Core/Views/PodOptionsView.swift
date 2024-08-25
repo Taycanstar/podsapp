@@ -79,21 +79,21 @@ struct PodOptionsView: View {
                         HapticFeedback.generate()
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "bubble", text: "Pod Chat", action: {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            print("Tapped Pod chat")
-                        }
-                        HapticFeedback.generate()
-                    }, color: .primary)
-                    
-//                    MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
+//                    MenuItemView(iconName: "bubble", text: "Pod Chat", action: {
 //                        dismiss()
 //                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-//                            print("Tapped Pod activity")
+//                            print("Tapped Pod chat")
 //                        }
 //                        HapticFeedback.generate()
 //                    }, color: .primary)
+                    
+                    MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            print("Tapped Pod activity")
+                        }
+                        HapticFeedback.generate()
+                    }, color: .primary)
                     //                
                     //                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
                     //                    dismiss()

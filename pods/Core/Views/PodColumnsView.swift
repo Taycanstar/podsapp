@@ -70,10 +70,10 @@ struct PodColumnsView: View {
                 }
                 .background(Color("mdBg"))
                 
-                GeometryReader { geometry in
+                
+                .sheet(isPresented: $showAddColumn) {
                     AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
-                        .offset(y: showAddColumn ? geometry.size.height - 300 : geometry.size.height + 300)
-                        .animation(.snappy)
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
             }
             .navigationBarTitle("Pod Columns", displayMode: .inline)

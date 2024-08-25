@@ -35,7 +35,7 @@ struct PodView: View {
     @State private var selectedColumnForEdit: (index: Int, name: String)?
     @State private var showColumnEditSheet = false
     @State private var showCardSheet = false
-    @State private var showBubbleSheet = false
+    @State private var showLogActivitySheet = false
     @State private var selectedItemIndex: Int?
     
     @State private var podColumns: [PodColumn]
@@ -284,12 +284,16 @@ struct PodView: View {
             }
         }
           
-               .sheet(isPresented: $showBubbleSheet) {
-                   if let index = selectedItemIndex {
-                       BubbleActionView(item: reorderedItems[index])
-                           .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
-                   }
-               }
+        .sheet(isPresented: $showLogActivitySheet) {
+                 if let index = selectedItemIndex {
+                     LogActivityView(
+                         item: reorderedItems[index],
+                         podColumns: podColumns,
+                         podId: pod.id
+                     )
+                     .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
+                 }
+             }
               
     }
     
@@ -365,7 +369,7 @@ struct PodView: View {
                             .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
                             .onTapGesture {
                                 selectedItemIndex = index
-                                showBubbleSheet = true
+                                showLogActivitySheet = true
                             }
                     }
                     .padding(10)
@@ -940,6 +944,7 @@ struct CardDetailView: View {
     @FocusState private var isItemNameFocused: Bool
     
     @State private var showDeleteConfirmation = false
+    @State private var expandedColumn: String?
 
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
@@ -972,44 +977,77 @@ struct CardDetailView: View {
                         .edgesIgnoringSafeArea(.all)
                     
                     ScrollView {
+
                         VStack(alignment: .leading, spacing: 20) {
-                            TextField("Item Name", text: $itemName)
-                                .font(.system(size: 18)).bold()
-                                .background(Color.clear)
-                                .focused($isItemNameFocused)
-                            
-                            ForEach(podColumns, id: \.name) { column in
-                                VStack(alignment: .leading) {
-                                    Text(column.name)
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 5)
-                                        .kerning(0.2)
-                                    
-                                    TextField("", text: Binding(
-                                        get: { self.columnValues[column.name] ?? "" },
-                                        set: { self.columnValues[column.name] = $0 }
-                                    ))
-                                    .textFieldStyle(PlainTextFieldStyle())
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-                                    )
-                                }
-                            }
+                               TextField("Item Name", text: $itemName)
+                                   .font(.system(size: 18)).bold()
+                                   .background(Color.clear)
+                                   .focused($isItemNameFocused)
+                               
+                               ForEach(podColumns, id: \.name) { column in
+                                   VStack(alignment: .leading) {
+                                       Text(column.name)
+                                           .font(.system(size: 15))
+                                           .foregroundColor(.primary)
+                                           .padding(.horizontal, 5)
+                                           .kerning(0.2)
+                                       
+                                       if column.type == "text" {
+                                           TextField("", text: Binding(
+                                               get: { self.columnValues[column.name] ?? "" },
+                                               set: { self.columnValues[column.name] = $0 }
+                                           ))
+                                           .foregroundColor(.primary)
+                                           .textFieldStyle(PlainTextFieldStyle())
+                                           .padding(.vertical, 12)
+                                           .padding(.horizontal)
+                                           .background(
+                                               RoundedRectangle(cornerRadius: 12)
+                                                   .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                           )
+                                       } else if column.type == "number" {
+                                           Button(action: {
+                                               withAnimation {
+                                                   if expandedColumn == column.name {
+                                                       expandedColumn = nil
+                                                   } else {
+                                                       expandedColumn = column.name
+                                                   }
+                                               }
+                                           }) {
+                                               Text(self.columnValues[column.name] ?? "")
+                                                   .foregroundColor(.primary)
+                                                   .frame(maxWidth: .infinity, alignment: .leading)
+                                                   .padding(.vertical, 12)
+                                                   .padding(.horizontal)
+                                                   .background(
+                                                       RoundedRectangle(cornerRadius: 12)
+                                                           .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                                   )
+                                           }
+                                           
+                                           if expandedColumn == column.name {
+                                               InlineNumberPicker(value: Binding(
+                                                   get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
+                                                   set: { self.columnValues[column.name] = String($0) }
+                                               ))
+                                               .frame(height: 150)
+                                               .transition(.opacity)
+                                           }
+                                       }
+                                   }
+                               }
                             addColumnButton
                         }
                         
                         .padding()
                     }
                     
-                    GeometryReader { geometry in
+                    .sheet(isPresented: $showAddColumn) {
                         AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
-                            .offset(y: showAddColumn ? geometry.size.height - 250 : geometry.size.height + 250)
-                            .animation(.snappy)
+                            .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                     }
+                    
                     
                 }
                 
@@ -1182,14 +1220,15 @@ struct CardDetailView: View {
         }
     }
 
+    
     private func saveChanges() {
-        let updatedColumnValues = columnValues.mapValues { value in
+        let updatedColumnValues = columnValues.mapValues { value -> ColumnValue in
             if let intValue = Int(value) {
-                return ColumnValue.number(intValue)
+                return .number(intValue)
             } else if value.isEmpty {
-                return ColumnValue.null
+                return .null
             } else {
-                return ColumnValue.string(value)
+                return .string(value)
             }
         }
         
@@ -1201,7 +1240,6 @@ struct CardDetailView: View {
                     self.item.columnValues = updatedColumnValues
                     self.presentationMode.wrappedValue.dismiss()
                 case .failure(let error):
-                    // Handle the error, maybe show an alert to the user
                     print("Failed to update pod item: \(error)")
                 }
             }
@@ -1215,6 +1253,7 @@ struct AddColumnView: View {
     var onAddColumn: (String, String) -> Void
     @State private var columnType: ColumnType = .number
     @State private var columnName: String = ""
+    @Environment(\.presentationMode) var presentationMode
     
     
     enum ColumnType: String, CaseIterable {
@@ -1232,82 +1271,72 @@ struct AddColumnView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { isPresented = false }) {
+        NavigationView{
+            ZStack {
+                Color("mxdBg")
+                    .ignoresSafeArea(.all)
+                VStack(spacing: 0) {
+                    
+                    VStack(spacing: 20) {
+                        // Pod Name Input
+                        HStack {
+                            TextField("Column Name", text: $columnName)
+                        }
+                        .padding()
+                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                        )
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                        .padding(.top)
+                        
+                        // Pod Mode Selection
+                        HStack {
+                            Image(systemName: (columnType == .number ? "number" :"textformat"))
+                                .foregroundColor(.accentColor)
+                            Text("Column Type")
+                            Spacer()
+                            Picker("Column Type", selection: $columnType) {
+                                ForEach(ColumnType.allCases, id: \.self) { type in
+                                    Text(type.displayText)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                        .padding()
+                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                        )
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                        
+                        Spacer()
+                    }
+                    
+                    Spacer()
+                }
+            }
+            .background(Color("mxdBg").edgesIgnoringSafeArea(.all))
+            .navigationTitle("Create a new column")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
                     Image(systemName: "xmark")
                         .foregroundColor(.primary)
-                }
-                Spacer()
-                Text("Create a new column")
-                    .font(.headline)
-                Spacer()
-                Button(action: {
+                },
+                trailing: Button("Done") {
                     onAddColumn(columnName, columnType.rawValue)
                     isPresented = false
-                }) {
-                    Text("Save")
-                        .foregroundColor(.accentColor)
-                        .font(.system(size: 18))
                 }
-         
-            }
-            .padding()
-            
-            Divider()
-            
-            
-            VStack(spacing: 20) {
-                // Pod Name Input
-                HStack {
-                    TextField("Column Name", text: $columnName)
-                }
-                .padding()
-                .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
-                )
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Pod Mode Selection
-                HStack {
-                    Image(systemName: (columnType == .number ? "number" :"textformat"))
-                        .foregroundColor(.accentColor)
-                    Text("Column Type")
-                    Spacer()
-                    Picker("Column Type", selection: $columnType) {
-                        ForEach(ColumnType.allCases, id: \.self) { type in
-                            Text(type.displayText)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-                .padding()
-                .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
-                )
-                .cornerRadius(10)
-                .padding(.horizontal)
-                
-                Spacer()
-            }
-            
-            Spacer()
+                .foregroundColor(Color.accentColor)
+            )
         }
-        .frame(height: 400)
-        .background(Color("mdBg"))
-        .cornerRadius(16) // This rounds all corners
-           .overlay(
-               RoundedRectangle(cornerRadius: 16)
-                   .stroke(borderColor, lineWidth: 1)
-                   .stroke(borderColor, lineWidth: 1)
-           )
-   
     }
     
     private var borderColor: Color {
@@ -1333,20 +1362,90 @@ struct AddColumnView: View {
         .foregroundColor(.primary)
     }
 }
-struct BubbleActionView: View {
+
+
+struct LogActivityView: View {
     let item: PodItem
+    let podColumns: [PodColumn]
+    let podId: Int
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var colorScheme
+    @State private var columnValues: [String: ColumnValue]
+    @State private var activityNote: String = ""
+    @State private var expandedColumn: String?
+
+    init(item: PodItem, podColumns: [PodColumn], podId: Int) {
+        self.item = item
+        self.podColumns = podColumns
+        self.podId = podId
+        _columnValues = State(initialValue: item.columnValues ?? [:])
+    }
+
     var body: some View {
         NavigationView {
-            List {
-                Button("Edit") {
-                    // Implement edit action
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+          
+                    
+                    ForEach(podColumns, id: \.name) { column in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(column.name)
+                                .font(.system(size: 15))
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 5)
+                                .kerning(0.2)
+                            
+                            if column.type == "text" {
+                                TextField("", text: Binding(
+                                    get: { self.stringValue(for: column.name) },
+                                    set: { self.columnValues[column.name] = .string($0) }
+                                ))
+                                .foregroundColor(.primary)
+                                .textFieldStyle(PlainTextFieldStyle())
+                                .padding(.vertical, 12)
+                                .padding(.horizontal)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                )
+                            } else if column.type == "number" {
+                                Button(action: {
+                                    withAnimation {
+                                        if expandedColumn == column.name {
+                                            expandedColumn = nil
+                                        } else {
+                                            expandedColumn = column.name
+                                        }
+                                    }
+                                }) {
+                                    Text(self.stringValue(for: column.name))
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                        )
+                                }
+                                
+                                if expandedColumn == column.name {
+                                    InlineNumberPicker(value: Binding(
+                                        get: { self.numberValue(for: column.name) },
+                                        set: { self.columnValues[column.name] = .number($0) }
+                                    ))
+                                    .frame(height: 150)
+                                    .transition(.opacity)
+                                }
+                            }
+                        }
+                    }
                 }
-                Button("Delete") {
-                    // Implement delete action
-                }
-                // Add more actions as needed
+                .padding()
             }
+            .background(Color("mxdBg").edgesIgnoringSafeArea(.all))
+            .navigationTitle("Log Activity")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
                 leading: Button(action: {
                     presentationMode.wrappedValue.dismiss()
@@ -1354,11 +1453,45 @@ struct BubbleActionView: View {
                     Image(systemName: "xmark")
                         .foregroundColor(.primary)
                 },
-                trailing: Button("Save") {
-                   print("")
+                trailing: Button("Done") {
+                    submitActivity()
                 }
+                .foregroundColor(Color.accentColor)
             )
         }
     }
+
+    private func stringValue(for columnName: String) -> String {
+        switch columnValues[columnName] ?? .null {
+        case .string(let value): return value
+        case .number(let value): return String(value)
+        case .null: return ""
+        }
+    }
+
+    private func numberValue(for columnName: String) -> Int {
+        switch columnValues[columnName] ?? .null {
+        case .number(let value): return value
+        default: return 0
+        }
+    }
+
+    private func submitActivity() {
+        print("Activity Note: \(activityNote)")
+        print("Column Values: \(columnValues)")
+        presentationMode.wrappedValue.dismiss()
+    }
 }
 
+struct InlineNumberPicker: View {
+    @Binding var value: Int
+    
+    var body: some View {
+        Picker("", selection: $value) {
+            ForEach(0...1000, id: \.self) { number in
+                Text("\(number)").tag(number)
+            }
+        }
+        .pickerStyle(WheelPickerStyle())
+    }
+}
