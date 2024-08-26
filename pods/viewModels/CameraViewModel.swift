@@ -6,6 +6,8 @@ import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
 
+
+
 struct TeamMembersResponse: Codable {
     let members: [TeamMember]
 }
@@ -124,9 +126,35 @@ struct PodItem: Identifiable {
     var uuid: String?
     var player: AVPlayer?
     var notes: String
-//    var columnValues: [String: String?]?
     var columnValues: [String: ColumnValue]?
     
+}
+
+struct PodItemActivityLog: Identifiable {
+    let id: Int
+    let itemId: Int
+    let userEmail: String
+    let loggedAt: Date
+    let columnValues: [String: ColumnValue]
+    let notes: String
+    
+    init(from json: PodItemActivityLogJSON) {
+        self.id = json.id
+        self.itemId = json.itemId
+        self.userEmail = json.userEmail
+        self.loggedAt = ISO8601DateFormatter().date(from: json.loggedAt) ?? Date()
+        self.columnValues = json.columnValues
+        self.notes = json.notes
+    }
+}
+
+struct PodItemActivityLogJSON: Codable {
+    let id: Int
+    let itemId: Int
+    let userEmail: String
+    let loggedAt: String
+    let columnValues: [String: ColumnValue]
+    let notes: String
 }
 
 
@@ -144,7 +172,11 @@ struct Pod: Identifiable {
     var description: String?
     var type: String?
     var teamId: Int?
+    var recentActivityLogs: [PodItemActivityLog]?
+
 }
+
+
 
 
 
@@ -163,6 +195,8 @@ struct PodJSON: Codable {
     var description: String?
     var type: String?
     var teamId: Int?
+    var recentActivityLogs: [PodItemActivityLogJSON]?
+ 
 }
 
 
@@ -176,7 +210,6 @@ struct PodItemJSON: Codable {
     let thumbnail: String?
     let itemType: String?
     let notes: String?
-//    let columnValues: [String: String?]?
     let columnValues: [String: ColumnValue]?
 
 }
@@ -233,6 +266,9 @@ extension Pod {
         self.description = podJSON.description
         self.type = podJSON.type
         self.teamId = podJSON.teamId
+        self.recentActivityLogs = podJSON.recentActivityLogs?.compactMap { PodItemActivityLog(from: $0) }
+        
+        
     }
 }
 

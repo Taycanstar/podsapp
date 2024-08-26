@@ -169,7 +169,8 @@ struct PodView: View {
                      keyboardOffset = 0
                  }
              }
-
+            
+            printActivityLogs()
         }
         .onDisappear {
 //            isTabBarVisible.wrappedValue = true
@@ -302,6 +303,27 @@ struct PodView: View {
         
 
               
+    }
+    
+    private func printActivityLogs() {
+        if let activityLogs = pod.recentActivityLogs {
+            print("Recent Activity Logs for Pod: \(pod.title)")
+            for (index, log) in activityLogs.enumerated() {
+                print("Log \(index + 1):")
+                print("  ID: \(log.id)")
+                print("  Item ID: \(log.itemId)")
+                print("  User Email: \(log.userEmail)")
+                print("  Logged At: \(log.loggedAt)")
+                print("  Notes: \(log.notes)")
+                print("  Column Values:")
+                for (key, value) in log.columnValues {
+                    print("    \(key): \(value)")
+                }
+                print("--------------------")
+            }
+        } else {
+            print("No recent activity logs for Pod: \(pod.title)")
+        }
     }
     
     private func checkForRecentActivity(itemId: Int) {
