@@ -1,6 +1,38 @@
 import SwiftUI
 import AVFoundation
 
+enum NavigationDestination: Hashable {
+    case player(items: [PodItem], initialIndex: Int)
+    case podInfo
+    case podMembers
+    case activityLog
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .player(let items, let initialIndex):
+            hasher.combine("player")
+            hasher.combine(items.map { $0.id })  // Assuming PodItem has an id property
+            hasher.combine(initialIndex)
+        case .podInfo:
+            hasher.combine("podInfo")
+        case .podMembers:
+            hasher.combine("podMembers")
+        case .activityLog:
+            hasher.combine("activityLog")
+        }
+    }
+
+    static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
+        switch (lhs, rhs) {
+        case (.player(let items1, let index1), .player(let items2, let index2)):
+            return items1.map { $0.id } == items2.map { $0.id } && index1 == index2
+        case (.podInfo, .podInfo), (.podMembers, .podMembers), (.activityLog, .activityLog):
+            return true
+        default:
+            return false
+        }
+    }
+}
 struct PodView: View {
     @Binding var pod: Pod
     @Binding var needsRefresh: Bool
@@ -56,6 +88,10 @@ struct PodView: View {
     @State private var navigateToActivityLog = false
     
     @State private var activityLogs: [PodItemActivityLog] = []
+    
+    @State private var navigationPath = NavigationPath()
+    
+    @Environment(\.dismiss) private var dismiss
 
    
     
@@ -78,49 +114,52 @@ struct PodView: View {
     }
 
     var body: some View {
-       
+        NavigationStack(path: $navigationPath) {
         ZStack {
             (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
-                            .edgesIgnoringSafeArea(.all)
+                .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
-                PodViewHeaderSection(selectedView: $selectedView)
-               
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            switch selectedView {
-                            case .list:
-                                listView
-                            case .table:
-                                Text("Table View")
-                            case .calendar:
-                                Text("Calendar View")
-                            }
-                            
-                            if isCreatingNewItem {
-                                newItemInputView
-                       
-                                    .padding(.bottom, 45)
-                            } else {
-                           
-
-                                addItemButton
-                                    .padding(.bottom, 45)
-                            
-                                
-                          
-                            }
+//                PodViewHeaderSection(selectedView: $selectedView)
+                PodViewHeaderSection(
+                                       selectedView: $selectedView,
+                                       podTitle: currentTitle,
+                                       showPodOptionsSheet: { showPodOptionsSheet = true },
+                                       onDismiss: { dismiss() }  // Add this line
+                                   )
+                
+                ScrollView {
+                    VStack(spacing: 12) {
+                        switch selectedView {
+                        case .list:
+                            listView
+                        case .table:
+                            Text("Table View")
+                        case .calendar:
+                            Text("Calendar View")
                         }
-               
+                        
+                        if isCreatingNewItem {
+                            newItemInputView
+                            
+                                .padding(.bottom, 45)
+                        } else {
+                            
+                            
+                            addItemButton
+                                .padding(.bottom, 45)
+                            
+                            
+                            
+                        }
                     }
                     
-                    .padding(.bottom, keyboardOffset)
-            
+                }
+                
+                .padding(.bottom, keyboardOffset)
                 
             }
-//            .id(refreshID)
-            .navigationTitle(currentTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: trailingNavigationBarItem)
+            
+            
             
             // Floating button
             VStack {
@@ -147,58 +186,74 @@ struct PodView: View {
                 }
             }
         }
-    
+        .navigationDestination(for: NavigationDestination.self) { destination in
+            switch destination {
+            case .player(let items, let initialIndex):
+                PlayerContainerView(items: items, initialIndex: initialIndex)
+            case .podInfo:
+                PodInfoView(pod: $pod,
+                            currentTitle: $currentTitle,
+                            currentDescription: $currentDescription,
+                            currentType: $currentType,
+                            onSave: { updatedTitle, updatedDescription, updatedType in
+                    self.currentTitle = updatedTitle
+                    self.currentDescription = updatedDescription
+                    self.currentType = updatedType
+                    self.needsRefresh = true
+                }
+                )
+            case .podMembers:
+                PodMembersView(podId: pod.id, teamId: pod.teamId)
+            case .activityLog:
+                ActivityLogView(activityLogs: activityLogs)
+            }
+        }
 
+        .toolbar(.hidden, for: .navigationBar)
+        
+        
         .edgesIgnoringSafeArea(.bottom)
         .onAppear {
             self.reorderedItems = self.pod.items
-       
+            
             uploadViewModel.addItemCompletion = {
                 refreshPodItems()
             }
             homeViewModel.updatePodLastVisited(podId: pod.id)
             isTabBarVisible.wrappedValue = false
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { (notification) in
-                 if let keyboardSize = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                     let keyboardHeight = keyboardSize.height
+                if let keyboardSize = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    let keyboardHeight = keyboardSize.height
                     
-                     withAnimation {
-                         keyboardOffset = keyboardHeight  /*(UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)*/
-                     }
-                 }
-             }
-     
-             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                 withAnimation {
-                     keyboardOffset = 0
-                 }
-             }
+                    withAnimation {
+                        keyboardOffset = keyboardHeight  /*(UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)*/
+                    }
+                }
+            }
+            
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                withAnimation {
+                    keyboardOffset = 0
+                }
+            }
             
             self.activityLogs = pod.recentActivityLogs ?? []
-            printActivityLogs()
         }
         .onDisappear {
-//            isTabBarVisible.wrappedValue = true
+            //            isTabBarVisible.wrappedValue = true
             
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
         .sheet(isPresented: $showPodOptionsSheet) {
-            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,      onPodInfoSelected: {
-//                showPodOptionsSheet = false
+            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,    navigationAction: { destination in
+                showPodOptionsSheet = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    navigateToPodInfo = true
+                    navigationPath.append(destination)
                 }
-            },  onPodMembersSelected: {
-//                showPodOptionsSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    navigateToPodMembers = true
-                }
-            }, onActivityLogSelected: {
-                navigateToActivityLog = true
             })
+            
         }
-
         .sheet(isPresented: $showPodColumnsView) {
             PodColumnsView(
                 podColumns: $podColumns,
@@ -207,58 +262,12 @@ struct PodView: View {
                 networkManager: networkManager, visibleColumns: $visibleColumns
             )
         }
-
+        
         .fullScreenCover(isPresented: $showAddItemView) {
             AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
         }
-        .background(
-                   Group {
-                       NavigationLink(
-                           destination: selection.map { index in
-                               PlayerContainerView(
-                                   items: reorderedItems,
-                                   initialIndex: index.itemIndex
-                               )
-                           },
-                           isActive: Binding(
-                               get: { selection != nil },
-                               set: { if !$0 { selection = nil } }
-                           )
-                       ) {
-                           EmptyView()
-                       }
-
-                       NavigationLink(
-                           destination: PodInfoView(pod: $pod,
-                               currentTitle: $currentTitle,
-                               currentDescription: $currentDescription,
-                               currentType: $currentType,
-                               onSave: { updatedTitle, updatedDescription, updatedType in
-                                   self.currentTitle = updatedTitle
-                                   self.currentDescription = updatedDescription
-                                   self.currentType = updatedType
-                                   self.needsRefresh = true
-                               }
-                           ),
-                           isActive: $navigateToPodInfo
-                       ) {
-                           EmptyView()
-                       }
-                       
-                       NavigationLink(
-                        destination: PodMembersView(podId: pod.id, teamId: pod.teamId),
-                           isActive: $navigateToPodMembers
-                       ) {
-                           EmptyView()
-                       }
-                    
-                       
-                       NavigationLink(destination: ActivityLogView(activityLogs: activityLogs), isActive: $navigateToActivityLog) {
-                           EmptyView()
-                       }
-                   }
-               )
-
+        
+        
         .sheet(isPresented: $showColumnEditSheet) {
             if let selectedColumn = selectedColumnForEdit,
                let itemIndex = selectedItemIndex,
@@ -285,7 +294,7 @@ struct PodView: View {
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
             }
         }
-       
+        
         .sheet(isPresented: $showCardSheet) {
             if let index = selectedItemIndex {
                 CardDetailView(item: Binding<PodItem>(
@@ -293,12 +302,12 @@ struct PodView: View {
                     set: { self.reorderedItems[index] = $0 }
                 ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager,
                                allItems: Binding<[PodItem]>(
-                                                get: { self.reorderedItems },
-                                                set: { self.reorderedItems = $0 }
-                                            ))
+                                get: { self.reorderedItems },
+                                set: { self.reorderedItems = $0 }
+                               ))
             }
         }
-
+        
         .sheet(isPresented: $showLogActivitySheet) {
             if let index = selectedItemIndex {
                 LogActivityView(
@@ -313,9 +322,11 @@ struct PodView: View {
             }
         }
         
-
-              
+        
     }
+        .navigationBarHidden(true)
+    }
+    
     
     private func printActivityLogs() {
         if let activityLogs = pod.recentActivityLogs {
@@ -421,14 +432,7 @@ struct PodView: View {
                                 }
                             }
                         Spacer()
-                        
-//                        Image(systemName: "plus.bubble")
-//                            .font(.system(size: 20))
-//                            .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-//                            .onTapGesture {
-//                                selectedItemIndex = index
-//                                showLogActivitySheet = true
-//                            }
+
                         if itemsWithRecentActivity.contains(reorderedItems[index].id) {
                                               Image(systemName: "checkmark.circle.fill")
                                                     .font(.system(size: 20))
@@ -618,15 +622,6 @@ struct PodView: View {
         .padding(.horizontal, 15)
     }
     
-    private var trailingNavigationBarItem: some View {
-        Button(action: {
-            showPodOptionsSheet = true
-        }) {
-            Image(systemName: "ellipsis.circle")
-                .foregroundColor(.primary)
-        }
-    }
-    
     private func deletePod() {
         networkManager.deletePod(podId: pod.id) { success, message in
             DispatchQueue.main.async {
@@ -778,18 +773,48 @@ struct PodView: View {
 struct PodViewHeaderSection: View {
     @Binding var selectedView: PodView.ViewType
     @Environment(\.colorScheme) var colorScheme
+    var podTitle: String
+        var showPodOptionsSheet: () -> Void
+        var onDismiss: () -> Void
     
     var body: some View {
-        HStack(spacing: 10) {
-            viewSection
-            filterSection
-            Spacer()
-            searchSection
+            VStack(spacing: 0) {
+                // Navigation section
+                HStack {
+                    Button(action: onDismiss) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(podTitle)
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Button(action: showPodOptionsSheet) {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding()
+                
+                // View/Filter/Search section
+                HStack(spacing: 10) {
+                    viewSection
+                    filterSection
+                    Spacer()
+                    searchSection
+                }
+                .padding(.horizontal)
+                .padding(.top, 10)
+                .padding(.bottom, 15)
+            }
+            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
         }
-        .padding(.horizontal)
-        .padding(.top, 10)
-        .padding(.bottom, 15)
-    }
     
     private var viewSection: some View {
         Menu {
@@ -1587,34 +1612,6 @@ struct LogActivityView: View {
         }
     }
 
-//    private func submitActivity() {
-//        isSubmitting = true
-//        NetworkManager().createActivityLog(
-//            itemId: item.id,
-//            podId: podId,
-//            userEmail: viewModel.email,
-//            columnValues: columnValues,
-//            podColumns: podColumns,
-//            notes: activityNote
-//        ) { result in
-//            DispatchQueue.main.async {
-//                isSubmitting = false
-//                switch result {
-//                case .success(let loggedAt):
-//                    print("Activity logged successfully at: \(loggedAt)")
-//
-//                    onActivityLogged()
-//                    
-//                    presentationMode.wrappedValue.dismiss()
-//                case .failure(let error):
-//                    print("Failed to log activity: \(error)")
-//              
-//                        errorMessage = error.localizedDescription
-//                    
-//                }
-//            }
-//        }
-//    }
     private func submitActivity() {
           isSubmitting = true
           NetworkManager().createActivityLog(

@@ -19,9 +19,7 @@ struct PodOptionsView: View {
     var podId: Int
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
-    var onPodInfoSelected: () -> Void
-    var onPodMembersSelected: () -> Void
-    var onActivityLogSelected: () -> Void
+    var navigationAction: (NavigationDestination) -> Void
     
     @State private var shareItem: ActivityItem?
     var body: some View {
@@ -50,7 +48,6 @@ struct PodOptionsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     MenuItemView(iconName: "square.and.arrow.up", text: "Share", action: {
                         print("Tapped Share")
-//                        showPodOptionsSheet = false
                         generateShareLink()
                         HapticFeedback.generate()
                     }, color: .primary)
@@ -58,16 +55,17 @@ struct PodOptionsView: View {
                     MenuItemView(iconName: "info.circle", text: "Pod info", action: {
                         dismiss()
                         HapticFeedback.generate()
-                       onPodInfoSelected()
+                            navigationAction(.podInfo)
+                         
                     }, color: .primary)
                     
                     MenuItemView(iconName: "person.2", text: "Pod members", action: {
                         dismiss()
                             print("Tapped pod members")
                         HapticFeedback.generate()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                             onPodMembersSelected()
-                         }
+                                navigationAction(.podMembers)
+                          
+                     
                        
                     }, color: .primary)
                     
@@ -90,7 +88,10 @@ struct PodOptionsView: View {
                     
                     MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
                         dismiss()
-                        onActivityLogSelected()
+//                        onActivityLogSelected()
+                     
+                            navigationAction(.activityLog)
+                     
                         HapticFeedback.generate()
                     }, color: .primary)
                     //                
