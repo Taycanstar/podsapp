@@ -96,3 +96,5 @@ struct CustomVideoPlayer2: UIViewControllerRepresentable {
         NotificationCenter.default.removeObserver(controller.player as Any)
     }
 }
+
+
