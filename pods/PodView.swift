@@ -52,6 +52,10 @@ struct PodView: View {
     @State private var currentDescription: String
     @State private var currentType: String
     @State private var itemsWithRecentActivity: Set<Int> = Set()
+    
+    @State private var navigateToActivityLog = false
+    
+    @State private var activityLogs: [PodItemActivityLog] = []
 
    
     
@@ -170,6 +174,7 @@ struct PodView: View {
                  }
              }
             
+            self.activityLogs = pod.recentActivityLogs ?? []
             printActivityLogs()
         }
         .onDisappear {
@@ -180,15 +185,17 @@ struct PodView: View {
         }
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,      onPodInfoSelected: {
-                showPodOptionsSheet = false
+//                showPodOptionsSheet = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     navigateToPodInfo = true
                 }
             },  onPodMembersSelected: {
-                showPodOptionsSheet = false
+//                showPodOptionsSheet = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     navigateToPodMembers = true
                 }
+            }, onActivityLogSelected: {
+                navigateToActivityLog = true
             })
         }
 
@@ -242,6 +249,11 @@ struct PodView: View {
                         destination: PodMembersView(podId: pod.id, teamId: pod.teamId),
                            isActive: $navigateToPodMembers
                        ) {
+                           EmptyView()
+                       }
+                    
+                       
+                       NavigationLink(destination: ActivityLogView(activityLogs: activityLogs), isActive: $navigateToActivityLog) {
                            EmptyView()
                        }
                    }
@@ -1575,34 +1587,62 @@ struct LogActivityView: View {
         }
     }
 
+//    private func submitActivity() {
+//        isSubmitting = true
+//        NetworkManager().createActivityLog(
+//            itemId: item.id,
+//            podId: podId,
+//            userEmail: viewModel.email,
+//            columnValues: columnValues,
+//            podColumns: podColumns,
+//            notes: activityNote
+//        ) { result in
+//            DispatchQueue.main.async {
+//                isSubmitting = false
+//                switch result {
+//                case .success(let loggedAt):
+//                    print("Activity logged successfully at: \(loggedAt)")
+//
+//                    onActivityLogged()
+//                    
+//                    presentationMode.wrappedValue.dismiss()
+//                case .failure(let error):
+//                    print("Failed to log activity: \(error)")
+//              
+//                        errorMessage = error.localizedDescription
+//                    
+//                }
+//            }
+//        }
+//    }
     private func submitActivity() {
-        isSubmitting = true
-        NetworkManager().createActivityLog(
-            itemId: item.id,
-            podId: podId,
-            userEmail: viewModel.email,
-            columnValues: columnValues,
-            podColumns: podColumns,
-            notes: activityNote
-        ) { result in
-            DispatchQueue.main.async {
-                isSubmitting = false
-                switch result {
-                case .success(let loggedAt):
-                    print("Activity logged successfully at: \(loggedAt)")
-                    onActivityLogged()
-                    presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Failed to log activity: \(error)")
-              
-                        errorMessage = error.localizedDescription
-                    
-                }
-            }
-        }
-    }
+          isSubmitting = true
+          NetworkManager().createActivityLog(
+              itemId: item.id,
+              podId: podId,
+              userEmail: viewModel.email,
+              columnValues: columnValues,
+              podColumns: podColumns,
+              notes: activityNote
+          ) { result in
+              DispatchQueue.main.async {
+                  isSubmitting = false
+                  switch result {
+                  case .success:
+                      print("Activity logged successfully")
+                      onActivityLogged()
+                      presentationMode.wrappedValue.dismiss()
+                  case .failure(let error):
+                      print("Failed to log activity: \(error)")
+                      errorMessage = error.localizedDescription
+                  }
+              }
+          }
+      }
 
 }
+
+
 
 struct InlineNumberPicker: View {
     @Binding var value: Int

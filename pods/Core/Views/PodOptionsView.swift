@@ -21,6 +21,7 @@ struct PodOptionsView: View {
     @Environment(\.colorScheme) var colorScheme
     var onPodInfoSelected: () -> Void
     var onPodMembersSelected: () -> Void
+    var onActivityLogSelected: () -> Void
     
     @State private var shareItem: ActivityItem?
     var body: some View {
@@ -89,9 +90,7 @@ struct PodOptionsView: View {
                     
                     MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
                         dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            print("Tapped Pod activity")
-                        }
+                        onActivityLogSelected()
                         HapticFeedback.generate()
                     }, color: .primary)
                     //                
