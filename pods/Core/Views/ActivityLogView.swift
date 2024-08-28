@@ -9,7 +9,7 @@ struct ActivityLogView: View {
             Color("mxdBg").edgesIgnoringSafeArea(.all)
             
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(activityLogs) { log in
                         ActivityLogItemView(log: log)
                     }
@@ -30,7 +30,10 @@ struct ActivityLogItemView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(log.userEmail)
-                    .font(.headline)
+                    .font(.system(size: 16))
+                    .fontWeight(.semibold)
+//                    .font(.headline)
+                
                 Text(columnValuesString(log.columnValues))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -38,7 +41,7 @@ struct ActivityLogItemView: View {
             
             Spacer()
             
-            VStack(alignment: .trailing, spacing: 5) {
+            HStack(spacing: 5) {
                 Text(formattedDate(log.loggedAt))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -49,6 +52,11 @@ struct ActivityLogItemView: View {
         .padding()
         .background(Color("ltBg"))
         .cornerRadius(10)
+        .onAppear {
+                   print("Log ID: \(log.id)")
+                   print("Raw loggedAt: \(log.loggedAt)")
+                   print("Formatted loggedAt: \(formattedDate(log.loggedAt))")
+               }
     }
     
     private func columnValuesString(_ values: [String: ColumnValue]) -> String {

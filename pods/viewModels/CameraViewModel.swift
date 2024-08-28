@@ -130,6 +130,23 @@ struct PodItem: Identifiable {
     
 }
 
+//struct PodItemActivityLog: Identifiable {
+//    let id: Int
+//    let itemId: Int
+//    let userEmail: String
+//    let loggedAt: Date
+//    let columnValues: [String: ColumnValue]
+//    let notes: String
+//    
+//    init(from json: PodItemActivityLogJSON) {
+//        self.id = json.id
+//        self.itemId = json.itemId
+//        self.userEmail = json.userEmail
+//        self.loggedAt = ISO8601DateFormatter().date(from: json.loggedAt) ?? Date()
+//        self.columnValues = json.columnValues
+//        self.notes = json.notes
+//    }
+//}
 struct PodItemActivityLog: Identifiable {
     let id: Int
     let itemId: Int
@@ -142,7 +159,18 @@ struct PodItemActivityLog: Identifiable {
         self.id = json.id
         self.itemId = json.itemId
         self.userEmail = json.userEmail
-        self.loggedAt = ISO8601DateFormatter().date(from: json.loggedAt) ?? Date()
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: json.loggedAt) {
+            self.loggedAt = date
+        } else {
+            // Fallback parsing method
+            let fallbackFormatter = DateFormatter()
+            fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+            self.loggedAt = fallbackFormatter.date(from: json.loggedAt) ?? Date()
+        }
+        
         self.columnValues = json.columnValues
         self.notes = json.notes
     }
