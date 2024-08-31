@@ -130,35 +130,22 @@ struct PodItem: Identifiable {
     
 }
 
-//struct PodItemActivityLog: Identifiable {
-//    let id: Int
-//    let itemId: Int
-//    let userEmail: String
-//    let loggedAt: Date
-//    let columnValues: [String: ColumnValue]
-//    let notes: String
-//    
-//    init(from json: PodItemActivityLogJSON) {
-//        self.id = json.id
-//        self.itemId = json.itemId
-//        self.userEmail = json.userEmail
-//        self.loggedAt = ISO8601DateFormatter().date(from: json.loggedAt) ?? Date()
-//        self.columnValues = json.columnValues
-//        self.notes = json.notes
-//    }
-//}
 struct PodItemActivityLog: Identifiable {
     let id: Int
     let itemId: Int
+    let itemLabel: String
     let userEmail: String
     let loggedAt: Date
     let columnValues: [String: ColumnValue]
     let notes: String
+    let userName: String  // Add this line
     
     init(from json: PodItemActivityLogJSON) {
         self.id = json.id
         self.itemId = json.itemId
+        self.itemLabel = json.itemLabel
         self.userEmail = json.userEmail
+        self.userName = json.userName  // Add this line
         
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -173,16 +160,20 @@ struct PodItemActivityLog: Identifiable {
         
         self.columnValues = json.columnValues
         self.notes = json.notes
+        
     }
 }
 
 struct PodItemActivityLogJSON: Codable {
     let id: Int
     let itemId: Int
+    let itemLabel: String
     let userEmail: String
     let loggedAt: String
     let columnValues: [String: ColumnValue]
     let notes: String
+    let userName: String  // Add this line
+  
 }
 
 

@@ -3,6 +3,7 @@ import SwiftUI
 struct ActivityLogView: View {
     let activityLogs: [PodItemActivityLog]
     @Environment(\.dismiss) private var dismiss
+
     
     var body: some View {
         ZStack {
@@ -25,16 +26,16 @@ struct ActivityLogView: View {
 
 struct ActivityLogItemView: View {
     let log: PodItemActivityLog
-    
+    @State private var showFullLog = false
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(log.userEmail)
-                    .font(.system(size: 16))
-                    .fontWeight(.semibold)
+                Text(log.userName)
+                    .font(.system(size: 15))
+                    .fontWeight(.medium)
 //                    .font(.headline)
                 
-                Text(columnValuesString(log.columnValues))
+                Text(log.itemLabel)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -46,30 +47,39 @@ struct ActivityLogItemView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 Image(systemName: "info.circle")
+                    .font(.system(size: 20))
                     .foregroundColor(.accentColor)
+                    .onTapGesture {
+                                          showFullLog = true
+                                      }
             }
         }
         .padding()
-        .background(Color("ltBg"))
+        .background(Color("mdBg"))
         .cornerRadius(10)
         .onAppear {
                    print("Log ID: \(log.id)")
                    print("Raw loggedAt: \(log.loggedAt)")
                    print("Formatted loggedAt: \(formattedDate(log.loggedAt))")
                }
+        .sheet(isPresented: $showFullLog) {
+                  FullActivityLogView(log: log)
+              }
     }
     
     private func columnValuesString(_ values: [String: ColumnValue]) -> String {
-        values.map { key, value in
+        let result = values.compactMap { key, value in
             switch value {
             case .string(let str):
-                return "\(key): \(str)"
+                return str.isEmpty ? nil : "\(str) \(key)"
             case .number(let num):
-                return "\(key): \(num)"
+                return "\(num) \(key)"
             case .null:
-                return "\(key): N/A"
+                return nil
             }
         }.joined(separator: ", ")
+        
+        return result.isEmpty ? "No data" : result
     }
     
     private func formattedDate(_ date: Date) -> String {

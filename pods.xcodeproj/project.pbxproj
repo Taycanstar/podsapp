@@ -32,6 +32,7 @@
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
 		367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
 		3680C26B2C7E127D00D66167 /* ActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3680C26A2C7E127D00D66167 /* ActivityLogView.swift */; };
+		3680C26D2C802D9900D66167 /* FullActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3680C26C2C802D9900D66167 /* FullActivityLogView.swift */; };
 		3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8662BBAE45200B350E2 /* PodItemView.swift */; };
 		3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8682BBAE68C00B350E2 /* PodItemCell.swift */; };
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
@@ -127,6 +128,7 @@
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
 		3680C26A2C7E127D00D66167 /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
+		3680C26C2C802D9900D66167 /* FullActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivityLogView.swift; sourceTree = "<group>"; };
 		3682C8662BBAE45200B350E2 /* PodItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemView.swift; sourceTree = "<group>"; };
 		3682C8682BBAE68C00B350E2 /* PodItemCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCell.swift; sourceTree = "<group>"; };
 		3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomVideoPlayer.swift; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 				3641F5112C73A13500256E85 /* PodInfoView.swift */,
 				367540F02C76E99900B066A9 /* PodMembersView.swift */,
 				3680C26A2C7E127D00D66167 /* ActivityLogView.swift */,
+				3680C26C2C802D9900D66167 /* FullActivityLogView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -696,6 +699,7 @@
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
+				3680C26D2C802D9900D66167 /* FullActivityLogView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
