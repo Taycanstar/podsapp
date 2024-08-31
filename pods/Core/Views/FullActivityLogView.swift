@@ -68,7 +68,7 @@ struct FullActivityLogView: View {
                             
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 25)
+                    .padding(.vertical, 30)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
