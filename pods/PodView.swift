@@ -329,26 +329,7 @@ struct PodView: View {
     }
     
     
-    private func printActivityLogs() {
-        if let activityLogs = pod.recentActivityLogs {
-            print("Recent Activity Logs for Pod: \(pod.title)")
-            for (index, log) in activityLogs.enumerated() {
-                print("Log \(index + 1):")
-                print("  ID: \(log.id)")
-                print("  Item ID: \(log.itemId)")
-                print("  User Email: \(log.userEmail)")
-                print("  Logged At: \(log.loggedAt)")
-                print("  Notes: \(log.notes)")
-                print("  Column Values:")
-                for (key, value) in log.columnValues {
-                    print("    \(key): \(value)")
-                }
-                print("--------------------")
-            }
-        } else {
-            print("No recent activity logs for Pod: \(pod.title)")
-        }
-    }
+
     
     private func checkForRecentActivity(itemId: Int) {
         showTemporaryCheckmark(for: itemId)
@@ -426,7 +407,7 @@ struct PodView: View {
                     Spacer()
                     
                     VStack {
-                        iconView(for: reorderedItems[index])
+                        iconView(for: reorderedItems[index] , index: index)
                             .onTapGesture {
                                 if reorderedItems[index].videoURL != nil || reorderedItems[index].imageURL != nil {
                                     self.selection = (0, index)
@@ -468,12 +449,15 @@ struct PodView: View {
         .padding(.horizontal, 15)
     }
 
-    private func iconView(for item: PodItem) -> some View {
+    private func iconView(for item: PodItem , index: Int) -> some View {
         Group {
             if item.videoURL != nil || item.imageURL != nil {
                 Image(systemName: "play")
                     .font(.system(size: 20))
                     .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                    .onTapGesture {
+                                     navigationPath.append(NavigationDestination.player(items: reorderedItems, initialIndex: index))
+                                 }
             } else {
                 Image(systemName: "video.badge.plus")
                     .font(.system(size: 20))

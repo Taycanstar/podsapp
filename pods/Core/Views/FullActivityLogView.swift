@@ -68,7 +68,7 @@ struct FullActivityLogView: View {
                             
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 30)
+                    .padding(.vertical, 20)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -78,7 +78,12 @@ struct FullActivityLogView: View {
     }
     
     private var columnValuesGrid: some View {
-        let columns = Array(log.columnValues)
+        let columns = Array(log.columnValues).filter { _, value in
+            if case .null = value {
+                return false
+            }
+            return true
+        }
         return VStack(spacing: 15) {
             ForEach(0..<(columns.count + 1) / 2, id: \.self) { rowIndex in
                 HStack(spacing: 20) {
@@ -95,8 +100,9 @@ struct FullActivityLogView: View {
             }
         }
         .padding()
+        .padding(.top, 20)
     }
-    
+
     private func columnView(key: String, value: ColumnValue) -> some View {
         VStack(alignment: .leading) {
             Text(key)
@@ -108,10 +114,9 @@ struct FullActivityLogView: View {
                 .font(.system(size: 16))
                 .fontWeight(.semibold)
         }
-       
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    
+
     private func valueString(for value: ColumnValue) -> String {
         switch value {
         case .string(let str):
@@ -119,7 +124,7 @@ struct FullActivityLogView: View {
         case .number(let num):
             return "\(num)"
         case .null:
-            return "N/A"
+            return "" // This case should never be reached due to the filter
         }
     }
     
