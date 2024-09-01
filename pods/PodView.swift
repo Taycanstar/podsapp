@@ -42,7 +42,6 @@ struct PodView: View {
     @State private var reorderedItems: [PodItem] = []
     @State private var deletedItemIDs: [Int] = []
     @State private var showMenu = false
-    @State private var showAddItemView = false
     @State private var isAnyItemEditing: Bool = false
     @State private var showDoneButton = false
     @State private var editingItemId: Int?
@@ -92,6 +91,9 @@ struct PodView: View {
     @State private var navigationPath = NavigationPath()
     
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var selectedItemForMedia: PodItem?
+    @State private var showCameraView = false
 
    
     
@@ -264,9 +266,18 @@ struct PodView: View {
             )
         }
         
-        .fullScreenCover(isPresented: $showAddItemView) {
-            AddItemContainerView(showAddItemView: $showAddItemView, podId: pod.id)
-        }
+        .fullScreenCover(isPresented: $showCameraView) {
+                   if let selectedItem = selectedItemForMedia {
+                       CameraView(
+                           showingVideoCreationScreen: $showCameraView,
+                           selectedTab: .constant(0),
+                           podId: pod.id,
+                           itemId: selectedItem.id
+                       ) { updatedItemId in
+                           refreshItem(with: updatedItemId)
+                       }
+                   }
+               }
         
         
         .sheet(isPresented: $showColumnEditSheet) {
@@ -330,6 +341,23 @@ struct PodView: View {
     
     
 
+    private func refreshItem(with id: Int) {
+           networkManager.fetchPodItem(podId: pod.id, itemId: id) { result in
+               DispatchQueue.main.async {
+                   switch result {
+                   case .success(let updatedItem):
+                       if let index = reorderedItems.firstIndex(where: { $0.id == id }) {
+                           reorderedItems[index] = updatedItem
+                       }
+                       pod.items = reorderedItems
+                       needsRefresh = true
+                   case .failure(let error):
+                       print("Failed to fetch updated item: \(error)")
+                       // You might want to show an error message to the user here
+                   }
+               }
+           }
+       }
     
     private func checkForRecentActivity(itemId: Int) {
         showTemporaryCheckmark(for: itemId)
@@ -462,6 +490,10 @@ struct PodView: View {
                 Image(systemName: "video.badge.plus")
                     .font(.system(size: 20))
                     .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                    .onTapGesture {
+                                       selectedItemForMedia = item
+                                       showCameraView = true
+                                   }
             }
         }
     }

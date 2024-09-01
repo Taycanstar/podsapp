@@ -30,68 +30,6 @@ struct PhotoPicker: UIViewControllerRepresentable {
         Coordinator(self)
     }
 
-//    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-//        let parent: PhotoPicker
-//
-//        init(_ parent: PhotoPicker) {
-//            self.parent = parent
-//        }
-//
-//        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-//            parent.isPresented = false
-//            guard let provider = results.first?.itemProvider else {
-//                print("No provider found for the selected item.")
-//                return
-//            }
-//
-//            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-//                processVideo(provider: provider)
-//            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-//                processImage(provider: provider)
-//            }
-//        }
-//
-//        private func processVideo(provider: NSItemProvider) {
-//            provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
-//                guard let url = url else {
-//                    print("Error loading video: \(error?.localizedDescription ?? "Unknown error")")
-//                    return
-//                }
-//                
-//                let destinationURL = self.createUniqueVideoURL()
-//                do {
-//                    try FileManager.default.moveItem(at: url, to: destinationURL)
-//                    DispatchQueue.main.async {
-//                        self.parent.cameraViewModel.handleSelectedVideo(destinationURL)
-//                    }
-//                } catch {
-//                    print("Error moving video file: \(error)")
-//                }
-//            }
-//        }
-//
-//        private func processImage(provider: NSItemProvider) {
-//            provider.loadObject(ofClass: UIImage.self) { object, error in
-//                DispatchQueue.main.async {
-//                    if let error = error {
-//                        print("Error loading image: \(error.localizedDescription)")
-//                    }
-//                    if let image = object as? UIImage {
-//                        print("Successfully selected image: \(image)")
-//                        self.parent.cameraViewModel.handleSelectedImage(image)
-//                    } else {
-//                        print("No image found in the provider.")
-//                    }
-//                }
-//            }
-//        }
-//
-//        private func createUniqueVideoURL() -> URL {
-//            let tempDirectory = FileManager.default.temporaryDirectory
-//            return tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
-//        }
-//    }
-    
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         let parent: PhotoPicker
 
@@ -310,48 +248,7 @@ struct CameraContainerView: View {
                             }
                         }
                         
-                        
-//                        
-//                        Button(action: {
-//
-//                            cameraModel.toggleWaveform()
-//
-//                            print("Waveform Enabled State: \(cameraModel.isWaveformEnabled)")
-//                            voiceCommandPopupMessage = cameraModel.isWaveformEnabled ? "Video transcription on" : "Video transcription off"
-//                            
-//                            // Show the message
-//                            withAnimation {
-//                                showingVoiceCommandPopup = true
-//                            }
-//                            
-//                            // Hide the popup after a few seconds and reset the message
-//                            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-//                                showingVoiceCommandPopup = false
-//                                // Reset the message after the animation completes to ensure it's ready for the next toggle
-//                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//                                    voiceCommandPopupMessage = nil
-//                                }
-//                            }
-//                        }) {
-//                            Image(systemName: "waveform")
-//                                .font(.title)
-//                                .foregroundColor(cameraModel.isWaveformEnabled ? Color(red: 70/255, green: 87/255, blue: 245/255) : .white)
-//                                .font(.system(size: 16))
-//                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
-//                                .overlay(
-//                                    Text("Transcribe video")
-//                                        .font(.system(size: 14))
-//                                        .fontWeight(.semibold)
-//                                        .foregroundColor(.white)
-//                                        .opacity(showTranscribeLabel ? 1.0 : 0.0) // Control opacity of the label only
-//                                        .fixedSize()
-//                                        .offset(x: -120) // Adjust position relative to the icon
-//                                    , alignment: .leading
-//                                )
-//                                .padding()
-//                            
-//                        }
-//                        
+
                         
                         Button(action: {
                             cameraModel.toggleSummary()
@@ -910,42 +807,6 @@ struct FinalPreview: View {
                                         .fontWeight(.medium)
                                         .shadow(radius: 5)
                                 }
-                                
-//                                
-//                                Button(action: {
-//                                    // Immediately hide the preview
-//                                       showPreview = false
-//                                    
-//                                    
-//                                   
-//                                    
-//                                    // Perform the confirmation and other actions in the background
-//                                    DispatchQueue.global(qos: .userInitiated).async {
-//                                        if let _ = cameraModel.previewURL {
-//                                            // It's a video
-//                                            cameraModel.confirmVideo()
-//                                        } else if cameraModel.selectedImage != nil {
-//                                            // It's a photo
-//                                            cameraModel.confirmPhoto()
-//                                        }
-//                                        
-//                                        DispatchQueue.main.async {
-//                                            cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
-//                                        }
-//                                    }
-//
-//                                }) {
-//                                    
-//                                    Image(systemName: "checkmark")
-//                                        .foregroundColor(.black)
-//                                        .font(.system(size: 34))
-//                                        .frame(width: 75, height: 75) // Making this larger as specified
-//                                        .background(Color.white)
-//                                        .clipShape(Circle())
-//                                    
-//                                }
-//                                .padding(.bottom, 15)
-//
 
                                 VStack {
                                         if showCheckmarkLabel {
@@ -1076,14 +937,4 @@ struct FinalPreview: View {
        }
 
 
-}
-
-
-
-extension Image {
-    func iconStyle() -> some View {
-        self
-            .font(.title)
-            .foregroundColor(.white)
-    }
 }

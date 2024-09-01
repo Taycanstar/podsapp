@@ -1,558 +1,507 @@
 import SwiftUI
+import Photos
 import AVFoundation
 
 
 
 
-struct CameraView: UIViewRepresentable {
-    
+struct CameraView: View {
+    @StateObject var cameraModel = CameraViewModel()
+    @State private var showCreatePodView = false
+    @State private var isShowingVideoPicker = false
+    @State private var selectedVideoURL: URL?
+    @State private var isProcessingVideo = false
+    @State private var showingVoiceCommandPopup = false
+    @State private var showingSummarizationPopup = false
+    @State private var voiceCommandPopupMessage: String? = nil
+    @State private var summarizationMessage: String? = nil
+    @Binding var showingVideoCreationScreen: Bool
+    @State private var latestPhoto: UIImage? = nil
+    @State private var showTranscribeLabel = true
+    @State private var showSummarizationLabel = true
+    @State private var showCommandLabel = true
+    @Binding var selectedTab: Int
+    @State private var navigationPath = NavigationPath()
+    var onMediaAdded: ((Int) -> Void)?
     
    
-    @Binding var isRecording: Bool  // Bind this variable to control recording status
-   
-//    let tabBarHeight: CGFloat = 85
+    let itemId: Int
+    let podId: Int
     
-    
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: UIScreen.main.bounds)
-        // Adjust the view frame to exclude the tab bar area
-//        view.frame.size.height -= tabBarHeight
-        let coordinator = context.coordinator
-      
-            
-
-           
-        
-        // Setup preview layer
-        if let captureSession = coordinator.captureSession {
-            let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-            previewLayer.frame = view.bounds
-            previewLayer.videoGravity = .resizeAspectFill
-            view.layer.addSublayer(previewLayer)
-            coordinator.previewLayer = previewLayer
-        } else {
-            print("Failed to get capture session from coordinator")
-        }
-
-        setupFloatingControls(in: view, coordinator: coordinator)
-
-        // Adding the capture button
-        DispatchQueue.main.async {
-            let backgroundView = UIView()
-            backgroundView.backgroundColor = UIColor.clear
-            backgroundView.layer.cornerRadius = 40 // Adjust for larger background view
-            backgroundView.layer.borderColor = UIColor.white.cgColor
-            backgroundView.layer.borderWidth = 3 // Original thickness
-            backgroundView.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(backgroundView)
-            backgroundView.isUserInteractionEnabled = true
-
-            NSLayoutConstraint.activate([
-                backgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -85),
-                backgroundView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                backgroundView.widthAnchor.constraint(equalToConstant: 80), // Increased size for more space
-                backgroundView.heightAnchor.constraint(equalToConstant: 80)  // Increased size for more space
-            ])
-
-            let button = UIButton(type: .custom)
-            button.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0)
-            button.layer.cornerRadius = 34 // Same as original
-            button.translatesAutoresizingMaskIntoConstraints = false
-            coordinator.captureButton = button
-            backgroundView.addSubview(button)
-            
-            let transparentButton = UIButton(type: .custom)
-             transparentButton.backgroundColor = .clear
-             transparentButton.translatesAutoresizingMaskIntoConstraints = false
-             backgroundView.addSubview(transparentButton)
-
-             NSLayoutConstraint.activate([
-                 transparentButton.topAnchor.constraint(equalTo: backgroundView.topAnchor),
-                 transparentButton.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor),
-                 transparentButton.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
-                 transparentButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor)
-             ])
-
-            
-
-            
-            
-            let gestureTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.toggleRecord))
-     
-            transparentButton.addGestureRecognizer(gestureTap)
-
-            let gestureLongPress = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress))
-            transparentButton.addGestureRecognizer(gestureLongPress)
-           
-            
-            
-
-            NSLayoutConstraint.activate([
-                button.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
-                button.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
-                button.widthAnchor.constraint(equalToConstant: 68), // Same as original
-                button.heightAnchor.constraint(equalToConstant: 68)  // Same as original
-            ])
-        }
-
-
-        return view
-    }
-    
- 
+    @EnvironmentObject var uploadViewModel: UploadViewModel
 
     
-
+    // New state variables
+        @State private var cameraViewCreated = false
     
-
-
-
-
-    private func setupFloatingControls(in view: UIView, coordinator: Coordinator) {
-        let controlBar = UIStackView()
-        controlBar.axis = .vertical
-        controlBar.spacing = 15 // Space between icons
-        controlBar.distribution = .equalSpacing
-        controlBar.isLayoutMarginsRelativeArrangement = true
-        controlBar.layoutMargins = UIEdgeInsets(top: 20, left: 0, bottom: 20, right: 0) // Set padding
-        controlBar.backgroundColor = UIColor.black.withAlphaComponent(0.15)
-        controlBar.layer.cornerRadius = 25 // Fully rounded corners
-        controlBar.translatesAutoresizingMaskIntoConstraints = false
-        
-        coordinator.controlBar = controlBar
-        
-
-        // Flash Button
-         let flashButton = UIButton(type: .system)
-         flashButton.setImage(UIImage(systemName: "bolt.slash.fill"), for: .normal)
-         flashButton.tintColor = .white
-         flashButton.addTarget(coordinator, action: #selector(Coordinator.toggleFlash), for: .touchUpInside)
-         coordinator.flashButton = flashButton
-
-        // Record Button
-        let recordButton = UIButton(type: .system)
-        recordButton.setImage(UIImage(systemName: "record.circle"), for: .normal)
-        recordButton.tintColor = .white
-        coordinator.recordButton = recordButton
-        // Add target for recordButton if needed
-
-        // Switch Camera Button
-        let switchCameraButton = UIButton(type: .system)
-        switchCameraButton.setImage(UIImage(systemName: "camera.rotate"), for: .normal)
-        switchCameraButton.tintColor = .white
-        switchCameraButton.addTarget(coordinator, action: #selector(Coordinator.switchCamera), for: .touchUpInside)
-        coordinator.switchCameraButton = switchCameraButton
-
-        [switchCameraButton,flashButton, recordButton].forEach { button in
-            controlBar.addArrangedSubview(button)
-        }
-
-        view.addSubview(controlBar)
-
-        NSLayoutConstraint.activate([
-            controlBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            controlBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
-            controlBar.widthAnchor.constraint(equalToConstant: 50)
-        ])
-    }
-
-
-
-    class Coordinator: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
-   
-        weak var previewLayer: AVCaptureVideoPreviewLayer?
-        var parent: CameraView
-        var backFacingCamera: AVCaptureDevice?
-        var frontFacingCamera: AVCaptureDevice?
-        var captureSession: AVCaptureSession?
-        var movieFileOutput: AVCaptureVideoDataOutput?
-        var isRecording = false
-        var flashButton: UIButton?
-        var recordButton: UIButton?
-        var isFlashOn = false
-        var timer: Timer?
-        var totalTime = 60.0 // Total recording time in seconds
-        var currentTime = 0.0
-        var captureButton: UIButton?
-        weak var controlBar: UIStackView?
-        var switchCameraButton: UIButton?
-        @Published var alert = false
-        var assetWriter: AVAssetWriter?
-         var assetWriterInput: AVAssetWriterInput?
-         var videoDataOutput: AVCaptureVideoDataOutput?
-
-
-        init(_ parent: CameraView) {
-            self.parent = parent
-            super.init()
-            findCameraDevices()
-            setupCaptureSession()
-            
-        }
-        
-        func checkPermission(){
-            
-            switch AVCaptureDevice.authorizationStatus(for: .video) {
-            case .authorized:
-                setupCaptureSession()
-                return
-            case .notDetermined:
-                AVCaptureDevice.requestAccess(for: .video) { (status) in
-                    
-                    if status{
-                        self.setupCaptureSession()
-                    }
-                }
-            case .denied:
-                self.alert.toggle()
-                return
-            default:
-                return
-            }
-        }
-
-        func setupCaptureSession() {
-            captureSession = AVCaptureSession()
-            captureSession?.sessionPreset = AVCaptureSession.Preset.high  // Or use a specific preset like .hd1920x1080
-
-            // Prepare for both front and back cameras
-            setupCameraInput(position: .front)
-            setupCameraInput(position: .back)
-
-            // Setup Video Data Output
-            let videoDataOutput = AVCaptureVideoDataOutput()
-            videoDataOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoQueue"))
-
-            var videoSettings: [String: Any] = [
-                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-            ]
-            
-            // Additional keys for iOS 16 and later
-            if #available(iOS 16.0, *) {
-                videoSettings[AVVideoColorPropertiesKey] = [
-                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-                ]
-            }
-
-            videoDataOutput.videoSettings = videoSettings
-
-            if captureSession?.canAddOutput(videoDataOutput) ?? false {
-                captureSession?.addOutput(videoDataOutput)
-            }
-
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                self?.captureSession?.startRunning()
-            }
-        }
-
-
-        private func setupCameraInput(position: AVCaptureDevice.Position) {
-            guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
-                  let input = try? AVCaptureDeviceInput(device: camera),
-                  captureSession?.canAddInput(input) ?? false else {
-                print("Failed to get camera for position: \(position)")
-                return
-            }
-            captureSession?.addInput(input)
-        }
-
-        func startRecording() {
-            let uniqueFileName = "output_" + UUID().uuidString + ".mov"
-            let outputPath = NSTemporaryDirectory() + uniqueFileName
-            let outputURL = URL(fileURLWithPath: outputPath)
-
-            do {
-                assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
-
-                // Make sure the settings match the video data being captured
-                let videoSettings: [String: Any] = [
-                    AVVideoCodecKey: AVVideoCodecType.h264,
-                    AVVideoWidthKey: 1920,   // Adjust if necessary
-                    AVVideoHeightKey: 1080   // Adjust if necessary
-                ]
-
-                assetWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
-                assetWriterInput?.expectsMediaDataInRealTime = true
-
-                if assetWriter?.canAdd(assetWriterInput!) ?? false {
-                    assetWriter?.add(assetWriterInput!)
-                }
-
-                assetWriter?.startWriting()
-                assetWriter?.startSession(atSourceTime: CMTime.zero)
-            } catch {
-                print("Error setting up asset writer: \(error)")
-            }
-        }
-
-
-        func stopRecording() {
-            assetWriterInput?.markAsFinished()
-            assetWriter?.finishWriting { [weak self] in
-                guard let self = self else { return }
-                
-                if let error = self.assetWriter?.error {
-                    print("Error finishing writing: \(error)")
-                } else {
-                    if let outputURL = self.assetWriter?.outputURL {
-                        DispatchQueue.main.async {
-                            NotificationCenter.default.post(name: .didFinishRecordingVideo, object: outputURL)
-                        }
-                    } else {
-                        print("Error: Output URL is nil")
-                    }
-                }
-                self.assetWriter = nil
-                self.assetWriterInput = nil
-            }
-        }
-
-
-
-
-
-        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-            guard isRecording,
-                  let assetWriterInput = assetWriterInput,
-                  assetWriterInput.isReadyForMoreMediaData,
-                  CMSampleBufferDataIsReady(sampleBuffer) else {
-                print("Recording not started or sample buffer not ready")
-                return
-            }
-
-            if !assetWriterInput.append(sampleBuffer) {
-                print("Failed to append sample buffer: \(String(describing: assetWriter?.error))")
-            } else {
-                print("Sample buffer appended successfully.")
-            }
-        }
-        
-
-
-
-
-        
-        
-        @objc func toggleRecord() {
-            print("Toggle Record: Current state isRecording = \(isRecording)")
-
-            if isRecording {
-                print("Stopping recording...")
-                stopRecording()
-                isRecording = false
-                updateButtonAppearance(isRecording: false)
-                updateUIForRecordingState(isRecording: false)
-            } else {
-                print("Starting recording...")
-                startRecording()
-                isRecording = true
-                updateButtonAppearance(isRecording: true)
-                updateUIForRecordingState(isRecording: true)
-            }
-        }
-
-
-        
-        private func updateUIForRecordingState(isRecording: Bool) {
-            flashButton?.isHidden = isRecording
-            recordButton?.isHidden = isRecording
-            controlBar?.backgroundColor = isRecording ?  UIColor.black.withAlphaComponent(0) : UIColor.black.withAlphaComponent(0.15)
-            // The switch camera button stays visible
-            switchCameraButton?.isHidden = false
-        }
-        
-        @objc func toggleFlash() {
-            guard let device = AVCaptureDevice.default(for: AVMediaType.video) else { return }
-            
-            if device.hasTorch {
-                do {
-                    try device.lockForConfiguration()
-                    
-                    if isFlashOn {
-                        // If the flash is currently on, turn it off
-                        device.torchMode = .off
-                        isFlashOn = false
-                    } else {
-                        // If the flash is currently off, turn it on
-                        try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
-                        isFlashOn = true
-                    }
-
-                    device.unlockForConfiguration()
-                } catch {
-                    print("Torch could not be used: \(error)")
-                }
-            } else {
-                print("Torch is not available")
-            }
-
-            // Update the flash button icon
-            let iconName = isFlashOn ? "bolt.fill" : "bolt.slash.fill"
-            DispatchQueue.main.async {
-                self.flashButton?.setImage(UIImage(systemName: iconName), for: .normal)
-            }
-        }
-       
-         
-
-        
-        @objc func handleLongPress(gesture: UILongPressGestureRecognizer) {
-            print("Long press state: \(gesture.state.rawValue)") // Log the gesture state
-            switch gesture.state {
-            case .began:
-                print("Long press began, starting recording")
-                toggleRecord()
-            case .ended:
-                print("Long press ended, stopping recording")
-                toggleRecord()
-            default:
-                break
-            }
-        }
-
-
-        private func updateButtonAppearance(isRecording: Bool) {
-            DispatchQueue.main.async {
-                UIView.animate(withDuration: 0.3, animations: {
-                    if isRecording {
-                        self.captureButton?.layer.cornerRadius = 15 // Rounded corners for smaller square
-                        self.captureButton?.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0) // Original color
-                        self.captureButton?.transform = CGAffineTransform(scaleX: 0.5, y: 0.5) // Shrink the button
-                    } else {
-                        self.captureButton?.layer.cornerRadius = 34 // Original corner radius
-                        self.captureButton?.backgroundColor = UIColor(red: 255/255.0, green: 59/255.0, blue: 48/255.0, alpha: 1.0) // Original color
-                        self.captureButton?.transform = CGAffineTransform.identity // Reset to original size
-                    }
-                })
-            }
-        }
-
-
-
-        
-       
-
-        @objc func switchCamera(_ uiView: UIView) {
-            print("Switch camera tapped")
-
-            guard let captureSession = self.captureSession else {
-                print("Capture session is not initialized")
-                return
-            }
-
-            guard let backFacingCamera = backFacingCamera, let frontFacingCamera = frontFacingCamera else {
-                print("One or both cameras are unavailable")
-                return
-            }
-
-            captureSession.beginConfiguration()
-
-            guard let currentInput = captureSession.inputs.first as? AVCaptureDeviceInput else {
-                print("No current input to remove")
-                captureSession.commitConfiguration()
-                return
-            }
-
-            print("Current camera: \(currentInput.device.position == .front ? "Front" : "Back")")
-
-            captureSession.removeInput(currentInput)
-
-            let newCameraDevice = (currentInput.device.position == .front) ? backFacingCamera : frontFacingCamera
-            do {
-                let newInput = try AVCaptureDeviceInput(device: newCameraDevice)
-                if captureSession.canAddInput(newInput) {
-                    captureSession.addInput(newInput)
-                    print("Switched camera to: \(newCameraDevice.position == .front ? "Front" : "Back")")
-                } else {
-                    print("Could not add input for new camera")
-                    captureSession.commitConfiguration()
-                    return
-                }
-            } catch {
-                print("Failed to create input for new camera: \(error)")
-                captureSession.commitConfiguration()
-                return
-            }
-
-            captureSession.commitConfiguration()
-
-            DispatchQueue.main.async {
-                self.previewLayer?.session = captureSession
-                
-            }
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                if !captureSession.isRunning {
-                    captureSession.startRunning()
-                }
-            }
-
-        }
-
-        func findCameraDevices() {
-            let devices = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera],
-                                                           mediaType: .video,
-                                                           position: .unspecified).devices
-
-            for device in devices {
-                if device.position == .back {
-                    backFacingCamera = device
-                } else if device.position == .front {
-                    frontFacingCamera = device
-                }
-            }
-
-            // Ensure that both cameras are found
-            if backFacingCamera == nil || frontFacingCamera == nil {
-                print("Failed to find one or both cameras.")
-                return
-            }
-        }
-
-
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {
-//        if let previewLayer = context.coordinator.previewLayer {
-//            previewLayer.frame = uiView.bounds
-//        }
-    }
-
-}
-
-extension Notification.Name {
-    static let didFinishRecordingVideo = Notification.Name("didFinishRecordingVideo")
-}
-
-struct CameraViewContainer: View {
-    @State private var isRecording = false
-    @State private var showVideoPreview = false
-    @State private var recordedVideoURL: URL?
+    init(showingVideoCreationScreen: Binding<Bool>, selectedTab: Binding<Int>, podId: Int, itemId: Int, onMediaAdded: ((Int) -> Void)? = nil) {
+          self._showingVideoCreationScreen = showingVideoCreationScreen
+          self._selectedTab = selectedTab
+          self.podId = podId
+          self.itemId = itemId
+          self.onMediaAdded = onMediaAdded
+      }
 
     var body: some View {
+   
+            
         ZStack {
-            // In your CameraViewContainer or another visible SwiftUI view
-       
-     
-            CameraView(isRecording: $isRecording)
-            if showVideoPreview, let videoURL = recordedVideoURL {
-                                    VideoPreviewView(videoURL: videoURL, showPreview: $showVideoPreview)
+            // MARK: Camera View
+            Color.black.edgesIgnoringSafeArea(.all)
+            
+            
+            // code starts here
+            ZStack {
+                AltCameraView()
+                    .opacity(cameraModel.showPreview || showCreatePodView ? 0 : 1)
+                    .allowsHitTesting(!(cameraModel.showPreview || showCreatePodView))
+                
+                    .onAppear {
+                        
+                        if !cameraModel.hasCheckedPermission {
+                                cameraModel.checkPermission()
+                            }
+                            if cameraModel.permissionGranted {
+                                cameraModel.setUp()
+                            }
+                        // Set labels to disappear after 4 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                            showTranscribeLabel = false
+                            showCommandLabel = false
+                            showSummarizationLabel = false
+                        }
+                    }
+                    .onDisappear {
+                        cameraModel.deactivateAudioSession()
+                        //                                    cameraModel.deactivateSpeechService()
+                        cameraModel.stopAudioRecorder()
+                    }
+                    .environmentObject(cameraModel)
+                
+                if !cameraModel.isRecording {
+                    Button(action: {
+                        // Instead of resetting properties, just close the video creation screen
+                        showingVideoCreationScreen = false
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                            .font(.system(size: 22))
+                            .padding()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.top, 15)
+                    .padding(.leading, 5)
+                    .padding(.leading, 0)
+                    
+                }
+                
+                
+                
+                
+                
+                // Floating Camera Control Buttons
+                if !cameraModel.isRecording {
+                    VStack(spacing: 0) {  // Adjust spacing as needed
+                        Button(action: cameraModel.switchCamera) {
+                            Image(systemName: "arrow.triangle.capsulepath")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                .font(.system(size: 16))
+                                .padding()
+                        }
+                        if cameraModel.selectedCameraMode == .photo {
+                            Button(action: {
+                                
+                                cameraModel.toggleFlashForPhotoMode()
+                                
+                                
+                            }) {
+                                Image(systemName: getFlashIcon())
+                                    .font(.title)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                    .padding()
+                            }
+                        } else {
+                            Button(action: cameraModel.toggleFlash) {
+                                Image(systemName: cameraModel.isFlashOn ? "bolt.fill" : "bolt.slash.fill")
+                                    .font(.title)
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
+                                    .font(.system(size: 16))
+                                    .padding()
+                            }
+                        }
+                        
+                    }
+                    .position(x: UIScreen.main.bounds.width - 28, y: 130)
+                }
+
+                
+                
+                VStack(spacing: 10){
+                    Spacer()
+                    
+                    if !cameraModel.isRecording {
+                        HStack{
+                            Spacer()
+                            WheelPicker(selectedMode: $cameraModel.selectedCameraMode, cameraViewModel: cameraModel)
+                                .background(Color.clear) // Just to highlight the ScrollView area
+                                .frame(width: 200)
+                                .zIndex(3)
+                            //                                   .frame(maxWidth: .infinity)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    
+                    
+                    HStack(spacing: 55) { // This HStack contains all main elements
+                        
+                        if !cameraModel.isRecording {
+                            if !cameraModel.currentPod.items.isEmpty {
+                                // Thumbnail Carousel
+                                ThumbnailCarouselView(items: cameraModel.currentPod.items)
+                                //                            .frame(width: 40, height: 40)
+                                    .frame(width: 40, height: 40)
+                                    .padding(.top, -5)
+                                
+                                
+                            } else {
+                                // Invisible Placeholder when there are no items
+                                VStack {
+                                    Color.clear
+                                        .frame(width: 40, height: 40)
+                                    Text(" ")
+                                        .font(.footnote)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.clear)
                                 }
-         
+                            }
+                        } else {
+                            
+                            VStack {
+                                Color.clear
+                                    .frame(width: 40, height: 40)
+                                Text(" ")
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.clear)
+                            }
+                            
+                            
+                        }
+                        
+                        ZStack {
+                            Button(action: {
+                                if cameraModel.selectedCameraMode == .photo {
+                                    cameraModel.takePhoto()
+                                } else if cameraModel.isRecording {
+                                    cameraModel.stopRecording()
+                                } else {
+                                    cameraModel.startRecordingBasedOnMode()
+                                }
+                            }) {
+                                ZStack {
+                                    if cameraModel.selectedCameraMode == .photo {
+                                        Circle()
+                                            .fill(Color.white)
+                                            .frame(width: 65, height: 65)
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 4)
+                                            .frame(width: 75, height: 75)
+                                    } else {
+                                        // Background circle (white when recording, clear when not)
+                                        Circle()
+                                            .fill(cameraModel.isRecording ? Color.white.opacity(0.6) : Color.clear)
+                                            .frame(width: 75, height: 75)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        // Stroke (red loop when recording)
+                                        if cameraModel.isRecording && (cameraModel.selectedCameraMode == .fifteen || cameraModel.selectedCameraMode == .thirty) {
+                                            Circle()
+                                                .trim(from: 0.0, to: CGFloat(cameraModel.recordedDuration.truncatingRemainder(dividingBy: cameraModel.maxDuration) / cameraModel.maxDuration))
+                                                .stroke(Color(red: 230/255, green: 55/255, blue: 67/255), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                                .rotationEffect(Angle(degrees: -90))
+                                                .frame(width: 71, height: 71)
+                                                .animation(.linear(duration: 0.1), value: cameraModel.recordedDuration)
+                                        }
+                                        
+                                        // Main circle (red when recording, white stroke when not)
+                                        Circle()
+                                            .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+                                            .frame(width: cameraModel.isRecording ? 25 : 65, height: cameraModel.isRecording ? 25 : 65)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 4)
+                                            .frame(width: 75, height: 75)
+                                            .opacity(cameraModel.isRecording ? 0 : 1)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                        
+                                        // Rectangle for recording state
+                                        RoundedRectangle(cornerRadius: cameraModel.isRecording ? 8 : 32)
+                                            .fill(Color(red: 230/255, green: 55/255, blue: 67/255))
+                                            .frame(width: cameraModel.isRecording ? 25 : 0, height: cameraModel.isRecording ? 25 : 0)
+                                            .animation(.easeInOut(duration: 0.03), value: cameraModel.isRecording)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        
+                        
+                        if !cameraModel.isRecording {
+                            
+                            VStack {
+                                if let latestPhoto = latestPhoto {
+                                    Button(action: {
+                                        // Trigger upload functionality
+                                        isShowingVideoPicker = true
+                                        
+                                    }) {
+                                        Image(uiImage: latestPhoto)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 40, height: 40) // Adjust size as needed
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                                    }
+                                } else {
+                                    Button(action: {
+                                        // Placeholder or action for when no photo is available
+                                    }) {
+                                        Image("ms")
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 40, height: 40) // Adjust size as needed
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 1))
+                                    }
+                                }
+                                Text("Upload") // This ensures the text is below the button
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                            }
+                            .sheet(isPresented: $isShowingVideoPicker) {
+                                PhotoPicker(isPresented: $isShowingVideoPicker, cameraViewModel: cameraModel)
+                            }
+                        } else {
+                            VStack {
+                                Color.clear
+                                    .frame(width: 40, height: 40)
+                                Text(" ")
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.clear)
+                            }
+                            
+                        }
+                        
+                        
+                        
+                        
+                    }
+                    
+                    .padding(.bottom,15)
+                    .padding()
+                    
+                    //                    .padding(.top)
+                    
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                //                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .opacity(cameraModel.showPreview || showCreatePodView ? 0 : 1)
+            .allowsHitTesting(!(cameraModel.showPreview || showCreatePodView))
+        
+            // ends here
+            
+            if cameraModel.showPreview {
+                if let url = cameraModel.previewURL {
+                    MediaPreview(
+                        url: url,
+                        selectedImage: nil,
+                        showPreview: $cameraModel.showPreview,
+                        cameraModel: cameraModel,
+                        isFrontCameraUsed: cameraModel.isFrontCameraUsed,
+                        showCreatePodView: $showCreatePodView, itemId: itemId, podId: podId, onMediaAdded: onMediaAdded, showingVideoCreationScreen: $showingVideoCreationScreen
+                    )
+                } else if let selectedImage = cameraModel.selectedImage {
+                    MediaPreview(
+                        url: nil,
+                        selectedImage: selectedImage,
+                        showPreview: $cameraModel.showPreview,
+                        cameraModel: cameraModel,
+                        isFrontCameraUsed: cameraModel.isFrontCameraUsed,
+                        showCreatePodView: $showCreatePodView,
+                        itemId: itemId, podId: podId, onMediaAdded: onMediaAdded, showingVideoCreationScreen: $showingVideoCreationScreen
+                    )
+                }
+            } else {
+                EmptyView()
+                
+            }
+        }
+   
+//        Spacer()
+        
+        
+        if !showCreatePodView {
+            if !cameraModel.isRecording && !cameraModel.showPreview  {
+                HStack(spacing: 10) { // Spacing between buttons is 10
+                    // Start Over Button
+                    
+                    if !cameraModel.currentPod.items.isEmpty {
+                        Button("Start over") {
+                            // Action for Start Over
+                            cameraModel.currentPod = Pod(id: -1, items:[],title: "")
+                            cameraModel.recordedDuration = 0
+                            cameraModel.previewURL = nil
+                        }
+                        .foregroundColor(.black) // Text color
+                        .padding(.vertical, 15) // Padding for thickness
+                        .frame(maxWidth: .infinity) // Make button expand
+                        .background(Color.white)
+                        .cornerRadius(8) // Rounded corners
+                        .fontWeight(.semibold)
+
+
+                        Button("Next") {
+                            // Check if there's either a video URL or a selected image available for preview
+                            if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
+                                cameraModel.showPreview = true
+                            } else {
+                                print("No preview content available")
+                         
+                            }
+                        }
+                        .foregroundColor(.white) // Text color for the Next button
+                        .padding(.vertical, 15) // Padding for thickness
+                        .frame(maxWidth: .infinity) // Make button expand
+                        .fontWeight(.semibold)
+                        .background(Color(red: 35/255, green: 108/255, blue: 255/255))
+                        .cornerRadius(8) // Rounded corners
+                    } else{
+                        Rectangle()
+                            .foregroundColor(.black)
+                    }
+             
+                }
+                .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each side
+                .frame(height: 60) // Set the height of the bottom bar
+                .background(Color.black) // Set the color to black
+                .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
+
+                .onAppear {
+                    let initialMode: CameraMode = .fifteen
+                        
+                        // Ensure session is configured for the initial mode
+                        cameraModel.configureSessionFor(mode: initialMode)
+                        
+                        // Update maxDuration based on the initial mode
+                        cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0
+                          // Request authorization and fetch latest photo
+                          PHPhotoLibrary.requestAuthorization { status in
+                              if status == .authorized {
+                                  self.fetchLatestPhoto { photo in
+                                      self.latestPhoto = photo
+                                  }
+                              }
+                          }
+                      }
+            }
+            else {
+    //            HStack { // This empty HStack ensures it covers the same height as the buttons
+    //                   Spacer()
+    //               }
+    //               .frame(height: 60)
+                Color.black  // Use Color.black instead of Spacer when recording
+                                .frame(height: 60)
+                                .edgesIgnoringSafeArea(.bottom)
+  
+                
+            }
+        } else {
+            EmptyView()
+        }
+
+        
+    }
+    
+    
+    private func getFlashIcon() -> String {
+        if cameraModel.selectedCameraMode == .photo {
+            // For photo mode, you might want to check a different property or condition
+            // This assumes isFlashIntendedForPhoto exists and is managed accordingly
+            return cameraModel.isFlashIntendedForPhoto ? "bolt" : "bolt.slash"
+        } else {
+            // For video mode, you can use the existing isFlashOn state
+            return cameraModel.isFlashOn ? "bolt" : "bolt.slash"
         }
     }
-}
+    
+    private func handleSelectedVideoURL() async {
+         if let url = selectedVideoURL {
+             // Set it as the preview URL and show the preview
+             cameraModel.previewURL = url
+             cameraModel.showPreview = true
+             selectedVideoURL = nil // Reset after handling
+         }
+        
+      
+     }
+    
+    
 
+    func fetchLatestPhoto(completion: @escaping (UIImage?) -> Void) {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.fetchLimit = 1
 
-struct CameraViewContainer_Previews: PreviewProvider {
-    static var previews: some View {
-        CameraViewContainer()
+        let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        guard let lastAsset = fetchResult.firstObject else {
+            completion(nil)
+            return
+        }
+
+        let options = PHImageRequestOptions()
+        options.version = .current
+        options.isSynchronous = true
+
+        PHImageManager.default().requestImage(for: lastAsset, targetSize: CGSize(width: 60, height: 60), contentMode: .aspectFill, options: options) { image, _ in
+            completion(image)
+        }
     }
+
+    
+    
+    
+    private var fullScreenOverlayView: some View {
+         Group {
+             if cameraModel.isProcessingVideo {
+                 ZStack {
+                     // Changed the background color to the specified RGB value
+                     Color(red: 30 / 255, green: 30 / 255, blue: 30 / 255)
+                         
+                         .ignoresSafeArea(.all)
+                     // Customized ProgressView for a larger display
+                     ProgressView()
+                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                         .scaleEffect(2) // Scale up the ProgressView to make it larger
+                         .foregroundColor(.white)
+                 }
+             }
+         }
+     }
+    
+    
+    
+        
 }
 

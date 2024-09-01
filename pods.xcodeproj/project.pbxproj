@@ -56,6 +56,7 @@
 		3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */; };
 		3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F72C248EBB0040AF60 /* RegionManager.swift */; };
 		3698E4FC2C24968F0040AF60 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 3698E4FB2C24968F0040AF60 /* .gitignore */; };
+		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36BBC80F2C2B39C70037CF74 /* TourView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
@@ -152,6 +153,7 @@
 		3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
 		3698E4F72C248EBB0040AF60 /* RegionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionManager.swift; sourceTree = "<group>"; };
 		3698E4FB2C24968F0040AF60 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36BBC80F2C2B39C70037CF74 /* TourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* Podstack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Podstack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
@@ -292,6 +294,7 @@
 				367540F02C76E99900B066A9 /* PodMembersView.swift */,
 				3680C26A2C7E127D00D66167 /* ActivityLogView.swift */,
 				3680C26C2C802D9900D66167 /* FullActivityLogView.swift */,
+				36B3CF862C84014000265F91 /* MediaPreview.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -705,6 +708,7 @@
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
 				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
+				36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */,
 				362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
