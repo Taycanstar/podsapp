@@ -69,7 +69,7 @@ struct ContentView: View {
                         }
                     }
                     if isTabBarVisible {
-                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, AddOptionsSheet: $showAddSheet)
+                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
                     }
                 }
                 .sheet(isPresented: $showAddSheet) {
@@ -91,11 +91,7 @@ struct ContentView: View {
                     }
                     .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                 }
-//        
-//
-//                .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
-//                    InvitationView(podId: invitation.podId, token: invitation.token, userEmail: invitation.userEmail, userName: invitation.userName, podName: invitation.podName)
-//                }
+
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
                     InvitationView(invitation: invitation)
                 }
