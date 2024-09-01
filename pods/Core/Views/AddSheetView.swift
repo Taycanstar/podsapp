@@ -56,7 +56,7 @@ struct AddSheetView: View {
                         HStack {
                             Image(systemName: "text.badge.plus")
                                 .font(.system(size: 20))
-                            Text("Quick Pod")
+                            Text("New Pod")
                                 .padding(.horizontal, 10)
                                 .font(.system(size: 15))
                         }
@@ -65,25 +65,7 @@ struct AddSheetView: View {
                         .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    Divider()
-                    Button(action: {
-                        dismiss()  // This will dismiss the sheet
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showingVideoCreationScreen = true
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "video.badge.plus")
-                                .font(.system(size: 20))
-                            Text("Standard Pod")
-                                .padding(.horizontal, 10)
-                                .font(.system(size: 15))
-                        }
-                        .padding(.vertical, 8)
-                        .foregroundColor(Color(UIColor.label))
-                        .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+            
                 }
                 .padding(.horizontal, 15)
                 .padding(.top, 10)
