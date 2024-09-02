@@ -126,7 +126,19 @@ struct PodItem: Identifiable {
     var uuid: String?
     var player: AVPlayer?
     var notes: String
-    var columnValues: [String: ColumnValue]?
+    var defaultColumnValues: [String: ColumnValue]?
+    var userColumnValues: [String: ColumnValue]?
+//    var columnValues: [String: ColumnValue]?
+
+    var columnValues: [String: ColumnValue]? {
+            get {
+                return userColumnValues ?? defaultColumnValues ?? [:]
+            }
+            set {
+                userColumnValues = newValue
+            }
+        }
+ 
     
 }
 
@@ -139,7 +151,7 @@ struct PodItemActivityLog: Identifiable {
     let columnValues: [String: ColumnValue]
     let notes: String
     let userName: String  // Add this line
-    
+
     init(from json: PodItemActivityLogJSON) {
         self.id = json.id
         self.itemId = json.itemId
@@ -160,7 +172,7 @@ struct PodItemActivityLog: Identifiable {
         
         self.columnValues = json.columnValues
         self.notes = json.notes
-        
+
     }
 }
 
@@ -215,6 +227,7 @@ struct PodJSON: Codable {
     var type: String?
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLogJSON]?
+  
  
 }
 
@@ -229,7 +242,9 @@ struct PodItemJSON: Codable {
     let thumbnail: String?
     let itemType: String?
     let notes: String?
-    let columnValues: [String: ColumnValue]?
+//    let columnValues: [String: ColumnValue]?
+    let defaultColumnValues: [String: ColumnValue]
+    let userColumnValues: [String: ColumnValue]?
 
 }
 
@@ -316,8 +331,12 @@ extension PodItem {
                   
                }
         self.notes = itemJSON.notes ?? ""
-        self.columnValues = itemJSON.columnValues ?? [:]
+        self.defaultColumnValues = itemJSON.defaultColumnValues
+        self.userColumnValues = itemJSON.userColumnValues
+//        self.columnValues = itemJSON.columnValues ?? [:]
+        
     }
+
 }
 
 enum CameraMode: String, CaseIterable {

@@ -49,6 +49,7 @@ struct PodView: View {
     var networkManager: NetworkManager = NetworkManager()
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
     @FocusState private var focusedField: String?
@@ -326,9 +327,12 @@ struct PodView: View {
                     item: reorderedItems[index],
                     podColumns: podColumns,
                     podId: pod.id,
-                    onActivityLogged: {
-                        showTemporaryCheckmark(for: reorderedItems[index].id)
-                    }
+//                    onActivityLogged: {
+//                        showTemporaryCheckmark(for: reorderedItems[index].id)
+//                    }
+                    onActivityLogged: { newLog in
+                                   self.onActivityLogged(newLog: newLog)
+                               }
                 )
                 .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
             }
@@ -340,9 +344,19 @@ struct PodView: View {
     }
     
     
-
+    func onActivityLogged(newLog: PodItemActivityLog) {
+          showTemporaryCheckmark(for: newLog.itemId)
+          DispatchQueue.main.async {
+              self.activityLogs.insert(newLog, at: 0)  // Add new log at the beginning
+              // Optionally, limit the number of logs kept in memory
+              if self.activityLogs.count > 100 {  // For example, keep only the latest 100 logs
+                  self.activityLogs = Array(self.activityLogs.prefix(100))
+              }
+          }
+      }
+    
     private func refreshItem(with id: Int) {
-           networkManager.fetchPodItem(podId: pod.id, itemId: id) { result in
+        networkManager.fetchPodItem(podId: pod.id, itemId: id, userEmail: viewModel.email) { result in
                DispatchQueue.main.async {
                    switch result {
                    case .success(let updatedItem):
@@ -417,7 +431,8 @@ struct PodView: View {
                        
                        HStack {
                            ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
-                               columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
+//                               columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
+                               columnView(name: column.name, item: reorderedItems[index])
                                    .onTapGesture {
                                        selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
                                        selectedItemIndex = index
@@ -499,21 +514,43 @@ struct PodView: View {
     }
 
 
-    private func columnView(name: String, value: ColumnValue?) -> some View {
-        VStack {
-            if let value = value {
-                switch value {
-                case .string(let stringValue):
-                    Text("\(stringValue) \(name)")
-                        .font(.system(size: 14))
-                case .number(let numberValue):
-                    Text("\(numberValue) \(name)")
-                        .font(.system(size: 14))
-                case .null:
-                    Text(name)
-                        .font(.system(size: 14))
-                }
-            } else {
+//    private func columnView(name: String, value: ColumnValue?) -> some View {
+//        VStack {
+//            if let value = value {
+//                switch value {
+//                case .string(let stringValue):
+//                    Text("\(stringValue) \(name)")
+//                        .font(.system(size: 14))
+//                case .number(let numberValue):
+//                    Text("\(numberValue) \(name)")
+//                        .font(.system(size: 14))
+//                case .null:
+//                    Text(name)
+//                        .font(.system(size: 14))
+//                }
+//            } else {
+//                Text(name)
+//                    .font(.system(size: 14))
+//            }
+//        }
+//        .padding(.horizontal,6)
+//        .padding(.vertical,4)
+//        .cornerRadius(4)
+//        .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
+//        .cornerRadius(4)
+//    }
+    
+    private func columnView(name: String, item: PodItem) -> some View {
+        let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
+        return VStack {
+            switch value {
+            case .string(let stringValue):
+                Text("\(stringValue) \(name)")
+                    .font(.system(size: 14))
+            case .number(let numberValue):
+                Text("\(numberValue) \(name)")
+                    .font(.system(size: 14))
+            case .null:
                 Text(name)
                     .font(.system(size: 14))
             }
@@ -594,7 +631,7 @@ struct PodView: View {
             label: newItemText,
             itemType: nil,  // We're not setting an item type for now
             notes: "",
-            columnValues: newItemColumnValues
+            defaultColumnValues: newItemColumnValues
         ) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -882,6 +919,7 @@ struct ColumnEditView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var textValue: String = ""
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     let networkManager: NetworkManager
 
@@ -951,7 +989,7 @@ struct ColumnEditView: View {
                newValue = .null
            }
         
-        networkManager.updatePodItemColumnValue(itemId: itemId, columnName: columnName, value: newValue) { result in
+        networkManager.updatePodItemColumnValue(itemId: itemId, columnName: columnName, value: newValue, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
@@ -1059,6 +1097,7 @@ struct CardDetailView: View {
     
     @State private var showDeleteConfirmation = false
     @State private var expandedColumn: String?
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
@@ -1242,11 +1281,10 @@ struct CardDetailView: View {
             id: 0, // The server will assign the actual ID
             metadata: "\(itemName) (Copy)",
             itemType: item.itemType,
-            notes: item.notes,
-            columnValues: item.columnValues
+            notes: item.notes
         )
         
-        networkManager.createPodItem(podId: podId, label: newItem.metadata, itemType: newItem.itemType, notes: newItem.notes, columnValues: newItem.columnValues ?? [:]) { result in
+        networkManager.createPodItem(podId: podId, label: newItem.metadata, itemType: newItem.itemType, notes: newItem.notes, defaultColumnValues: newItem.columnValues ?? [:]) { result in
             switch result {
             case .success(let createdItem):
                 DispatchQueue.main.async {
@@ -1346,7 +1384,7 @@ struct CardDetailView: View {
             }
         }
         
-        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues) { result in
+        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
@@ -1491,9 +1529,10 @@ struct LogActivityView: View {
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showNotesInput = false
-    var onActivityLogged: () -> Void
+//    var onActivityLogged: () -> Void
+    var onActivityLogged: (PodItemActivityLog) -> Void
 
-    init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping () -> Void) {
+    init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
         self.item = item
         self.podColumns = podColumns
         self.podId = podId
@@ -1569,14 +1608,23 @@ struct LogActivityView: View {
                                                     .padding(.horizontal, 5)
                                                     .kerning(0.2)
                                                 
-                                                TextEditor(text: $activityNote)
-                                                    .frame(height: 100)
-                                                    .padding(.vertical, 8)
-                                                    .padding(.horizontal)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 12)
-                                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                                    )
+//                                                TextEditor(text: $activityNote)
+//                                                    .frame(height: 100)
+//                                                    .padding(.vertical, 8)
+//                                                    .padding(.horizontal)
+//                                                    .background(
+//                                                        RoundedRectangle(cornerRadius: 12)
+//                                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                                    )
+                                                CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("mxdBg")))
+                                                     .frame(height: 100)
+                                                     .padding(.vertical, 8)
+                                                     .padding(.horizontal)
+                                                     .background(
+                                                         RoundedRectangle(cornerRadius: 12)
+                                                             .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                                     )
+                                               
                                             }
                                         } else {
                                             Button(action: {
@@ -1629,30 +1677,54 @@ struct LogActivityView: View {
         }
     }
 
+//    private func submitActivity() {
+//          isSubmitting = true
+//          NetworkManager().createActivityLog(
+//              itemId: item.id,
+//              podId: podId,
+//              userEmail: viewModel.email,
+//              columnValues: columnValues,
+//              podColumns: podColumns,
+//              notes: activityNote
+//          ) { result in
+//              DispatchQueue.main.async {
+//                  isSubmitting = false
+//                  switch result {
+//                  case .success:
+//                      print("Activity logged successfully")
+//                      onActivityLogged()
+//                      presentationMode.wrappedValue.dismiss()
+//                  case .failure(let error):
+//                      print("Failed to log activity: \(error)")
+//                      errorMessage = error.localizedDescription
+//                  }
+//              }
+//          }
+//      }
     private func submitActivity() {
-          isSubmitting = true
-          NetworkManager().createActivityLog(
-              itemId: item.id,
-              podId: podId,
-              userEmail: viewModel.email,
-              columnValues: columnValues,
-              podColumns: podColumns,
-              notes: activityNote
-          ) { result in
-              DispatchQueue.main.async {
-                  isSubmitting = false
-                  switch result {
-                  case .success:
-                      print("Activity logged successfully")
-                      onActivityLogged()
-                      presentationMode.wrappedValue.dismiss()
-                  case .failure(let error):
-                      print("Failed to log activity: \(error)")
-                      errorMessage = error.localizedDescription
-                  }
-              }
-          }
-      }
+            isSubmitting = true
+            NetworkManager().createActivityLog(
+                itemId: item.id,
+                podId: podId,
+                userEmail: viewModel.email,
+                columnValues: columnValues,
+                podColumns: podColumns,
+                notes: activityNote
+            ) { result in
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    switch result {
+                    case .success(let newLog):
+                        print("Activity logged successfully")
+                        onActivityLogged(newLog)
+                        presentationMode.wrappedValue.dismiss()
+                    case .failure(let error):
+                        print("Failed to log activity: \(error)")
+                        errorMessage = error.localizedDescription
+                    }
+                }
+            }
+        }
 
 }
 
@@ -1668,5 +1740,40 @@ struct InlineNumberPicker: View {
             }
         }
         .pickerStyle(WheelPickerStyle())
+    }
+}
+
+struct CustomTextEditor: UIViewRepresentable {
+    @Binding var text: String
+    let backgroundColor: UIColor
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.font = UIFont.preferredFont(forTextStyle: .body)
+        textView.backgroundColor = backgroundColor
+        textView.textColor = UIColor.label  // This adapts to light/dark mode automatically
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        uiView.text = text
+        uiView.backgroundColor = backgroundColor
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        var parent: CustomTextEditor
+
+        init(_ parent: CustomTextEditor) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+        }
     }
 }

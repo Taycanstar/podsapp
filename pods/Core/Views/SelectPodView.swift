@@ -43,15 +43,31 @@ struct SelectPodView: View {
         }
         .onAppear(perform: fetchPods)
     }
-
+//
+//    private func fetchPods() {
+//        isLoading = true
+//        networkManager.fetchPodsForUser(email: email) { success, fetchedPods, error in
+//            isLoading = false
+//            if success, let fetchedPods = fetchedPods {
+//                self.pods = fetchedPods
+//            } else {
+//                self.errorMessage = error ?? "Failed to fetch pods"
+//            }
+//        }
+//    }
+    
     private func fetchPods() {
         isLoading = true
-        networkManager.fetchPodsForUser(email: email) { success, fetchedPods, error in
-            isLoading = false
-            if success, let fetchedPods = fetchedPods {
-                self.pods = fetchedPods
-            } else {
-                self.errorMessage = error ?? "Failed to fetch pods"
+        networkManager.fetchPodsForUser(email: email) { [self] result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                switch result {
+                case .success(let fetchedPods):
+                    self.pods = fetchedPods
+                case .failure(let error):
+                    // Handle error (you might want to show an alert here)
+                    print("Failed to fetch pods: \(error)")
+                }
             }
         }
     }

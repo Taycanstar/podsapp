@@ -12,17 +12,36 @@ class HomeViewModel: ObservableObject {
     @Published var totalPods: Int = 0
     @Published var teams: [Team] = []
     
+//    func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
+//        isLoading = true
+//        
+//        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited) { [weak self] success, newPods, errorMessage in
+//            DispatchQueue.main.async {
+//                if success, let newPods = newPods {
+//                    self?.pods = newPods
+//                    self?.totalPods = newPods.count
+//                    self?.objectWillChange.send()
+//                } else {
+//                    print("Error fetching pods: \(errorMessage ?? "Unknown error")")
+//                }
+//                self?.isLoading = false
+//                completion()
+//            }
+//        }
+//    }
+    
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
         isLoading = true
         
-        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited) { [weak self] success, newPods, errorMessage in
+        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited) { [weak self] result in
             DispatchQueue.main.async {
-                if success, let newPods = newPods {
+                switch result {
+                case .success(let newPods):
                     self?.pods = newPods
                     self?.totalPods = newPods.count
                     self?.objectWillChange.send()
-                } else {
-                    print("Error fetching pods: \(errorMessage ?? "Unknown error")")
+                case .failure(let error):
+                    print("Error fetching pods: \(error)")
                 }
                 self?.isLoading = false
                 completion()

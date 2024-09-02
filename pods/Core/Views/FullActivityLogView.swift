@@ -59,6 +59,7 @@ struct FullActivityLogView: View {
                                 .font(.headline)
                                 .padding(.top)
                                 .padding(.horizontal)
+                             
                             
                             Text(log.notes)
                                 .font(.body)
