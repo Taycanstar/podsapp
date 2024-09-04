@@ -106,7 +106,7 @@ struct ProfileView: View {
                         
                     }
                     .scrollContentBackground(.hidden)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, 70)
             }
          
             .navigationBarTitle("Settings and privacy", displayMode: .inline)

@@ -176,6 +176,17 @@ struct PricingView: View {
     @ObservedObject var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) var presentationMode
     
+    
+    var savingsPercentage: Int {
+        switch tier {
+        case .plus:
+            return 30
+        case .team:
+            return 22
+        }
+    }
+    
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -187,7 +198,7 @@ struct PricingView: View {
                     PricingOptionView(
                         title: "Annual plan",
                         price: subscriptionManager.annualPrice(for: tier),
-                        savings: "SAVE 13%",
+                        savings: "SAVE \(savingsPercentage)%",
                         billingInfo: subscriptionManager.annualBillingInfo(for: tier)
                     )
                     
@@ -263,6 +274,5 @@ struct PricingOptionView: View {
         )
     }
 }
-
 
 

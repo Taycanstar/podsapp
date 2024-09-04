@@ -166,7 +166,7 @@ enum SubscriptionTier: CaseIterable {
         case .team:
             return [
                 "Create a new team",
-                "Dashboard access to team members' analytics",
+                "Team dashboard with analytics",
                 "Individual team members' analytics",
                 "Activity logs from up to 1 month",
                 "Unlimited pods",
