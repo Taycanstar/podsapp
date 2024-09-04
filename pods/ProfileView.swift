@@ -38,6 +38,10 @@ struct ProfileView: View {
                                 Text(viewModel.username)
                                     .foregroundColor(iconColor)
                             }
+                            NavigationLink(destination: SubscriptionView()) {
+                                Label("Subscription", systemImage: "plus.app")
+                                    .foregroundColor(iconColor)
+                            }
                             NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                                     .foregroundColor(iconColor)
@@ -257,40 +261,7 @@ struct MailView: UIViewControllerRepresentable {
 
 
 struct MyTeamsView: View {
-//    @EnvironmentObject var viewModel: OnboardingViewModel
-//    @EnvironmentObject var homeViewModel: HomeViewModel
-//    @Environment(\.colorScheme) var colorScheme
-//    @State private var isUpdating = false
-//
-//    var body: some View {
-//        ScrollView {
-//            VStack(spacing: 15) {
-//                ForEach(homeViewModel.teams) { team in
-//                    teamView(team: team)
-//                        .onTapGesture {
-//                            updateActiveTeam(teamId: team.id)
-//                        }
-//                }
-//            }
-//            .padding()
-//        }
-//        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242))
-//        .navigationBarTitle("My team", displayMode: .inline)
-//        .onAppear {
-//            homeViewModel.fetchTeamsForUser(email: viewModel.email)
-//        }
-//        .overlay(
-//            Group {
-//                if isUpdating {
-//                    ProgressView()
-//                        .scaleEffect(1.5)
-//                        .frame(width: 60, height: 60)
-//                        .background(Color.black.opacity(0.4))
-//                        .cornerRadius(10)
-//                }
-//            }
-//        )
-//    }
+
     @EnvironmentObject var viewModel: OnboardingViewModel
      @EnvironmentObject var homeViewModel: HomeViewModel
      @Environment(\.colorScheme) var colorScheme
