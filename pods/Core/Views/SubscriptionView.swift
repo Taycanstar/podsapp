@@ -64,9 +64,9 @@ struct SubscriptionView: View {
                             
                             // TabView with subscription tiers
                             TabView(selection: $selectedTab) {
-                                SubscriptionTierView(tier: .plus)
+                                SubscriptionTierView(tier: .plusMonthly)
                                     .tag(0)
-                                SubscriptionTierView(tier: .team)
+                                SubscriptionTierView(tier: .teamMonthly)
                                     .tag(1)
                             }
                             .padding(.top, 15)
@@ -182,10 +182,12 @@ struct PricingView: View {
     
     var savingsPercentage: Int {
         switch tier {
-        case .plus:
+        case .plusMonthly, .plusYearly:
             return 33
-        case .team:
+        case .teamMonthly, .teamYearly:
             return 22
+        case .none:
+            return 0
         }
     }
     

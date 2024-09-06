@@ -25,26 +25,36 @@ class OnboardingViewModel: ObservableObject {
       @Published var subscriptionStatus: String = "none"
       @Published var subscriptionPlan: String?
       @Published var subscriptionExpiresAt: String?
+    
+    func updateSubscriptionInfo(status: String?, plan: String?, expiresAt: String?) {
+        self.subscriptionStatus = status ?? "none"
+        self.subscriptionPlan = plan
+        self.subscriptionExpiresAt = expiresAt
+        
+        // Also update UserDefaults
+        UserDefaults.standard.set(self.subscriptionStatus, forKey: "subscriptionStatus")
+        UserDefaults.standard.set(self.subscriptionPlan, forKey: "subscriptionPlan")
+        UserDefaults.standard.set(self.subscriptionExpiresAt, forKey: "subscriptionExpiresAt")
+    }
+    
+    func getCurrentSubscriptionTier() -> SubscriptionTier {
+        guard let plan = subscriptionPlan else {
+            return .none
+        }
+        return SubscriptionTier(rawValue: plan) ?? .none
+    }
+    
+    func hasActiveSubscription() -> Bool {
+        return subscriptionStatus == "active" && subscriptionPlan != nil && subscriptionPlan != "None"
+    }
+    
+    func getActiveSubscriptionType() -> SubscriptionTier {
+        guard hasActiveSubscription() else {
+            return .none
+        }
+        return getCurrentSubscriptionTier()
+    }
       
-      func updateSubscriptionInfo(status: String?, plan: String?, expiresAt: String?) {
-          self.subscriptionStatus = status ?? "none"
-          self.subscriptionPlan = plan
-          self.subscriptionExpiresAt = expiresAt
-          
-          // Also update UserDefaults
-          UserDefaults.standard.set(self.subscriptionStatus, forKey: "subscriptionStatus")
-          UserDefaults.standard.set(self.subscriptionPlan, forKey: "subscriptionPlan")
-          UserDefaults.standard.set(self.subscriptionExpiresAt, forKey: "subscriptionExpiresAt")
-      }
-      
-      func getCurrentSubscriptionTier() -> SubscriptionTier? {
-          switch subscriptionPlan {
-          case "Podstack Plus Monthly", "Podstack Plus Yearly":
-              return .plus
-          case "Podstack Team Monthly", "Podstack Team Yearly":
-              return .team
-          default:
-              return nil
-          }
-      }
+
+    
 }

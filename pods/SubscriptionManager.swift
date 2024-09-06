@@ -82,53 +82,69 @@ class SubscriptionManager: ObservableObject {
     func notifyServerAboutPurchase(productId: String) async {
         // Implement API call to your server to update subscription status
     }
-    
-    // Pricing and tier information methods
+
     func startingPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .plus:
-            return "$3.99/month"
-        case .team:
-            return "$6.99 per seat/month"
-        }
-    }
-    
-    func annualPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .plus:
-            return "$3.99/month"
-        case .team:
-            return "$6.99 per seat/month"
-        }
-    }
-    
-    func monthlyPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .plus:
-            return "$5.99/month"
-        case .team:
-            return "$8.99 per seat/month"
-        }
-    }
-    
-    func annualBillingInfo(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .plus:
-            return "$47.90 per year billed annually"
-        case .team:
-            return "$419.99 per year billed annually starting with 5 team members"
-        }
-    }
-    
-    func monthlyBillingInfo(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .plus:
-            return "$71.88 per year billed monthly"
-        case .team:
-            return "$539.40 per year billed monthly starting with 5 team members"
-        }
-    }
-    
+          switch tier {
+          case .none:
+              return "Free"
+          case .plusMonthly, .plusYearly:
+              return "$3.99/month"
+          case .teamMonthly, .teamYearly:
+              return "$6.99 per seat/month"
+          }
+      }
+      
+      func annualPrice(for tier: SubscriptionTier) -> String {
+          switch tier {
+          case .none:
+              return "Free"
+          case .plusYearly:
+              return "$3.99/month"
+          case .teamYearly:
+              return "$6.99 per seat/month"
+          case .plusMonthly, .teamMonthly:
+              return "N/A"
+          }
+      }
+      
+      func monthlyPrice(for tier: SubscriptionTier) -> String {
+          switch tier {
+          case .none:
+              return "Free"
+          case .plusMonthly:
+              return "$5.99/month"
+          case .teamMonthly:
+              return "$8.99 per seat/month"
+          case .plusYearly, .teamYearly:
+              return "N/A"
+          }
+      }
+      
+      func annualBillingInfo(for tier: SubscriptionTier) -> String {
+          switch tier {
+          case .none:
+              return "Free"
+          case .plusYearly:
+              return "$47.90 per year billed annually"
+          case .teamYearly:
+              return "$419.99 per year billed annually starting with 5 team members"
+          case .plusMonthly, .teamMonthly:
+              return "N/A"
+          }
+      }
+      
+      func monthlyBillingInfo(for tier: SubscriptionTier) -> String {
+          switch tier {
+          case .none:
+              return "Free"
+          case .plusMonthly:
+              return "$71.88 per year billed monthly"
+          case .teamMonthly:
+              return "$539.40 per year billed monthly starting with 5 team members"
+          case .plusYearly, .teamYearly:
+              return "N/A"
+          }
+      }
     func purchase(tier: SubscriptionTier) {
         Task {
             if let product = self.products.first(where: { $0.id.contains(tier.productIdPrefix) }) {
@@ -142,27 +158,111 @@ class SubscriptionManager: ObservableObject {
     }
 }
 
-enum SubscriptionTier: CaseIterable {
-    case plus, team
+//enum SubscriptionTier: String, CaseIterable {
+//    case plus, team
+//    
+//    var name: String {
+//        switch self {
+//  
+//        case .plus: return "Podstack+"
+//        case .team: return "Podstack Team"
+//        }
+//    }
+//    
+//    var productIdPrefix: String {
+//        switch self {
+//        case .plus: return "com.humuli.pods.plus"
+//        case .team: return "com.humuli.pods.team"
+//        }
+//    }
+//    
+//    case none = "None"
+//       case plusMonthly = "Podstack Plus Monthly"
+//       case plusYearly = "Podstack Plus Yearly"
+//       case teamMonthly = "Podstack Team Monthly"
+//       case teamYearly = "Podstack Team Yearly"
+//       
+//       var name: String {
+//           switch self {
+//           case .none: return "Free"
+//           case .plusMonthly, .plusYearly: return "Podstack+"
+//           case .teamMonthly, .teamYearly: return "Podstack Team"
+//           }
+//       }
+//       
+//       var productIdPrefix: String {
+//           switch self {
+//           case .none: return ""
+//           case .plusMonthly, .plusYearly: return "com.humuli.pods.plus"
+//           case .teamMonthly, .teamYearly: return "com.humuli.pods.team"
+//           }
+//       }
+//    var features: [String] {
+//        switch self {
+//        case .plus:
+//            return [
+//                "Unlimited pods",
+//                "Unlimited items",
+//                "Unlimited workspaces",
+//                "AI automation features",
+//                "Activity logs from up to 2 weeks",
+//                "Data tracking and analysis",
+//                "Customize column colors",
+//                "Video integration",
+//                "Collaboration features",
+//                "Free templates",
+//                
+//                
+//            ]
+//        case .team:
+//            return [
+//                "Create a new team",
+//                "Team dashboard with analytics",
+//                "Individual team members' analytics",
+//                "Activity logs from up to 1 month",
+//                "Unlimited pods",
+//                "Unlimited items",
+//                "Unlimited workspaces",
+//                "AI Automation features",
+//                "Data tracking and analysis",
+//                "Customize column colors",
+//                "Video integration",
+//                "Collaboration features",
+//                "Free templates"
+//               
+//            ]
+//        }
+//    }
+//}
+
+enum SubscriptionTier: String, CaseIterable {
+    case none = "None"
+    case plusMonthly = "Podstack Plus Monthly"
+    case plusYearly = "Podstack Plus Yearly"
+    case teamMonthly = "Podstack Team Monthly"
+    case teamYearly = "Podstack Team Yearly"
     
     var name: String {
         switch self {
-  
-        case .plus: return "Podstack+"
-        case .team: return "Podstack Team"
+        case .none: return "Free"
+        case .plusMonthly, .plusYearly: return "Podstack+"
+        case .teamMonthly, .teamYearly: return "Podstack Team"
         }
     }
     
     var productIdPrefix: String {
         switch self {
-        case .plus: return "com.humuli.pods.plus"
-        case .team: return "com.humuli.pods.team"
+        case .none: return ""
+        case .plusMonthly, .plusYearly: return "com.humuli.pods.plus"
+        case .teamMonthly, .teamYearly: return "com.humuli.pods.team"
         }
     }
     
     var features: [String] {
         switch self {
-        case .plus:
+        case .none:
+            return ["Limited features"]
+        case .plusMonthly, .plusYearly:
             return [
                 "Unlimited pods",
                 "Unlimited items",
@@ -173,11 +273,9 @@ enum SubscriptionTier: CaseIterable {
                 "Customize column colors",
                 "Video integration",
                 "Collaboration features",
-                "Free templates",
-                
-                
+                "Free templates"
             ]
-        case .team:
+        case .teamMonthly, .teamYearly:
             return [
                 "Create a new team",
                 "Team dashboard with analytics",
@@ -192,7 +290,6 @@ enum SubscriptionTier: CaseIterable {
                 "Video integration",
                 "Collaboration features",
                 "Free templates"
-               
             ]
         }
     }
@@ -205,4 +302,9 @@ enum SubscriptionError: Error {
     case unknown
 }
 
+enum SubscriptionType {
+    case none
+    case plus
+    case team
+}
 

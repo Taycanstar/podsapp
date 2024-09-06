@@ -495,7 +495,7 @@ struct RecentlyVisitedSheet: View {
                         }
                         // Add Workspace Button
                            Button(action: {
-                               if viewModel.getCurrentSubscriptionTier() != nil {
+                               if viewModel.hasActiveSubscription() {
                                    showAddWorkspace = true
                                } else {
                                    navigationPath.append("Subscription")

@@ -3403,5 +3403,39 @@ class NetworkManager {
             }
         }.resume()
     }
+    
+    
+    func fetchSubscriptionInfo(for email: String, completion: @escaping (Result<SubscriptionInfo, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/fetch-subscription-info/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email]
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            do {
+                let subscriptionInfo = try JSONDecoder().decode(SubscriptionInfo.self, from: data)
+                completion(.success(subscriptionInfo))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 }
 

@@ -7,6 +7,12 @@ import CommonCrypto
 import Combine
 
 
+struct SubscriptionInfo: Codable {
+    let status: String
+    let plan: String?
+    let expiresAt: String?
+}
+
 
 struct TeamMembersResponse: Codable {
     let members: [TeamMember]

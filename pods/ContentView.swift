@@ -140,6 +140,8 @@ struct ContentView: View {
                            Task {
                                await subscriptionManager.updatePurchasedSubscriptions()
                            }
+                           
+                           fetchSubscriptionInfo()
                        }
         }
         .onChange(of: isAuthenticated) { _, newValue in
@@ -149,18 +151,45 @@ struct ContentView: View {
     
     
     func hasPremiumAccess() -> Bool {
-        return subscriptionStatus == "active" && (subscriptionPlan == "Podstack Plus Monthly" || subscriptionPlan == "Podstack Plus Yearly" || subscriptionPlan == "Podstack Team Monthly" || subscriptionPlan == "Podstack Team Yearly")
+            return viewModel.subscriptionStatus == "active" && viewModel.subscriptionPlan != nil && viewModel.subscriptionPlan != "None"
+        }
+    
+    func getCurrentSubscriptionTier() -> SubscriptionTier {
+            return SubscriptionTier(rawValue: viewModel.subscriptionPlan ?? "None") ?? .none
+        }
+    
+    private func fetchSubscriptionInfo() {
+        let email = viewModel.email
+        
+        NetworkManager().fetchSubscriptionInfo(for: email) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let subscriptionInfo):
+                    viewModel.updateSubscriptionInfo(
+                        status: subscriptionInfo.status,
+                        plan: subscriptionInfo.plan,
+                        expiresAt: subscriptionInfo.expiresAt
+                    )
+                    
+                    self.printSubscriptionInfo(source: "Network")
+                    
+                case .failure(let error):
+                    print("Failed to fetch subscription info: \(error.localizedDescription)")
+                    // Optionally handle the error, e.g., show an alert to the user
+                }
+            }
+        }
     }
     
-    func getCurrentSubscriptionTier() -> SubscriptionTier? {
-        switch subscriptionPlan {
-        case "Podstack Plus Monthly", "Podstack Plus Yearly":
-            return .plus
-        case "Podstack Team Monthly", "Podstack Team Yearly":
-            return .team
-        default:
-            return nil
-        }
+    private func printSubscriptionInfo(source: String) {
+        print("Subscription Info (from \(source)):")
+        print("Status: \(viewModel.subscriptionStatus)")
+        print("Plan: \(viewModel.subscriptionPlan ?? "None")")
+        print("Expires At: \(viewModel.subscriptionExpiresAt ?? "N/A")")
+        print("Has Premium Access: \(hasPremiumAccess())")
+        let currentTier = getCurrentSubscriptionTier()
+        print("Current Subscription Tier: \(currentTier)")
+        print("--------------------")
     }
 }
 
