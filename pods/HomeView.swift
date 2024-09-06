@@ -417,9 +417,14 @@ struct RecentlyVisitedSheet: View {
     @Binding var showSheet: Bool
     var workspaces: [Workspace]
     @Binding var selectedOption: String
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var showAddWorkspace = false
+    @State private var navigationPath = NavigationPath()
+    
     
     var body: some View {
-        NavigationView {
+//        NavigationView {
+        NavigationStack(path: $navigationPath) {
             VStack {
                 HStack {
                     Button(action: {
@@ -488,11 +493,50 @@ struct RecentlyVisitedSheet: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
+                        // Add Workspace Button
+                           Button(action: {
+                               if viewModel.getCurrentSubscriptionTier() != nil {
+                                   showAddWorkspace = true
+                               } else {
+                                   navigationPath.append("Subscription")
+                               }
+                           }) {
+                               ZStack {
+                                   RoundedRectangle(cornerRadius: 15)
+                                       .fill(Color.accentColor)
+                                   
+                                   HStack {
+                                       Spacer()
+                                       Image(systemName: "plus")
+                                           .foregroundColor(.white)
+                                       Text("Add workspace")
+                                           .fontWeight(.medium)
+                                           .font(.system(size: 14))
+                                           .foregroundColor(.white)
+                                       Spacer()
+                                   }
+                                   .padding()
+                                   .padding(.vertical, 3)
+                               }
+                               .padding(.top, 15)
+                               .fixedSize(horizontal: false, vertical: true)
+                           }
+                           .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.horizontal)
             }
+            .navigationDestination(for: String.self) { destination in
+                           if destination == "Subscription" {
+                               SubscriptionView()
+                           }
+                       }
         }
+  
+        .sheet(isPresented: $showAddWorkspace) {
+                    AddWorkspaceView() // Implement this view for adding workspaces
+                }
+
     }
     
     private func optionView(title: String, imageName: String) -> some View {
