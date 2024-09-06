@@ -170,22 +170,24 @@ struct PageIndicator: View {
         }
     }
 }
-
 struct PricingView: View {
     let tier: SubscriptionTier
     @ObservedObject var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) var presentationMode
+    @State private var selectedPlan: PlanType = .annual
     
+    enum PlanType {
+        case annual, monthly
+    }
     
     var savingsPercentage: Int {
         switch tier {
         case .plus:
-            return 30
+            return 33
         case .team:
             return 22
         }
     }
-    
     
     var body: some View {
         NavigationView {
@@ -199,19 +201,24 @@ struct PricingView: View {
                         title: "Annual plan",
                         price: subscriptionManager.annualPrice(for: tier),
                         savings: "SAVE \(savingsPercentage)%",
-                        billingInfo: subscriptionManager.annualBillingInfo(for: tier)
+                        billingInfo: subscriptionManager.annualBillingInfo(for: tier),
+                        isSelected: selectedPlan == .annual,
+                        action: { selectedPlan = .annual }
                     )
                     
                     PricingOptionView(
                         title: "Monthly plan",
                         price: subscriptionManager.monthlyPrice(for: tier),
-                        billingInfo: subscriptionManager.monthlyBillingInfo(for: tier)
+                        billingInfo: subscriptionManager.monthlyBillingInfo(for: tier),
+                        isSelected: selectedPlan == .monthly,
+                        action: { selectedPlan = .monthly }
                     )
                 }
                 .padding()
                 
                 Button(action: {
-                    subscriptionManager.purchase(tier: tier)
+                    subscriptionManager.purchase(tier: tier, planType: selectedPlan)
+                    presentationMode.wrappedValue.dismiss()
                 }) {
                     Text("Subscribe & Pay")
                         .font(.headline)
@@ -241,38 +248,40 @@ struct PricingOptionView: View {
     let price: String
     var savings: String? = nil
     let billingInfo: String
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                if let savings = savings {
-                    Text(savings)
-                        .font(.subheadline)
-                        .foregroundColor(.green)
-                        .padding(.horizontal, 5)
-                        .background(Color.green.opacity(0.2))
-                        .cornerRadius(5)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(title)
+                        .font(.headline)
+                    if let savings = savings {
+                        Text(savings)
+                            .font(.subheadline)
+                            .foregroundColor(.green)
+                            .padding(.horizontal, 5)
+                            .background(Color.green.opacity(0.2))
+                            .cornerRadius(5)
+                    }
+                    Spacer()
+                    Text(price)
+                        .font(.headline)
                 }
-                Spacer()
-                Text(price)
-                    .font(.headline)
+                Text(billingInfo)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
-            Text(billingInfo)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            .padding()
+            .background(Color("mdBg"))
+            .cornerRadius(15)
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+            )
         }
-        .padding()
-//        .background(Color(.systemGray6))
-//        .cornerRadius(10)
-        .background(Color("mdBg"))
-        .cornerRadius(15)
-        .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        )
+        .buttonStyle(PlainButtonStyle())
     }
 }
-
 

@@ -27,6 +27,10 @@ struct ContentView: View {
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
+    @StateObject private var subscriptionManager = SubscriptionManager()
+        @State private var subscriptionStatus: String = "none"
+        @State private var subscriptionPlan: String?
+        @State private var subscriptionExpiresAt: Date?
 
 
     @State private var showAddSheet = false
@@ -124,9 +128,40 @@ struct ContentView: View {
             }
             viewModel.profileInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
             viewModel.profileColor = UserDefaults.standard.string(forKey: "profileColor") ?? ""
+            
+            // Load subscription information
+                       subscriptionStatus = UserDefaults.standard.string(forKey: "subscriptionStatus") ?? "none"
+                       subscriptionPlan = UserDefaults.standard.string(forKey: "subscriptionPlan")
+                       if let expiresAtString = UserDefaults.standard.string(forKey: "subscriptionExpiresAt") {
+                           subscriptionExpiresAt = ISO8601DateFormatter().date(from: expiresAtString)
+                       }
+                       
+                       if isAuthenticated {
+                           Task {
+                               await subscriptionManager.updatePurchasedSubscriptions()
+                           }
+                       }
         }
         .onChange(of: isAuthenticated) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
         }
     }
+    
+    
+    func hasPremiumAccess() -> Bool {
+        return subscriptionStatus == "active" && (subscriptionPlan == "Podstack Plus Monthly" || subscriptionPlan == "Podstack Plus Yearly" || subscriptionPlan == "Podstack Team Monthly" || subscriptionPlan == "Podstack Team Yearly")
+    }
+    
+    func getCurrentSubscriptionTier() -> SubscriptionTier? {
+        switch subscriptionPlan {
+        case "Podstack Plus Monthly", "Podstack Plus Yearly":
+            return .plus
+        case "Podstack Team Monthly", "Podstack Team Yearly":
+            return .team
+        default:
+            return nil
+        }
+    }
 }
+
+

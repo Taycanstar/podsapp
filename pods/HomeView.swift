@@ -63,6 +63,9 @@ struct HomeView: View {
                .onAppear {
                    fetchPodsAndWorkspacesIfNeeded()
                    isTabBarVisible.wrappedValue = true
+                   print(viewModel.subscriptionExpiresAt, "exp")
+                   print(viewModel.subscriptionPlan, "plan")
+                   print(viewModel.subscriptionStatus, "sub")
 
                }
                .refreshable {

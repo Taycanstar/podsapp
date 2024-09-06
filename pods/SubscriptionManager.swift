@@ -44,6 +44,19 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
+    func purchase(tier: SubscriptionTier, planType: PricingView.PlanType) {
+           Task {
+               let productIdSuffix = planType == .annual ? "yearly" : "monthly"
+               if let product = self.products.first(where: { $0.id == "\(tier.productIdPrefix).\(productIdSuffix)" }) {
+                   do {
+                       try await purchase(product)
+                   } catch {
+                       print("Failed to purchase: \(error)")
+                   }
+               }
+           }
+       }
+    
     func purchase(_ product: Product) async throws {
         let result = try await product.purchase()
         
@@ -101,7 +114,7 @@ class SubscriptionManager: ObservableObject {
     func annualBillingInfo(for tier: SubscriptionTier) -> String {
         switch tier {
         case .plus:
-            return "$49.99 per year billed annually"
+            return "$47.90 per year billed annually"
         case .team:
             return "$419.99 per year billed annually starting with 5 team members"
         }
@@ -134,6 +147,7 @@ enum SubscriptionTier: CaseIterable {
     
     var name: String {
         switch self {
+  
         case .plus: return "Podstack+"
         case .team: return "Podstack Team"
         }
@@ -190,3 +204,5 @@ enum SubscriptionError: Error {
     case purchasePending
     case unknown
 }
+
+

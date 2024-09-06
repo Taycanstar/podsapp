@@ -217,69 +217,137 @@ class NetworkManager {
             }
         }.resume()
     }
-    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/login/") else {
-            print("Invalid URL for login endpoint")
-            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil)
-            return
-        }
+//    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/login/") else {
+//            print("Invalid URL for login endpoint")
+//            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil)
+//            return
+//        }
+//
+//        let body: [String: Any] = ["username": identifier, "password": password]
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Login request failed: \(error.localizedDescription)")
+//                DispatchQueue.main.async {
+//                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil)
+//                }
+//                return
+//            }
+//            
+//            guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
+//                print("No response or data received from login request")
+//                DispatchQueue.main.async {
+//                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil)
+//                }
+//                return
+//            }
+//            
+//            print("Received HTTP response status code: \(httpResponse.statusCode)")
+//            let responseString = String(data: responseData, encoding: .utf8)
+//            print("Response data string: \(String(describing: responseString))")
+//            
+//            if httpResponse.statusCode == 200 {
+//                do {
+//                    if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
+//                        let email = json["email"] as? String
+//                        let username = json["username"] as? String
+//                        let activeTeamId = json["activeTeamId"] as? Int
+//                        let activeWorkspaceId = json["activeWorkspaceId"] as? Int
+//                        let profileColor = json["profileColor"] as? String
+//                        let profileInitial = json["profileInitial"] as? String
+//                        DispatchQueue.main.async {
+//                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor)
+//                        }
+//                    } else {
+//                        DispatchQueue.main.async {
+//                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil)
+//                        }
+//                    }
+//                } catch {
+//                    DispatchQueue.main.async {
+//                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil)
+//                    }
+//                }
+//            } else {
+//                DispatchQueue.main.async {
+//                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil)
+//                }
+//            }
+//        }.resume()
+//    }
+    
+    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?) -> Void) {
+          guard let url = URL(string: "\(baseUrl)/login/") else {
+              print("Invalid URL for login endpoint")
+              completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+              return
+          }
 
-        let body: [String: Any] = ["username": identifier, "password": password]
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("Login request failed: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil)
-                }
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
-                print("No response or data received from login request")
-                DispatchQueue.main.async {
-                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil)
-                }
-                return
-            }
-            
-            print("Received HTTP response status code: \(httpResponse.statusCode)")
-            let responseString = String(data: responseData, encoding: .utf8)
-            print("Response data string: \(String(describing: responseString))")
-            
-            if httpResponse.statusCode == 200 {
-                do {
-                    if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
-                        let email = json["email"] as? String
-                        let username = json["username"] as? String
-                        let activeTeamId = json["activeTeamId"] as? Int
-                        let activeWorkspaceId = json["activeWorkspaceId"] as? Int
-                        let profileColor = json["profileColor"] as? String
-                        let profileInitial = json["profileInitial"] as? String
-                        DispatchQueue.main.async {
-                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor)
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil)
-                        }
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil)
-                    }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil)
-                }
-            }
-        }.resume()
-    }
+          let body: [String: Any] = ["username": identifier, "password": password]
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+          
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  print("Login request failed: \(error.localizedDescription)")
+                  DispatchQueue.main.async {
+                      completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                  }
+                  return
+              }
+              
+              guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
+                  print("No response or data received from login request")
+                  DispatchQueue.main.async {
+                      completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                  }
+                  return
+              }
+              
+              print("Received HTTP response status code: \(httpResponse.statusCode)")
+              let responseString = String(data: responseData, encoding: .utf8)
+              print("Response data string: \(String(describing: responseString))")
+              
+              if httpResponse.statusCode == 200 {
+                  do {
+                      if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
+                          let token = json["token"] as? String
+                          let email = json["email"] as? String
+                          let username = json["username"] as? String
+                          let activeTeamId = json["activeTeamId"] as? Int
+                          let activeWorkspaceId = json["activeWorkspaceId"] as? Int
+                          let profileInitial = json["profileInitial"] as? String
+                          let profileColor = json["profileColor"] as? String
+                          let subscriptionStatus = json["subscriptionStatus"] as? String
+                          let subscriptionPlan = json["subscriptionPlan"] as? String
+                          let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                          DispatchQueue.main.async {
+                              completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt)
+                          }
+                      } else {
+                          DispatchQueue.main.async {
+                              completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                          }
+                      }
+                  } catch {
+                      DispatchQueue.main.async {
+                          completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                      }
+                  }
+              } else {
+                  DispatchQueue.main.async {
+                      completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                  }
+              }
+          }.resume()
+      }
 
     func updateUserInformation(email: String, name: String, username: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
          let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
