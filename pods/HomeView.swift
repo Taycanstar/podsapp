@@ -482,7 +482,7 @@ struct RecentlyVisitedSheet: View {
                 .padding(.vertical, 5)
                 
                 ScrollView {
-                    VStack(spacing: 1) {
+                    VStack(spacing: 10) {
                         ForEach(workspaces) { workspace in
                             Button(action: {
                                 selectedOption = workspace.name
@@ -534,7 +534,8 @@ struct RecentlyVisitedSheet: View {
         }
   
         .sheet(isPresented: $showAddWorkspace) {
-                    AddWorkspaceView() // Implement this view for adding workspaces
+            AddWorkspaceView(isPresented: $showAddWorkspace)
+                .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
 
     }

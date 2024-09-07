@@ -96,7 +96,7 @@ struct PodView: View {
     @State private var selectedItemForMedia: PodItem?
     @State private var showCameraView = false
 
-   
+    @State private var isAddInputLoading = false
     
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
@@ -514,31 +514,6 @@ struct PodView: View {
     }
 
 
-//    private func columnView(name: String, value: ColumnValue?) -> some View {
-//        VStack {
-//            if let value = value {
-//                switch value {
-//                case .string(let stringValue):
-//                    Text("\(stringValue) \(name)")
-//                        .font(.system(size: 14))
-//                case .number(let numberValue):
-//                    Text("\(numberValue) \(name)")
-//                        .font(.system(size: 14))
-//                case .null:
-//                    Text(name)
-//                        .font(.system(size: 14))
-//                }
-//            } else {
-//                Text(name)
-//                    .font(.system(size: 14))
-//            }
-//        }
-//        .padding(.horizontal,6)
-//        .padding(.vertical,4)
-//        .cornerRadius(4)
-//        .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
-//        .cornerRadius(4)
-//    }
     
     private func columnView(name: String, item: PodItem) -> some View {
         let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
@@ -592,14 +567,21 @@ struct PodView: View {
                                createNewPodItem()
                            }
             }) {
-                Text("Add")
-                    .fontWeight(.regular)
-                    .font(.system(size: 14))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
+                if isAddInputLoading {
+                          ProgressView() // Display loader when loading
+                              .progressViewStyle(CircularProgressViewStyle())
+                              .padding(.horizontal, 12)
+                              .padding(.vertical, 8)
+                      } else {
+                          Text("Add")
+                              .fontWeight(.regular)
+                              .font(.system(size: 14))
+                              .padding(.horizontal, 12)
+                              .padding(.vertical, 8)
+                              .background(Color.accentColor)
+                              .foregroundColor(.white)
+                              .cornerRadius(6)
+                      }
             }
             .disabled(newItemText.isEmpty)
         }
@@ -622,6 +604,7 @@ struct PodView: View {
     }
     
     private func createNewPodItem() {
+        isAddInputLoading = true
         let newItemColumnValues: [String: ColumnValue] = pod.columns.reduce(into: [:]) { result, column in
             result[column.name] = .null  // Initialize all columns with null values
         }
@@ -641,9 +624,11 @@ struct PodView: View {
                     self.newItemText = ""
                     self.isCreatingNewItem = false
                     self.needsRefresh = true
+                    self.isAddInputLoading = false
                 case .failure(let error):
                     print("Failed to create new pod item: \(error)")
                     // You might want to show an alert to the user here
+                    self.isAddInputLoading = false
                 }
             }
         }

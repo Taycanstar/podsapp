@@ -302,6 +302,7 @@
 				3680C26C2C802D9900D66167 /* FullActivityLogView.swift */,
 				36B3CF862C84014000265F91 /* MediaPreview.swift */,
 				36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */,
+				36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -379,7 +380,6 @@
 				3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */,
 				36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */,
 				36C458E32B7457580060355F /* HomeView.swift */,
-				36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */,
 				36C848172BFB0065008EA74B /* ColorThemeView.swift */,
 				36C458E52B7458720060355F /* CameraView.swift */,
 				36C458E92B746D650060355F /* ProfileView.swift */,
