@@ -412,6 +412,9 @@ struct MyWorkspacesView: View {
             }
             .padding()
         }
+        .onTapGesture {
+            viewModel.updateActiveWorkspace(workspaceId: workspace.id)
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 15)
                 .stroke(workspace.id == viewModel.activeWorkspaceId ? Color.accentColor : Color.clear, lineWidth: 3)
