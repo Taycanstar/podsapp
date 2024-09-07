@@ -136,47 +136,7 @@ struct LoginView: View {
         authenticateUser()
         
     }
-//    private func authenticateUser() {
-//        isLoading = true
-//        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor in
-//            DispatchQueue.main.async {
-//                if success {
-//                    self.isAuthenticated = true
-//                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
-//                   
-//                    if let email = email {
-//                        self.viewModel.email = email
-//                        UserDefaults.standard.set(email, forKey: "userEmail")
-//                    }
-//                    if let username = username {
-//                        self.viewModel.username = username
-//                        UserDefaults.standard.set(username, forKey: "username")
-//                    }
-//                    if let activeTeamId = activeTeamId {
-//                        self.viewModel.activeTeamId = activeTeamId
-//                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-//                    }
-//                    if let activeWorkspaceId = activeWorkspaceId {
-//                        self.viewModel.activeWorkspaceId = activeWorkspaceId
-//                        UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
-//                    }
-//                    if let profileInitial = profileInitial {
-//                        self.viewModel.profileInitial = profileInitial
-//                        UserDefaults.standard.set(profileInitial, forKey: "profileInitial")
-//                    }
-//                    if let profileColor = profileColor {
-//                        self.viewModel.profileColor = profileColor
-//                        UserDefaults.standard.set(profileColor, forKey: "profileColor")
-//                    }
-//                    
-//                 
-//                } else {
-//                    self.errorMessage = error ?? "Invalid credentials"
-//                }
-//                self.isLoading = false
-//            }
-//        }
-//    }
+
     private func authenticateUser() {
         isLoading = true
         NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt in

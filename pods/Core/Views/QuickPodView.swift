@@ -113,26 +113,50 @@ struct QuickPodView: View {
     private var borderColor: Color {
         colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
+//    private func createQuickPod() {
+//        guard !podName.isEmpty else {
+//            errorMessage = "Pod name is required."
+//            return
+//        }
+//        
+//        networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email) { [self] success, podIdString in
+//            DispatchQueue.main.async {
+//                if success, let podIdString = podIdString, let podId = Int(podIdString) {
+//                    print("Quick Pod created successfully with ID: \(podId)")
+//                    let newPod = Pod(id: podId, items: [], title: self.podName , templateId: self.podTemplate.id)
+//                    print("New pod created with mode: \(String(describing: newPod.templateId))")
+//                    self.homeViewModel.appendNewPod(newPod)
+//                    self.isPresented = false
+//                    self.onPodCreated(newPod)
+//                } else {
+//                    print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
+//                    self.errorMessage = podIdString
+//                }
+//            }
+//        }
+//    }
     private func createQuickPod() {
-        guard !podName.isEmpty else {
-            errorMessage = "Pod name is required."
-            return
-        }
-        
-        networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email) { [self] success, podIdString in
-            DispatchQueue.main.async {
-                if success, let podIdString = podIdString, let podId = Int(podIdString) {
-                    print("Quick Pod created successfully with ID: \(podId)")
-                    let newPod = Pod(id: podId, items: [], title: self.podName , templateId: self.podTemplate.id)
-                    print("New pod created with mode: \(newPod.templateId)")
-                    self.homeViewModel.appendNewPod(newPod)
-                    self.isPresented = false
-                    self.onPodCreated(newPod)
-                } else {
-                    print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
-                    self.errorMessage = podIdString
+            guard !podName.isEmpty else {
+                errorMessage = "Pod name is required."
+                return
+            }
+            
+            let activeWorkspaceId = viewModel.activeWorkspaceId
+            
+            networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email, workspaceId: activeWorkspaceId) { [self] success, podIdString in
+                DispatchQueue.main.async {
+                    if success, let podIdString = podIdString, let podId = Int(podIdString) {
+                        print("Quick Pod created successfully with ID: \(podId)")
+                        let newPod = Pod(id: podId, items: [], title: self.podName, templateId: self.podTemplate.id)
+                        print("New pod created with mode: \(String(describing: newPod.templateId))")
+                        self.homeViewModel.appendNewPod(newPod)
+                        self.isPresented = false
+                        self.onPodCreated(newPod)
+                    } else {
+                        print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
+                        self.errorMessage = podIdString
+                    }
                 }
             }
         }
-    }
 }

@@ -54,6 +54,12 @@ class OnboardingViewModel: ObservableObject {
         }
         return getCurrentSubscriptionTier()
     }
+    
+    func updateActiveWorkspace(workspaceId: Int) {
+            self.activeWorkspaceId = workspaceId
+            UserDefaults.standard.set(workspaceId, forKey: "activeWorkspaceId")
+        }
+
       
 
     

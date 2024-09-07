@@ -1841,17 +1841,21 @@ class NetworkManager {
             }.resume()
         }
     
-    func createQuickPod(podTitle: String, templateId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+    func createQuickPod(podTitle: String, templateId: Int, email: String, workspaceId: Int?, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
             completion(false, "Invalid URL")
             return
         }
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "title": podTitle,
             "templateId": templateId,
             "email": email
         ]
+
+        if let workspaceId = workspaceId {
+            body["workspace_id"] = workspaceId
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -1863,6 +1867,30 @@ class NetworkManager {
             completion(false, "Failed to encode request body")
             return
         }
+
+    
+//    func createQuickPod(podTitle: String, templateId: Int, email: String, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "title": podTitle,
+//            "templateId": templateId,
+//            "email": email
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(false, "Failed to encode request body")
+//            return
+//        }
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {

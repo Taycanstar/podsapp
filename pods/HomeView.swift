@@ -486,6 +486,7 @@ struct RecentlyVisitedSheet: View {
                         ForEach(workspaces) { workspace in
                             Button(action: {
                                 selectedOption = workspace.name
+                                viewModel.updateActiveWorkspace(workspaceId: workspace.id)
                                 showSheet = false
                                 HapticFeedback.generateRigid()
                             }) {
