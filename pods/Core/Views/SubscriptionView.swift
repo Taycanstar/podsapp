@@ -14,6 +14,8 @@ struct SubscriptionView: View {
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
+    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -36,7 +38,8 @@ struct SubscriptionView: View {
                                 
                                 Spacer()
                                 
-                                Text(SubscriptionTier.allCases[selectedTab].name)
+//                                Text(SubscriptionTier.allCases[selectedTab].name)
+                                Text(displayedTiers[selectedTab].name)
                                     .font(.headline)
                                     .fontWeight(.bold)
                                 
@@ -84,7 +87,8 @@ struct SubscriptionView: View {
                     Button(action: {
                         showPricingSheet = true
                     }) {
-                        Text("Starting at \(subscriptionManager.startingPrice(for: SubscriptionTier.allCases[selectedTab]))")
+//                        Text("Starting at \(subscriptionManager.startingPrice(for: SubscriptionTier.allCases[selectedTab]))")
+                        Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -121,7 +125,8 @@ struct SubscriptionView: View {
             }
         }
         .sheet(isPresented: $showPricingSheet) {
-            PricingView(tier: SubscriptionTier.allCases[selectedTab], subscriptionManager: subscriptionManager)
+//            PricingView(tier: SubscriptionTier.allCases[selectedTab], subscriptionManager: subscriptionManager)
+            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: subscriptionManager)
         }
     }
 }

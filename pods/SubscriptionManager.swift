@@ -98,12 +98,10 @@ class SubscriptionManager: ObservableObject {
           switch tier {
           case .none:
               return "Free"
-          case .plusYearly:
+          case .plusMonthly, .plusYearly:
               return "$3.99/month"
-          case .teamYearly:
+          case .teamMonthly, .teamYearly:
               return "$6.99 per seat/month"
-          case .plusMonthly, .teamMonthly:
-              return "N/A"
           }
       }
       
@@ -111,12 +109,10 @@ class SubscriptionManager: ObservableObject {
           switch tier {
           case .none:
               return "Free"
-          case .plusMonthly:
+          case .plusMonthly, .plusYearly:
               return "$5.99/month"
-          case .teamMonthly:
+          case .teamMonthly, .teamYearly:
               return "$8.99 per seat/month"
-          case .plusYearly, .teamYearly:
-              return "N/A"
           }
       }
       
@@ -124,12 +120,10 @@ class SubscriptionManager: ObservableObject {
           switch tier {
           case .none:
               return "Free"
-          case .plusYearly:
+          case .plusMonthly, .plusYearly:
               return "$47.90 per year billed annually"
-          case .teamYearly:
+          case .teamMonthly, .teamYearly:
               return "$419.99 per year billed annually starting with 5 team members"
-          case .plusMonthly, .teamMonthly:
-              return "N/A"
           }
       }
       
@@ -137,12 +131,10 @@ class SubscriptionManager: ObservableObject {
           switch tier {
           case .none:
               return "Free"
-          case .plusMonthly:
+          case .plusMonthly, .plusYearly:
               return "$71.88 per year billed monthly"
-          case .teamMonthly:
+          case .teamMonthly, .teamYearly:
               return "$539.40 per year billed monthly starting with 5 team members"
-          case .plusYearly, .teamYearly:
-              return "N/A"
           }
       }
     func purchase(tier: SubscriptionTier) {
