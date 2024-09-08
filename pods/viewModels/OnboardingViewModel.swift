@@ -25,16 +25,19 @@ class OnboardingViewModel: ObservableObject {
       @Published var subscriptionStatus: String = "none"
       @Published var subscriptionPlan: String?
       @Published var subscriptionExpiresAt: String?
+    @Published var subscriptionRenews: Bool = false
     
-    func updateSubscriptionInfo(status: String?, plan: String?, expiresAt: String?) {
+    func updateSubscriptionInfo(status: String?, plan: String?, expiresAt: String?, renews: Bool?) {
         self.subscriptionStatus = status ?? "none"
         self.subscriptionPlan = plan
         self.subscriptionExpiresAt = expiresAt
+        self.subscriptionRenews = renews ?? false
         
         // Also update UserDefaults
         UserDefaults.standard.set(self.subscriptionStatus, forKey: "subscriptionStatus")
         UserDefaults.standard.set(self.subscriptionPlan, forKey: "subscriptionPlan")
         UserDefaults.standard.set(self.subscriptionExpiresAt, forKey: "subscriptionExpiresAt")
+        UserDefaults.standard.set(self.subscriptionRenews, forKey: "subscriptionRenews")
     }
     
     func getCurrentSubscriptionTier() -> SubscriptionTier {

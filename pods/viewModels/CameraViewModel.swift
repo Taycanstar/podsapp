@@ -11,6 +11,7 @@ struct SubscriptionInfo: Codable {
     let status: String
     let plan: String?
     let expiresAt: String?
+    let renews: Bool 
 }
 
 

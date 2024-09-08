@@ -186,6 +186,57 @@ struct WelcomeView: View {
 //        }
 //    }
     
+//    private func authenticateUser() {
+//        let authenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+//        let networkManager = NetworkManager()
+//        if authenticated {
+//            viewModel.currentStep = .landing
+//            self.isAuthenticated = true
+//            self.showTourView = true
+//        } else {
+//            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt in
+//                DispatchQueue.main.async {
+//                    isLoading = false
+//                    if success {
+//                        self.isAuthenticated = true
+//                        self.showTourView = true
+//                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                        if let email = email {
+//                            UserDefaults.standard.set(email, forKey: "userEmail")
+//                            viewModel.email = email
+//                        }
+//                        if let username = username {
+//                            UserDefaults.standard.set(username, forKey: "username")
+//                            viewModel.username = username
+//                        }
+//                        if let activeTeamId = activeTeamId {
+//                            self.viewModel.activeTeamId = activeTeamId
+//                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                        }
+//                        if let activeWorkspaceId = activeWorkspaceId {
+//                            self.viewModel.activeWorkspaceId = activeWorkspaceId
+//                            UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
+//                        }
+//                        if let profileInitial = profileInitial {
+//                            self.viewModel.profileInitial = profileInitial
+//                            UserDefaults.standard.set(profileInitial, forKey: "profileInitial")
+//                        }
+//                        if let profileColor = profileColor {
+//                            self.viewModel.profileColor = profileColor
+//                            UserDefaults.standard.set(profileColor, forKey: "profileColor")
+//                        }
+//                        
+//                        self.viewModel.updateSubscriptionInfo(status: subscriptionStatus, plan: subscriptionPlan, expiresAt: subscriptionExpiresAt, renews: <#Bool?#>)
+//
+//                        self.viewModel.password = ""
+//                        viewModel.currentStep = .landing
+//                    } else {
+//                        self.errorMessage = error ?? "Login failed. Please check your credentials and try again."
+//                    }
+//                }
+//            }
+//        }
+//    }
     private func authenticateUser() {
         let authenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
         let networkManager = NetworkManager()
@@ -194,7 +245,7 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews in
                 DispatchQueue.main.async {
                     isLoading = false
                     if success {
@@ -226,7 +277,7 @@ struct WelcomeView: View {
                             UserDefaults.standard.set(profileColor, forKey: "profileColor")
                         }
                         
-                        self.viewModel.updateSubscriptionInfo(status: subscriptionStatus, plan: subscriptionPlan, expiresAt: subscriptionExpiresAt)
+                        self.viewModel.updateSubscriptionInfo(status: subscriptionStatus, plan: subscriptionPlan, expiresAt: subscriptionExpiresAt, renews: subscriptionRenews)
 
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing

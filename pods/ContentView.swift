@@ -135,6 +135,8 @@ struct ContentView: View {
                        if let expiresAtString = UserDefaults.standard.string(forKey: "subscriptionExpiresAt") {
                            subscriptionExpiresAt = ISO8601DateFormatter().date(from: expiresAtString)
                        }
+            
+       
                        
                        if isAuthenticated {
                            Task {
@@ -168,7 +170,8 @@ struct ContentView: View {
                     viewModel.updateSubscriptionInfo(
                         status: subscriptionInfo.status,
                         plan: subscriptionInfo.plan,
-                        expiresAt: subscriptionInfo.expiresAt
+                        expiresAt: subscriptionInfo.expiresAt,
+                        renews: subscriptionInfo.renews
                     )
                     
                     self.printSubscriptionInfo(source: "Network")

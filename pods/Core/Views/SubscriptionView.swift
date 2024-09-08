@@ -6,13 +6,138 @@
 //
 
 import SwiftUI
+import Foundation
+
+//struct SubscriptionView: View {
+//    @State private var selectedTab = 0
+//    @State private var showPricingSheet = false
+//    @StateObject private var subscriptionManager = SubscriptionManager()
+//    @Environment(\.presentationMode) var presentationMode
+//    @Environment(\.isTabBarVisible) var isTabBarVisible
+//    
+//    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+//    
+//    var body: some View {
+//        GeometryReader { geometry in
+//            ZStack {
+//                Color("dkBg").edgesIgnoringSafeArea(.all)
+//                
+//                VStack(spacing: 0) {
+//                    ScrollView {
+//                        VStack(spacing: 10) {
+//                            // Title card with arrows
+//                            HStack {
+//                                Button(action: {
+//                                    withAnimation {
+//                                        selectedTab = max(0, selectedTab - 1)
+//                                    }
+//                                }) {
+//                                    Image(systemName: "chevron.left")
+//                                        .foregroundColor(.accentColor)
+//                                }
+//                                .opacity(selectedTab > 0 ? 1 : 0.3)
+//                                
+//                                Spacer()
+//                                
+////                                Text(SubscriptionTier.allCases[selectedTab].name)
+//                                Text(displayedTiers[selectedTab].name)
+//                                    .font(.headline)
+//                                    .fontWeight(.bold)
+//                                
+//                                Spacer()
+//                                
+//                                Button(action: {
+//                                    withAnimation {
+//                                        selectedTab = min(1, selectedTab + 1)
+//                                    }
+//                                }) {
+//                                    Image(systemName: "chevron.right")
+//                                        .foregroundColor(.accentColor)
+//                                }
+//                                .opacity(selectedTab < 1 ? 1 : 0.3)
+//                            }
+//                            .padding()
+//                            .background(Color("mdBg"))
+//                            .cornerRadius(15)
+//                            .overlay(
+//                                RoundedRectangle(cornerRadius: 15)
+//                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+//                            )
+//                            .padding(.horizontal)
+//                            .padding(.top, 10)
+//                            
+//                            // TabView with subscription tiers
+//                            TabView(selection: $selectedTab) {
+//                                SubscriptionTierView(tier: .plusMonthly)
+//                                    .tag(0)
+//                                SubscriptionTierView(tier: .teamMonthly)
+//                                    .tag(1)
+//                            }
+//                            .padding(.top, 15)
+//                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+//                            .frame(height: geometry.size.height * 0.6)
+//
+//                            
+//                            PageIndicator(currentPage: selectedTab, pageCount: 2)
+//                                .padding()
+//                        }
+//                    }
+//                    
+//                    Spacer()
+//                    
+//                    Button(action: {
+//                        showPricingSheet = true
+//                    }) {
+//                        Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
+//                            .font(.headline)
+//                            .foregroundColor(.white)
+//                            .frame(maxWidth: .infinity)
+//                            .padding()
+//                            .background(Color.accentColor)
+//                            .cornerRadius(10)
+//                    }
+//                    .padding(.horizontal)
+//                    .padding(.bottom, 20)
+//                }
+//            }
+//        }
+//        .onAppear {
+//            isTabBarVisible.wrappedValue = false
+//        }
+//        .onDisappear {
+//            isTabBarVisible.wrappedValue = true
+//        }
+//        .navigationBarTitleDisplayMode(.inline)
+//        .navigationBarBackButtonHidden(true)
+//        .toolbar {
+//            ToolbarItem(placement: .navigationBarLeading) {
+//                Button(action: {
+//                    presentationMode.wrappedValue.dismiss()
+//                }) {
+//                    Image(systemName: "chevron.left")
+//                        .foregroundColor(.primary)
+//                        .font(.system(size: 20))
+//                }
+//            }
+//            ToolbarItem(placement: .principal) {
+//                Text("Subscription")
+//                    .font(.headline)
+//            }
+//        }
+//        .sheet(isPresented: $showPricingSheet) {
+////            PricingView(tier: SubscriptionTier.allCases[selectedTab], subscriptionManager: subscriptionManager)
+//            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: subscriptionManager)
+//        }
+//    }
+//}
+
+
 
 struct SubscriptionView: View {
-    @State private var selectedTab = 0
-    @State private var showPricingSheet = false
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.isTabBarVisible) var isTabBarVisible
+    @Environment(\.colorScheme) var colorScheme
     
     let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
     
@@ -21,88 +146,21 @@ struct SubscriptionView: View {
             ZStack {
                 Color("dkBg").edgesIgnoringSafeArea(.all)
                 
-                VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(spacing: 10) {
-                            // Title card with arrows
-                            HStack {
-                                Button(action: {
-                                    withAnimation {
-                                        selectedTab = max(0, selectedTab - 1)
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.left")
-                                        .foregroundColor(.accentColor)
-                                }
-                                .opacity(selectedTab > 0 ? 1 : 0.3)
-                                
-                                Spacer()
-                                
-//                                Text(SubscriptionTier.allCases[selectedTab].name)
-                                Text(displayedTiers[selectedTab].name)
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    withAnimation {
-                                        selectedTab = min(1, selectedTab + 1)
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.accentColor)
-                                }
-                                .opacity(selectedTab < 1 ? 1 : 0.3)
-                            }
-                            .padding()
-                            .background(Color("mdBg"))
-                            .cornerRadius(15)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
-                            .padding(.horizontal)
-                            .padding(.top, 10)
-                            
-                            // TabView with subscription tiers
-                            TabView(selection: $selectedTab) {
-                                SubscriptionTierView(tier: .plusMonthly)
-                                    .tag(0)
-                                SubscriptionTierView(tier: .teamMonthly)
-                                    .tag(1)
-                            }
-                            .padding(.top, 15)
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            .frame(height: geometry.size.height * 0.6)
-
-                            
-                            PageIndicator(currentPage: selectedTab, pageCount: 2)
-                                .padding()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        if viewModel.hasActiveSubscription() {
+                            ActiveSubscriptionView(viewModel: _viewModel)
+                        } else {
+                            NoSubscriptionView(geometry: geometry)
                         }
                     }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showPricingSheet = true
-                    }) {
-//                        Text("Starting at \(subscriptionManager.startingPrice(for: SubscriptionTier.allCases[selectedTab]))")
-                        Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.accentColor)
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
+                    .padding()
                 }
             }
         }
         .onAppear {
             isTabBarVisible.wrappedValue = false
+//            viewModel.checkSubscriptionStatus()
         }
         .onDisappear {
             isTabBarVisible.wrappedValue = true
@@ -124,12 +182,244 @@ struct SubscriptionView: View {
                     .font(.headline)
             }
         }
+    }
+}
+
+struct ActiveSubscriptionView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var showCancelAlert = false
+    @State private var showUpgradeSheet = false
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image("copy") // Replace with your app icon
+                .resizable()
+                .scaledToFit()
+                .frame(height: 50)
+            
+            Text(viewModel.subscriptionPlan ?? "Unknown Plan")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "creditcard")
+//                    Text(viewModel.subscriptionCost)
+                    Text(getCurrentSubscriptionPrice())
+                }
+                HStack {
+                    Image(systemName: "calendar")
+                    Text(getSubscriptionStatusText())
+                }
+            }
+            .padding(.bottom, 15)
+            
+            
+            if viewModel.subscriptionPlan?.contains("Plus") == true {
+                Button(action: {
+                    showUpgradeSheet = true
+                }) {
+                    Text("Upgrade to Podstack Team")
+                        .font(.system(size: 16))
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                }
+            } else if viewModel.subscriptionPlan?.contains("Team") == true {
+                Button(action: {
+                    showUpgradeSheet = true
+                }) {
+                    Text("Upgrade and add another team")
+                        .font(.system(size: 16))
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.accentColor)
+                        .cornerRadius(10)
+                }
+            }
+            
+            Button(action: {
+                showCancelAlert = true
+            }) {
+                Text("Cancel Subscription")
+                    .font(.system(size: 16))
+                    .fontWeight(.regular)
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(10)
+            }
+            .alert(isPresented: $showCancelAlert) {
+                Alert(
+                    title: Text("Cancel Subscription"),
+                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(viewModel.subscriptionExpiresAt ?? "the end of the billing period")."),
+                    primaryButton: .destructive(Text("Cancel Subscription")) {
+//                        viewModel.cancelSubscription()
+                        print("tapped cancel")
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
+            
+            Text(getSubscriptionInfoText())
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                           .multilineTextAlignment(.center)
+                           .padding()
+                       
+            
+            Button(action: {
+                // Handle About Subscriptions and Privacy
+            }) {
+                Text("About Subscriptions and Privacy")
+                    .font(.footnote)
+                    .foregroundColor(.blue)
+            }
+        }
+        .padding()
+        .background(Color("mdBg"))
+        .cornerRadius(15)
+        .sheet(isPresented: $showUpgradeSheet) {
+            // Implement UpgradeView here
+        }
+    }
+    
+    private func getSubscriptionInfoText() -> String {
+            if viewModel.subscriptionStatus == "active" {
+                if viewModel.subscriptionRenews {
+                    return "Your subscription will automatically renew on \(formatSubscriptionDate(viewModel.subscriptionExpiresAt ?? ""))."
+                } else {
+                    return getCancellationMessage()
+                }
+            } else {
+                return "Your subscription has expired. Renew now to regain access to all features."
+            }
+        }
+    
+    private func getCurrentSubscriptionPrice() -> String {
+          let subscriptionManager = SubscriptionManager()
+          if let plan = viewModel.subscriptionPlan {
+              if plan.contains("Plus") {
+                  return subscriptionManager.monthlyPrice(for: .plusMonthly)
+              } else if plan.contains("Team") {
+                  return subscriptionManager.monthlyPrice(for: .teamMonthly)
+              }
+          }
+          return "Unknown"
+      }
+      
+      private func getSubscriptionStatusText() -> String {
+          guard let dateString = viewModel.subscriptionExpiresAt else {
+              return "Unknown"
+          }
+          let formattedDate = formatSubscriptionDate(dateString)
+          return viewModel.subscriptionRenews ? "Renews \(formattedDate)" : "Expires \(formattedDate)"
+      }
+    
+    
+      
+      private func getCancellationMessage() -> String {
+          guard let dateString = viewModel.subscriptionExpiresAt else {
+              return "You can still access your subscription until the end of the billing period."
+          }
+          let formattedDate = formatSubscriptionDate(dateString)
+          return "You can still access your subscription until \(formattedDate)."
+      }
+}
+
+struct NoSubscriptionView: View {
+    let geometry: GeometryProxy
+    @EnvironmentObject var viewModel: OnboardingViewModel
+
+    @State private var selectedTab = 0
+    @State private var showPricingSheet = false
+    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            // Title card with arrows
+            HStack {
+                Button(action: {
+                    withAnimation {
+                        selectedTab = max(0, selectedTab - 1)
+                    }
+                }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(.accentColor)
+                }
+                .opacity(selectedTab > 0 ? 1 : 0.3)
+                
+                Spacer()
+                
+                Text(displayedTiers[selectedTab].name)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                Button(action: {
+                    withAnimation {
+                        selectedTab = min(1, selectedTab + 1)
+                    }
+                }) {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.accentColor)
+                }
+                .opacity(selectedTab < 1 ? 1 : 0.3)
+            }
+            .padding()
+            .background(Color("mdBg"))
+            .cornerRadius(15)
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .padding(.horizontal)
+            .padding(.top, 10)
+            
+            // TabView with subscription tiers
+            TabView(selection: $selectedTab) {
+                SubscriptionTierView(tier: .plusMonthly)
+                    .tag(0)
+                SubscriptionTierView(tier: .teamMonthly)
+                    .tag(1)
+            }
+            .padding(.top, 15)
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: geometry.size.height * 0.6)
+
+            PageIndicator(currentPage: selectedTab, pageCount: 2)
+                .padding()
+            
+            Button(action: {
+                showPricingSheet = true
+            }) {
+                Text("Starting at \(SubscriptionManager().startingPrice(for: displayedTiers[selectedTab]))")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.accentColor)
+                    .cornerRadius(10)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
+        }
         .sheet(isPresented: $showPricingSheet) {
-//            PricingView(tier: SubscriptionTier.allCases[selectedTab], subscriptionManager: subscriptionManager)
-            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: subscriptionManager)
+            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: SubscriptionManager())
         }
     }
 }
+
+// Existing SubscriptionTierView, PageIndicator, and PricingView remain unchanged
+
 struct SubscriptionTierView: View {
     let tier: SubscriptionTier
     @Environment(\.colorScheme) var colorScheme
@@ -292,3 +582,21 @@ struct PricingOptionView: View {
     }
 }
 
+
+extension DateFormatter {
+    static let subscriptionDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter
+    }()
+}
+
+func formatSubscriptionDate(_ dateString: String) -> String {
+    let dateFormatter = ISO8601DateFormatter()
+    dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    
+    if let date = dateFormatter.date(from: dateString) {
+        return DateFormatter.subscriptionDateFormatter.string(from: date)
+    }
+    return "Unknown"
+}
