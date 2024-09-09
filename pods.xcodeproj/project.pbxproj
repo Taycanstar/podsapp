@@ -77,6 +77,7 @@
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
 		36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */; };
 		36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */; };
+		36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */; };
 		36E097362C4C74CE00F354E6 /* .lldbinit in Resources */ = {isa = PBXBuildFile; fileRef = 36E097352C4C74CE00F354E6 /* .lldbinit */; };
 		36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */; };
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
@@ -182,6 +183,7 @@
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWorkspaceView.swift; sourceTree = "<group>"; };
+		36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTeamView.swift; sourceTree = "<group>"; };
 		36E097352C4C74CE00F354E6 /* .lldbinit */ = {isa = PBXFileReference; lastKnownFileType = text; path = .lldbinit; sourceTree = "<group>"; };
 		36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorViewController.swift; sourceTree = "<group>"; };
 		36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditorRepresentable.swift; sourceTree = "<group>"; };
@@ -303,6 +305,7 @@
 				36B3CF862C84014000265F91 /* MediaPreview.swift */,
 				36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */,
 				36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */,
+				36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -739,6 +742,7 @@
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,
 				36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */,
+				36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,

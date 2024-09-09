@@ -24,6 +24,7 @@ struct HomeView: View {
     @State private var selectedHeaderOption = "Recently visited"
     @Binding var shouldNavigateToNewPod: Bool
        @Binding var newPodId: Int?
+    @State private var lastSubscriptionRefresh: Date?
     @Environment(\.isTabBarVisible) var isTabBarVisible
     var body: some View {
            NavigationView {
@@ -62,6 +63,7 @@ struct HomeView: View {
                .navigationBarHidden(true)
                .onAppear {
                    fetchPodsAndWorkspacesIfNeeded()
+                   refreshSubscriptionIfNeeded()
                    isTabBarVisible.wrappedValue = true
 
 
@@ -94,6 +96,30 @@ struct HomeView: View {
     private var favoritePods: [Pod] {
         homeViewModel.pods.filter { $0.isFavorite ?? false }
     }
+    
+    private func refreshSubscriptionIfNeeded() {
+         let now = Date()
+         if lastSubscriptionRefresh == nil || now.timeIntervalSince(lastSubscriptionRefresh!) > 3600 { // Refresh every hour
+             NetworkManager().fetchSubscriptionInfo(for: viewModel.email) { result in
+                 DispatchQueue.main.async {
+                     switch result {
+                     case .success(let subscriptionInfo):
+                         viewModel.updateSubscriptionInfo(
+                             status: subscriptionInfo.status,
+                             plan: subscriptionInfo.plan,
+                             expiresAt: subscriptionInfo.expiresAt,
+                             renews: subscriptionInfo.renews,
+                             seats: subscriptionInfo.seats,
+                             canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+                         )
+                         lastSubscriptionRefresh = now
+                     case .failure(let error):
+                         print("Failed to fetch subscription info: \(error.localizedDescription)")
+                     }
+                 }
+             }
+         }
+     }
 
     private var recentlyVisitedPods: [Pod] {
         // Assuming you have a property to track recently visited pods

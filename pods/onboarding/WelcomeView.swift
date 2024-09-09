@@ -245,7 +245,7 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam in
                 DispatchQueue.main.async {
                     isLoading = false
                     if success {
@@ -277,7 +277,14 @@ struct WelcomeView: View {
                             UserDefaults.standard.set(profileColor, forKey: "profileColor")
                         }
                         
-                        self.viewModel.updateSubscriptionInfo(status: subscriptionStatus, plan: subscriptionPlan, expiresAt: subscriptionExpiresAt, renews: subscriptionRenews)
+                        self.viewModel.updateSubscriptionInfo(
+                            status: subscriptionStatus,
+                            plan: subscriptionPlan,
+                            expiresAt: subscriptionExpiresAt,
+                            renews: subscriptionRenews,
+                            seats: subscriptionSeats,
+                            canCreateNewTeam: canCreateNewTeam
+                        )
 
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing
@@ -285,8 +292,9 @@ struct WelcomeView: View {
                         self.errorMessage = error ?? "Login failed. Please check your credentials and try again."
                     }
                 }
-            }
+            
         }
+    }
     }
 
     // Sample data structure for the info section

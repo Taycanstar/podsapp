@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-    let baseUrl = "http://192.168.1.67:8000"
+//    let baseUrl = "http://192.168.1.67:8000"
 
-//    let baseUrl = "http://172.20.10.2:8000"
+    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -285,10 +285,10 @@ class NetworkManager {
 //              }
 //          }.resume()
 //      }
-    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?) -> Void) {
+    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
             print("Invalid URL for login endpoint")
-            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
             return
         }
 
@@ -302,7 +302,7 @@ class NetworkManager {
             if let error = error {
                 print("Login request failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
@@ -310,7 +310,7 @@ class NetworkManager {
             guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
                 print("No response or data received from login request")
                 DispatchQueue.main.async {
-                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
@@ -333,22 +333,24 @@ class NetworkManager {
                         let subscriptionPlan = json["subscriptionPlan"] as? String
                         let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
                         let subscriptionRenews = json["subscriptionRenews"] as? Bool
+                        let subscriptionSeats = json["subscriptionSeats"] as? Int
+                                            let canCreateNewTeam = json["canCreateNewTeam"] as? Bool
                         DispatchQueue.main.async {
-                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews)
+                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam)
                         }
                     } else {
                         DispatchQueue.main.async {
-                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                         }
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                     }
                 }
             } else {
                 DispatchQueue.main.async {
-                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
             }
         }.resume()
@@ -1235,9 +1237,10 @@ class NetworkManager {
         print("Starting transcription request to backend.")
         task.resume()
     }
-//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?) -> Void) {
+
+//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?) -> Void) {
 //        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-//            completion(false, "Invalid URL", false, nil, nil)
+//            completion(false, "Invalid URL", false, nil, nil, nil)
 //            return
 //        }
 //
@@ -1252,14 +1255,14 @@ class NetworkManager {
 //        URLSession.shared.dataTask(with: request) { data, response, error in
 //            if let error = error {
 //                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil)
+//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil)
 //                }
 //                return
 //            }
 //
 //            guard let data = data else {
 //                DispatchQueue.main.async {
-//                    completion(false, "No data from server", false, nil, nil)
+//                    completion(false, "No data from server", false, nil, nil, nil)
 //                }
 //                return
 //            }
@@ -1269,25 +1272,26 @@ class NetworkManager {
 //                   let token = json["token"] as? String,
 //                   let isNewUser = json["is_new_user"] as? Bool,
 //                   let email = json["email"] as? String,
-//                   let username = json["username"] as? String {
+//                   let username = json["username"] as? String,
+//                   let activeTeamId = json["activeTeamId"] as? Int {
 //                    DispatchQueue.main.async {
-//                        completion(true, nil, isNewUser, email, username)
+//                        completion(true, nil, isNewUser, email, username, activeTeamId)
 //                    }
 //                } else {
 //                    DispatchQueue.main.async {
-//                        completion(false, "Invalid data from server", false, nil, nil)
+//                        completion(false, "Invalid data from server", false, nil, nil, nil)
 //                    }
 //                }
 //            } catch {
 //                DispatchQueue.main.async {
-//                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil)
+//                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil)
 //                }
 //            }
 //        }.resume()
 //    }
-    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?) -> Void) {
+    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/google-login/") else {
-            completion(false, "Invalid URL", false, nil, nil, nil)
+            completion(false, "Invalid URL", false, nil, nil, nil, nil)
             return
         }
 
@@ -1302,14 +1306,14 @@ class NetworkManager {
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil)
+                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil)
                 }
                 return
             }
 
             guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(false, "No data from server", false, nil, nil, nil)
+                    completion(false, "No data from server", false, nil, nil, nil, nil)
                 }
                 return
             }
@@ -1320,23 +1324,33 @@ class NetworkManager {
                    let isNewUser = json["is_new_user"] as? Bool,
                    let email = json["email"] as? String,
                    let username = json["username"] as? String,
-                   let activeTeamId = json["activeTeamId"] as? Int {
+                   let activeTeamId = json["activeTeamId"] as? Int,
+                   let subscriptionData = json["subscription"] as? [String: Any] {
+                    
+                    let subscriptionInfo = SubscriptionInfo(
+                        status: subscriptionData["status"] as? String ?? "none",
+                        plan: subscriptionData["plan"] as? String,
+                        expiresAt: subscriptionData["expiresAt"] as? String,
+                        renews: subscriptionData["renews"] as? Bool ?? false,
+                        seats: subscriptionData["seats"] as? Int,
+                        canCreateNewTeam: subscriptionData["canCreateNewTeam"] as? Bool ?? false
+                    )
+                    
                     DispatchQueue.main.async {
-                        completion(true, nil, isNewUser, email, username, activeTeamId)
+                        completion(true, nil, isNewUser, email, username, activeTeamId, subscriptionInfo)
                     }
                 } else {
                     DispatchQueue.main.async {
-                        completion(false, "Invalid data from server", false, nil, nil, nil)
+                        completion(false, "Invalid data from server", false, nil, nil, nil, nil)
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil)
+                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil, nil)
                 }
             }
         }.resume()
     }
-
     
     func sendAppleTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool) -> Void) {
         guard let url = URL(string: "\(baseUrl)/apple-login/") else {
@@ -3506,6 +3520,38 @@ class NetworkManager {
                 do {
                     let workspace = try JSONDecoder().decode(Workspace.self, from: data)
                     completion(.success(workspace))
+                } catch {
+                    completion(.failure(error))
+                }
+            }.resume()
+        }
+    
+    func createTeam(name: String, email: String, completion: @escaping (Result<Team, Error>) -> Void) {
+            guard let url = URL(string: "\(baseUrl)/create-team/") else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+
+            let body = ["name": name, "email": email]
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONEncoder().encode(body)
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+
+                do {
+                    let team = try JSONDecoder().decode(Team.self, from: data)
+                    completion(.success(team))
                 } catch {
                     completion(.failure(error))
                 }

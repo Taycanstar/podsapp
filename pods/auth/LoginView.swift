@@ -181,7 +181,7 @@ struct LoginView: View {
 //    }
     private func authenticateUser() {
         isLoading = true
-        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews in
+        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam in
             DispatchQueue.main.async {
                 if success {
                     self.isAuthenticated = true
@@ -212,7 +212,14 @@ struct LoginView: View {
                         UserDefaults.standard.set(profileColor, forKey: "profileColor")
                     }
                     
-                    self.viewModel.updateSubscriptionInfo(status: subscriptionStatus, plan: subscriptionPlan, expiresAt: subscriptionExpiresAt, renews: subscriptionRenews)
+                    self.viewModel.updateSubscriptionInfo(
+                        status: subscriptionStatus,
+                        plan: subscriptionPlan,
+                        expiresAt: subscriptionExpiresAt,
+                        renews: subscriptionRenews,
+                        seats: subscriptionSeats,
+                        canCreateNewTeam: canCreateNewTeam
+                    )
                  
                 } else {
                     self.errorMessage = error ?? "Invalid credentials"

@@ -11,7 +11,9 @@ struct SubscriptionInfo: Codable {
     let status: String
     let plan: String?
     let expiresAt: String?
-    let renews: Bool 
+    let renews: Bool
+    let seats: Int?
+    let canCreateNewTeam: Bool?
 }
 
 
@@ -71,13 +73,19 @@ struct Team: Identifiable, Codable {
     var isPersonal: Bool
     var profileInitial: String?
     var profileColor: String?
+    var subscriptionId: Int?
+    var seatsUsed: Int
+    var availableSeats: Int?
     
-    init(id: Int, name: String, isPersonal: Bool, profileInitial: String?, profileColor: String?) {
+    init(id: Int, name: String, isPersonal: Bool, profileInitial: String?, profileColor: String?, subscriptionId: Int? = nil, seatsUsed: Int = 1, availableSeats: Int? = nil) {
         self.id = id
         self.name = name
         self.isPersonal = isPersonal
         self.profileInitial = profileInitial
         self.profileColor = profileColor
+        self.subscriptionId = subscriptionId
+        self.seatsUsed = seatsUsed
+        self.availableSeats = availableSeats
     }
 }
 struct Workspace: Identifiable, Codable {

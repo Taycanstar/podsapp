@@ -171,7 +171,9 @@ struct ContentView: View {
                         status: subscriptionInfo.status,
                         plan: subscriptionInfo.plan,
                         expiresAt: subscriptionInfo.expiresAt,
-                        renews: subscriptionInfo.renews
+                        renews: subscriptionInfo.renews,
+                        seats: subscriptionInfo.seats,
+                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
                     )
                     
                     self.printSubscriptionInfo(source: "Network")

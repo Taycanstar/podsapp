@@ -140,7 +140,7 @@ struct SubscriptionView: View {
     @Environment(\.colorScheme) var colorScheme
     
     let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
-    
+ 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
