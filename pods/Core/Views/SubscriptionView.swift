@@ -259,7 +259,7 @@ struct ActiveSubscriptionView: View {
             .alert(isPresented: $showCancelAlert) {
                 Alert(
                     title: Text("Cancel Subscription"),
-                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(viewModel.subscriptionExpiresAt ?? "the end of the billing period")."),
+                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(formatSubscriptionDate(viewModel.subscriptionExpiresAt ?? "at the end of the billing period"))."),
                     primaryButton: .destructive(Text("Cancel Subscription")) {
 //                        viewModel.cancelSubscription()
                         print("tapped cancel")

@@ -194,6 +194,7 @@ struct ContentView: View {
         print("Has Premium Access: \(hasPremiumAccess())")
         let currentTier = getCurrentSubscriptionTier()
         print("Current Subscription Tier: \(currentTier)")
+        print("Can user create team? \(viewModel.canCreateNewTeam)")
         print("--------------------")
     }
 }

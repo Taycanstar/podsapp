@@ -504,11 +504,11 @@ struct MyTeamsView: View {
     private func handleAddTeamAction() {
         if viewModel.hasActiveSubscription() {
             if viewModel.subscriptionPlan?.contains("Team") == true {
-                if homeViewModel.teams.count > 1 {
-                    showSubscriptionView = true
-                } else {
-                    showCreateTeamView = true
-                }
+                if viewModel.canCreateNewTeam {
+                        showCreateTeamView = true
+                    } else {
+                        showSubscriptionView = true
+                    }
             } else {
                 showSubscriptionView = true
             }
@@ -516,6 +516,8 @@ struct MyTeamsView: View {
             showSubscriptionView = true
         }
     }
+    
+    
 
     private func fetchTeams() {
         isLoading = true

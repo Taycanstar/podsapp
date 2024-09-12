@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
-    let baseUrl = "http://172.20.10.2:8000"
+//    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -3526,37 +3526,73 @@ class NetworkManager {
             }.resume()
         }
     
+//    func createTeam(name: String, email: String, completion: @escaping (Result<Team, Error>) -> Void) {
+//            guard let url = URL(string: "\(baseUrl)/create-team/") else {
+//                completion(.failure(NetworkError.invalidURL))
+//                return
+//            }
+//
+//            let body = ["name": name, "email": email]
+//            var request = URLRequest(url: url)
+//            request.httpMethod = "POST"
+//            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//            request.httpBody = try? JSONEncoder().encode(body)
+//
+//            URLSession.shared.dataTask(with: request) { data, response, error in
+//                if let error = error {
+//                    completion(.failure(error))
+//                    return
+//                }
+//
+//                guard let data = data else {
+//                    completion(.failure(NetworkError.noData))
+//                    return
+//                }
+//
+//                do {
+//                    let team = try JSONDecoder().decode(Team.self, from: data)
+//                    completion(.success(team))
+//                } catch {
+//                    completion(.failure(error))
+//                }
+//            }.resume()
+//        }
     func createTeam(name: String, email: String, completion: @escaping (Result<Team, Error>) -> Void) {
-            guard let url = URL(string: "\(baseUrl)/create-team/") else {
-                completion(.failure(NetworkError.invalidURL))
+        guard let url = URL(string: "\(baseUrl)/create-team/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body = ["name": name, "email": email]
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
                 return
             }
 
-            let body = ["name": name, "email": email]
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try? JSONEncoder().encode(body)
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
 
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-
-                guard let data = data else {
-                    completion(.failure(NetworkError.noData))
-                    return
-                }
-
-                do {
+            do {
+                if let httpResponse = response as? HTTPURLResponse,
+                   (400...499).contains(httpResponse.statusCode),
+                   let errorMessage = try? JSONDecoder().decode([String: String].self, from: data)["error"] {
+                    completion(.failure(NSError(domain: "APIError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                } else {
                     let team = try JSONDecoder().decode(Team.self, from: data)
                     completion(.success(team))
-                } catch {
-                    completion(.failure(error))
                 }
-            }.resume()
-        }
-    
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 }
 
