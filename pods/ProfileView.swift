@@ -260,6 +260,163 @@ struct MailView: UIViewControllerRepresentable {
 }
 
 
+//struct MyTeamsView: View {
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//    @EnvironmentObject var homeViewModel: HomeViewModel
+//    @Environment(\.colorScheme) var colorScheme
+//    @State private var isUpdating = false
+//    @State private var isLoading = true
+//    @State private var showCreateTeamView = false
+//    @State private var showSubscriptionView = false
+//
+//    var body: some View {
+//        VStack {
+//            if isLoading {
+//                ProgressView()
+//                    .scaleEffect(1.5)
+//            } else {
+//                ScrollView {
+//                    VStack(spacing: 15) {
+//                        ForEach(homeViewModel.teams) { team in
+//                            teamView(team: team)
+//                                .onTapGesture {
+//                                    updateActiveTeam(teamId: team.id)
+//                                }
+//                        }
+//                        addTeamButton
+//                    }
+//                    .padding()
+//                }
+//            }
+//        }
+//        .background(backgroundColorForTheme.edgesIgnoringSafeArea(.all))
+//        .navigationBarTitle("My team", displayMode: .inline)
+//        .onAppear {
+//            fetchTeams()
+//        }
+//        
+//        .overlay(Group {
+//            if isUpdating {
+//                ProgressView()
+//                    .scaleEffect(1.5)
+//                    .frame(width: 60, height: 60)
+//                    .background(Color.black.opacity(0.4))
+//                    .cornerRadius(10)
+//            }
+//        })
+//        .sheet(isPresented: $showCreateTeamView) {
+//            CreateTeamView(isPresented: $showCreateTeamView)
+//                .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+//        }
+//        .background(
+//            NavigationLink(destination: SubscriptionView(), isActive: $showSubscriptionView) {
+//                EmptyView()
+//            }
+//        )
+//    }
+//    
+//    private var addTeamButton: some View {
+//        Button(action: {
+//            handleAddTeamAction()
+//        }) {
+//            ZStack {
+//                RoundedRectangle(cornerRadius: 15)
+//                    .fill(Color.accentColor)
+//                
+//                HStack {
+//                    Spacer()
+//                    Image(systemName: "plus")
+//                        .foregroundColor(.white)
+//                    Text("Add team")
+//                        .fontWeight(.medium)
+//                        .font(.system(size: 14))
+//                        .foregroundColor(.white)
+//                    Spacer()
+//                }
+//                .padding()
+//                .padding(.vertical, 3)
+//            }
+//        }
+//        .buttonStyle(PlainButtonStyle())
+//    }
+//    
+//    private func handleAddTeamAction() {
+//        if viewModel.hasActiveSubscription() {
+//            if viewModel.subscriptionPlan?.contains("Team") == true {
+//                if viewModel.canCreateNewTeam {
+//                        showCreateTeamView = true
+//                    } else {
+//                        showSubscriptionView = true
+//                    }
+//            } else {
+//                showSubscriptionView = true
+//            }
+//        } else {
+//            showSubscriptionView = true
+//        }
+//    }
+//    
+//    
+//
+//    private func fetchTeams() {
+//        isLoading = true
+//        homeViewModel.fetchTeamsForUser(email: viewModel.email)
+//        isLoading = false
+//    }
+//
+//    private var backgroundColorForTheme: Color {
+//        colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
+//    }
+//
+//    private func teamView(team: Team) -> some View {
+//        ZStack {
+//            RoundedRectangle(cornerRadius: 15)
+//                .fill(colorScheme == .dark ? Color(rgb:44,44,44) : Color.white)
+//                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+//            
+//            HStack {
+//                DefaultProfilePicture(
+//                    initial: team.profileInitial ?? "",
+//                    color: team.profileColor ?? "",
+//                    size: 30
+//                )
+//                
+//                Text(team.name)
+//                    .fontWeight(.medium)
+//                    .font(.system(size: 14))
+//                Spacer()
+//                
+//                if team.id == viewModel.activeTeamId {
+//                    Image(systemName: "checkmark.circle.fill")
+//                        .foregroundColor(.accentColor)
+//                }
+//            }
+//            .padding()
+//        }
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 15)
+//                .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
+//        )
+//    }
+//
+//    private func updateActiveTeam(teamId: Int) {
+//        isUpdating = true
+//        NetworkManager().updateActiveTeam(email: viewModel.email, teamId: teamId) { result in
+//            DispatchQueue.main.async {
+//                isUpdating = false
+//                switch result {
+//                case .success(let newActiveTeamId):
+//                    viewModel.activeTeamId = newActiveTeamId
+//                    UserDefaults.standard.set(newActiveTeamId, forKey: "activeTeamId")
+//                case .failure(let error):
+//                    print("Failed to update active team: \(error.localizedDescription)")
+//                }
+//            }
+//        }
+//    }
+//}
+
+
 struct MyTeamsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
@@ -268,6 +425,8 @@ struct MyTeamsView: View {
     @State private var isLoading = true
     @State private var showCreateTeamView = false
     @State private var showSubscriptionView = false
+    @State private var showTeamOptionsSheet = false
+    @State private var selectedTeam: Team?
 
     var body: some View {
         VStack {
@@ -279,9 +438,6 @@ struct MyTeamsView: View {
                     VStack(spacing: 15) {
                         ForEach(homeViewModel.teams) { team in
                             teamView(team: team)
-                                .onTapGesture {
-                                    updateActiveTeam(teamId: team.id)
-                                }
                         }
                         addTeamButton
                     }
@@ -308,11 +464,41 @@ struct MyTeamsView: View {
             CreateTeamView(isPresented: $showCreateTeamView)
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
         }
+        .sheet(isPresented: $showTeamOptionsSheet) {
+            if let team = selectedTeam {
+                TeamOptionsView(
+                    showTeamOptionsSheet: $showTeamOptionsSheet,
+                    onDeleteTeam: { deleteTeam(team: team) },
+                    teamName: team.name,
+                    teamId: team.id,
+                    navigationAction: { destination in
+                        handleTeamNavigation(destination: destination, for: team)
+                    }
+                )
+            }
+        }
         .background(
             NavigationLink(destination: SubscriptionView(), isActive: $showSubscriptionView) {
                 EmptyView()
             }
         )
+    }
+    
+    private func deleteTeam(team: Team) {
+        // Implement team deletion logic here
+        print("Deleting team: \(team.name)")
+    }
+    
+    
+    private func handleTeamNavigation(destination: TeamNavigationDestination, for team: Team) {
+        // Implement navigation logic here
+        switch destination {
+        case .teamInfo:
+            print("Navigating to team info for: \(team.name)")
+        case .teamMembers:
+            print("Navigating to team members for: \(team.name)")
+      
+        }
     }
     
     private var addTeamButton: some View {
@@ -356,12 +542,20 @@ struct MyTeamsView: View {
         }
     }
     
-    
-
+//    private func fetchTeams() {
+//        isLoading = true
+//        homeViewModel.fetchTeamsForUser(email: viewModel.email)
+//        isLoading = false
+//    }
     private func fetchTeams() {
         isLoading = true
         homeViewModel.fetchTeamsForUser(email: viewModel.email)
-        isLoading = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.isLoading = false
+            if let firstTeam = self.homeViewModel.teams.first {
+                self.selectedTeam = firstTeam
+            }
+        }
     }
 
     private var backgroundColorForTheme: Color {
@@ -390,6 +584,18 @@ struct MyTeamsView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.accentColor)
                 }
+                
+                Button(action: {
+                               selectedTeam = team
+                   
+                                   showTeamOptionsSheet = true
+                            
+                           }) {
+                               Image(systemName: "info.circle")
+                                   .font(.system(size: 20))
+                                   .foregroundColor(.accentColor)
+                           }
+                
             }
             .padding()
         }
@@ -397,6 +603,9 @@ struct MyTeamsView: View {
             RoundedRectangle(cornerRadius: 15)
                 .stroke(team.id == viewModel.activeTeamId ? Color.accentColor : Color.clear, lineWidth: 3)
         )
+        .onTapGesture {
+            updateActiveTeam(teamId: team.id)
+        }
     }
 
     private func updateActiveTeam(teamId: Int) {
@@ -415,6 +624,8 @@ struct MyTeamsView: View {
         }
     }
 }
+
+
 
 struct MyWorkspacesView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel

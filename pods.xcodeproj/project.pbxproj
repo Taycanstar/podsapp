@@ -21,6 +21,7 @@
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
+		3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */; };
 		36411D2F2C32867D0034E36D /* app1.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D2E2C32867D0034E36D /* app1.mp4 */; };
 		36411D312C3286890034E36D /* app2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D302C3286890034E36D /* app2.mp4 */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
@@ -123,6 +124,7 @@
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
+		3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamOptionsView.swift; sourceTree = "<group>"; };
 		36411D2E2C32867D0034E36D /* app1.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app1.mp4; path = pods/Assets.xcassets/app1.dataset/app1.mp4; sourceTree = "<group>"; };
 		36411D302C3286890034E36D /* app2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app2.mp4; path = pods/Assets.xcassets/app2.dataset/app2.mp4; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */,
 				36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */,
 				36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */,
+				3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -755,6 +758,7 @@
 				36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
+				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

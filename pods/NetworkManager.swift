@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
-    let baseUrl = "http://172.20.10.2:8000"
+//    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -3588,6 +3588,58 @@ class NetworkManager {
                 } else {
                     let team = try JSONDecoder().decode(Team.self, from: data)
                     completion(.success(team))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func shareTeam(teamId: Int, userEmail: String, completion: @escaping (Result<TeamInvitation, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/share-team/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = [
+            "team_id": teamId,
+            "user_email": userEmail
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.decodingError))
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let shareUrl = json["shareUrl"] as? String,
+                   let teamId = json["teamId"] as? Int,
+                   let userName = json["userName"] as? String,
+                   let userEmail = json["userEmail"] as? String,
+                   let invitationType = json["invitationType"] as? String,
+                   let teamName = json["teamName"] as? String {
+                    let invitation = TeamInvitation(id: 0, teamId: teamId, token: shareUrl, userName: userName, userEmail: userEmail, teamName: teamName, invitationType: invitationType)
+                    completion(.success(invitation))
+                } else {
+                    completion(.failure(NetworkError.decodingError))
                 }
             } catch {
                 completion(.failure(error))
