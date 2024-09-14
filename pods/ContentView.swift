@@ -99,6 +99,10 @@ struct ContentView: View {
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
                     InvitationView(invitation: invitation)
                 }
+                .fullScreenCover(item: $deepLinkHandler.activeTeamInvitation) { invitation in
+                                 TeamInvitationView(invitation: invitation)
+                             }
+                
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)

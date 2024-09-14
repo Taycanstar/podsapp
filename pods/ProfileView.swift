@@ -271,7 +271,9 @@ struct MyTeamsView: View {
     @State private var showTeamOptionsSheet = false
     @State private var selectedTeam: Team?
     
-    @State private var teamForOptions: Team?
+    @State private var teamForOptions: Team?  = nil
+    
+    
 
     var body: some View {
         VStack {
@@ -309,6 +311,7 @@ struct MyTeamsView: View {
             CreateTeamView(isPresented: $showCreateTeamView)
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
         }
+
         .sheet(isPresented: $showTeamOptionsSheet) {
             if let team = teamForOptions {
                 TeamOptionsView(
@@ -320,6 +323,10 @@ struct MyTeamsView: View {
                         handleTeamNavigation(destination: destination, for: team)
                     }
                 )
+                .onAppear {
+                        print("Presenting sheet for team: \(team.name), ID: \(team.id)")  // Debugging print statement
+                    }
+         
             }
         }
         .background(
@@ -395,13 +402,9 @@ struct MyTeamsView: View {
     private func fetchTeams() {
         isLoading = true
         homeViewModel.fetchTeamsForUser(email: viewModel.email)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.isLoading = false
-            if let firstTeam = self.homeViewModel.teams.first {
-                self.selectedTeam = firstTeam
-                self.teamForOptions = firstTeam
-            }
-        }
+
+        isLoading = false
+
     }
 
     private var backgroundColorForTheme: Color {
@@ -431,18 +434,34 @@ struct MyTeamsView: View {
                         .foregroundColor(.accentColor)
                 }
                 
-                Button(action: {
-                    teamForOptions = team
-                    
-               
-                           showTeamOptionsSheet = true
-                   
-                            
-                           }) {
-                               Image(systemName: "info.circle")
-                                   .font(.system(size: 20))
-                                   .foregroundColor(.accentColor)
-                           }
+//                Button(action: {
+//           
+//                    DispatchQueue.main.async {
+//                        self.teamForOptions = team  // Set the correct team
+//                    }
+//                    
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                        print("Team selected for options: \(team.name), ID: \(team.id)")
+//                        // Now show the sheet
+//                        showTeamOptionsSheet = true
+//        
+//                        
+//                    }
+//                 
+//                                     
+//                    
+//                            
+//                           }) {
+//                               Image(systemName: "info.circle")
+//                                   .font(.system(size: 20))
+//                                   .foregroundColor(.accentColor)
+//                           }
+                
+                NavigationLink(destination: TeamOptionsViewWrapper(team: team)) {
+                                 Image(systemName: "info.circle")
+                                     .font(.system(size: 20))
+                                     .foregroundColor(.accentColor)
+                             }
                 
             }
             .padding()
@@ -527,6 +546,21 @@ struct MyWorkspacesView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 15)
                 .stroke(workspace.id == viewModel.activeWorkspaceId ? Color.accentColor : Color.clear, lineWidth: 3)
+        )
+    }
+}
+
+
+struct TeamOptionsViewWrapper: View {
+    let team: Team
+    
+    var body: some View {
+        TeamOptionsView(
+            showTeamOptionsSheet: .constant(true),
+            onDeleteTeam: { print("Delete team") },
+            teamName: team.name,
+            teamId: team.id,
+            navigationAction: { _ in }
         )
     }
 }

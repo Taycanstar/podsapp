@@ -43,21 +43,21 @@ struct TeamOptionsView: View {
                 .edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.6))
-                    .frame(width: 35, height: 4)
-                    .padding(.top, 10)
-                
-                HStack {
-                    Spacer()
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .foregroundColor(.primary)
-                    }
-                }
+//                Capsule()
+//                    .fill(Color.secondary.opacity(0.6))
+//                    .frame(width: 35, height: 4)
+//                    .padding(.top, 10)
+//                
+//                HStack {
+//                    Spacer()
+//                    Button(action: { dismiss() }) {
+//                        Image(systemName: "xmark")
+//                            .font(.system(size: 18))
+//                            .padding(.horizontal, 20)
+//                            .padding(.vertical, 10)
+//                            .foregroundColor(.primary)
+//                    }
+//                }
                 
                 VStack(alignment: .leading, spacing: 0) {
                     MenuItemView(iconName: "square.and.arrow.up", text: "Share", action: {
@@ -101,6 +101,7 @@ struct TeamOptionsView: View {
                 Button("Cancel", role: .cancel) {}
             }
         }
+        
         .sheet(isPresented: $isSharePresented, content: {
             if let url = shareURL {
                 ActivityViewController(activityItems: [url])
