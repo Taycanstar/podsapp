@@ -36,6 +36,7 @@ struct TeamOptionsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
     var navigationAction: (TeamNavigationDestination) -> Void
+    @State private var navigateToTeamInfo = false
     
     var body: some View {
         ZStack {
@@ -43,21 +44,7 @@ struct TeamOptionsView: View {
                 .edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
-//                Capsule()
-//                    .fill(Color.secondary.opacity(0.6))
-//                    .frame(width: 35, height: 4)
-//                    .padding(.top, 10)
-//                
-//                HStack {
-//                    Spacer()
-//                    Button(action: { dismiss() }) {
-//                        Image(systemName: "xmark")
-//                            .font(.system(size: 18))
-//                            .padding(.horizontal, 20)
-//                            .padding(.vertical, 10)
-//                            .foregroundColor(.primary)
-//                    }
-//                }
+
                 
                 VStack(alignment: .leading, spacing: 0) {
                     MenuItemView(iconName: "square.and.arrow.up", text: "Share", action: {
@@ -65,16 +52,23 @@ struct TeamOptionsView: View {
                         HapticFeedback.generate()
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "info.circle", text: "Team info", action: {
-                        dismiss()
-                        HapticFeedback.generate()
-                        navigationAction(.teamInfo)
-                    }, color: .primary)
+//                    MenuItemView(iconName: "info.circle", text: "Team info", action: {
+//                        dismiss()
+//                        HapticFeedback.generate()
+//                        navigationAction(.teamInfo)
+//                    }, color: .primary)
+                    NavigationLink(destination: TeamInfoView(teamId: teamId), isActive: $navigateToTeamInfo) {
+                                     MenuItemView(iconName: "info.circle", text: "Team info", action: {
+                                         HapticFeedback.generate()
+                                         navigateToTeamInfo = true
+                                     }, color: .primary)
+                                 }
                     
+
                     MenuItemView(iconName: "person.2", text: "Team members", action: {
                         dismiss()
                         HapticFeedback.generate()
-                        navigationAction(.teamMembers)
+//                        navigationAction(.teamMembers)
                     }, color: .primary)
                     
                     Divider().padding(.vertical, 5)

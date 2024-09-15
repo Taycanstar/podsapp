@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-    let baseUrl = "http://192.168.1.67:8000"
+//    let baseUrl = "http://192.168.1.67:8000"
 
-//    let baseUrl = "http://172.20.10.2:8000"
+    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -2930,6 +2930,59 @@ class NetworkManager {
             }
         }.resume()
     }
+    
+    func fetchTeamDetails(teamId: Int, completion: @escaping (Result<TeamDetails, Error>) -> Void) {
+          let url = URL(string: "\(baseUrl)/get-team-details/\(teamId)/")!
+          URLSession.shared.dataTask(with: url) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+              guard let data = data else {
+                  completion(.failure(NetworkError.noData))
+                  return
+              }
+              do {
+                  let teamDetails = try JSONDecoder().decode(TeamDetails.self, from: data)
+                  completion(.success(teamDetails))
+              } catch {
+                  completion(.failure(error))
+              }
+          }.resume()
+      }
+
+      func updateTeamDetails(teamId: Int, name: String, description: String, completion: @escaping (Result<(String, String), Error>) -> Void) {
+          let url = URL(string: "\(baseUrl)/update-team-details/\(teamId)/")!
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+          let body: [String: Any] = [
+              "name": name,
+              "description": description
+          ]
+
+          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+              guard let data = data else {
+                  completion(.failure(NetworkError.noData))
+                  return
+              }
+              do {
+                  let updatedDetails = try JSONDecoder().decode([String: String].self, from: data)
+                  let updatedName = updatedDetails["name"] ?? name
+                  let updatedDescription = updatedDetails["description"] ?? description
+                  completion(.success((updatedName, updatedDescription)))
+              } catch {
+                  completion(.failure(error))
+              }
+          }.resume()
+      }
 
     func fetchPodMembers(podId: Int, userEmail: String, completion: @escaping (Result<([PodMember], String, String), Error>) -> Void) {
         let urlString = "\(baseUrl)/get-pod-members/\(podId)/"

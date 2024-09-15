@@ -45,6 +45,17 @@ struct PodDetails: Codable {
     let workspace: WorkspaceDetails
 }
 
+struct TeamDetails: Codable {
+    let creator: UserDetails
+    let profileInitial: String
+    let profileColor: String
+    let name: String
+    let description: String
+}
+
+
+
+
 struct UserDetails: Codable {
     let name: String
     let profileInitial: String
@@ -80,22 +91,26 @@ struct TeamInvitation: Identifiable {
 struct Team: Identifiable, Codable {
     var id: Int
     var name: String
+    var description: String
     var isPersonal: Bool
     var profileInitial: String?
     var profileColor: String?
     var subscriptionId: Int?
     var seatsUsed: Int
     var availableSeats: Int?
+    var role: String?
     
-    init(id: Int, name: String, isPersonal: Bool, profileInitial: String?, profileColor: String?, subscriptionId: Int? = nil, seatsUsed: Int = 1, availableSeats: Int? = nil) {
+    init(id: Int, name: String, description: String, isPersonal: Bool, profileInitial: String?, profileColor: String?, subscriptionId: Int? = nil, seatsUsed: Int = 1, availableSeats: Int? = nil, role: String?) {
         self.id = id
         self.name = name
+        self.description = description
         self.isPersonal = isPersonal
         self.profileInitial = profileInitial
         self.profileColor = profileColor
         self.subscriptionId = subscriptionId
         self.seatsUsed = seatsUsed
         self.availableSeats = availableSeats
+        self.role = role
     }
 }
 struct Workspace: Identifiable, Codable {

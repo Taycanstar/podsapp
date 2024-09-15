@@ -312,28 +312,12 @@ struct MyTeamsView: View {
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
         }
 
-        .sheet(isPresented: $showTeamOptionsSheet) {
-            if let team = teamForOptions {
-                TeamOptionsView(
-                    showTeamOptionsSheet: $showTeamOptionsSheet,
-                    onDeleteTeam: { deleteTeam(team: team) },
-                    teamName: team.name,
-                    teamId: team.id,
-                    navigationAction: { destination in
-                        handleTeamNavigation(destination: destination, for: team)
-                    }
-                )
-                .onAppear {
-                        print("Presenting sheet for team: \(team.name), ID: \(team.id)")  // Debugging print statement
-                    }
-         
-            }
-        }
         .background(
             NavigationLink(destination: SubscriptionView(), isActive: $showSubscriptionView) {
                 EmptyView()
             }
         )
+        
     }
     
     private func deleteTeam(team: Team) {
@@ -342,16 +326,7 @@ struct MyTeamsView: View {
     }
     
     
-    private func handleTeamNavigation(destination: TeamNavigationDestination, for team: Team) {
-        // Implement navigation logic here
-        switch destination {
-        case .teamInfo:
-            print("Navigating to team info for: \(team.name)")
-        case .teamMembers:
-            print("Navigating to team members for: \(team.name)")
-      
-        }
-    }
+   
     
     private var addTeamButton: some View {
         Button(action: {
@@ -394,11 +369,6 @@ struct MyTeamsView: View {
         }
     }
     
-//    private func fetchTeams() {
-//        isLoading = true
-//        homeViewModel.fetchTeamsForUser(email: viewModel.email)
-//        isLoading = false
-//    }
     private func fetchTeams() {
         isLoading = true
         homeViewModel.fetchTeamsForUser(email: viewModel.email)
@@ -457,11 +427,19 @@ struct MyTeamsView: View {
 //                                   .foregroundColor(.accentColor)
 //                           }
                 
-                NavigationLink(destination: TeamOptionsViewWrapper(team: team)) {
-                                 Image(systemName: "info.circle")
-                                     .font(.system(size: 20))
-                                     .foregroundColor(.accentColor)
+                NavigationLink(destination: TeamOptionsView(
+                             showTeamOptionsSheet: .constant(true),
+                             onDeleteTeam: { deleteTeam(team: team) },
+                             teamName: team.name,
+                             teamId: team.id,
+                             navigationAction: { destination in
+                                 handleNavigation(destination: destination, for: team)
                              }
+                         )) {
+                             Image(systemName: "info.circle")
+                                 .font(.system(size: 20))
+                                 .foregroundColor(.accentColor)
+                         }
                 
             }
             .padding()
@@ -472,6 +450,18 @@ struct MyTeamsView: View {
         )
         .onTapGesture {
             updateActiveTeam(teamId: team.id)
+        }
+    }
+    
+    private func handleNavigation(destination: TeamNavigationDestination, for team: Team) {
+        switch destination {
+        case .teamInfo:
+            // Navigate to TeamInfoView
+            // You might want to use a NavigationLink here or programmatic navigation
+            print("Navigate to TeamInfoView for team: \(team.name)")
+        case .teamMembers:
+            // Navigate to TeamMembersView
+            print("Navigate to TeamMembersView for team: \(team.name)")
         }
     }
 
@@ -551,16 +541,3 @@ struct MyWorkspacesView: View {
 }
 
 
-struct TeamOptionsViewWrapper: View {
-    let team: Team
-    
-    var body: some View {
-        TeamOptionsView(
-            showTeamOptionsSheet: .constant(true),
-            onDeleteTeam: { print("Delete team") },
-            teamName: team.name,
-            teamId: team.id,
-            navigationAction: { _ in }
-        )
-    }
-}
