@@ -2930,59 +2930,119 @@ class NetworkManager {
             }
         }.resume()
     }
-    
-    func fetchTeamDetails(teamId: Int, completion: @escaping (Result<TeamDetails, Error>) -> Void) {
-          let url = URL(string: "\(baseUrl)/get-team-details/\(teamId)/")!
-          URLSession.shared.dataTask(with: url) { data, response, error in
-              if let error = error {
-                  completion(.failure(error))
-                  return
-              }
-              guard let data = data else {
-                  completion(.failure(NetworkError.noData))
-                  return
-              }
-              do {
-                  let teamDetails = try JSONDecoder().decode(TeamDetails.self, from: data)
-                  completion(.success(teamDetails))
-              } catch {
-                  completion(.failure(error))
-              }
-          }.resume()
-      }
+//    
+//    func fetchTeamDetails(teamId: Int, completion: @escaping (Result<TeamDetails, Error>) -> Void) {
+//          let url = URL(string: "\(baseUrl)/get-team-details/\(teamId)/")!
+//          URLSession.shared.dataTask(with: url) { data, response, error in
+//              if let error = error {
+//                  completion(.failure(error))
+//                  return
+//              }
+//              guard let data = data else {
+//                  completion(.failure(NetworkError.noData))
+//                  return
+//              }
+//              do {
+//                  let teamDetails = try JSONDecoder().decode(TeamDetails.self, from: data)
+//                  completion(.success(teamDetails))
+//              } catch {
+//                  completion(.failure(error))
+//              }
+//          }.resume()
+//      }
+    func fetchTeamDetails(teamId: Int, userEmail: String, completion: @escaping (Result<TeamDetails, Error>) -> Void) {
+        guard var urlComponents = URLComponents(string: "\(baseUrl)/get-team-details/\(teamId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        urlComponents.queryItems = [URLQueryItem(name: "email", value: userEmail)]
+        
+        guard let url = urlComponents.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            do {
+                let teamDetails = try JSONDecoder().decode(TeamDetails.self, from: data)
+                completion(.success(teamDetails))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
-      func updateTeamDetails(teamId: Int, name: String, description: String, completion: @escaping (Result<(String, String), Error>) -> Void) {
-          let url = URL(string: "\(baseUrl)/update-team-details/\(teamId)/")!
-          var request = URLRequest(url: url)
-          request.httpMethod = "POST"
-          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-          let body: [String: Any] = [
-              "name": name,
-              "description": description
-          ]
-
-          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-          URLSession.shared.dataTask(with: request) { data, response, error in
-              if let error = error {
-                  completion(.failure(error))
-                  return
-              }
-              guard let data = data else {
-                  completion(.failure(NetworkError.noData))
-                  return
-              }
-              do {
-                  let updatedDetails = try JSONDecoder().decode([String: String].self, from: data)
-                  let updatedName = updatedDetails["name"] ?? name
-                  let updatedDescription = updatedDetails["description"] ?? description
-                  completion(.success((updatedName, updatedDescription)))
-              } catch {
-                  completion(.failure(error))
-              }
-          }.resume()
-      }
+//      func updateTeamDetails(teamId: Int, name: String, description: String, completion: @escaping (Result<(String, String), Error>) -> Void) {
+//          let url = URL(string: "\(baseUrl)/update-team-details/\(teamId)/")!
+//          var request = URLRequest(url: url)
+//          request.httpMethod = "PUT"
+//          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//          let body: [String: Any] = [
+//              "name": name,
+//              "description": description
+//          ]
+//
+//          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+//
+//          URLSession.shared.dataTask(with: request) { data, response, error in
+//              if let error = error {
+//                  completion(.failure(error))
+//                  return
+//              }
+//              guard let data = data else {
+//                  completion(.failure(NetworkError.noData))
+//                  return
+//              }
+//              do {
+//                  let updatedDetails = try JSONDecoder().decode([String: String].self, from: data)
+//                  let updatedName = updatedDetails["name"] ?? name
+//                  let updatedDescription = updatedDetails["description"] ?? description
+//                  completion(.success((updatedName, updatedDescription)))
+//              } catch {
+//                  completion(.failure(error))
+//              }
+//          }.resume()
+//      }
+    func updateTeamDetails(teamId: Int, name: String, description: String, completion: @escaping (Result<(String, String), Error>) -> Void) {
+        let url = URL(string: "\(baseUrl)/update-team-details/\(teamId)/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "name": name,
+            "description": description
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            do {
+                let response = try JSONDecoder().decode(TeamUpdateResponse.self, from: data)
+                completion(.success((response.team.name, response.team.description)))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
     func fetchPodMembers(podId: Int, userEmail: String, completion: @escaping (Result<([PodMember], String, String), Error>) -> Void) {
         let urlString = "\(baseUrl)/get-pod-members/\(podId)/"

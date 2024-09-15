@@ -8,27 +8,21 @@
 import SwiftUI
 
 struct TeamInfoView: View {
-       @State private var team: Team?
-        let teamId: Int
-     @State private var currentName: String = ""
-     @State private var currentDescription: String = ""
-     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
-     @Environment(\.isTabBarVisible) var isTabBarVisible
-     @Environment(\.colorScheme) var colorScheme
-     @State private var isLoading = true
-     @State private var errorMessage: String?
-     @State private var teamDetails: TeamDetails?
+//    @State private var team: Team?
+    let teamId: Int
+    @State private var currentName: String = ""
+    @State private var currentDescription: String = ""
+    @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
+    @Environment(\.isTabBarVisible) var isTabBarVisible
+    @Environment(\.colorScheme) var colorScheme
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var teamDetails: TeamDetails?
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     private var canEditTeam: Bool {
-        team?.role == "owner" || team?.role == "admin"
+        teamDetails?.role == "owner" || teamDetails?.role == "admin"
     }
-
-//    init(team: Binding<Team>, currentName: Binding<String>, currentDescription: Binding<String>, onSave: @escaping (String, String) -> Void) {
-//        self._team = team
-//        self._currentName = currentName
-//        self._currentDescription = currentDescription
-//        self.onSave = onSave
-//    }
 
     var body: some View {
         ZStack {
@@ -39,11 +33,16 @@ struct TeamInfoView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Team Name Section
                     Section(header: Text("Team Name").font(.system(size: 14))) {
-                        TextField("Enter Team Name", text: $currentName)
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .background(Color("mxdBg"))
-                            .disabled(!canEditTeam)
+                        if canEditTeam {
+                            TextField("Enter Team Name", text: $currentName)
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+//                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        } else {
+                            Text(currentName)
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                        }
                     }
 
                     Divider()
@@ -51,11 +50,18 @@ struct TeamInfoView: View {
 
                     // Team Description Section
                     Section(header: Text("Team Description").font(.system(size: 14))) {
-                        TextField("Enter team description", text: $currentDescription)
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .background(Color("mxdBg"))
-                            .disabled(!canEditTeam)
+                        if canEditTeam {
+                            TextEditor(text: $currentDescription)
+                                .font(.system(size: 16))
+                                .frame(height: 100)
+//                                .overlay(
+//                                    RoundedRectangle(cornerRadius: 8)
+//                                        .stroke(borderColor, lineWidth: 1)
+//                                )
+                        } else {
+                            Text(currentDescription)
+                                .font(.system(size: 16))
+                        }
                     }
 
                     Divider()
@@ -93,15 +99,16 @@ struct TeamInfoView: View {
             }
         }
         .navigationBarItems(
-            trailing: Button(action: {
-                saveTeamChanges()
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                Text("Save")
-                    .foregroundColor(.accentColor)
+            trailing: Group {
+                if canEditTeam {
+                    Button(action: {
+                        saveTeamChanges()
+                    }) {
+                        Text("Save")
+                            .foregroundColor(.accentColor)
+                    }
+                }
             }
-            .disabled(!canEditTeam)
-            .opacity(canEditTeam ? 1 : 0)
         )
         .navigationTitle("Team Info")
         .navigationBarTitleDisplayMode(.inline)
@@ -111,9 +118,10 @@ struct TeamInfoView: View {
         }
     }
 
+
     private func loadTeamDetails() {
         isLoading = true
-        NetworkManager().fetchTeamDetails(teamId: teamId) { result in
+        NetworkManager().fetchTeamDetails(teamId: teamId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 switch result {
@@ -121,6 +129,7 @@ struct TeamInfoView: View {
                     self.teamDetails = details
                     self.currentName = details.name
                     self.currentDescription = details.description
+                    print(details, "dets")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }

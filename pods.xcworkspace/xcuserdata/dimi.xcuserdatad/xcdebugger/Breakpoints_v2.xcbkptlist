@@ -384,5 +384,53 @@
             </Locations>
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "682F1ED3-9F32-4A17-A2F8-5F583BF1C348"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pods/Core/Views/TeamInfoView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "162"
+            endingLineNumber = "162"
+            landmarkName = "saveTeamChanges()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "682F1ED3-9F32-4A17-A2F8-5F583BF1C348 - ec62c01f995188d8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Result&lt;(Swift.String, Swift.String), Swift.Error&gt;) -&gt; () in Podstack.TeamInfoView.saveTeamChanges() -&gt; ()"
+                  moduleName = "Podstack"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TeamInfoView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "162"
+                  endingLineNumber = "162"
+                  offsetFromSymbolStart = "224">
+               </Location>
+               <Location
+                  uuid = "682F1ED3-9F32-4A17-A2F8-5F583BF1C348 - bdf930a94ba64024"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 @Swift.MainActor () -&gt; () in closure #1 (Swift.Result&lt;(Swift.String, Swift.String), Swift.Error&gt;) -&gt; () in Podstack.TeamInfoView.saveTeamChanges() -&gt; ()"
+                  moduleName = "Podstack"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TeamInfoView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "162"
+                  endingLineNumber = "162"
+                  offsetFromSymbolStart = "208">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

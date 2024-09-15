@@ -45,12 +45,24 @@ struct PodDetails: Codable {
     let workspace: WorkspaceDetails
 }
 
+struct TeamUpdateResponse: Codable {
+    let message: String
+    let team: TeamData
+}
+
+struct TeamData: Codable {
+    let id: Int
+    let name: String
+    let description: String
+}
+
 struct TeamDetails: Codable {
     let creator: UserDetails
     let profileInitial: String
     let profileColor: String
     let name: String
     let description: String
+    let role: String
 }
 
 
