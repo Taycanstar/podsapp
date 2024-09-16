@@ -37,6 +37,7 @@ struct TeamOptionsView: View {
     @Environment(\.colorScheme) var colorScheme
     var navigationAction: (TeamNavigationDestination) -> Void
     @State private var navigateToTeamInfo = false
+    @State private var navigateToTeamMembers = false
     
     var body: some View {
         ZStack {
@@ -65,11 +66,13 @@ struct TeamOptionsView: View {
                                  }
                     
 
-                    MenuItemView(iconName: "person.2", text: "Team members", action: {
-                        dismiss()
-                        HapticFeedback.generate()
-//                        navigationAction(.teamMembers)
-                    }, color: .primary)
+                    // NavigationLink for Team members
+                                        NavigationLink(destination: MyTeamMembersView(teamId: teamId), isActive: $navigateToTeamMembers) {
+                                            MenuItemView(iconName: "person.2", text: "Team members", action: {
+                                                HapticFeedback.generate()
+                                                navigateToTeamMembers = true
+                                            }, color: .primary)
+                                        }
                     
                     Divider().padding(.vertical, 5)
                     

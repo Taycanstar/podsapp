@@ -56,6 +56,7 @@ struct TeamData: Codable {
     let description: String
 }
 
+
 struct TeamDetails: Codable {
     let creator: UserDetails
     let profileInitial: String

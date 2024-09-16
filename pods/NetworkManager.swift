@@ -7,9 +7,9 @@ class NetworkManager {
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
    
-//    let baseUrl = "http://192.168.1.67:8000"
+    let baseUrl = "http://192.168.1.67:8000"
 
-    let baseUrl = "http://172.20.10.2:8000"
+//    let baseUrl = "http://172.20.10.2:8000"
 
     
     enum NetworkError: Error {
@@ -3096,6 +3096,7 @@ class NetworkManager {
                 completion(.failure(error))
             }
         }.resume()
+        
     }
     
     func updatePodMembership(podId: Int, memberId: Int, newRole: String, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -3636,5 +3637,73 @@ class NetworkManager {
             }
         }.resume()
     }
+    
+    func removeTeamMember(teamId: Int, memberId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+            let url = URL(string: "\(baseUrl)/remove-team-member/\(teamId)/\(memberId)/")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    completion(.success(()))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
+            }.resume()
+        }
+    
+    func updateTeamMembership(teamId: Int, memberId: Int, newRole: String, completion: @escaping (Result<Void, Error>) -> Void) {
+            let url = URL(string: "\(baseUrl)/update-team-membership/\(teamId)/\(memberId)/")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "PUT"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let body = ["role": newRole]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    completion(.success(()))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
+            }.resume()
+        }
+    
+    func inviteTeamMember(teamId: Int, inviterEmail: String, inviteeEmail: String, role: String, completion: @escaping (Result<Void, Error>) -> Void) {
+          let url = URL(string: "\(baseUrl)/invite-team-member/")!
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+          let body: [String: Any] = [
+              "team_id": teamId,
+              "inviter_email": inviterEmail,
+              "invitee_email": inviteeEmail,
+              "role": role
+          ]
+
+          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+          URLSession.shared.dataTask(with: request) { data, response, error in
+              if let error = error {
+                  completion(.failure(error))
+                  return
+              }
+              if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                  completion(.success(()))
+              } else {
+                  completion(.failure(NetworkError.unknownError))
+              }
+          }.resume()
+      }
 }
 

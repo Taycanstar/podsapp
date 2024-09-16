@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var showingMail = false
     @Binding var isAuthenticated: Bool
     @Binding var showTourView: Bool
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     
     var body: some View {
         
@@ -113,6 +114,10 @@ struct ProfileView: View {
             .sheet(isPresented: $showingMail) {
                 MailView(isPresented: self.$showingMail)
                      }
+            .onAppear{
+                isTabBarVisible.wrappedValue = true
+            }
+            
         }
      
     }
@@ -270,7 +275,7 @@ struct MyTeamsView: View {
     @State private var showSubscriptionView = false
     @State private var showTeamOptionsSheet = false
     @State private var selectedTeam: Team?
-    
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     @State private var teamForOptions: Team?  = nil
     
     
@@ -295,6 +300,7 @@ struct MyTeamsView: View {
         .background(backgroundColorForTheme.edgesIgnoringSafeArea(.all))
         .navigationBarTitle("My team", displayMode: .inline)
         .onAppear {
+            isTabBarVisible.wrappedValue = false
             fetchTeams()
         }
         

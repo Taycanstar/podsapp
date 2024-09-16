@@ -118,7 +118,8 @@ struct TeamInfoView: View {
         }
     }
 
-
+  
+     
     private func loadTeamDetails() {
         isLoading = true
         NetworkManager().fetchTeamDetails(teamId: teamId, userEmail: viewModel.email) { result in
