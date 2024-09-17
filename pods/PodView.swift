@@ -123,12 +123,12 @@ struct PodView: View {
                 .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
 
-//                PodViewHeaderSection(
-//                                       selectedView: $selectedView,
-//                                       podTitle: currentTitle,
-//                                       showPodOptionsSheet: { showPodOptionsSheet = true },
-//                                       onDismiss: { dismiss() }  // Add this line
-//                                   )
+                PodViewHeaderSection(
+                                       selectedView: $selectedView,
+                                       podTitle: currentTitle,
+                                       showPodOptionsSheet: { showPodOptionsSheet = true },
+                                       onDismiss: { dismiss() }  // Add this line
+                                   )
                 
                 ScrollView {
                     VStack(spacing: 12) {
@@ -842,15 +842,15 @@ struct PodViewHeaderSection: View {
                 .padding()
                 
                 // View/Filter/Search section
-                HStack(spacing: 10) {
-                    viewSection
-                    filterSection
-                    Spacer()
-                    searchSection
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                .padding(.bottom, 15)
+//                HStack(spacing: 10) {
+//                    viewSection
+//                    filterSection
+//                    Spacer()
+//                    searchSection
+//                }
+//                .padding(.horizontal)
+//                .padding(.top, 10)
+//                .padding(.bottom, 15)
             }
             .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
         }
