@@ -54,10 +54,13 @@ struct TeamInfoView: View {
                             TextEditor(text: $currentDescription)
                                 .font(.system(size: 16))
                                 .frame(height: 100)
-//                                .overlay(
-//                                    RoundedRectangle(cornerRadius: 8)
-//                                        .stroke(borderColor, lineWidth: 1)
-//                                )
+                                .onAppear {
+                                              UITextView.appearance().backgroundColor = UIColor(named: "mxdBg")
+                                          }
+                                          .onDisappear {
+                                              UITextView.appearance().backgroundColor = nil
+                                          }
+
                         } else {
                             Text(currentDescription)
                                 .font(.system(size: 16))
