@@ -122,13 +122,13 @@ struct PodView: View {
             (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
                 .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
-//                PodViewHeaderSection(selectedView: $selectedView)
-                PodViewHeaderSection(
-                                       selectedView: $selectedView,
-                                       podTitle: currentTitle,
-                                       showPodOptionsSheet: { showPodOptionsSheet = true },
-                                       onDismiss: { dismiss() }  // Add this line
-                                   )
+
+//                PodViewHeaderSection(
+//                                       selectedView: $selectedView,
+//                                       podTitle: currentTitle,
+//                                       showPodOptionsSheet: { showPodOptionsSheet = true },
+//                                       onDismiss: { dismiss() }  // Add this line
+//                                   )
                 
                 ScrollView {
                     VStack(spacing: 12) {

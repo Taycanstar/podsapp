@@ -52,15 +52,6 @@ class DeepLinkHandler: ObservableObject {
     @Published var activeInvitation: PodInvitation?
     @Published var activeTeamInvitation: TeamInvitation?
 
-//    func handle(url: URL) {
-//        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
-//              components.path == "/pods/invite",
-//              let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
-//            return
-//        }
-//        
-//        fetchInvitationDetails(token: token)
-//    }
     func handle(url: URL) {
             guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
                   let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {

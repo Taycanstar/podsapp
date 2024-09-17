@@ -3705,5 +3705,24 @@ class NetworkManager {
               }
           }.resume()
       }
+    
+    func updateSubscription(productId: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/update_subscription/") else {
+            throw NetworkError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["product_id": productId]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, 200...299 ~= httpResponse.statusCode else {
+            throw NetworkError.invalidResponse
+        }
+    }
 }
 
