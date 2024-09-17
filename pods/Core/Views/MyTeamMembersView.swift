@@ -352,7 +352,7 @@ enum TeamMemberRole: String, CaseIterable, Identifiable {
 struct InviteTeamMemberView: View {
     let teamId: Int
     @State private var email: String = ""
-    @State private var selectedRole: PodMemberRole = .member
+    @State private var selectedRole: TeamMemberRole = .member
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoading = false
@@ -386,7 +386,7 @@ struct InviteTeamMemberView: View {
                         Text("User role")
                         Spacer()
                         Picker("User Role", selection: $selectedRole) {
-                            ForEach(PodMemberRole.allCases, id: \.self) { role in
+                            ForEach(TeamMemberRole.allCases, id: \.self) { role in
                                 Text(role.rawValue).tag(role)
                                     .foregroundColor(.primary)
                             }
@@ -429,7 +429,7 @@ struct InviteTeamMemberView: View {
                                               .font(.caption)
                                       }
                     if showAlert {
-                        Text("Pod invite sent successfully")
+                        Text("Team invite sent successfully")
                             .foregroundColor(.green)
                             .font(.caption)
                     }
@@ -438,7 +438,7 @@ struct InviteTeamMemberView: View {
                 .padding(.top, 35)
             }
             .background(Color("mdBg").edgesIgnoringSafeArea(.all))
-            .navigationTitle("Invite a new pod member")
+            .navigationTitle("Invite a new team member")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
                 leading: Button(action: {
