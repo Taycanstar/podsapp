@@ -21,6 +21,7 @@
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
+		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
 		3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */; };
@@ -127,6 +128,7 @@
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
+		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
 		3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamOptionsView.swift; sourceTree = "<group>"; };
@@ -318,6 +320,7 @@
 				3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */,
 				363201322C96257100BC1815 /* TeamInfoView.swift */,
 				363201362C97812B00BC1815 /* MyTeamMembersView.swift */,
+				363201382C9CFDCF00BC1815 /* TrendsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -755,6 +758,7 @@
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,
+				363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */,
 				36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */,
 				36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */,
 				363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */,
@@ -947,7 +951,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -977,7 +981,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1014,7 +1018,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -1044,7 +1048,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

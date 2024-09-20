@@ -6,6 +6,7 @@ enum NavigationDestination: Hashable {
     case podInfo
     case podMembers
     case activityLog
+    case trends
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -19,6 +20,9 @@ enum NavigationDestination: Hashable {
             hasher.combine("podMembers")
         case .activityLog:
             hasher.combine("activityLog")
+        case .trends:
+                  hasher.combine("trends")
+              
         }
     }
 
@@ -209,6 +213,9 @@ struct PodView: View {
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
                 ActivityLogView(activityLogs: activityLogs)
+            case .trends:
+                                TrendsView(activityLogs: activityLogs, podColumns: podColumns)
+                            
             }
         }
 
