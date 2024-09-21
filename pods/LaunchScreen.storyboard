@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Y6W-OH-hqX">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="23094" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Y6W-OH-hqX">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22504"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23084"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -17,24 +16,6 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="from" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Og5-TE-xwR">
-                                <rect key="frame" x="179" y="735" width="35" height="20"/>
-                                <fontDescription key="fontDescription" name="HelveticaNeue" family="Helvetica Neue" pointSize="17"/>
-                                <color key="textColor" systemColor="systemGray5Color"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Humuli" textAlignment="natural" lineBreakMode="wordWrap" baselineAdjustment="alignBaselines" minimumFontSize="12" translatesAutoresizingMaskIntoConstraints="NO" id="dLn-Ci-lZh">
-                                <rect key="frame" x="169" y="759" width="67" height="28"/>
-                                <fontDescription key="fontDescription" name="HelveticaNeue-Medium" family="Helvetica Neue" pointSize="24"/>
-                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="white-logo" translatesAutoresizingMaskIntoConstraints="NO" id="hS9-gd-oj7">
-                                <rect key="frame" x="126" y="754" width="51" height="38"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="38" id="bvv-Z7-sXr"/>
-                                </constraints>
-                            </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="small" translatesAutoresizingMaskIntoConstraints="NO" id="b6S-lp-rNl">
                                 <rect key="frame" x="90" y="353" width="213" height="108"/>
                                 <color key="tintColor" name="AccentColor"/>
@@ -42,21 +23,18 @@
                                     <constraint firstAttribute="height" constant="108" id="UGc-1F-8ti"/>
                                 </constraints>
                             </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="dropimg" translatesAutoresizingMaskIntoConstraints="NO" id="YXB-qy-a37">
+                                <rect key="frame" x="110" y="647" width="159" height="110"/>
+                            </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vDu-zF-Fre"/>
                         <color key="backgroundColor" name="AccentColor"/>
                         <constraints>
-                            <constraint firstItem="vDu-zF-Fre" firstAttribute="trailing" secondItem="hS9-gd-oj7" secondAttribute="trailing" constant="216" id="0n2-Nv-wtV"/>
-                            <constraint firstItem="hS9-gd-oj7" firstAttribute="centerY" secondItem="dLn-Ci-lZh" secondAttribute="centerY" id="3Ke-hI-B3D"/>
-                            <constraint firstItem="vDu-zF-Fre" firstAttribute="bottom" secondItem="hS9-gd-oj7" secondAttribute="bottom" constant="26" id="4Ji-Rp-w70"/>
-                            <constraint firstItem="dLn-Ci-lZh" firstAttribute="top" secondItem="Og5-TE-xwR" secondAttribute="bottom" constant="4" id="C9M-D4-1CR"/>
                             <constraint firstItem="b6S-lp-rNl" firstAttribute="top" secondItem="vDu-zF-Fre" secondAttribute="top" constant="294" id="LAL-Cb-CSN"/>
-                            <constraint firstItem="vDu-zF-Fre" firstAttribute="trailing" secondItem="dLn-Ci-lZh" secondAttribute="trailing" constant="157" id="PgK-IP-8Ko"/>
+                            <constraint firstItem="YXB-qy-a37" firstAttribute="centerX" secondItem="vDu-zF-Fre" secondAttribute="centerX" constant="-7" id="MQT-5A-DDR"/>
                             <constraint firstItem="b6S-lp-rNl" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="90" id="Rta-lb-CK4"/>
-                            <constraint firstItem="dLn-Ci-lZh" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="169" id="XtR-hc-FGQ"/>
-                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="Og5-TE-xwR" secondAttribute="centerX" id="bfm-Nx-HX6"/>
                             <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="n44-rG-3wp"/>
-                            <constraint firstItem="hS9-gd-oj7" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="126" id="vPI-oM-Cbv"/>
+                            <constraint firstItem="vDu-zF-Fre" firstAttribute="bottom" secondItem="YXB-qy-a37" secondAttribute="bottom" constant="61" id="ySD-fj-6AJ"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -66,13 +44,10 @@
         </scene>
     </scenes>
     <resources>
+        <image name="dropimg" width="159" height="110"/>
         <image name="small" width="220" height="320"/>
-        <image name="white-logo" width="1024" height="1024"/>
         <namedColor name="AccentColor">
             <color red="0.13699999451637268" green="0.42399999499320984" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
-        <systemColor name="systemGray5Color">
-            <color red="0.8980392157" green="0.8980392157" blue="0.91764705879999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </systemColor>
     </resources>
 </document>

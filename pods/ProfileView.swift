@@ -83,12 +83,12 @@ struct ProfileView: View {
                                 Label("Privacy Policy", systemImage: "lock")
                                     .foregroundColor(iconColor)
                             }
-                            Button(action: {
-                                self.showTourView = true
-                            }) {
-                                Label("App tour guide", systemImage: "safari")
-                                    .foregroundColor(iconColor)
-                            }
+//                            Button(action: {
+//                                self.showTourView = true
+//                            }) {
+//                                Label("App tour guide", systemImage: "safari")
+//                                    .foregroundColor(iconColor)
+//                            }
                         }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         

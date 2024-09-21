@@ -519,34 +519,34 @@ struct RecentlyVisitedSheet: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                         // Add Workspace Button
-                           Button(action: {
-                               if viewModel.hasActiveSubscription() {
-                                   showAddWorkspace = true
-                               } else {
-                                   navigationPath.append("Subscription")
-                               }
-                           }) {
-                               ZStack {
-                                   RoundedRectangle(cornerRadius: 15)
-                                       .fill(Color.accentColor)
-                                   
-                                   HStack {
-                                       Spacer()
-                                       Image(systemName: "plus")
-                                           .foregroundColor(.white)
-                                       Text("Add workspace")
-                                           .fontWeight(.medium)
-                                           .font(.system(size: 14))
-                                           .foregroundColor(.white)
-                                       Spacer()
-                                   }
-                                   .padding()
-                                   .padding(.vertical, 3)
-                               }
-                               .padding(.top, 15)
-                               .fixedSize(horizontal: false, vertical: true)
-                           }
-                           .buttonStyle(PlainButtonStyle())
+//                           Button(action: {
+//                               if viewModel.hasActiveSubscription() {
+//                                   showAddWorkspace = true
+//                               } else {
+//                                   navigationPath.append("Subscription")
+//                               }
+//                           }) {
+//                               ZStack {
+//                                   RoundedRectangle(cornerRadius: 15)
+//                                       .fill(Color.accentColor)
+//                                   
+//                                   HStack {
+//                                       Spacer()
+//                                       Image(systemName: "plus")
+//                                           .foregroundColor(.white)
+//                                       Text("Add workspace")
+//                                           .fontWeight(.medium)
+//                                           .font(.system(size: 14))
+//                                           .foregroundColor(.white)
+//                                       Spacer()
+//                                   }
+//                                   .padding()
+//                                   .padding(.vertical, 3)
+//                               }
+//                               .padding(.top, 15)
+//                               .fixedSize(horizontal: false, vertical: true)
+//                           }
+//                           .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.horizontal)

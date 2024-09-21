@@ -94,38 +94,33 @@ struct LandingView: View {
         }
     }
     func handleGoogleSignIn() {
-
+        guard let clientID = ConfigurationManager.shared.getValue(forKey: "GOOGLE_CLIENT_ID") as? String else {
+            print("Missing configuration values for google client")
+            return
+        }
         
-        guard let clientID = ConfigurationManager.shared.getValue(forKey: "GOOGLE_CLIENT_ID") as? String
-                       else {
-                    print("Missing configuration values for google client")
-                  
-                    return
-                }
-            
-            let signInConfig = GIDConfiguration(clientID: clientID)
-            
-            guard let presentingViewController = getRootViewController() else {
-                fatalError("Failed to retrieve root view controller.")
+        let signInConfig = GIDConfiguration(clientID: clientID)
+        
+        guard let presentingViewController = getRootViewController() else {
+            fatalError("Failed to retrieve root view controller.")
+        }
+        
+        // Remove the birthday scope
+        GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController, hint: nil, additionalScopes: ["profile"]) { signInResult, error in
+            if let error = error {
+                print("Google Sign-In error: \(error.localizedDescription)")
+                return
             }
             
-            GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController,  hint: nil,  additionalScopes: ["profile", "https://www.googleapis.com/auth/user.birthday.read"]) { signInResult, error in
-                if let error = error {
-                    print(error.localizedDescription)
-                    print("Google Sign-In error: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let result = signInResult else {
-                         print("No sign-in result")
-                         return
-                     }
-                
-                guard let idToken = result.user.idToken?.tokenString else {
-                    print("Error: No ID token found")
-                    return
-                }
-                
+            guard let result = signInResult else {
+                print("No sign-in result")
+                return
+            }
+            
+            guard let idToken = result.user.idToken?.tokenString else {
+                print("Error: No ID token found")
+                return
+            }
 
                 NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo in
                         if success {
@@ -186,14 +181,16 @@ struct LandingView: View {
     
 
 
-    // Add these new methods for Apple Sign In
     func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
         let nonce = randomNonceString()
         currentNonce = nonce
         let hashedNonce = sha256(nonce)
-        request.requestedScopes = [.fullName, .email]
+        request.requestedScopes = [.fullName, .email]  // Request email scope
         request.nonce = hashedNonce
-        
+
+        // Request a private email relay
+        request.requestedScopes?.append(.email)
+
         print("Generated nonce: \(nonce)")
         print("SHA256 hashed nonce: \(hashedNonce)")
     }

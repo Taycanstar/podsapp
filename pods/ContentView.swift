@@ -113,9 +113,9 @@ struct ContentView: View {
                 fetchInitialPods()
             }
         }
-        .sheet(isPresented: $showTourView) {
-            TourView(isTourViewPresented: $showTourView)
-        }
+//        .sheet(isPresented: $showTourView) {
+//            TourView(isTourViewPresented: $showTourView)
+//        }
         .onAppear {
             self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
             if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {

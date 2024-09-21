@@ -118,11 +118,31 @@ struct InfoView: View {
             Spacer()
             
             VStack {
-                Text("By clicking \"Continue\", you agree to our Terms and acknowledge our Privacy Policy.")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding()
+                HStack {
+                    Text("By continuing, you agree to the ")
+                    
+                    Text("Terms")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "http://humuli.com/policies/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    
+                    Text(" and ")
+                    
+                    Text("Privacy Policy")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                }
+                .font(.footnote)
+                .foregroundColor(.gray)
 
                 Button(action: {
 

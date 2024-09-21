@@ -85,14 +85,14 @@ struct PodOptionsView: View {
 //                        }
 //                        HapticFeedback.generate()
 //                    }, color: .primary)
-                    MenuItemView(iconName: "chart.line.uptrend.xyaxis", text: "Trends", action: {
-                        dismiss()
-//                        onActivityLogSelected()
-                     
-                            navigationAction(.trends)
-                     
-                        HapticFeedback.generate()
-                    }, color: .primary)
+//                    MenuItemView(iconName: "chart.line.uptrend.xyaxis", text: "Trends", action: {
+//                        dismiss()
+////                        onActivityLogSelected()
+//                     
+//                            navigationAction(.trends)
+//                     
+//                        HapticFeedback.generate()
+//                    }, color: .primary)
                     
                     MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
                         dismiss()
@@ -102,13 +102,7 @@ struct PodOptionsView: View {
                      
                         HapticFeedback.generate()
                     }, color: .primary)
-                    //                
-                    //                MenuItemView(iconName: "gauge.with.needle", text: "Progress Tracker", action: {
-                    //                    dismiss()
-                    //                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    //                        print("Tapped Progress")
-                    //                    }
-                    //                }, color: .primary)
+
                     
                     Divider().padding(.vertical, 5)
                     
