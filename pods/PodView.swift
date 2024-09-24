@@ -22,6 +22,7 @@ enum NavigationDestination: Hashable {
             hasher.combine("activityLog")
         case .trends:
                   hasher.combine("trends")
+            
               
         }
     }
@@ -214,7 +215,8 @@ struct PodView: View {
             case .activityLog:
                 ActivityLogView(activityLogs: activityLogs)
             case .trends:
-                                TrendsView(activityLogs: activityLogs, podColumns: podColumns)
+//                                TrendsView(activityLogs: activityLogs, podColumns: podColumns)
+                ItemTrendsView(podItems: reorderedItems, activityLogs: activityLogs, podColumns: podColumns)
                             
             }
         }

@@ -162,18 +162,7 @@ struct ItemOptionsView: View {
         
         
     }
-//    private func fetchPods() {
-//         isLoadingPods = true
-//        networkManager.fetchPodsForUser(email: viewModel.email) { success, fetchedPods, error in
-//             isLoadingPods = false
-//             if success, let fetchedPods = fetchedPods {
-//                 self.pods = fetchedPods
-//             } else {
-//                 // Handle error (you might want to show an alert here)
-//                 print("Failed to fetch pods: \(error ?? "Unknown error")")
-//             }
-//         }
-//     }
+
     private func fetchPods() {
         isLoadingPods = true
         networkManager.fetchPodsForUser(email: viewModel.email) { [self] result in

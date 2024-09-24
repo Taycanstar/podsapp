@@ -1,27 +1,28 @@
 //
-//  TrendsView.swift
+//  ItemTrendsView.swift
 //  Podstack
 //
-//  Created by Dimi Nunez on 9/19/24.
+//  Created by Dimi Nunez on 9/23/24.
 //
 
 import SwiftUI
 
-struct TrendsView: View {
+struct ItemTrendsView: View {
+    let podItems: [PodItem]
     let activityLogs: [PodItemActivityLog]
     let podColumns: [PodColumn]
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         List {
-            ForEach(podColumns.filter { $0.type == "number" }, id: \.name) { column in
+            ForEach(podItems, id: \.id) { item in
                 VStack(spacing: 0) {
                     HStack {
-                        NavigationLink(destination: ColumnDetailView(column: column, activityLogs: activityLogs)) {
-                            Text(column.name)
+                        NavigationLink(destination: TrendsView(activityLogs: activityLogs.filter { $0.itemId == item.id }, podColumns: podColumns)) {
+                            Text(item.metadata)
                                 .font(.system(size: 16))
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 16)
+                                .padding(.vertical, 18)
                         }
                     }
                     .padding(.horizontal, 17)
@@ -36,19 +37,9 @@ struct TrendsView: View {
             .listRowBackground(Color("dkBg"))
         }
         .listStyle(PlainListStyle())
-        .navigationTitle("Trends")
+        .navigationTitle("Select Item")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color("dkBg"))
         .scrollContentBackground(.hidden)
-    }
-}
-
-struct ColumnDetailView: View {
-    let column: PodColumn
-    let activityLogs: [PodItemActivityLog]
-
-    var body: some View {
-        ColumnTrendView(column: column, activityLogs: activityLogs)
-//        Text("Hi")
     }
 }
