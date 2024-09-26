@@ -1,3 +1,4 @@
+
 //import SwiftUI
 //import Charts
 //
@@ -5,6 +6,9 @@
 //    let column: PodColumn
 //    let activityLogs: [PodItemActivityLog]
 //    @State private var chartData: [ChartDataPoint] = []
+//    @State private var startDate: Date = Date()
+//    @State private var endDate: Date = Date()
+//    @State private var currentMonth: String = ""
 //
 //    struct ChartDataPoint: Identifiable {
 //        let id = UUID()
@@ -13,30 +17,64 @@
 //    }
 //
 //    var body: some View {
-//        ZStack {
-//
+//        VStack(alignment: .leading, spacing: 10) {
+//            // Day label at the top
+//            HStack {
+//                Text("Day")
+//                    .font(.headline)
+//                    .padding(.horizontal)
+//                Spacer()
+//            }
+//            .background(Color.gray.opacity(0.2))
+//            .cornerRadius(8)
+//            
 //            ScrollView(.horizontal, showsIndicators: false) {
-//
-//                Chart(chartData) {datapoint in
-//                    Plot {
-//                        LineMark(x: .value("Date", datapoint.date),
-//                                 y: .value("Value", datapoint.value))
-//                        .foregroundStyle(by: .value("Value", column.name))
-//                        .symbol(by: .value("Value", column.name))
+//                VStack {
+//                    Chart {
+//                        ForEach(chartData) { datapoint in
+//                            LineMark(
+//                                x: .value("Date", datapoint.date),
+//                                y: .value("Value", datapoint.value)
+//                            )
+//                            .lineStyle(StrokeStyle(lineWidth: 2))
+//                            .foregroundStyle(Color.accentColor)
+//                            
+//                            PointMark(
+//                                x: .value("Date", datapoint.date),
+//                                y: .value("Value", datapoint.value)
+//                            )
+//                            .foregroundStyle(Color.accentColor)
+//                        }
 //                    }
-//                    .lineStyle(StrokeStyle(lineWidth:2))
-//                    .interpolationMethod(.catmullRom)
+//                    .chartXAxis {
+//                        AxisMarks(values: .stride(by: .day)) { value in
+//                            if let date = value.as(Date.self) {
+//                                AxisValueLabel {
+//                                    Text(date, format: .dateTime.day())
+//                                }
+//                                AxisGridLine()
+//                                AxisTick()
+//                            }
+//                        }
+//                    }
+//                    .chartYAxis {
+//                        AxisMarks(position: .leading)
+//                    }
+//                    .chartXScale(domain: startDate...endDate)
+//                    .chartYAxisLabel(column.name)
+//                    .frame(height: 300)
+//                    .frame(width: max(UIScreen.main.bounds.width - 40, CGFloat(chartData.count * 30)))
 //                    
+//                    // Dynamic month label
+//                    Text(currentMonth)
+//                        .font(.subheadline)
+//                        .padding(.top, 5)
 //                }
-//                .padding()
-//                .aspectRatio(1, contentMode: .fit)
-//                .chartForegroundStyleScale([column.name: Color.accentColor])
 //            }
 //            .padding()
 //        }
-//        .navigationBarTitle(column.name, displayMode: .inline)
-//        
 //        .padding()
+//        .navigationBarTitle(column.name, displayMode: .inline)
 //        .onAppear {
 //            updateChartData()
 //        }
@@ -44,24 +82,29 @@
 //
 //    private func updateChartData() {
 //        let calendar = Calendar.current
+//        let relevantLogs = activityLogs.filter { log in
+//            guard let value = numericValue(for: log) else { return false }
+//            return value > 0
+//        }.sorted { $0.loggedAt < $1.loggedAt }
 //        
-//        // Ensure we have data for every day in the range
-//        guard let startDate = activityLogs.map({ $0.loggedAt }).min(),
-//              let endDate = activityLogs.map({ $0.loggedAt }).max() else {
-//            return
+//        if let firstLog = relevantLogs.first, let lastLog = relevantLogs.last {
+//            startDate = calendar.startOfDay(for: firstLog.loggedAt)
+//            endDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: lastLog.loggedAt))!
+//            currentMonth = firstLog.loggedAt.formatted(.dateTime.month(.wide))
 //        }
 //        
-//        var currentDate = calendar.startOfDay(for: startDate)
-//        let endOfRange = calendar.startOfDay(for: endDate)
-//        
-//        while currentDate <= endOfRange {
-//            let logsForDay = activityLogs.filter { calendar.isDate($0.loggedAt, inSameDayAs: currentDate) }
-//            let averageValue = logsForDay.compactMap { numericValue(for: $0) }.reduce(0, +) / Double(logsForDay.count)
-//            chartData.append(ChartDataPoint(date: currentDate, value: averageValue.isNaN ? 0 : averageValue))
-//            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+//        chartData = relevantLogs.compactMap { log in
+//            guard let value = numericValue(for: log) else { return nil }
+//            let alignedDate = calendar.startOfDay(for: log.loggedAt)
+//            return ChartDataPoint(date: alignedDate, value: value)
 //        }
 //        
-//        chartData.sort { $0.date < $1.date }
+//        // Aggregate values for the same day
+//        let groupedData = Dictionary(grouping: chartData, by: { $0.date })
+//        chartData = groupedData.map { (date, points) in
+//            let averageValue = points.map { $0.value }.reduce(0, +) / Double(points.count)
+//            return ChartDataPoint(date: date, value: averageValue)
+//        }.sorted { $0.date < $1.date }
 //    }
 //
 //    private func numericValue(for log: PodItemActivityLog) -> Double? {
@@ -74,6 +117,7 @@
 //        }
 //    }
 //}
+
 import SwiftUI
 import Charts
 
@@ -83,15 +127,23 @@ struct ColumnTrendView: View {
     @State private var chartData: [ChartDataPoint] = []
     @State private var startDate: Date = Date()
     @State private var endDate: Date = Date()
-
+    
+    private let dayWidth: CGFloat = 50 // Width for each day
+    
     struct ChartDataPoint: Identifiable {
         let id = UUID()
         let date: Date
         let value: Double
     }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Text("Day")
+                .font(.headline)
+                .padding(.horizontal)
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 Chart {
                     ForEach(chartData) { datapoint in
@@ -124,12 +176,11 @@ struct ColumnTrendView: View {
                     AxisMarks(position: .leading)
                 }
                 .chartXScale(domain: startDate...endDate)
-                .chartXAxisLabel("Day", alignment: .center)
                 .chartYAxisLabel(column.name)
+                .frame(width: CGFloat(Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) * dayWidth + dayWidth)
                 .frame(height: 300)
-                .frame(width: max(UIScreen.main.bounds.width - 40, CGFloat(chartData.count * 30)))
-                .padding()
             }
+            .frame(height: 320) // Fixed height for the scroll view
         }
         .padding()
         .navigationBarTitle(column.name, displayMode: .inline)
@@ -137,7 +188,7 @@ struct ColumnTrendView: View {
             updateChartData()
         }
     }
-
+    
     private func updateChartData() {
         let calendar = Calendar.current
         let relevantLogs = activityLogs.filter { log in
@@ -152,27 +203,10 @@ struct ColumnTrendView: View {
         
         chartData = relevantLogs.compactMap { log in
             guard let value = numericValue(for: log) else { return nil }
-            let alignedDate = calendar.startOfDay(for: log.loggedAt)
-            return ChartDataPoint(date: alignedDate, value: value)
-        }
-        
-        // Aggregate values for the same day
-        let groupedData = Dictionary(grouping: chartData, by: { $0.date })
-        chartData = groupedData.map { (date, points) in
-            let averageValue = points.map { $0.value }.reduce(0, +) / Double(points.count)
-            return ChartDataPoint(date: date, value: averageValue)
-        }.sorted { $0.date < $1.date }
-        
-        print("Total logs: \(activityLogs.count)")
-        print("Chart data points: \(chartData.count)")
-        print("Date range: \(startDate) to \(endDate)")
-        
-        // Print each data point for debugging
-        chartData.forEach { point in
-            print("Date: \(point.date), Value: \(point.value)")
+            return ChartDataPoint(date: log.loggedAt, value: value)
         }
     }
-
+    
     private func numericValue(for log: PodItemActivityLog) -> Double? {
         guard let columnValue = log.columnValues[column.name] else { return nil }
         
