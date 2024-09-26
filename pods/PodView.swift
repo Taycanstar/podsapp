@@ -250,7 +250,7 @@ struct PodView: View {
             }
             
             self.activityLogs = pod.recentActivityLogs ?? []
-        
+            print(activityLogs, "logs")
         }
         .onDisappear {
             //            isTabBarVisible.wrappedValue = true
