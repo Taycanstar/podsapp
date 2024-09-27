@@ -117,7 +117,6 @@
 //        }
 //    }
 //}
-
 import SwiftUI
 import Charts
 
@@ -127,8 +126,10 @@ struct ColumnTrendView: View {
     @State private var chartData: [ChartDataPoint] = []
     @State private var dateRange: ClosedRange<Date> = Date()...Date()
     
-    private let dayWidth: CGFloat = 40 // Increased width for each day
+    private let dayWidth: CGFloat = 40 // Width for each day
     private let minGapBetweenPoints: CGFloat = 20 // Minimum gap between points
+    private let rightPaddingWidth: CGFloat = 100 // Width of blank space to add on the right
+    private let extraDays: Int = 3 // Number of days to add before and after the data range
     
     struct ChartDataPoint: Identifiable {
         let id = UUID()
@@ -162,23 +163,30 @@ struct ColumnTrendView: View {
                             )
                             .foregroundStyle(Color.accentColor)
                         }
+                        .padding()
                         .chartXAxis {
                             AxisMarks(values: .stride(by: .day)) { value in
-                                AxisValueLabel {
-                                    if let date = value.as(Date.self) {
-                                        Text(date, format: .dateTime.day())
+                                if let date = value.as(Date.self), date <= extendedDateRange.upperBound {
+                                    AxisValueLabel {
+                                        VStack(alignment: .leading) {
+                                            Text(date, format: .dateTime.day())
+                                            if date.day == 1 || value.index == 0 {
+                                                Text(date, format: .dateTime.month(.abbreviated))
+                                                    .font(.caption)
+                                            }
+                                        }
                                     }
+                                    AxisGridLine()
+                                    AxisTick()
                                 }
-                                AxisGridLine()
-                                AxisTick()
                             }
                         }
                         .chartYAxis {
                             AxisMarks(position: .trailing)
                         }
-                        .chartXScale(domain: dateRange)
+                        .chartXScale(domain: extendedDateRange)
                         .chartYAxisLabel(column.name, position: .trailing)
-                        .frame(width: max(geometry.size.width, calculateChartWidth()))
+                        .frame(width: calculateChartWidth())
                         .frame(height: 300)
                         .id("chart")
                     }
@@ -201,6 +209,13 @@ struct ColumnTrendView: View {
         }
     }
     
+    private var extendedDateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .day, value: -extraDays, to: dateRange.lowerBound) ?? dateRange.lowerBound
+        let endDate = calendar.date(byAdding: .day, value: extraDays, to: dateRange.upperBound) ?? dateRange.upperBound
+        return startDate...endDate
+    }
+    
     private func updateChartData() {
         chartData = activityLogs.compactMap { log -> ChartDataPoint? in
             guard let value = numericValue(for: log), value > 0 else { return nil }
@@ -214,13 +229,13 @@ struct ColumnTrendView: View {
     
     private func calculateChartWidth() -> CGFloat {
         let calendar = Calendar.current
-        guard let startDate = dateRange.lowerBound.timeIntervalSince1970 as? Double,
-              let endDate = dateRange.upperBound.timeIntervalSince1970 as? Double else {
-            return CGFloat(chartData.count) * dayWidth
+        guard let startDate = extendedDateRange.lowerBound.timeIntervalSince1970 as? Double,
+              let endDate = extendedDateRange.upperBound.timeIntervalSince1970 as? Double else {
+            return CGFloat(chartData.count + 2 * extraDays) * dayWidth + rightPaddingWidth
         }
         
         let numberOfDays = Int(ceil((endDate - startDate) / (24 * 60 * 60)))
-        return max(CGFloat(numberOfDays) * dayWidth, CGFloat(chartData.count) * (dayWidth + minGapBetweenPoints))
+        return max(CGFloat(numberOfDays) * dayWidth, CGFloat(chartData.count + 2 * extraDays) * (dayWidth + minGapBetweenPoints)) + rightPaddingWidth
     }
     
     private func numericValue(for log: PodItemActivityLog) -> Double? {
@@ -231,5 +246,11 @@ struct ColumnTrendView: View {
         case .string(let value): return Double(value)
         case .null: return nil
         }
+    }
+}
+
+extension Date {
+    var day: Int {
+        Calendar.current.component(.day, from: self)
     }
 }
