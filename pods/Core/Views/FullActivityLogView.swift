@@ -65,6 +65,9 @@ struct FullActivityLogView: View {
                                 .font(.body)
                                 .padding(.horizontal)
                         }
+                        Spacer(minLength: 10) // Add space before the delete button
+                                                
+                                                deleteLogButton
                             
                             
                     }
@@ -77,6 +80,22 @@ struct FullActivityLogView: View {
             .cornerRadius(20)
         }
     }
+    
+    private var deleteLogButton: some View {
+            Button(action: {
+                // Add delete action here
+                print("Delete log tapped")
+            }) {
+                Text("Delete log")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+
+            }
+            .padding(.horizontal)
+            .padding(.top, 20)
+        }
     
     private var columnValuesGrid: some View {
         let columns = Array(log.columnValues).filter { _, value in

@@ -1929,7 +1929,6 @@ struct LogActivityView: View {
     }
 }
 
-
 struct InlineNumberPicker: View {
     @Binding var value: Int
     
