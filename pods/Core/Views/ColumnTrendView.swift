@@ -7,20 +7,24 @@ struct ColumnTrendView: View {
     let activityLogs: [PodItemActivityLog]
     @State private var chartData: [ChartDataPoint] = []
     @State private var weeklyChartData: [WeeklyChartDataPoint] = []
+    @State private var monthlyChartData: [MonthlyChartDataPoint] = []
     @State private var dateRange: ClosedRange<Date> = Date()...Date()
     @State private var selectedView: ChartView = .day
     @Environment(\.colorScheme) private var colorScheme
     
     private let dayWidth: CGFloat = 40 // Width for each day
     private let weekWidth: CGFloat = 40 // Width for each week
+    private let monthWidth: CGFloat = 40 // Width for each month
     private let minGapBetweenPoints: CGFloat = 20 // Minimum gap between points
     private let rightPaddingWidth: CGFloat = 100 // Width of blank space to add on the right
     private let extraDays: Int = 3 // Number of days to add before and after the data range
     private let extraWeeks: Int = 3 // Number of weeks to add before and after the data range
+    private let extraMonths: Int = 3 // Number of months to add before and after the data range
     
     enum ChartView: String, CaseIterable {
         case day = "Day"
         case week = "Week"
+        case month = "Month"
     }
     
     struct ChartDataPoint: Identifiable {
@@ -37,6 +41,14 @@ struct ColumnTrendView: View {
         let value: Double
     }
     
+    struct MonthlyChartDataPoint: Identifiable {
+        let id = UUID()
+        let month: Int
+        let year: Int
+        let date: Date
+        let value: Double
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             timeRangeSelector
@@ -45,10 +57,13 @@ struct ColumnTrendView: View {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
                         Group {
-                            if selectedView == .day {
+                            switch selectedView {
+                            case .day:
                                 dayChart
-                            } else {
+                            case .week:
                                 weekChart
+                            case .month:
+                                monthChart
                             }
                         }
                         .padding()
@@ -58,18 +73,11 @@ struct ColumnTrendView: View {
                     }
                     .frame(height: 320) // Fixed height for the scroll view
                     .onAppear {
-                        // Scroll to the most recent data point
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            withAnimation {
-                                proxy.scrollTo("chart", anchor: .trailing)
-                            }
-                        }
+                        scrollToMostRecent(proxy: proxy)
                     }
-                    
                     .onChange(of: selectedView) { _ in
-                                         // Scroll to the most recent data point when switching between day and week views
-                                         scrollToMostRecent(proxy: proxy)
-                                     }
+                        scrollToMostRecent(proxy: proxy)
+                    }
                 }
             }
         }
@@ -81,12 +89,12 @@ struct ColumnTrendView: View {
     }
     
     private func scrollToMostRecent(proxy: ScrollViewProxy) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                withAnimation {
-                    proxy.scrollTo("chart", anchor: .trailing)
-                }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation {
+                proxy.scrollTo("chart", anchor: .trailing)
             }
         }
+    }
     
     private var timeRangeSelector: some View {
         HStack(spacing: 0) {
@@ -199,7 +207,57 @@ struct ColumnTrendView: View {
         .chartYAxisLabel(column.name, position: .trailing)
     }
     
+    private var monthChart: some View {
+        let yearFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .none // Ensures no thousands separator
+            return formatter
+        }()
+        
+        return Chart(monthlyChartData) { datapoint in
+            LineMark(
+                x: .value("Month", datapoint.date),
+                y: .value("Value", datapoint.value)
+            )
+            .interpolationMethod(.catmullRom)
+            .lineStyle(StrokeStyle(lineWidth: 2))
+            .foregroundStyle(Color.accentColor)
+            
+            PointMark(
+                x: .value("Month", datapoint.date),
+                y: .value("Value", datapoint.value)
+            )
+            .foregroundStyle(Color.accentColor)
+        }
+        .chartXAxis {
+            AxisMarks(values: .stride(by: .month)) { value in
+                if let date = value.as(Date.self) {
+                    let month = Calendar.current.component(.month, from: date)
+                    let year = Calendar.current.component(.year, from: date)
+                    AxisValueLabel {
+                        VStack(alignment: .leading) {
+                            Text(date, format: .dateTime.month(.abbreviated))
+                            if month == 1 || value.index == 0 {
+                                // Use the yearFormatter to avoid commas
+                                Text(yearFormatter.string(from: NSNumber(value: year)) ?? "\(year)")
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                    AxisGridLine()
+                    AxisTick()
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .trailing)
+        }
+        .chartXScale(domain: extendedMonthlyDateRange)
+        .chartXAxisLabel("Month", position: .bottomTrailing)
+        .chartYAxisLabel(column.name, position: .trailing)
+    }
 
+    
     private var extendedDateRange: ClosedRange<Date> {
         let calendar = Calendar.current
         let startDate = calendar.date(byAdding: .day, value: -extraDays, to: dateRange.lowerBound) ?? dateRange.lowerBound
@@ -220,17 +278,17 @@ struct ColumnTrendView: View {
         }
     }
     
-    private func updateChartData() {
-        chartData = activityLogs.compactMap { log -> ChartDataPoint? in
-            guard let value = numericValue(for: log), value > 0 else { return nil }
-            return ChartDataPoint(date: log.loggedAt, value: value)
-        }.sorted { $0.date < $1.date }
-        
-        if let firstLog = chartData.first, let lastLog = chartData.last {
-            dateRange = firstLog.date...max(lastLog.date, Date())
+    private var extendedMonthlyDateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        if let firstDate = monthlyChartData.first?.date,
+           let lastDate = monthlyChartData.last?.date {
+            let startDate = calendar.date(byAdding: .month, value: -extraMonths, to: firstDate) ?? firstDate
+            let endDate = calendar.date(byAdding: .month, value: extraMonths, to: lastDate) ?? lastDate
+            return startDate...endDate
+        } else {
+            let today = Date()
+            return today...today
         }
-        
-        updateWeeklyChartData()
     }
     
     private func updateWeeklyChartData() {
@@ -258,8 +316,48 @@ struct ColumnTrendView: View {
         }.sorted { $0.date < $1.date }
     }
     
+    private func updateChartData() {
+        chartData = activityLogs.compactMap { log -> ChartDataPoint? in
+            guard let value = numericValue(for: log), value > 0 else { return nil }
+            return ChartDataPoint(date: log.loggedAt, value: value)
+        }.sorted { $0.date < $1.date }
+        
+        if let firstLog = chartData.first, let lastLog = chartData.last {
+            dateRange = firstLog.date...max(lastLog.date, Date())
+        }
+        
+        updateWeeklyChartData()
+        updateMonthlyChartData()
+    }
+    
+    private func updateMonthlyChartData() {
+        let calendar = Calendar.current
+        var monthlyData: [Int: (sum: Double, count: Int, date: Date)] = [:]
+        
+        for log in activityLogs {
+            guard let value = numericValue(for: log) else { continue }
+            let month = calendar.component(.month, from: log.loggedAt)
+            let year = calendar.component(.year, from: log.loggedAt)
+            let monthYear = year * 100 + month // Unique identifier for each month
+            
+            if let (sum, count, _) = monthlyData[monthYear] {
+                monthlyData[monthYear] = (sum + value, count + 1, log.loggedAt)
+            } else {
+                monthlyData[monthYear] = (value, 1, log.loggedAt)
+            }
+        }
+        
+        monthlyChartData = monthlyData.map { (monthYear, data) in
+            let year = monthYear / 100
+            let month = monthYear % 100
+            let averageValue = data.sum / Double(data.count)
+            return MonthlyChartDataPoint(month: month, year: year, date: data.date, value: averageValue)
+        }.sorted { $0.date < $1.date }
+    }
+    
     private func calculateChartWidth() -> CGFloat {
-        if selectedView == .day {
+        switch selectedView {
+        case .day:
             let calendar = Calendar.current
             guard let startDate = extendedDateRange.lowerBound.timeIntervalSince1970 as? Double,
                   let endDate = extendedDateRange.upperBound.timeIntervalSince1970 as? Double else {
@@ -268,9 +366,12 @@ struct ColumnTrendView: View {
             
             let numberOfDays = Int(ceil((endDate - startDate) / (24 * 60 * 60)))
             return max(CGFloat(numberOfDays) * dayWidth, CGFloat(chartData.count + 2 * extraDays) * (dayWidth + minGapBetweenPoints)) + rightPaddingWidth
-        } else {
+        case .week:
             let numberOfWeeks = weeklyChartData.count + 2 * extraWeeks
             return max(CGFloat(numberOfWeeks) * weekWidth, CGFloat(numberOfWeeks) * (weekWidth + minGapBetweenPoints)) + rightPaddingWidth
+        case .month:
+            let numberOfMonths = monthlyChartData.count + 2 * extraMonths
+            return max(CGFloat(numberOfMonths) * monthWidth, CGFloat(numberOfMonths) * (monthWidth + minGapBetweenPoints)) + rightPaddingWidth
         }
     }
     
