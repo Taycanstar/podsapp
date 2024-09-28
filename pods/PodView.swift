@@ -336,9 +336,7 @@ struct PodView: View {
                     item: reorderedItems[index],
                     podColumns: podColumns,
                     podId: pod.id,
-//                    onActivityLogged: {
-//                        showTemporaryCheckmark(for: reorderedItems[index].id)
-//                    }
+
                     onActivityLogged: { newLog in
                                    self.onActivityLogged(newLog: newLog)
                                }
@@ -1092,7 +1090,7 @@ struct CardDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var expandedColumn: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
-
+    
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
@@ -1115,7 +1113,7 @@ struct CardDetailView: View {
         self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
     }
-
+    
     var body: some View {
         ZStack {
             NavigationView {
@@ -1124,66 +1122,66 @@ struct CardDetailView: View {
                         .edgesIgnoringSafeArea(.all)
                     
                     ScrollView {
-
+                        
                         VStack(alignment: .leading, spacing: 20) {
-                               TextField("Item Name", text: $itemName)
-                                   .font(.system(size: 18)).bold()
-                                   .background(Color.clear)
-                                   .focused($isItemNameFocused)
-                               
-                               ForEach(podColumns, id: \.name) { column in
-                                   VStack(alignment: .leading) {
-                                       Text(column.name)
-                                           .font(.system(size: 15))
-                                           .foregroundColor(.primary)
-                                           .padding(.horizontal, 5)
-                                           .kerning(0.2)
-                                       
-                                       if column.type == "text" {
-                                           TextField("", text: Binding(
-                                               get: { self.columnValues[column.name] ?? "" },
-                                               set: { self.columnValues[column.name] = $0 }
-                                           ))
-                                           .foregroundColor(.primary)
-                                           .textFieldStyle(PlainTextFieldStyle())
-                                           .padding(.vertical, 12)
-                                           .padding(.horizontal)
-                                           .background(
-                                               RoundedRectangle(cornerRadius: 12)
-                                                   .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-                                           )
-                                       } else if column.type == "number" {
-                                           Button(action: {
-                                               withAnimation {
-                                                   if expandedColumn == column.name {
-                                                       expandedColumn = nil
-                                                   } else {
-                                                       expandedColumn = column.name
-                                                   }
-                                               }
-                                           }) {
-                                               Text(self.columnValues[column.name] ?? "")
-                                                   .foregroundColor(.primary)
-                                                   .frame(maxWidth: .infinity, alignment: .leading)
-                                                   .padding(.vertical, 12)
-                                                   .padding(.horizontal)
-                                                   .background(
-                                                       RoundedRectangle(cornerRadius: 12)
-                                                           .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-                                                   )
-                                           }
-                                           
-                                           if expandedColumn == column.name {
-                                               InlineNumberPicker(value: Binding(
-                                                   get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
-                                                   set: { self.columnValues[column.name] = String($0) }
-                                               ))
-                                               .frame(height: 150)
-                                               .transition(.opacity)
-                                           }
-                                       }
-                                   }
-                               }
+                            TextField("Item Name", text: $itemName)
+                                .font(.system(size: 18)).bold()
+                                .background(Color.clear)
+                                .focused($isItemNameFocused)
+                            
+                            ForEach(podColumns, id: \.name) { column in
+                                VStack(alignment: .leading) {
+                                    Text(column.name)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 5)
+                                        .kerning(0.2)
+                                    
+                                    if column.type == "text" {
+                                        TextField("", text: Binding(
+                                            get: { self.columnValues[column.name] ?? "" },
+                                            set: { self.columnValues[column.name] = $0 }
+                                        ))
+                                        .foregroundColor(.primary)
+                                        .textFieldStyle(PlainTextFieldStyle())
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                        )
+                                    } else if column.type == "number" {
+                                        Button(action: {
+                                            withAnimation {
+                                                if expandedColumn == column.name {
+                                                    expandedColumn = nil
+                                                } else {
+                                                    expandedColumn = column.name
+                                                }
+                                            }
+                                        }) {
+                                            Text(self.columnValues[column.name] ?? "")
+                                                .foregroundColor(.primary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, 12)
+                                                .padding(.horizontal)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                                )
+                                        }
+                                        
+                                        if expandedColumn == column.name {
+                                            InlineNumberPicker(value: Binding(
+                                                get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
+                                                set: { self.columnValues[column.name] = String($0) }
+                                            ))
+                                            .frame(height: 150)
+                                            .transition(.opacity)
+                                        }
+                                    }
+                                }
+                            }
                             addColumnButton
                         }
                         
@@ -1218,27 +1216,27 @@ struct CardDetailView: View {
                 .allowsHitTesting(!showItemOptions)
             }
             GeometryReader { geometry in
-
+                
                 ItemOptionsView(showItemOptionsSheet: $showItemOptions, onDeleteItem: deleteItem, onEditName: {
                     isItemNameFocused = true
                 }, itemName: item.metadata,
                                 onDuplicateItem: duplicateItem,  onMoveItem: moveItemToPod, currentPodId: podId,
                                 dismissCardDetailView: { presentationMode.wrappedValue.dismiss()})
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .offset(y: itemOptionsOffset)
-                                   .onChange(of: showItemOptions) { oldValue, newValue in
-                                       withAnimation(.snappy()) {
-                                           itemOptionsOffset = newValue ? 0 : geometry.size.height
-                                       }
-                                   }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .offset(y: itemOptionsOffset)
+                .onChange(of: showItemOptions) { oldValue, newValue in
+                    withAnimation(.snappy()) {
+                        itemOptionsOffset = newValue ? 0 : geometry.size.height
+                    }
+                }
                 
                 
             }
             .edgesIgnoringSafeArea(.all)
         }
         .onAppear {
-                   itemOptionsOffset = UIScreen.main.bounds.height
-               }
+            itemOptionsOffset = UIScreen.main.bounds.height
+        }
         .alert(isPresented: $showDeleteConfirmation) {
             Alert(
                 title: Text("Delete Item"),
@@ -1247,28 +1245,28 @@ struct CardDetailView: View {
                     deleteItem()
                 },
                 secondaryButton: .cancel())}
-                
+        
     }
     
     
     private func moveItemToPod(_ toPodId: Int) {
-          networkManager.moveItemToPod(itemId: item.id, fromPodId: podId, toPodId: toPodId) { result in
-              DispatchQueue.main.async {
-                  switch result {
-                  case .success:
-                      // Remove the item from the current pod's items
-                      if let index = allItems.firstIndex(where: { $0.id == item.id }) {
-                          allItems.remove(at: index)
-                      }
-                      presentationMode.wrappedValue.dismiss()
-                      // You might want to show a success message or update UI here
-                  case .failure(let error):
-                      print("Failed to move item: \(error)")
-                      // You might want to show an error message to the user here
-                  }
-              }
-          }
-      }
+        networkManager.moveItemToPod(itemId: item.id, fromPodId: podId, toPodId: toPodId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Remove the item from the current pod's items
+                    if let index = allItems.firstIndex(where: { $0.id == item.id }) {
+                        allItems.remove(at: index)
+                    }
+                    presentationMode.wrappedValue.dismiss()
+                    // You might want to show a success message or update UI here
+                case .failure(let error):
+                    print("Failed to move item: \(error)")
+                    // You might want to show an error message to the user here
+                }
+            }
+        }
+    }
     
     private func duplicateItem() {
         let newItem = PodItem(
@@ -1295,7 +1293,7 @@ struct CardDetailView: View {
             }
         }
     }
-
+    
     
     private var addColumnButton: some View {
         HStack {
@@ -1321,23 +1319,23 @@ struct CardDetailView: View {
     }
     
     private func deleteItem() {
-           networkManager.deletePodItem(itemId: item.id) { success, errorMessage in
-               DispatchQueue.main.async {
-                   if success {
-                       if let index = allItems.firstIndex(where: { $0.id == item.id }) {
-                           allItems.remove(at: index)
-                       }
-                       presentationMode.wrappedValue.dismiss()
-                   
-                   } else {
-                       print("Failed to delete item: \(errorMessage ?? "Unknown error")")
-                       // You might want to show an error alert to the user here
-                   }
-               }
-           }
-       }
-
-
+        networkManager.deletePodItem(itemId: item.id) { success, errorMessage in
+            DispatchQueue.main.async {
+                if success {
+                    if let index = allItems.firstIndex(where: { $0.id == item.id }) {
+                        allItems.remove(at: index)
+                    }
+                    presentationMode.wrappedValue.dismiss()
+                    
+                } else {
+                    print("Failed to delete item: \(errorMessage ?? "Unknown error")")
+                    // You might want to show an error alert to the user here
+                }
+            }
+        }
+    }
+    
+    
     private func addNewColumn(title: String, type: String) {
         newColumnName = title
         newColumnType = type // This should be "number" or "text"
@@ -1365,16 +1363,62 @@ struct CardDetailView: View {
             }
         }
     }
-
     
+    
+    //    private func saveChanges() {
+    //        let updatedColumnValues = columnValues.mapValues { value -> ColumnValue in
+    //            if let intValue = Int(value) {
+    //                return .number(intValue)
+    //            } else if value.isEmpty {
+    //                return .null
+    //            } else {
+    //                return .string(value)
+    //            }
+    //        }
+    //
+    //        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+    //            DispatchQueue.main.async {
+    //                switch result {
+    //                case .success:
+    //                    self.item.metadata = self.itemName
+    //                    self.item.columnValues = updatedColumnValues
+    //                    self.presentationMode.wrappedValue.dismiss()
+    //                case .failure(let error):
+    //                    print("Failed to update pod item: \(error)")
+    //                }
+    //            }
+    //        }
+    //    }
     private func saveChanges() {
-        let updatedColumnValues = columnValues.mapValues { value -> ColumnValue in
-            if let intValue = Int(value) {
-                return .number(intValue)
-            } else if value.isEmpty {
-                return .null
+        // Filter out unchanged or empty fields
+        var updatedColumnValues: [String: ColumnValue] = [:]
+        
+        for (key, value) in columnValues {
+            if let originalValue = item.columnValues?[key] {
+                // Extract the actual value from ColumnValue and compare appropriately
+                switch originalValue {
+                case .string(let originalStringValue):
+                    if originalStringValue != value { // Compare string values
+                        updatedColumnValues[key] = .string(value)
+                    }
+                case .number(let originalNumberValue):
+                    if let intValue = Int(value), originalNumberValue != intValue { // Compare number values
+                        updatedColumnValues[key] = .number(intValue)
+                    }
+                case .null:
+                    if !value.isEmpty { // If the original value was null but now there's a value
+                        updatedColumnValues[key] = .string(value)
+                    }
+                }
             } else {
-                return .string(value)
+                // If the value is new or doesn't exist, update it
+                if let intValue = Int(value) {
+                    updatedColumnValues[key] = .number(intValue)
+                } else if value.isEmpty {
+                    updatedColumnValues[key] = .null
+                } else {
+                    updatedColumnValues[key] = .string(value)
+                }
             }
         }
         
@@ -1510,6 +1554,194 @@ struct AddColumnView: View {
 }
 
 
+//struct LogActivityView: View {
+//    let item: PodItem
+//    let podColumns: [PodColumn]
+//    let podId: Int
+//    @Environment(\.presentationMode) var presentationMode
+//    @Environment(\.colorScheme) var colorScheme
+//    @State private var columnValues: [String: ColumnValue]
+//    @State private var activityNote: String = ""
+//    @State private var expandedColumn: String?
+//    @State private var isSubmitting = false
+//    @State private var errorMessage: String?
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//    @State private var showNotesInput = false
+////    var onActivityLogged: () -> Void
+//    var onActivityLogged: (PodItemActivityLog) -> Void
+//
+//    init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
+//        self.item = item
+//        self.podColumns = podColumns
+//        self.podId = podId
+//        self.onActivityLogged = onActivityLogged
+//        _columnValues = State(initialValue: item.columnValues ?? [:])
+//        
+//    }
+//
+//    var body: some View {
+//        NavigationView {
+//            ScrollView {
+//                VStack(alignment: .leading, spacing: 20) {
+//          
+//                    
+//                    ForEach(podColumns, id: \.name) { column in
+//                        VStack(alignment: .leading, spacing: 5) {
+//                            Text(column.name)
+//                                .font(.system(size: 15))
+//                                .foregroundColor(.primary)
+//                                .padding(.horizontal, 5)
+//                                .kerning(0.2)
+//                            
+//                            if column.type == "text" {
+//                                TextField("", text: Binding(
+//                                    get: { self.stringValue(for: column.name) },
+//                                    set: { self.columnValues[column.name] = .string($0) }
+//                                ))
+//                                .foregroundColor(.primary)
+//                                .textFieldStyle(PlainTextFieldStyle())
+//                                .padding(.vertical, 12)
+//                                .padding(.horizontal)
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 12)
+//                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                )
+//                            } else if column.type == "number" {
+//                                Button(action: {
+//                                    withAnimation {
+//                                        if expandedColumn == column.name {
+//                                            expandedColumn = nil
+//                                        } else {
+//                                            expandedColumn = column.name
+//                                        }
+//                                    }
+//                                }) {
+//                                    Text(self.stringValue(for: column.name))
+//                                        .foregroundColor(.primary)
+//                                        .frame(maxWidth: .infinity, alignment: .leading)
+//                                        .padding(.vertical, 12)
+//                                        .padding(.horizontal)
+//                                        .background(
+//                                            RoundedRectangle(cornerRadius: 12)
+//                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                        )
+//                                }
+//                                
+//                                if expandedColumn == column.name {
+//                                    InlineNumberPicker(value: Binding(
+//                                        get: { self.numberValue(for: column.name) },
+//                                        set: { self.columnValues[column.name] = .number($0) }
+//                                    ))
+//                                    .frame(height: 150)
+//                                    .transition(.opacity)
+//                                }
+//                            }
+//                        }
+//                    }
+//                    if showNotesInput {
+//                                            VStack(alignment: .leading, spacing: 5) {
+//                                                Text("Notes")
+//                                                    .font(.system(size: 15))
+//                                                    .foregroundColor(.primary)
+//                                                    .padding(.horizontal, 5)
+//                                                    .kerning(0.2)
+//                                                
+////                                                TextEditor(text: $activityNote)
+////                                                    .frame(height: 100)
+////                                                    .padding(.vertical, 8)
+////                                                    .padding(.horizontal)
+////                                                    .background(
+////                                                        RoundedRectangle(cornerRadius: 12)
+////                                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+////                                                    )
+//                                                CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("mxdBg")))
+//                                                     .frame(height: 100)
+//                                                     .padding(.vertical, 8)
+//                                                     .padding(.horizontal)
+//                                                     .background(
+//                                                         RoundedRectangle(cornerRadius: 12)
+//                                                             .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                                     )
+//                                               
+//                                            }
+//                                        } else {
+//                                            Button(action: {
+//                                                withAnimation {
+//                                                    showNotesInput = true
+//                                                }
+//                                            }) {
+//                                                Text("+ Add notes")
+//                                                    .foregroundColor(.accentColor)
+//                                            }
+//                                        }
+//                    
+//                    if let error = errorMessage {
+//                        Text(error)
+//                            .foregroundColor(.red)
+//                    }
+//                }
+//                .padding()
+//            }
+//            .background(Color("mxdBg").edgesIgnoringSafeArea(.all))
+//            .navigationTitle("Log Activity")
+//            .navigationBarTitleDisplayMode(.inline)
+//            .navigationBarItems(
+//                leading: Button(action: {
+//                    presentationMode.wrappedValue.dismiss()
+//                }) {
+//                    Image(systemName: "xmark")
+//                        .foregroundColor(.primary)
+//                },
+//                trailing: Button("Done") {
+//                    submitActivity()
+//                }
+//                .foregroundColor(Color.accentColor)
+//            )
+//        }
+//    }
+//
+//    private func stringValue(for columnName: String) -> String {
+//        switch columnValues[columnName] ?? .null {
+//        case .string(let value): return value
+//        case .number(let value): return String(value)
+//        case .null: return ""
+//        }
+//    }
+//
+//    private func numberValue(for columnName: String) -> Int {
+//        switch columnValues[columnName] ?? .null {
+//        case .number(let value): return value
+//        default: return 0
+//        }
+//    }
+//
+//    private func submitActivity() {
+//            isSubmitting = true
+//            NetworkManager().createActivityLog(
+//                itemId: item.id,
+//                podId: podId,
+//                userEmail: viewModel.email,
+//                columnValues: columnValues,
+//                podColumns: podColumns,
+//                notes: activityNote
+//            ) { result in
+//                DispatchQueue.main.async {
+//                    isSubmitting = false
+//                    switch result {
+//                    case .success(let newLog):
+//                        print("Activity logged successfully")
+//                        onActivityLogged(newLog)
+//                        presentationMode.wrappedValue.dismiss()
+//                    case .failure(let error):
+//                        print("Failed to log activity: \(error)")
+//                        errorMessage = error.localizedDescription
+//                    }
+//                }
+//            }
+//        }
+//
+//}
+
 struct LogActivityView: View {
     let item: PodItem
     let podColumns: [PodColumn]
@@ -1523,7 +1755,6 @@ struct LogActivityView: View {
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showNotesInput = false
-//    var onActivityLogged: () -> Void
     var onActivityLogged: (PodItemActivityLog) -> Void
 
     init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
@@ -1532,105 +1763,106 @@ struct LogActivityView: View {
         self.podId = podId
         self.onActivityLogged = onActivityLogged
         _columnValues = State(initialValue: item.columnValues ?? [:])
-        
     }
 
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-          
                     
-                    ForEach(podColumns, id: \.name) { column in
+                    // Handle case when there are no columns
+                    if podColumns.isEmpty {
+                        Text("No columns available to log.")
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        ForEach(podColumns, id: \.name) { column in
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(column.name)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 5)
+                                    .kerning(0.2)
+                                
+                                if column.type == "text" {
+                                    TextField("", text: Binding(
+                                        get: { self.stringValue(for: column.name) },
+                                        set: { self.columnValues[column.name] = .string($0) }
+                                    ))
+                                    .foregroundColor(.primary)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                    )
+                                } else if column.type == "number" {
+                                    Button(action: {
+                                        withAnimation {
+                                            if expandedColumn == column.name {
+                                                expandedColumn = nil
+                                            } else {
+                                                expandedColumn = column.name
+                                            }
+                                        }
+                                    }) {
+                                        Text(self.stringValue(for: column.name))
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, 12)
+                                            .padding(.horizontal)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                            )
+                                    }
+                                    
+                                    if expandedColumn == column.name {
+                                        InlineNumberPicker(value: Binding(
+                                            get: { self.numberValue(for: column.name) },
+                                            set: { self.columnValues[column.name] = .number($0) }
+                                        ))
+                                        .frame(height: 150)
+                                        .transition(.opacity)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Notes section
+                    if showNotesInput {
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(column.name)
+                            Text("Notes")
                                 .font(.system(size: 15))
                                 .foregroundColor(.primary)
                                 .padding(.horizontal, 5)
                                 .kerning(0.2)
                             
-                            if column.type == "text" {
-                                TextField("", text: Binding(
-                                    get: { self.stringValue(for: column.name) },
-                                    set: { self.columnValues[column.name] = .string($0) }
-                                ))
-                                .foregroundColor(.primary)
-                                .textFieldStyle(PlainTextFieldStyle())
-                                .padding(.vertical, 12)
+                            CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("mxdBg")))
+                                .frame(height: 100)
+                                .padding(.vertical, 8)
                                 .padding(.horizontal)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
                                 )
-                            } else if column.type == "number" {
-                                Button(action: {
-                                    withAnimation {
-                                        if expandedColumn == column.name {
-                                            expandedColumn = nil
-                                        } else {
-                                            expandedColumn = column.name
-                                        }
-                                    }
-                                }) {
-                                    Text(self.stringValue(for: column.name))
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                        )
-                                }
-                                
-                                if expandedColumn == column.name {
-                                    InlineNumberPicker(value: Binding(
-                                        get: { self.numberValue(for: column.name) },
-                                        set: { self.columnValues[column.name] = .number($0) }
-                                    ))
-                                    .frame(height: 150)
-                                    .transition(.opacity)
-                                }
+                        }
+                    } else {
+                        Button(action: {
+                            withAnimation {
+                                showNotesInput = true
                             }
+                        }) {
+                            Text("+ Add notes")
+                                .foregroundColor(.accentColor)
                         }
                     }
-                    if showNotesInput {
-                                            VStack(alignment: .leading, spacing: 5) {
-                                                Text("Notes")
-                                                    .font(.system(size: 15))
-                                                    .foregroundColor(.primary)
-                                                    .padding(.horizontal, 5)
-                                                    .kerning(0.2)
-                                                
-//                                                TextEditor(text: $activityNote)
-//                                                    .frame(height: 100)
-//                                                    .padding(.vertical, 8)
-//                                                    .padding(.horizontal)
-//                                                    .background(
-//                                                        RoundedRectangle(cornerRadius: 12)
-//                                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-//                                                    )
-                                                CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("mxdBg")))
-                                                     .frame(height: 100)
-                                                     .padding(.vertical, 8)
-                                                     .padding(.horizontal)
-                                                     .background(
-                                                         RoundedRectangle(cornerRadius: 12)
-                                                             .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                                     )
-                                               
-                                            }
-                                        } else {
-                                            Button(action: {
-                                                withAnimation {
-                                                    showNotesInput = true
-                                                }
-                                            }) {
-                                                Text("+ Add notes")
-                                                    .foregroundColor(.accentColor)
-                                            }
-                                        }
-                    
+
+                    // Error message if any
                     if let error = errorMessage {
                         Text(error)
                             .foregroundColor(.red)
@@ -1638,7 +1870,7 @@ struct LogActivityView: View {
                 }
                 .padding()
             }
-            .background(Color("mxdBg").edgesIgnoringSafeArea(.all))
+            .background(Color("mxdBg").edgesIgnoringSafeArea(.all)) // Apply background color
             .navigationTitle("Log Activity")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
@@ -1671,57 +1903,31 @@ struct LogActivityView: View {
         }
     }
 
-//    private func submitActivity() {
-//          isSubmitting = true
-//          NetworkManager().createActivityLog(
-//              itemId: item.id,
-//              podId: podId,
-//              userEmail: viewModel.email,
-//              columnValues: columnValues,
-//              podColumns: podColumns,
-//              notes: activityNote
-//          ) { result in
-//              DispatchQueue.main.async {
-//                  isSubmitting = false
-//                  switch result {
-//                  case .success:
-//                      print("Activity logged successfully")
-//                      onActivityLogged()
-//                      presentationMode.wrappedValue.dismiss()
-//                  case .failure(let error):
-//                      print("Failed to log activity: \(error)")
-//                      errorMessage = error.localizedDescription
-//                  }
-//              }
-//          }
-//      }
     private func submitActivity() {
-            isSubmitting = true
-            NetworkManager().createActivityLog(
-                itemId: item.id,
-                podId: podId,
-                userEmail: viewModel.email,
-                columnValues: columnValues,
-                podColumns: podColumns,
-                notes: activityNote
-            ) { result in
-                DispatchQueue.main.async {
-                    isSubmitting = false
-                    switch result {
-                    case .success(let newLog):
-                        print("Activity logged successfully")
-                        onActivityLogged(newLog)
-                        presentationMode.wrappedValue.dismiss()
-                    case .failure(let error):
-                        print("Failed to log activity: \(error)")
-                        errorMessage = error.localizedDescription
-                    }
+        isSubmitting = true
+        NetworkManager().createActivityLog(
+            itemId: item.id,
+            podId: podId,
+            userEmail: viewModel.email,
+            columnValues: columnValues,
+            podColumns: podColumns,
+            notes: activityNote
+        ) { result in
+            DispatchQueue.main.async {
+                isSubmitting = false
+                switch result {
+                case .success(let newLog):
+                    print("Activity logged successfully")
+                    onActivityLogged(newLog)
+                    presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    print("Failed to log activity: \(error)")
+                    errorMessage = error.localizedDescription
                 }
             }
         }
-
+    }
 }
-
 
 
 struct InlineNumberPicker: View {
