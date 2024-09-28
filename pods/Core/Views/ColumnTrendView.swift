@@ -166,7 +166,7 @@ struct ColumnTrendView: View {
         
         return Chart(weeklyChartData) { datapoint in
             LineMark(
-                x: .value("Week", datapoint.date),
+                x: .value("Week", Calendar.current.dateInterval(of: .weekOfYear, for: datapoint.date)?.start ?? datapoint.date),
                 y: .value("Value", datapoint.value)
             )
             .interpolationMethod(.catmullRom)
@@ -174,7 +174,7 @@ struct ColumnTrendView: View {
             .foregroundStyle(Color.accentColor)
             
             PointMark(
-                x: .value("Week", datapoint.date),
+                x: .value("Week", Calendar.current.dateInterval(of: .weekOfYear, for: datapoint.date)?.start ?? datapoint.date),
                 y: .value("Value", datapoint.value)
             )
             .foregroundStyle(Color.accentColor)
@@ -210,13 +210,13 @@ struct ColumnTrendView: View {
     private var monthChart: some View {
         let yearFormatter: NumberFormatter = {
             let formatter = NumberFormatter()
-            formatter.numberStyle = .none // Ensures no thousands separator
+            formatter.numberStyle = .none
             return formatter
         }()
         
         return Chart(monthlyChartData) { datapoint in
             LineMark(
-                x: .value("Month", datapoint.date),
+                x: .value("Month", Calendar.current.dateInterval(of: .month, for: datapoint.date)?.start ?? datapoint.date),
                 y: .value("Value", datapoint.value)
             )
             .interpolationMethod(.catmullRom)
@@ -224,7 +224,7 @@ struct ColumnTrendView: View {
             .foregroundStyle(Color.accentColor)
             
             PointMark(
-                x: .value("Month", datapoint.date),
+                x: .value("Month", Calendar.current.dateInterval(of: .month, for: datapoint.date)?.start ?? datapoint.date),
                 y: .value("Value", datapoint.value)
             )
             .foregroundStyle(Color.accentColor)
@@ -238,8 +238,7 @@ struct ColumnTrendView: View {
                         VStack(alignment: .leading) {
                             Text(date, format: .dateTime.month(.abbreviated))
                             if month == 1 || value.index == 0 {
-                                // Use the yearFormatter to avoid commas
-                                Text(yearFormatter.string(from: NSNumber(value: year)) ?? "\(year)")
+                                Text("\(year)")
                                     .font(.caption)
                             }
                         }
@@ -256,7 +255,6 @@ struct ColumnTrendView: View {
         .chartXAxisLabel("Month", position: .bottomTrailing)
         .chartYAxisLabel(column.name, position: .trailing)
     }
-
     
     private var extendedDateRange: ClosedRange<Date> {
         let calendar = Calendar.current
