@@ -3105,6 +3105,75 @@ class NetworkManager {
           }.resume()
       }
 
+//    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let serializedColumnData = podColumns.compactMap { column -> [String: Any]? in
+//            guard let value = columnValues[column.name] else { return nil }
+//            
+//            let serializedValue: Any
+//            switch value {
+//            case .string(let str):
+//                serializedValue = str
+//            case .number(let num):
+//                serializedValue = num
+//            case .null:
+//                serializedValue = NSNull()
+//            }
+//            
+//            return [
+//                "name": column.name,
+//                "type": column.type,
+//                "value": serializedValue
+//            ]
+//        }
+//
+//        let body: [String: Any] = [
+//            "itemId": itemId,
+//            "podId": podId,
+//            "userEmail": userEmail,
+//            "columnData": serializedColumnData,
+//            "notes": notes
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error: \(error.localizedDescription)")
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let data = data else {
+//                print("No data received from server")
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//
+//            do {
+//                let decoder = JSONDecoder()
+//                let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
+//                let activityLog = PodItemActivityLog(from: logJSON)
+//                completion(.success(activityLog))
+//            } catch {
+//                print("JSON parsing error: \(error.localizedDescription)")
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
     func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
             completion(.failure(NetworkError.invalidURL))
@@ -3166,7 +3235,7 @@ class NetworkManager {
             do {
                 let decoder = JSONDecoder()
                 let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
-                let activityLog = PodItemActivityLog(from: logJSON)
+                let activityLog = try PodItemActivityLog(from: logJSON)
                 completion(.success(activityLog))
             } catch {
                 print("JSON parsing error: \(error.localizedDescription)")

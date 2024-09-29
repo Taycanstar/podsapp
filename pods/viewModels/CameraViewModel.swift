@@ -195,7 +195,40 @@ struct PodItem: Identifiable {
     
 }
 
-struct PodItemActivityLog: Identifiable {
+//struct PodItemActivityLog: Identifiable {
+//    let id: Int
+//    let itemId: Int
+//    let itemLabel: String
+//    let userEmail: String
+//    let loggedAt: Date
+//    let columnValues: [String: ColumnValue]
+//    let notes: String
+//    let userName: String  // Add this line
+//
+//    init(from json: PodItemActivityLogJSON) {
+//        self.id = json.id
+//        self.itemId = json.itemId
+//        self.itemLabel = json.itemLabel
+//        self.userEmail = json.userEmail
+//        self.userName = json.userName  // Add this line
+//        
+//        let formatter = ISO8601DateFormatter()
+//        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+//        if let date = formatter.date(from: json.loggedAt) {
+//            self.loggedAt = date
+//        } else {
+//            // Fallback parsing method
+//            let fallbackFormatter = DateFormatter()
+//            fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+//            self.loggedAt = fallbackFormatter.date(from: json.loggedAt) ?? Date()
+//        }
+//        
+//        self.columnValues = json.columnValues
+//        self.notes = json.notes
+//
+//    }
+//}
+struct PodItemActivityLog: Identifiable, Comparable {
     let id: Int
     let itemId: Int
     let itemLabel: String
@@ -203,29 +236,39 @@ struct PodItemActivityLog: Identifiable {
     let loggedAt: Date
     let columnValues: [String: ColumnValue]
     let notes: String
-    let userName: String  // Add this line
+    let userName: String
 
-    init(from json: PodItemActivityLogJSON) {
+    init(from json: PodItemActivityLogJSON) throws {
         self.id = json.id
         self.itemId = json.itemId
         self.itemLabel = json.itemLabel
         self.userEmail = json.userEmail
-        self.userName = json.userName  // Add this line
-        
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: json.loggedAt) {
-            self.loggedAt = date
-        } else {
-            // Fallback parsing method
-            let fallbackFormatter = DateFormatter()
-            fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
-            self.loggedAt = fallbackFormatter.date(from: json.loggedAt) ?? Date()
-        }
-        
+        self.userName = json.userName
         self.columnValues = json.columnValues
         self.notes = json.notes
 
+        let dateFormatters = [
+            ISO8601DateFormatter(),
+            { () -> ISO8601DateFormatter in
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return formatter
+            }()
+        ]
+
+        if let date = dateFormatters.lazy.compactMap({ $0.date(from: json.loggedAt) }).first {
+            self.loggedAt = date
+        } else {
+            throw NSError(domain: "PodItemActivityLog", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.loggedAt)"])
+        }
+    }
+
+    static func < (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
+        return lhs.loggedAt > rhs.loggedAt
+    }
+
+    static func == (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 
@@ -353,8 +396,19 @@ extension Pod {
         self.description = podJSON.description
         self.type = podJSON.type
         self.teamId = podJSON.teamId
-        self.recentActivityLogs = podJSON.recentActivityLogs?.compactMap { PodItemActivityLog(from: $0) }
-        
+//        self.recentActivityLogs = podJSON.recentActivityLogs?.compactMap { PodItemActivityLog(from: $0) }
+        if let recentActivityLogs = podJSON.recentActivityLogs {
+                  self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
+                      do {
+                          return try PodItemActivityLog(from: logJSON)
+                      } catch {
+                          print("Error parsing activity log: \(error)")
+                          return nil
+                      }
+                  }
+              } else {
+                  self.recentActivityLogs = nil
+              }
         
     }
 }

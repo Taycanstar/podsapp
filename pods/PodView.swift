@@ -351,16 +351,37 @@ struct PodView: View {
     }
     
     
+//    func onActivityLogged(newLog: PodItemActivityLog) {
+//          showTemporaryCheckmark(for: newLog.itemId)
+//          DispatchQueue.main.async {
+//              self.activityLogs.insert(newLog, at: 0)  // Add new log at the beginning
+//              // Optionally, limit the number of logs kept in memory
+//              if self.activityLogs.count > 100 {  // For example, keep only the latest 100 logs
+//                  self.activityLogs = Array(self.activityLogs.prefix(100))
+//              }
+//          }
+//      }
     func onActivityLogged(newLog: PodItemActivityLog) {
-          showTemporaryCheckmark(for: newLog.itemId)
-          DispatchQueue.main.async {
-              self.activityLogs.insert(newLog, at: 0)  // Add new log at the beginning
-              // Optionally, limit the number of logs kept in memory
-              if self.activityLogs.count > 100 {  // For example, keep only the latest 100 logs
-                  self.activityLogs = Array(self.activityLogs.prefix(100))
-              }
-          }
-      }
+        showTemporaryCheckmark(for: newLog.itemId)
+        DispatchQueue.main.async {
+            // Insert the new log at the correct position
+            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
+            self.activityLogs.insert(newLog, at: insertionIndex)
+            
+            // Ensure the logs are sorted
+            self.activityLogs.sort()
+            
+            // Optionally, limit the number of logs kept in memory
+            if self.activityLogs.count > 100 {
+                self.activityLogs = Array(self.activityLogs.prefix(100))
+            }
+            
+            // Update the pod's recentActivityLogs if necessary
+            self.pod.recentActivityLogs = self.activityLogs
+            
+           
+        }
+    }
     
     private func refreshItem(with id: Int) {
         networkManager.fetchPodItem(podId: pod.id, itemId: id, userEmail: viewModel.email) { result in
