@@ -11,6 +11,10 @@ struct FullActivityLogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     let log: PodItemActivityLog
+    let onDelete: () -> Void
+    @State private var showDeleteAlert = false
+    @State private var isDeleting = false
+    
     
     var body: some View {
         ZStack {
@@ -79,23 +83,47 @@ struct FullActivityLogView: View {
             .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
             .cornerRadius(20)
         }
+        .alert("Delete Log", isPresented: $showDeleteAlert) {
+                  Button("Cancel", role: .cancel) { }
+                  Button("Delete", role: .destructive) {
+                      deleteLog()
+                  }
+              } message: {
+                  Text("Are you sure you want to delete this log?")
+              }
     }
     
     private var deleteLogButton: some View {
-            Button(action: {
-                // Add delete action here
-                print("Delete log tapped")
-            }) {
-                Text("Delete log")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-
-            }
-            .padding(.horizontal)
-            .padding(.top, 20)
+        Button(action: {
+            showDeleteAlert = true
+        }) {
+            Text("Delete log")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
         }
+        .padding(.horizontal)
+        .padding(.top, 20)
+        .disabled(isDeleting)
+    }
+    
+    private func deleteLog() {
+           isDeleting = true
+           NetworkManager().deleteActivityLog(logId: log.id) { result in
+               DispatchQueue.main.async {
+                   isDeleting = false
+                   switch result {
+                   case .success:
+                       onDelete()
+                       dismiss()
+                   case .failure(let error):
+                       print("Failed to delete log: \(error.localizedDescription)")
+                       // You might want to show an error alert here
+                   }
+               }
+           }
+       }
     
     private var columnValuesGrid: some View {
         let columns = Array(log.columnValues).filter { _, value in

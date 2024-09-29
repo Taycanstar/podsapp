@@ -3568,5 +3568,33 @@ class NetworkManager {
             throw NetworkError.invalidResponse
         }
     }
+    
+    func deleteActivityLog(logId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/delete-activity-log/\(logId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                completion(.success(()))
+            } else {
+                completion(.failure(NetworkError.invalidResponse))
+            }
+        }.resume()
+    }
 }
 

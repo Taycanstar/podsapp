@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct ActivityLogView: View {
-    let activityLogs: [PodItemActivityLog]
+//    let activityLogs: [PodItemActivityLog]
+    @State private var activityLogs: [PodItemActivityLog]
     @Environment(\.dismiss) private var dismiss
+    
+    init(activityLogs: [PodItemActivityLog]) {
+           _activityLogs = State(initialValue: activityLogs)
+       }
 
     
     var body: some View {
@@ -12,7 +17,10 @@ struct ActivityLogView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(activityLogs) { log in
-                        ActivityLogItemView(log: log)
+//                        ActivityLogItemView(log: log)
+                        ActivityLogItemView(log: log, onDelete: { deletedLog in
+                                                   removeLog(deletedLog)
+                                               })
                     }
                 }
                 .padding()
@@ -22,19 +30,23 @@ struct ActivityLogView: View {
         .navigationTitle("Activity Log")
         .navigationBarTitleDisplayMode(.inline)
     }
+    
+    private func removeLog(_ log: PodItemActivityLog) {
+            activityLogs.removeAll { $0.id == log.id }
+        }
 }
 
 struct ActivityLogItemView: View {
     let log: PodItemActivityLog
+    let onDelete: (PodItemActivityLog) -> Void
     @State private var showFullLog = false
+    
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(log.userName)
                     .font(.system(size: 15))
                     .fontWeight(.medium)
-//                    .font(.headline)
-                
                 Text(log.itemLabel)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -63,7 +75,11 @@ struct ActivityLogItemView: View {
                    print("Formatted loggedAt: \(formattedDate(log.loggedAt))")
                }
         .sheet(isPresented: $showFullLog) {
-                  FullActivityLogView(log: log)
+//                  FullActivityLogView(log: log)
+            FullActivityLogView(log: log, onDelete: {
+                           onDelete(log)
+                           showFullLog = false
+                       })
               }
     }
     
