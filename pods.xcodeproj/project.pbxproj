@@ -26,8 +26,6 @@
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
 		3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */; };
 		3638CCAA2C954BA900CCA675 /* TeamInvitationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA92C954BA900CCA675 /* TeamInvitationView.swift */; };
-		36411D2F2C32867D0034E36D /* app1.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D2E2C32867D0034E36D /* app1.mp4 */; };
-		36411D312C3286890034E36D /* app2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 36411D302C3286890034E36D /* app2.mp4 */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -135,8 +133,6 @@
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
 		3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamOptionsView.swift; sourceTree = "<group>"; };
 		3638CCA92C954BA900CCA675 /* TeamInvitationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInvitationView.swift; sourceTree = "<group>"; };
-		36411D2E2C32867D0034E36D /* app1.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app1.mp4; path = pods/Assets.xcassets/app1.dataset/app1.mp4; sourceTree = "<group>"; };
-		36411D302C3286890034E36D /* app2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = app2.mp4; path = pods/Assets.xcassets/app2.dataset/app2.mp4; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -356,8 +352,6 @@
 			isa = PBXGroup;
 			children = (
 				36E097352C4C74CE00F354E6 /* .lldbinit */,
-				36411D302C3286890034E36D /* app2.mp4 */,
-				36411D2E2C32867D0034E36D /* app1.mp4 */,
 				3698E4FB2C24968F0040AF60 /* .gitignore */,
 				3698E4F32C2483F90040AF60 /* config.release.plist */,
 				36C458B82B7421100060355F /* pods */,
@@ -578,8 +572,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				36411D312C3286890034E36D /* app2.mp4 in Resources */,
-				36411D2F2C32867D0034E36D /* app1.mp4 in Resources */,
 				3698E4FC2C24968F0040AF60 /* .gitignore in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
@@ -949,7 +941,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -989,7 +981,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionProfile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -1016,7 +1008,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -1056,7 +1048,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionProfile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
