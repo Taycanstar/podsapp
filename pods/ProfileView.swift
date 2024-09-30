@@ -39,10 +39,10 @@ struct ProfileView: View {
                                 Text(viewModel.username)
                                     .foregroundColor(iconColor)
                             }
-//                            NavigationLink(destination: SubscriptionView()) {
-//                                Label("Subscription", systemImage: "plus.app")
-//                                    .foregroundColor(iconColor)
-//                            }
+                            NavigationLink(destination: SubscriptionView()) {
+                                Label("Subscription", systemImage: "plus.app")
+                                    .foregroundColor(iconColor)
+                            }
                             NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                                     .foregroundColor(iconColor)

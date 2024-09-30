@@ -530,7 +530,7 @@ struct PodView: View {
                                      navigationPath.append(NavigationDestination.player(items: reorderedItems, initialIndex: index))
                                  }
             } else {
-                Image(systemName: "video.badge.plus")
+                Image(systemName: "camera")
                     .font(.system(size: 20))
                     .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
                     .onTapGesture {
