@@ -5,12 +5,12 @@ import SwiftUI
 class NetworkManager {
 
   
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   
 
-//    let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://192.168.1.79:8000"
 
-//    let baseUrl = "http://172.20.10.2:8000"
+//    let baseUrl = "http://172.20.10.3:8000"
 
     
     enum NetworkError: Error {
@@ -3665,5 +3665,63 @@ class NetworkManager {
             }
         }.resume()
     }
+ 
+
+        func purchaseSubscription(userEmail: String, productId: String, transactionId: String) async throws -> [String: Any] {
+            guard let url = URL(string: "\(baseUrl)/purchase-subscription/") else {
+                throw NetworkError.invalidURL
+            }
+
+            let body: [String: Any] = [
+                "user_email": userEmail,
+                "product_id": productId,
+                "transaction_id": transactionId
+            ]
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                guard let jsonResult = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    throw NetworkError.decodingError
+                }
+                return jsonResult
+            } else {
+                throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
+            }
+        }
+    
+    
+    func updateSubscriptionStatus(userEmail: String, productId: String, status: String, expirationDate: String?) async throws -> [String: Any] {
+          let url = URL(string: "\(baseUrl)/update-subscription/")!
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+          let body: [String: Any] = [
+              "user_email": userEmail,
+              "product_id": productId,
+              "status": status,
+              "expiration_date": expirationDate ?? NSNull()
+          ]
+          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+          let (data, response) = try await URLSession.shared.data(for: request)
+
+          guard let httpResponse = response as? HTTPURLResponse,
+                (200...299).contains(httpResponse.statusCode) else {
+              throw NetworkError.invalidResponse
+          }
+
+          return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+      }
 }
 

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import StoreKit
 
 
 
@@ -68,6 +69,7 @@ struct ActiveSubscriptionView: View {
     @State private var showUpgradeSheet = false
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @State private var isManagingSubscriptions = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -122,29 +124,42 @@ struct ActiveSubscriptionView: View {
                 }
             }
             
+//            Button(action: {
+//                showCancelAlert = true
+//            }) {
+//                Text("Cancel Subscription")
+//                    .font(.system(size: 16))
+//                    .fontWeight(.regular)
+//                    .foregroundColor(.red)
+//                    .frame(maxWidth: .infinity)
+//                    .padding()
+//                    .background(Color.red.opacity(0.1))
+//                    .cornerRadius(10)
+//            }
+//            .alert(isPresented: $showCancelAlert) {
+//                Alert(
+//                    title: Text("Cancel Subscription"),
+//                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(formatSubscriptionDate(viewModel.subscriptionExpiresAt ?? "at the end of the billing period"))."),
+//                    primaryButton: .destructive(Text("Cancel Subscription")) {
+////                        viewModel.cancelSubscription()
+//                        print("tapped cancel")
+//                    },
+//                    secondaryButton: .cancel()
+//                )
+//            }
             Button(action: {
-                showCancelAlert = true
-            }) {
-                Text("Cancel Subscription")
-                    .font(.system(size: 16))
-                    .fontWeight(.regular)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(10)
-            }
-            .alert(isPresented: $showCancelAlert) {
-                Alert(
-                    title: Text("Cancel Subscription"),
-                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(formatSubscriptionDate(viewModel.subscriptionExpiresAt ?? "at the end of the billing period"))."),
-                    primaryButton: .destructive(Text("Cancel Subscription")) {
-//                        viewModel.cancelSubscription()
-                        print("tapped cancel")
-                    },
-                    secondaryButton: .cancel()
-                )
-            }
+                isManagingSubscriptions = true
+                          openManageSubscriptions()
+                      }) {
+                          Text("Manage Subscription")
+                              .font(.system(size: 16))
+                              .fontWeight(.regular)
+                              .foregroundColor(.blue)
+                              .frame(maxWidth: .infinity)
+                              .padding()
+                              .background(Color.blue.opacity(0.1))
+                              .cornerRadius(10)
+                      }
             
             Text(getSubscriptionInfoText())
                            .font(.caption)
@@ -152,14 +167,14 @@ struct ActiveSubscriptionView: View {
                            .multilineTextAlignment(.center)
                            .padding()
                        
-            
-            Button(action: {
-                // Handle About Subscriptions and Privacy
-            }) {
-                Text("About Subscriptions and Privacy")
-                    .font(.footnote)
-                    .foregroundColor(.blue)
-            }
+//            
+//            Button(action: {
+//                // Handle About Subscriptions and Privacy
+//            }) {
+//                Text("About Subscriptions and Privacy")
+//                    .font(.footnote)
+//                    .foregroundColor(.blue)
+//            }
         }
         .padding()
         .background(Color("mdBg"))
@@ -167,8 +182,36 @@ struct ActiveSubscriptionView: View {
         .sheet(isPresented: $showUpgradeSheet) {
                    PricingView(tier: .teamMonthly, subscriptionManager: subscriptionManager)
                }
+        .onChange(of: isManagingSubscriptions) { newValue in
+                 if !newValue {
+                     // User has returned from subscription management
+                     Task {
+                         await subscriptionManager.checkAndUpdateSubscriptionStatus()
+//                         await viewModel.refreshSubscriptionInfo()
+                     }
+                 }
+             }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                   if isManagingSubscriptions {
+                       isManagingSubscriptions = false
+                   }
+               }
     }
     
+    private func openManageSubscriptions() {
+         if #available(iOS 15.0, *) {
+             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                 Task {
+                     try? await AppStore.showManageSubscriptions(in: scene)
+                 }
+             }
+         } else {
+             // Fallback for iOS versions before 15.0
+             if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
+             }
+         }
+     }
     private func getSubscriptionInfoText() -> String {
             if viewModel.subscriptionStatus == "active" {
                 if viewModel.subscriptionRenews {
@@ -343,150 +386,6 @@ struct PageIndicator: View {
         }
     }
 }
-//struct PricingView: View {
-//    let tier: SubscriptionTier
-//    @ObservedObject var subscriptionManager: SubscriptionManager
-//    @Environment(\.presentationMode) var presentationMode
-//    @State private var selectedPlan: PlanType = .annual
-//    
-//    enum PlanType {
-//        case annual, monthly
-//    }
-//    
-//    var savingsPercentage: Int {
-//        switch tier {
-//        case .plusMonthly, .plusYearly:
-//            return 33
-//        case .teamMonthly, .teamYearly:
-//            return 22
-//        case .none:
-//            return 0
-//        }
-//    }
-//    
-//    var body: some View {
-//        NavigationView {
-//            VStack(spacing: 20) {
-//                Text(tier.name)
-//                    .font(.title)
-//                    .fontWeight(.bold)
-//                
-//                VStack(spacing: 15) {
-//                    PricingOptionView(
-//                        title: "Annual plan",
-//                        price: subscriptionManager.annualPrice(for: tier),
-//                        savings: "SAVE \(savingsPercentage)%",
-//                        billingInfo: subscriptionManager.annualBillingInfo(for: tier),
-//                        isSelected: selectedPlan == .annual,
-//                        action: { selectedPlan = .annual }
-//                    )
-//                    
-//                    PricingOptionView(
-//                        title: "Monthly plan",
-//                        price: subscriptionManager.monthlyPrice(for: tier),
-//                        billingInfo: subscriptionManager.monthlyBillingInfo(for: tier),
-//                        isSelected: selectedPlan == .monthly,
-//                        action: { selectedPlan = .monthly }
-//                    )
-//                }
-//                .padding()
-//                
-//                Button(action: {
-////                    subscriptionManager.purchase(tier: tier, planType: selectedPlan)
-////                    presentationMode.wrappedValue.dismiss()
-//                    Task {
-//                        do {
-//                            try await subscriptionManager.purchase(tier: tier, planType: selectedPlan)
-//                            presentationMode.wrappedValue.dismiss()
-//                        } catch {
-//                            print("Failed to purchase: \(error)")
-//                            // Handle the error, e.g., show an alert to the user
-//                        }
-//                    }
-//                }) {
-//                    Text("Subscribe & Pay")
-//                        .font(.headline)
-//                        .foregroundColor(.white)
-//                        .frame(maxWidth: .infinity)
-//                        .padding()
-//                        .background(Color.accentColor)
-//                        .cornerRadius(10)
-//                }
-//                .padding()
-//                
-//                Text("By subscribing, you agree to our Purchaser Terms of Service. Subscriptions auto-renew until canceled, as described in the Terms. Cancel anytime. Cancel at least 24 hours prior to renewal to avoid additional charges.")
-//                    .font(.caption)
-//                    .foregroundColor(.secondary)
-//                    .padding()
-//            }
-//            .navigationBarTitle("Choose a Plan", displayMode: .inline)
-//            .navigationBarItems(trailing: Button("Close") {
-//                presentationMode.wrappedValue.dismiss()
-//            })
-//        }
-//    }
-//}
-//
-//struct PricingOptionView: View {
-//    let title: String
-//    let price: String
-//    var savings: String? = nil
-//    let billingInfo: String
-//    let isSelected: Bool
-//    let action: () -> Void
-//    
-//    var body: some View {
-//        Button(action: action) {
-//            VStack(alignment: .leading, spacing: 5) {
-//                HStack {
-//                    Text(title)
-//                        .font(.headline)
-//                    if let savings = savings {
-//                        Text(savings)
-//                            .font(.subheadline)
-//                            .foregroundColor(.green)
-//                            .padding(.horizontal, 5)
-//                            .background(Color.green.opacity(0.2))
-//                            .cornerRadius(5)
-//                    }
-//                    Spacer()
-//                    Text(price)
-//                        .font(.headline)
-//                }
-//                Text(billingInfo)
-//                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
-//            }
-//            .padding()
-//            .background(Color("mdBg"))
-//            .cornerRadius(15)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 15)
-//                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
-//            )
-//        }
-//        .buttonStyle(PlainButtonStyle())
-//    }
-//}
-//
-//
-//extension DateFormatter {
-//    static let subscriptionDateFormatter: DateFormatter = {
-//        let formatter = DateFormatter()
-//        formatter.dateFormat = "MMMM d, yyyy"
-//        return formatter
-//    }()
-//}
-//
-//func formatSubscriptionDate(_ dateString: String) -> String {
-//    let dateFormatter = ISO8601DateFormatter()
-//    dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-//    
-//    if let date = dateFormatter.date(from: dateString) {
-//        return DateFormatter.subscriptionDateFormatter.string(from: date)
-//    }
-//    return "Unknown"
-//}
 
 
 struct PricingView: View {
@@ -496,6 +395,7 @@ struct PricingView: View {
     @State private var selectedPlan: PlanType = .annual
     @State private var showError = false
     @State private var errorMessage = ""
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     enum PlanType {
         case annual, monthly
@@ -541,14 +441,19 @@ struct PricingView: View {
                 
                 Button(action: {
                     Task {
-                        do {
-                            try await subscriptionManager.purchase(tier: tier, planType: selectedPlan)
-                            presentationMode.wrappedValue.dismiss()
-                        } catch {
-                            errorMessage = error.localizedDescription
-                            showError = true
-                        }
-                    }
+                               do {
+                                   try await subscriptionManager.purchase(
+                                       tier: tier,
+                                       planType: selectedPlan,
+                                       userEmail: viewModel.email,
+                                       onboardingViewModel: viewModel
+                                   )
+                                   presentationMode.wrappedValue.dismiss()
+                               } catch {
+                                   errorMessage = error.localizedDescription
+                                   showError = true
+                               }
+                           }
                 }) {
                     Text("Subscribe & Pay")
                         .font(.headline)

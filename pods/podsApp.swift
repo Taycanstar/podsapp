@@ -15,6 +15,7 @@ struct podsApp: App {
     @StateObject var homeViewModel = HomeViewModel()
     @StateObject private var themeManager = ThemeManager()
     @StateObject private var deepLinkHandler = DeepLinkHandler()
+    @StateObject private var subscriptionManager = SubscriptionManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
@@ -44,6 +45,7 @@ struct podsApp: App {
                               }
          
         }
+
     }
 }
 

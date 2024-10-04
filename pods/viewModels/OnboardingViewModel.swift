@@ -10,7 +10,7 @@ class OnboardingViewModel: ObservableObject {
         case welcome
         case login
     }
-
+    
     @Published var currentStep: OnboardingStep = .landing
     @Published var email: String = ""
     @Published var region: String = ""
@@ -22,9 +22,9 @@ class OnboardingViewModel: ObservableObject {
     @Published var profileColor: String = ""
     
     // Add these new properties for subscription information
-      @Published var subscriptionStatus: String = "none"
-      @Published var subscriptionPlan: String?
-      @Published var subscriptionExpiresAt: String?
+    @Published var subscriptionStatus: String = "none"
+    @Published var subscriptionPlan: String?
+    @Published var subscriptionExpiresAt: String?
     @Published var subscriptionRenews: Bool = false
     @Published var subscriptionSeats: Int?
     @Published var canCreateNewTeam: Bool = false
@@ -65,11 +65,9 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func updateActiveWorkspace(workspaceId: Int) {
-            self.activeWorkspaceId = workspaceId
-            UserDefaults.standard.set(workspaceId, forKey: "activeWorkspaceId")
-        }
-
-      
-
+        self.activeWorkspaceId = workspaceId
+        UserDefaults.standard.set(workspaceId, forKey: "activeWorkspaceId")
+    }
     
+
 }

@@ -31,7 +31,7 @@ struct ContentView: View {
         @State private var subscriptionStatus: String = "none"
         @State private var subscriptionPlan: String?
         @State private var subscriptionExpiresAt: Date?
-
+    @State private var forceRefresh: Bool = false
 
     @State private var showAddSheet = false
     @State private var showQuickPodView = false
@@ -108,9 +108,12 @@ struct ContentView: View {
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
         }
+  
+        .id(forceRefresh)
         .onChange(of: isAuthenticated) { _, newValue in
             if newValue {
                 fetchInitialPods()
+                
             }
         }
 //        .sheet(isPresented: $showTourView) {
@@ -150,6 +153,12 @@ struct ContentView: View {
                            fetchSubscriptionInfo()
                        }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
+                 fetchSubscriptionInfo()
+             }
+             .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+                 forceRefresh.toggle()
+             }
         .onChange(of: isAuthenticated) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
         }
