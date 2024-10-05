@@ -251,6 +251,7 @@ struct PodView: View {
             
             self.activityLogs = pod.recentActivityLogs ?? []
             print(activityLogs, "logs")
+            fetchFullPodDetails()
         }
         .onDisappear {
             //            isTabBarVisible.wrappedValue = true
@@ -351,16 +352,26 @@ struct PodView: View {
     }
     
     
-//    func onActivityLogged(newLog: PodItemActivityLog) {
-//          showTemporaryCheckmark(for: newLog.itemId)
-//          DispatchQueue.main.async {
-//              self.activityLogs.insert(newLog, at: 0)  // Add new log at the beginning
-//              // Optionally, limit the number of logs kept in memory
-//              if self.activityLogs.count > 100 {  // For example, keep only the latest 100 logs
-//                  self.activityLogs = Array(self.activityLogs.prefix(100))
-//              }
-//          }
-//      }
+    private func fetchFullPodDetails() {
+        networkManager.fetchFullPodDetails(email: viewModel.email, podId: pod.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let fullPod):
+                    self.pod = fullPod
+                    self.reorderedItems = fullPod.items
+                    self.podColumns = fullPod.columns
+                    self.visibleColumns = fullPod.visibleColumns
+                    self.currentTitle = fullPod.title
+                    self.currentDescription = fullPod.description ?? ""
+                    self.currentType = fullPod.type ?? ""
+                    print("Pod details fetched successfully!")
+                case .failure(let error):
+                    print("Failed to load pod details: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
     func onActivityLogged(newLog: PodItemActivityLog) {
         showTemporaryCheckmark(for: newLog.itemId)
         DispatchQueue.main.async {

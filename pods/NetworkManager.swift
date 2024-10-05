@@ -743,6 +743,103 @@ class NetworkManager {
             }
         }.resume()
     }
+//    func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
+//          let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
+//          
+//          guard let url = URL(string: urlString) else {
+//              completion(.failure(NetworkError.invalidURL))
+//              return
+//          }
+//          
+//          var request = URLRequest(url: url)
+//          request.httpMethod = "GET"
+//          
+//          URLSession.shared.dataTask(with: request) { data, response, error in
+//              if let error = error {
+//                  completion(.failure(error))
+//                  return
+//              }
+//              
+//              guard let data = data else {
+//                  completion(.failure(NetworkError.noData))
+//                  return
+//              }
+//              
+//              do {
+//                  let decoder = JSONDecoder()
+//                  decoder.dateDecodingStrategy = .iso8601
+//                  let podJSON = try decoder.decode(PodJSON.self, from: data)
+//                  let pod = Pod(from: podJSON)
+//                  completion(.success(pod))
+//              } catch {
+//                  print("Decoding error: \(error)")
+//                  completion(.failure(error))
+//              }
+//          }.resume()
+//      }
+    func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
+         let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
+         
+         guard let url = URL(string: urlString) else {
+             completion(.failure(NetworkError.invalidURL))
+             return
+         }
+         
+         var request = URLRequest(url: url)
+         request.httpMethod = "GET"
+         
+         URLSession.shared.dataTask(with: request) { data, response, error in
+             if let error = error {
+                 completion(.failure(error))
+                 return
+             }
+             
+             guard let data = data else {
+                 completion(.failure(NetworkError.noData))
+                 return
+             }
+             
+             do {
+                 let decoder = JSONDecoder()
+                 
+                 // Create a date formatter for the 'created_at' field
+                 let createdAtFormatter = DateFormatter()
+                 createdAtFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+                 
+                 // Create an ISO8601DateFormatter for the 'lastVisited' field
+                 let iso8601Formatter = ISO8601DateFormatter()
+                 iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                 
+                 decoder.dateDecodingStrategy = .custom { decoder in
+                     let container = try decoder.singleValueContainer()
+                     let dateString = try container.decode(String.self)
+                     
+                     // Try parsing with 'created_at' format first
+                     if let date = createdAtFormatter.date(from: dateString) {
+                         return date
+                     }
+                     
+                     // If that fails, try ISO8601 format (for 'lastVisited')
+                     if let date = iso8601Formatter.date(from: dateString) {
+                         return date
+                     }
+                     
+                     // If both fail, throw an error
+                     throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+                 }
+                 
+                 let podJSON = try decoder.decode(PodJSON.self, from: data)
+                 let pod = Pod(from: podJSON)
+                 completion(.success(pod))
+             } catch {
+                 print("Decoding error: \(error)")
+                 if let dataString = String(data: data, encoding: .utf8) {
+                     print("Received data: \(dataString)")
+                 }
+                 completion(.failure(error))
+             }
+         }.resume()
+     }
 
 
     func fetchWorkspacesForUser(email: String, completion: @escaping (Bool, [Workspace]?, String?) -> Void) {

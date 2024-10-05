@@ -195,39 +195,6 @@ struct PodItem: Identifiable {
     
 }
 
-//struct PodItemActivityLog: Identifiable {
-//    let id: Int
-//    let itemId: Int
-//    let itemLabel: String
-//    let userEmail: String
-//    let loggedAt: Date
-//    let columnValues: [String: ColumnValue]
-//    let notes: String
-//    let userName: String  // Add this line
-//
-//    init(from json: PodItemActivityLogJSON) {
-//        self.id = json.id
-//        self.itemId = json.itemId
-//        self.itemLabel = json.itemLabel
-//        self.userEmail = json.userEmail
-//        self.userName = json.userName  // Add this line
-//        
-//        let formatter = ISO8601DateFormatter()
-//        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-//        if let date = formatter.date(from: json.loggedAt) {
-//            self.loggedAt = date
-//        } else {
-//            // Fallback parsing method
-//            let fallbackFormatter = DateFormatter()
-//            fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
-//            self.loggedAt = fallbackFormatter.date(from: json.loggedAt) ?? Date()
-//        }
-//        
-//        self.columnValues = json.columnValues
-//        self.notes = json.notes
-//
-//    }
-//}
 struct PodItemActivityLog: Identifiable, Comparable {
     let id: Int
     let itemId: Int
@@ -311,7 +278,7 @@ struct PodJSON: Codable {
     let id: Int
     let title: String
     let created_at: String
-    let items: [PodItemJSON]
+    let items: [PodItemJSON]?
     var templateId: Int?
     let workspace: String?
     var isFavorite: Bool?
@@ -385,7 +352,7 @@ extension Pod {
     init(from podJSON: PodJSON) {
         self.id = podJSON.id
         self.title = podJSON.title
-        self.items = podJSON.items.map { PodItem(from: $0) }
+        self.items = podJSON.items?.map { PodItem(from: $0) } ?? []
         self.templateId = podJSON.templateId
         self.workspace = podJSON.workspace ?? "Main workspace"
         self.isFavorite = podJSON.isFavorite
