@@ -126,25 +126,52 @@ struct Team: Identifiable, Codable {
         self.role = role
     }
 }
+//struct Workspace: Identifiable, Codable {
+//    var id: Int
+//    var name: String
+//    var description: String?
+//    var coverPhoto: URL?
+//    var icon: URL?
+//    var isMain: Bool
+//    let profileInitial: String?
+//    let profileColor: String?
+//    
+//    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool, profileInitial: String?, profileColor: String?) {
+//        self.id = id
+//        self.name = name
+//        self.description = description
+//        self.coverPhoto = coverPhoto
+//        self.icon = icon
+//        self.isMain = isMain
+//        self.profileInitial = profileInitial
+//        self.profileColor = profileColor
+//    }
+//}
+
 struct Workspace: Identifiable, Codable {
     var id: Int
     var name: String
     var description: String?
-    var coverPhoto: URL?
-    var icon: URL?
+    var coverPhoto: String?
+    var icon: String?
     var isMain: Bool
     let profileInitial: String?
     let profileColor: String?
-    
-    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool, profileInitial: String?, profileColor: String?) {
-        self.id = id
-        self.name = name
-        self.description = description
-        self.coverPhoto = coverPhoto
-        self.icon = icon
-        self.isMain = isMain
-        self.profileInitial = profileInitial
-        self.profileColor = profileColor
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, coverPhoto, icon, isMain, profileInitial, profileColor
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        coverPhoto = try container.decodeIfPresent(String.self, forKey: .coverPhoto)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
+        isMain = try container.decode(Bool.self, forKey: .isMain)
+        profileInitial = try container.decodeIfPresent(String.self, forKey: .profileInitial)
+        profileColor = try container.decodeIfPresent(String.self, forKey: .profileColor)
     }
 }
 

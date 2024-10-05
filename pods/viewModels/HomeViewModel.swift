@@ -43,7 +43,7 @@ class HomeViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if success, let workspaces = workspaces {
                     self?.workspaces = workspaces
-                 
+                    print("workspaces are", workspaces)
                 } else {
                     print("Error fetching workspaces: \(errorMessage ?? "Unknown error")")
                 }
