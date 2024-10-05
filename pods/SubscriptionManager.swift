@@ -6,19 +6,37 @@ class SubscriptionManager: ObservableObject {
     @Published var purchasedSubscriptions: [Product] = []
     private var onboardingViewModel: OnboardingViewModel?
     private var lastKnownSubscriptionStatuses: [String: String] = [:]
+    private var timer: Timer?
     init() {
         Task {
             await fetchProducts()
             await updatePurchasedSubscriptions()
             await listenForTransactions()
         }
+        startPeriodicCheck()
     }
     func setOnboardingViewModel(_ viewModel: OnboardingViewModel) {
             self.onboardingViewModel = viewModel
         }
     
-
-    
+    private func startPeriodicCheck() {
+            DispatchQueue.main.async { [weak self] in
+                self?.timer = Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { _ in
+                    Task { [weak self] in
+                        await self?.checkCurrentEntitlements()
+                    }
+                }
+            }
+        }
+    deinit {
+          timer?.invalidate()
+      }
+    @MainActor
+     func forceSubscriptionCheck() async {
+         print("Forcing subscription check...")
+         await checkAndUpdateSubscriptionStatus()
+         print("Force subscription check completed.")
+     }
     @MainActor
     func fetchProducts() async {
         do {
@@ -158,106 +176,120 @@ class SubscriptionManager: ObservableObject {
             print("Failed to sync purchase with backend: \(error)")
         }
     }
+
     @MainActor
-        func checkAndUpdateSubscriptionStatus() async {
-            print("Checking and updating subscription status...")
-            let currentEntitlements = await Transaction.currentEntitlements
-            var activeProductIds = Set<String>()
+      private func handleTransactionUpdate(_ transaction: StoreKit.Transaction) async {
+          print("Handling transaction update for product: \(transaction.productID)")
+          
+          let status: String
+          let willRenew: Bool
+          
+          if let revocationDate = transaction.revocationDate {
+              print("Cancellation detected for product: \(transaction.productID), Revocation Date: \(revocationDate)")
+              status = "cancelled"
+              willRenew = false
+          } else if let expirationDate = transaction.expirationDate, expirationDate < Date() {
+              print("Subscription expired for product: \(transaction.productID), Expiration Date: \(expirationDate)")
+              status = "expired"
+              willRenew = false
+          } else {
+              print("Active subscription for product: \(transaction.productID)")
+              status = "active"
+              willRenew = await checkIfSubscriptionWillRenew(transaction)
+          }
+
+          print("Final Subscription status: \(status), Will Renew: \(willRenew), Product ID: \(transaction.productID)")
+          await updateBackendSubscriptionStatus(productId: transaction.productID, status: status, willRenew: willRenew, expirationDate: transaction.expirationDate)
+      }
+    
+
+    private func checkIfSubscriptionWillRenew(_ transaction: StoreKit.Transaction) async -> Bool {
+            guard let statuses = try? await Product.SubscriptionInfo.status(for: transaction.productID) else {
+                return false
+            }
             
-            for await result in currentEntitlements {
+            for status in statuses {
+                switch status.state {
+                case .subscribed:
+                    if case .verified(let renewalInfo) = status.renewalInfo {
+                        return renewalInfo.willAutoRenew
+                    }
+                case .inGracePeriod:
+                    if case .verified(let renewalInfo) = status.renewalInfo {
+                        return renewalInfo.willAutoRenew
+                    }
+                case .inBillingRetryPeriod:
+                    if case .verified(let renewalInfo) = status.renewalInfo {
+                        return renewalInfo.willAutoRenew
+                    }
+                case .expired:
+                    continue
+                case .revoked:
+                    continue
+                default:
+                    print("Unknown subscription state for \(transaction.productID)")
+                    continue
+                }
+            }
+            
+            return false
+        }
+
+
+        @MainActor
+         func checkCurrentEntitlements() async {
+            print("Checking current entitlements...")
+            for await result in Transaction.currentEntitlements {
                 if case .verified(let transaction) = result {
-                    activeProductIds.insert(transaction.productID)
-                    if lastKnownSubscriptionStatuses[transaction.productID] != "active" {
-                        await updateBackendSubscriptionStatus(productId: transaction.productID, status: "active", expirationDate: transaction.expirationDate)
-                        lastKnownSubscriptionStatuses[transaction.productID] = "active"
-                    }
+                    await handleTransactionUpdate(transaction)
                 }
             }
-            
-            // Check for cancelled subscriptions
-            for product in purchasedSubscriptions {
-                if !activeProductIds.contains(product.id) && lastKnownSubscriptionStatuses[product.id] != "cancelled" {
-                    await updateBackendSubscriptionStatus(productId: product.id, status: "cancelled", expirationDate: nil)
-                    lastKnownSubscriptionStatuses[product.id] = "cancelled"
-                }
-            }
-            
-            // Update purchasedSubscriptions
-            self.purchasedSubscriptions = self.products.filter { activeProductIds.contains($0.id) }
-            
-            print("Subscription status update completed. Active products: \(activeProductIds)")
+            print("Current entitlements check completed.")
         }
 
-        private func updateBackendSubscriptionStatus(productId: String, status: String, expirationDate: Date?) async {
-            print("Updating backend subscription status for product: \(productId), status: \(status)")
-            let networkManager = NetworkManager()
-            do {
-                let result = try await networkManager.updateSubscriptionStatus(
-                    userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? "",
-                    productId: productId,
-                    status: status,
-                    expirationDate: expirationDate?.ISO8601Format()
-                )
-                print("Backend update result: \(result)")
-                
-                // Update local state
-                if let updatedStatus = result["new_status"] as? String,
-                   let updatedPlan = result["plan_name"] as? String,
-                   let updatedExpiresAt = result["end_date"] as? String,
-                   let renews = result["renews"] as? Bool {
-                    await MainActor.run { [weak self] in
-                        self?.onboardingViewModel?.updateSubscriptionInfo(
-                            status: updatedStatus,
-                            plan: updatedPlan,
-                            expiresAt: updatedExpiresAt,
-                            renews: renews,
-                            seats: (result["team"] as? [String: Any])?["seats"] as? Int,
-                            canCreateNewTeam: result["is_team_plan"] as? Bool ?? false
-                        )
-                    }
-                }
-                
-                NotificationCenter.default.post(name: .subscriptionUpdated, object: nil)
-            } catch {
-                print("Failed to update subscription status on backend: \(error)")
-            }
-        }
+      @MainActor
+      func checkAndUpdateSubscriptionStatus() async {
+          print("Checking subscription status...")
+          let currentEntitlements = await Transaction.currentEntitlements
+          for await result in currentEntitlements {
+              if case .verified(let transaction) = result {
+                  await handleTransactionUpdate(transaction)
+              }
+          }
+          print("Subscription check completed.")
+      }
 
-        func listenForAppStateChanges() {
-            NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                Task {
-                    await self?.checkAndUpdateSubscriptionStatus()
-                }
-            }
-            
-            // Add listener for StoreKit transaction updates
-            Task {
-                for await verificationResult in Transaction.updates {
-                    // Handle the transaction
-                    if case .verified(let transaction) = verificationResult {
-                        await self.handleTransactionUpdate(transaction)
-                    }
-                }
-            }
-        }
+
+    private func updateBackendSubscriptionStatus(productId: String, status: String, willRenew: Bool, expirationDate: Date?) async {
+          print("Updating backend for product: \(productId), status: \(status), willRenew: \(willRenew), expiration: \(String(describing: expirationDate))")
+          let networkManager = NetworkManager()
+          do {
+              let result = try await networkManager.updateSubscriptionStatus(
+                  userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? "",
+                  productId: productId,
+                  status: status,
+                  willRenew: willRenew,
+                  expirationDate: expirationDate?.ISO8601Format()
+              )
+              print("Backend update result: \(result)")
+              
+              // Update local state based on the backend response
+              await MainActor.run { [weak self] in
+                  self?.onboardingViewModel?.updateSubscriptionInfo(
+                      status: result["new_status"] as? String ?? status,
+                      plan: result["plan_name"] as? String,
+                      expiresAt: result["end_date"] as? String,
+                      renews: result["renews"] as? Bool ?? willRenew,
+                      seats: (result["team"] as? [String: Any])?["seats"] as? Int,
+                      canCreateNewTeam: result["is_team_plan"] as? Bool ?? false
+                  )
+              }
+          } catch {
+              print("Failed to update subscription status on backend: \(error)")
+          }
+      }
         
 
-    @MainActor
-    private func handleTransactionUpdate(_ transaction: StoreKit.Transaction) async {
-        // Check if the transaction represents a cancellation
-        if transaction.revocationDate != nil {
-            // This transaction has been revoked (cancelled)
-            await updateBackendSubscriptionStatus(productId: transaction.productID, status: "cancelled", expirationDate: transaction.expirationDate)
-            lastKnownSubscriptionStatuses[transaction.productID] = "cancelled"
-        } else {
-            // This is an active transaction
-            await updateBackendSubscriptionStatus(productId: transaction.productID, status: "active", expirationDate: transaction.expirationDate)
-            lastKnownSubscriptionStatuses[transaction.productID] = "active"
-        }
-        
-        // Always finish the transaction
-        await transaction.finish()
-    }
 
     func startingPrice(for tier: SubscriptionTier) -> String {
         switch tier {

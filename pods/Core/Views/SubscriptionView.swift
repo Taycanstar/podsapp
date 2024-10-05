@@ -85,13 +85,13 @@ struct ActiveSubscriptionView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "creditcard")
-//                    Text(viewModel.subscriptionCost)
+
                     Text(getCurrentSubscriptionPrice())
                 }
-                HStack {
-                    Image(systemName: "calendar")
-                    Text(getSubscriptionStatusText())
-                }
+//                HStack {
+//                    Image(systemName: "calendar")
+//                    Text(getSubscriptionStatusText())
+//                }
             }
             .padding(.bottom, 15)
             
@@ -148,8 +148,11 @@ struct ActiveSubscriptionView: View {
 //                )
 //            }
             Button(action: {
-                isManagingSubscriptions = true
+               
                           openManageSubscriptions()
+           
+                isManagingSubscriptions = true
+                print("we're b")
                       }) {
                           Text("Manage Subscription")
                               .font(.system(size: 16))
@@ -161,11 +164,11 @@ struct ActiveSubscriptionView: View {
                               .cornerRadius(10)
                       }
             
-            Text(getSubscriptionInfoText())
-                           .font(.caption)
-                           .foregroundColor(.secondary)
-                           .multilineTextAlignment(.center)
-                           .padding()
+//            Text(getSubscriptionInfoText())
+//                           .font(.caption)
+//                           .foregroundColor(.secondary)
+//                           .multilineTextAlignment(.center)
+//                           .padding()
                        
 //            
 //            Button(action: {
@@ -176,26 +179,31 @@ struct ActiveSubscriptionView: View {
 //                    .foregroundColor(.blue)
 //            }
         }
+        .onChange(of: isManagingSubscriptions) { newValue, _ in
+             if newValue == false {
+                 Task {
+                     await subscriptionManager.checkCurrentEntitlements()
+                 }
+             }
+         }
+         .onAppear {
+             Task {
+                 await subscriptionManager.checkCurrentEntitlements()
+             }
+         }
+
         .padding()
         .background(Color("mdBg"))
         .cornerRadius(15)
         .sheet(isPresented: $showUpgradeSheet) {
                    PricingView(tier: .teamMonthly, subscriptionManager: subscriptionManager)
                }
-        .onChange(of: isManagingSubscriptions) { newValue in
-                 if !newValue {
-                     // User has returned from subscription management
-                     Task {
-                         await subscriptionManager.checkAndUpdateSubscriptionStatus()
-//                         await viewModel.refreshSubscriptionInfo()
-                     }
-                 }
-             }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                   if isManagingSubscriptions {
-                       isManagingSubscriptions = false
-                   }
-               }
+
+//        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+//                   if isManagingSubscriptions {
+//                       isManagingSubscriptions = false
+//                   }
+//               }
     }
     
     private func openManageSubscriptions() {
@@ -448,6 +456,7 @@ struct PricingView: View {
                                        userEmail: viewModel.email,
                                        onboardingViewModel: viewModel
                                    )
+                                   await subscriptionManager.forceSubscriptionCheck()
                                    presentationMode.wrappedValue.dismiss()
                                } catch {
                                    errorMessage = error.localizedDescription

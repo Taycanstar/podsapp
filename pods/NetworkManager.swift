@@ -3700,28 +3700,29 @@ class NetworkManager {
         }
     
     
-    func updateSubscriptionStatus(userEmail: String, productId: String, status: String, expirationDate: String?) async throws -> [String: Any] {
-          let url = URL(string: "\(baseUrl)/update-subscription/")!
-          var request = URLRequest(url: url)
-          request.httpMethod = "POST"
-          request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    func updateSubscriptionStatus(userEmail: String, productId: String, status: String, willRenew: Bool, expirationDate: String?) async throws -> [String: Any] {
+        let url = URL(string: "\(baseUrl)/update-subscription-status/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-          let body: [String: Any] = [
-              "user_email": userEmail,
-              "product_id": productId,
-              "status": status,
-              "expiration_date": expirationDate ?? NSNull()
-          ]
-          request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "product_id": productId,
+            "status": status,
+            "will_renew": willRenew,
+            "expiration_date": expirationDate ?? NSNull()
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-          let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
 
-          guard let httpResponse = response as? HTTPURLResponse,
-                (200...299).contains(httpResponse.statusCode) else {
-              throw NetworkError.invalidResponse
-          }
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
 
-          return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-      }
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
 }
 
