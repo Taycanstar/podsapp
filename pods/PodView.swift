@@ -213,7 +213,8 @@ struct PodView: View {
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
-                ActivityLogView(activityLogs: activityLogs)
+//                ActivityLogView(activityLogs: activityLogs)
+                ActivityLogView(podId: pod.id)
             case .trends:
 //                                TrendsView(activityLogs: activityLogs, podColumns: podColumns)
                 ItemTrendsView(podItems: reorderedItems, activityLogs: activityLogs, podColumns: podColumns)

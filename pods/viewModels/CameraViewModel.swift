@@ -278,6 +278,10 @@ struct PodItemActivityLogJSON: Codable {
   
 }
 
+struct ActivityLogResponse: Codable {
+    let logs: [PodItemActivityLogJSON]
+}
+
 
 struct Pod: Identifiable {
     var id: Int

@@ -1,39 +1,103 @@
 import SwiftUI
 
+//struct ActivityLogView: View {
+////    let activityLogs: [PodItemActivityLog]
+//    @State private var activityLogs: [PodItemActivityLog]
+//    @Environment(\.dismiss) private var dismiss
+//    
+//    init(activityLogs: [PodItemActivityLog]) {
+//           _activityLogs = State(initialValue: activityLogs)
+//       }
+//
+//    
+//    var body: some View {
+//        ZStack {
+//            Color("mxdBg").edgesIgnoringSafeArea(.all)
+//            
+//            ScrollView {
+//                LazyVStack(alignment: .leading, spacing: 10) {
+//                    ForEach(activityLogs) { log in
+////                        ActivityLogItemView(log: log)
+//                        ActivityLogItemView(log: log, onDelete: { deletedLog in
+//                                                   removeLog(deletedLog)
+//                                               })
+//                    }
+//                }
+//                .padding()
+//            }
+//        }
+////        .navigationBarBackButtonHidden(true)
+//        .navigationTitle("Activity Log")
+//        .navigationBarTitleDisplayMode(.inline)
+//    }
+//    
+//    private func removeLog(_ log: PodItemActivityLog) {
+//            activityLogs.removeAll { $0.id == log.id }
+//        }
+//}
+
 struct ActivityLogView: View {
-//    let activityLogs: [PodItemActivityLog]
     @State private var activityLogs: [PodItemActivityLog]
     @Environment(\.dismiss) private var dismiss
+    let podId: Int
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
-    init(activityLogs: [PodItemActivityLog]) {
-           _activityLogs = State(initialValue: activityLogs)
-       }
-
+    init(podId: Int, initialLogs: [PodItemActivityLog] = []) {
+        self.podId = podId
+        _activityLogs = State(initialValue: initialLogs)
+    }
     
     var body: some View {
         ZStack {
             Color("mxdBg").edgesIgnoringSafeArea(.all)
             
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    ForEach(activityLogs) { log in
-//                        ActivityLogItemView(log: log)
-                        ActivityLogItemView(log: log, onDelete: { deletedLog in
-                                                   removeLog(deletedLog)
-                                               })
+            if isLoading {
+                ProgressView()
+            } else if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 10) {
+                        ForEach(activityLogs) { log in
+                            ActivityLogItemView(log: log, onDelete: { deletedLog in
+                                removeLog(deletedLog)
+                            })
+                        }
                     }
+                    .padding()
                 }
-                .padding()
             }
         }
-//        .navigationBarBackButtonHidden(true)
         .navigationTitle("Activity Log")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if activityLogs.isEmpty {
+                loadLogs()
+            }
+        }
+    }
+    
+    private func loadLogs() {
+        isLoading = true
+        errorMessage = nil
+        NetworkManager().fetchPodActivityLogs(podId: podId) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                switch result {
+                case .success(let logs):
+                    self.activityLogs = logs
+                case .failure(let error):
+                    self.errorMessage = "Failed to load activity logs: \(error.localizedDescription)"
+                }
+            }
+        }
     }
     
     private func removeLog(_ log: PodItemActivityLog) {
-            activityLogs.removeAll { $0.id == log.id }
-        }
+        activityLogs.removeAll { $0.id == log.id }
+    }
 }
 
 struct ActivityLogItemView: View {
