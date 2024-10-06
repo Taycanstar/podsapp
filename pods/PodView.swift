@@ -1220,7 +1220,7 @@ struct CardDetailView: View {
                                 }
                             }
                             VStack(alignment: .leading) {
-                                Text("Notes")
+                                Text("Description")
                                     .font(.system(size: 15))
                                     .foregroundColor(.primary)
                                     .padding(.horizontal, 5)
