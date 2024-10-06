@@ -1125,6 +1125,7 @@ struct CardDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var expandedColumn: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var itemNotes: String
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
         self._item = item
@@ -1147,6 +1148,7 @@ struct CardDetailView: View {
         }
         self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
+        self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
     }
     
     var body: some View {
@@ -1216,6 +1218,24 @@ struct CardDetailView: View {
                                         }
                                     }
                                 }
+                            }
+                            VStack(alignment: .leading) {
+                                Text("Notes")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 5)
+                                    .kerning(0.2)
+                                
+                                
+                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(colorScheme == .dark ? Color(rgb: 14,14,14) : .white))
+                                    .frame(height: 100)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                    )
+
                             }
                             addColumnButton
                         }
@@ -1398,78 +1418,125 @@ struct CardDetailView: View {
             }
         }
     }
+
+//    private func saveChanges() {
+//        // Filter out unchanged or empty fields
+//        var updatedColumnValues: [String: ColumnValue] = [:]
+//        
+//        for (key, value) in columnValues {
+//            if let originalValue = item.columnValues?[key] {
+//                // Extract the actual value from ColumnValue and compare appropriately
+//                switch originalValue {
+//                case .string(let originalStringValue):
+//                    if originalStringValue != value { // Compare string values
+//                        updatedColumnValues[key] = .string(value)
+//                    }
+//                case .number(let originalNumberValue):
+//                    if let intValue = Int(value), originalNumberValue != intValue { // Compare number values
+//                        updatedColumnValues[key] = .number(intValue)
+//                    }
+//                case .null:
+//                    if !value.isEmpty { // If the original value was null but now there's a value
+//                        updatedColumnValues[key] = .string(value)
+//                    }
+//                }
+//            } else {
+//                // If the value is new or doesn't exist, update it
+//                if let intValue = Int(value) {
+//                    updatedColumnValues[key] = .number(intValue)
+//                } else if value.isEmpty {
+//                    updatedColumnValues[key] = .null
+//                } else {
+//                    updatedColumnValues[key] = .string(value)
+//                }
+//            }
+//        }
+//        
+//        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success:
+////                    self.item.metadata = self.itemName
+////                    self.item.columnValues = updatedColumnValues
+////                    self.presentationMode.wrappedValue.dismiss()
+//                    self.item.metadata = self.itemName
+//                    self.item.notes = self.itemNotes // Update the item's notes
+//                    self.item.columnValues = updatedColumnValues
+//                    self.presentationMode.wrappedValue.dismiss()
+//                case .failure(let error):
+//                    print("Failed to update pod item: \(error)")
+//                }
+//            }
+//        }
+//    }
     
-    
-    //    private func saveChanges() {
-    //        let updatedColumnValues = columnValues.mapValues { value -> ColumnValue in
-    //            if let intValue = Int(value) {
-    //                return .number(intValue)
-    //            } else if value.isEmpty {
-    //                return .null
-    //            } else {
-    //                return .string(value)
-    //            }
-    //        }
-    //
-    //        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-    //            DispatchQueue.main.async {
-    //                switch result {
-    //                case .success:
-    //                    self.item.metadata = self.itemName
-    //                    self.item.columnValues = updatedColumnValues
-    //                    self.presentationMode.wrappedValue.dismiss()
-    //                case .failure(let error):
-    //                    print("Failed to update pod item: \(error)")
-    //                }
-    //            }
-    //        }
-    //    }
     private func saveChanges() {
-        // Filter out unchanged or empty fields
-        var updatedColumnValues: [String: ColumnValue] = [:]
-        
-        for (key, value) in columnValues {
-            if let originalValue = item.columnValues?[key] {
-                // Extract the actual value from ColumnValue and compare appropriately
-                switch originalValue {
-                case .string(let originalStringValue):
-                    if originalStringValue != value { // Compare string values
-                        updatedColumnValues[key] = .string(value)
-                    }
-                case .number(let originalNumberValue):
-                    if let intValue = Int(value), originalNumberValue != intValue { // Compare number values
-                        updatedColumnValues[key] = .number(intValue)
-                    }
-                case .null:
-                    if !value.isEmpty { // If the original value was null but now there's a value
-                        updatedColumnValues[key] = .string(value)
-                    }
-                }
-            } else {
-                // If the value is new or doesn't exist, update it
-                if let intValue = Int(value) {
-                    updatedColumnValues[key] = .number(intValue)
-                } else if value.isEmpty {
-                    updatedColumnValues[key] = .null
-                } else {
-                    updatedColumnValues[key] = .string(value)
-                }
-            }
-        }
-        
-        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: item.notes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    self.item.metadata = self.itemName
-                    self.item.columnValues = updatedColumnValues
-                    self.presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Failed to update pod item: \(error)")
-                }
-            }
-        }
-    }
+         var hasChanges = false
+         var updatedColumnValues: [String: ColumnValue] = [:]
+         
+         for (key, value) in columnValues {
+             if let originalValue = item.columnValues?[key] {
+                 switch originalValue {
+                 case .string(let originalStringValue):
+                     if originalStringValue != value {
+                         updatedColumnValues[key] = .string(value)
+                         hasChanges = true
+                     } else {
+                         updatedColumnValues[key] = originalValue
+                     }
+                 case .number(let originalNumberValue):
+                     if let intValue = Int(value), originalNumberValue != intValue {
+                         updatedColumnValues[key] = .number(intValue)
+                         hasChanges = true
+                     } else {
+                         updatedColumnValues[key] = originalValue
+                     }
+                 case .null:
+                     if !value.isEmpty {
+                         updatedColumnValues[key] = .string(value)
+                         hasChanges = true
+                     } else {
+                         updatedColumnValues[key] = originalValue
+                     }
+                 }
+             } else {
+                 if let intValue = Int(value) {
+                     updatedColumnValues[key] = .number(intValue)
+                     hasChanges = true
+                 } else if !value.isEmpty {
+                     updatedColumnValues[key] = .string(value)
+                     hasChanges = true
+                 } else {
+                     updatedColumnValues[key] = .null
+                 }
+             }
+         }
+         
+         // Check if item name or notes have changed
+         if itemName != item.metadata || itemNotes != (item.notes ?? "") {
+             hasChanges = true
+         }
+         
+         // Only update if there are changes
+         if hasChanges {
+             networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+                 DispatchQueue.main.async {
+                     switch result {
+                     case .success:
+                         self.item.metadata = self.itemName
+                         self.item.notes = self.itemNotes
+                         self.item.columnValues = updatedColumnValues
+                     case .failure(let error):
+                         print("Failed to update pod item: \(error)")
+                     }
+                     self.presentationMode.wrappedValue.dismiss()
+                 }
+             }
+         } else {
+             // If no changes, just dismiss the view
+             self.presentationMode.wrappedValue.dismiss()
+         }
+     }
 }
 
 struct AddColumnView: View {

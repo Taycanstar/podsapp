@@ -680,7 +680,7 @@ class NetworkManager {
       }
 
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping (Result<[Pod], Error>) -> Void) {
-        var urlString = "\(baseUrl)/get-user-pods/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        var urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
         
         if let workspaceId = workspaceId {
             urlString += "?workspaceId=\(workspaceId)"
