@@ -322,8 +322,8 @@
 				3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */,
 				363201322C96257100BC1815 /* TeamInfoView.swift */,
 				363201362C97812B00BC1815 /* MyTeamMembersView.swift */,
-				363201382C9CFDCF00BC1815 /* TrendsView.swift */,
 				365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */,
+				363201382C9CFDCF00BC1815 /* TrendsView.swift */,
 				36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */,
 			);
 			path = Views;

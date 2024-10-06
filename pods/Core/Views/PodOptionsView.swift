@@ -81,7 +81,8 @@ struct PodOptionsView: View {
 
                     MenuItemView(iconName: "chart.line.uptrend.xyaxis", text: "Trends", action: {
                         dismiss()
-                            navigationAction(.trends)
+//                            navigationAction(.trends)
+                        navigationAction(.trends(podId: podId))
                      
                         HapticFeedback.generate()
                     }, color: .primary)

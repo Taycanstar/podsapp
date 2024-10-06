@@ -6,7 +6,8 @@ enum NavigationDestination: Hashable {
     case podInfo
     case podMembers
     case activityLog
-    case trends
+//    case trends
+    case trends(podId: Int)
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -215,8 +216,10 @@ struct PodView: View {
             case .activityLog:
 //                ActivityLogView(activityLogs: activityLogs)
                 ActivityLogView(podId: pod.id)
-            case .trends:
-                ItemTrendsView(podItems: reorderedItems, activityLogs: activityLogs, podColumns: podColumns)
+//            case .trends:
+            case .trends(let podId):
+//                ItemTrendsView(podItems: reorderedItems, activityLogs: activityLogs, podColumns: podColumns)
+                ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
                             
             }
         }
