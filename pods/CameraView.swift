@@ -44,6 +44,7 @@ struct CameraView: View {
 
     var body: some View {
    
+        
             
         ZStack {
             // MARK: Camera View
@@ -308,14 +309,10 @@ struct CameraView: View {
                         
                     }
                     
-                    .padding(.bottom,15)
-                    .padding()
-                    
-                    //                    .padding(.top)
-                    
+                    .padding(.bottom,100)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                //                .frame(maxWidth: .infinity, maxHeight: .infinity)
+         
             }
             .opacity(cameraModel.showPreview || showCreatePodView ? 0 : 1)
             .allowsHitTesting(!(cameraModel.showPreview || showCreatePodView))
@@ -347,89 +344,84 @@ struct CameraView: View {
                 EmptyView()
                 
             }
-        }
-   
-//        Spacer()
-        
-        
-        if !showCreatePodView {
-            if !cameraModel.isRecording && !cameraModel.showPreview  {
-                HStack(spacing: 10) { // Spacing between buttons is 10
-                    // Start Over Button
-                    
-                    if !cameraModel.currentPod.items.isEmpty {
-                        Button("Start over") {
-                            // Action for Start Over
-                            cameraModel.currentPod = Pod(id: -1, items:[],title: "")
-                            cameraModel.recordedDuration = 0
-                            cameraModel.previewURL = nil
-                        }
-                        .foregroundColor(.black) // Text color
-                        .padding(.vertical, 15) // Padding for thickness
-                        .frame(maxWidth: .infinity) // Make button expand
-                        .background(Color.white)
-                        .cornerRadius(8) // Rounded corners
-                        .fontWeight(.semibold)
-
-
-                        Button("Next") {
-                            // Check if there's either a video URL or a selected image available for preview
-                            if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
-                                cameraModel.showPreview = true
-                            } else {
-                                print("No preview content available")
-                         
+            
+            
+            VStack {
+                Spacer()
+                if !showCreatePodView {
+                    if !cameraModel.isRecording && !cameraModel.showPreview  {
+                        HStack(spacing: 10) { // Spacing between buttons is 10
+                            if !cameraModel.currentPod.items.isEmpty {
+                                Button("Start over") {
+                                    // Action for Start Over
+                                    cameraModel.currentPod = Pod(id: -1, items:[],title: "")
+                                    cameraModel.recordedDuration = 0
+                                    cameraModel.previewURL = nil
+                                }
+                                .foregroundColor(.black) // Text color
+                                .padding(.vertical, 15) // Padding for thickness
+                                .frame(maxWidth: .infinity) // Make button expand
+                                .background(Color.white)
+                                .cornerRadius(8) // Rounded corners
+                                .fontWeight(.semibold)
+                                Button("Next") {
+                                    // Check if there's either a video URL or a selected image available for preview
+                                    if cameraModel.previewURL != nil || cameraModel.selectedImage != nil {
+                                        cameraModel.showPreview = true
+                                    } else {
+                                        print("No preview content available")
+                                    }
+                                }
+                                .foregroundColor(.white) // Text color for the Next button
+                                .padding(.vertical, 15) // Padding for thickness
+                                .frame(maxWidth: .infinity) // Make button expand
+                                .fontWeight(.semibold)
+                                .background(Color(red: 35/255, green: 108/255, blue: 255/255))
+                                .cornerRadius(8) // Rounded corners
+                            } else{
+                                Rectangle()
+                                .foregroundColor(.black)   }}
+                        .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each
+                        .frame(height: 60) // Set the height of the bottom bar
+                        .background(Color.black) // Set the color to black
+                        .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
+                        .onAppear {
+                            let initialMode: CameraMode = .fifteen
+                            
+                            // Ensure session is configured for the initial mode
+                            cameraModel.configureSessionFor(mode: initialMode)
+                            
+                            // Update maxDuration based on the initial mode
+                            cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0
+                            // Request authorization and fetch latest photo
+                            PHPhotoLibrary.requestAuthorization { status in
+                                if status == .authorized {
+                                    self.fetchLatestPhoto { photo in
+                                        self.latestPhoto = photo
+                                    }
+                                }
                             }
                         }
-                        .foregroundColor(.white) // Text color for the Next button
-                        .padding(.vertical, 15) // Padding for thickness
-                        .frame(maxWidth: .infinity) // Make button expand
-                        .fontWeight(.semibold)
-                        .background(Color(red: 35/255, green: 108/255, blue: 255/255))
-                        .cornerRadius(8) // Rounded corners
-                    } else{
-                        Rectangle()
-                            .foregroundColor(.black)
                     }
-             
+                    else {
+                        
+                        Color.black  // Use Color.black instead of Spacer when recording
+                            .frame(height: 60)
+                            .edgesIgnoringSafeArea(.bottom)
+                        
+                        
+                    }
+                } else {
+                    EmptyView()
                 }
-                .padding(.horizontal, 10) // Horizontal padding from the screen edges, 10 points on each side
-                .frame(height: 60) // Set the height of the bottom bar
-                .background(Color.black) // Set the color to black
-                .edgesIgnoringSafeArea(.bottom) // Ensures it goes to the edge of the screen
-
-                .onAppear {
-                    let initialMode: CameraMode = .fifteen
-                        
-                        // Ensure session is configured for the initial mode
-                        cameraModel.configureSessionFor(mode: initialMode)
-                        
-                        // Update maxDuration based on the initial mode
-                        cameraModel.maxDuration = initialMode == .fifteen ? 15.0 : 30.0
-                          // Request authorization and fetch latest photo
-                          PHPhotoLibrary.requestAuthorization { status in
-                              if status == .authorized {
-                                  self.fetchLatestPhoto { photo in
-                                      self.latestPhoto = photo
-                                  }
-                              }
-                          }
-                      }
             }
-            else {
-    //            HStack { // This empty HStack ensures it covers the same height as the buttons
-    //                   Spacer()
-    //               }
-    //               .frame(height: 60)
-                Color.black  // Use Color.black instead of Spacer when recording
-                                .frame(height: 60)
-                                .edgesIgnoringSafeArea(.bottom)
-  
-                
-            }
-        } else {
-            EmptyView()
+//            .padding(.bottom, 100)
+//            .edgesIgnoringSafeArea(.bottom)
         }
+//        .background(Color.black.edgesIgnoringSafeArea(.all))
+   
+
+
 
         
     }
