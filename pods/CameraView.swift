@@ -275,6 +275,7 @@ struct CameraView: View {
                                 } else {
                                     Button(action: {
                                         // Placeholder or action for when no photo is available
+                                        isShowingVideoPicker = true
                                     }) {
                                         Image("ms")
                                             .resizable()
@@ -303,9 +304,7 @@ struct CameraView: View {
                             }
                             
                         }
-                        
-                        
-                        
+
                         
                     }
                     
@@ -329,6 +328,11 @@ struct CameraView: View {
                         isFrontCameraUsed: cameraModel.isFrontCameraUsed,
                         showCreatePodView: $showCreatePodView, itemId: itemId, podId: podId, onMediaAdded: onMediaAdded, showingVideoCreationScreen: $showingVideoCreationScreen
                     )
+                    .onDisappear {
+                              DispatchQueue.main.async {
+                                  cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                              }
+                          }
                 } else if let selectedImage = cameraModel.selectedImage {
                     MediaPreview(
                         url: nil,
@@ -339,6 +343,11 @@ struct CameraView: View {
                         showCreatePodView: $showCreatePodView,
                         itemId: itemId, podId: podId, onMediaAdded: onMediaAdded, showingVideoCreationScreen: $showingVideoCreationScreen
                     )
+                    .onDisappear {
+                              DispatchQueue.main.async {
+                                  cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
+                              }
+                          }
                 }
             } else {
                 EmptyView()
@@ -415,6 +424,15 @@ struct CameraView: View {
 //                }
 //            }
 
+        }
+        .onAppear{
+            PHPhotoLibrary.requestAuthorization { status in
+                if status == .authorized {
+                    self.fetchLatestPhoto { photo in
+                        self.latestPhoto = photo
+                    }
+                }
+            }
         }
         .increaseBottomSafeArea(by: 75)
 

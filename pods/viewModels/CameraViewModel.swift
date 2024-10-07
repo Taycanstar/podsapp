@@ -5,6 +5,7 @@ import CoreMedia
 import MicrosoftCognitiveServicesSpeech
 import CommonCrypto
 import Combine
+import Photos
 
 
 struct SubscriptionInfo: Codable {
@@ -492,6 +493,8 @@ class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDel
 
     @Published var permissionGranted = false
 var hasCheckedPermission = false
+    
+    
 
 
     let voiceCommands = ["start recording", "stop recording"]
@@ -527,6 +530,8 @@ var hasCheckedPermission = false
      var transcription = ""
     
     var speechRecognizer: SPXSpeechRecognizer?
+    
+
     
     @Published var isRecordingAudio = false
     @Published var recordingTimeElapsed = 0.0
@@ -565,6 +570,7 @@ var hasCheckedPermission = false
         initialZoomFactor = max(1.0, min(initialZoomFactor * factor, maxZoomFactor))
         print("Final zoom factor: \(initialZoomFactor)") // Debug log
     }
+
 
     
     func toggleVoiceCommands() {
@@ -618,6 +624,7 @@ var hasCheckedPermission = false
           @unknown default:
               break
           }
+        
 
           hasCheckedPermission = true
       }
