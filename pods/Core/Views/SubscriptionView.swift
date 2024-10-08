@@ -152,7 +152,7 @@ struct ActiveSubscriptionView: View {
                           openManageSubscriptions()
            
                 isManagingSubscriptions = true
-                print("we're b")
+
                       }) {
                           Text("Manage Subscription")
                               .font(.system(size: 16))
@@ -171,13 +171,33 @@ struct ActiveSubscriptionView: View {
 //                           .padding()
                        
 //            
-//            Button(action: {
-//                // Handle About Subscriptions and Privacy
-//            }) {
-//                Text("About Subscriptions and Privacy")
-//                    .font(.footnote)
-//                    .foregroundColor(.blue)
-//            }
+            VStack {
+                HStack {
+                    Text("By continuing, you agree to the ")
+                    
+                    Text("Terms")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "http://humuli.com/policies/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    
+                    Text(" and ")
+                    
+                    Text("Privacy Policy")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                }
+                .font(.footnote)
+                .foregroundColor(.gray)
+            }
         }
         .onChange(of: isManagingSubscriptions) { newValue, _ in
              if newValue == false {
@@ -326,7 +346,7 @@ struct NoSubscriptionView: View {
 
             PageIndicator(currentPage: selectedTab, pageCount: 2)
                 .padding()
-            
+      
             Button(action: {
                 showPricingSheet = true
             }) {
@@ -340,6 +360,35 @@ struct NoSubscriptionView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 20)
+            
+            Spacer()
+            VStack {
+                HStack {
+                    Text("By continuing, you agree to the ")
+                    
+                    Text("Terms")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "http://humuli.com/policies/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    
+                    Text(" and ")
+                    
+                    Text("Privacy Policy")
+                        .foregroundColor(Color.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                }
+                .font(.footnote)
+                .foregroundColor(.gray)
+            }
         }
         .sheet(isPresented: $showPricingSheet) {
             PricingView(tier: displayedTiers[selectedTab], subscriptionManager: SubscriptionManager())
@@ -474,10 +523,39 @@ struct PricingView: View {
                 }
                 .padding()
                 
-                Text("By subscribing, you agree to our Purchaser Terms of Service. Subscriptions auto-renew until canceled, as described in the Terms. Cancel anytime. Cancel at least 24 hours prior to renewal to avoid additional charges.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding()
+           
+                
+                VStack {
+                    HStack {
+                        Text("By subscribing, you agree to our  ")
+                        
+                        Text("Terms")
+                            .foregroundColor(Color.accentColor)
+                            .underline()
+                            .onTapGesture {
+                                if let url = URL(string: "http://humuli.com/policies/terms") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                        
+                        Text(" and ")
+                        
+                        Text("Privacy Policy")
+                            .foregroundColor(Color.accentColor)
+                            .underline()
+                            .onTapGesture {
+                                if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                    
+                    }
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                }
+
+
+
             }
             .navigationBarTitle("Choose a Plan", displayMode: .inline)
             .navigationBarItems(trailing: Button("Close") {

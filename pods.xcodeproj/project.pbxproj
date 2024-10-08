@@ -42,7 +42,7 @@
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
 		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
-		3683FDA32CAE32180031F149 /* product.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3683FDA22CAE32180031F149 /* product.storekit */; };
+		3683FDA92CB5A28F0031F149 /* product.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3683FDA82CB5A28F0031F149 /* product.storekit */; };
 		3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */; };
 		3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */; };
 		368A27372B977F5A0001BBCA /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27362B977F5A0001BBCA /* LandingView.swift */; };
@@ -149,7 +149,7 @@
 		3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomVideoPlayer.swift; sourceTree = "<group>"; };
 		3682F09C2B8403D400ABF344 /* CameraContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContainerView.swift; sourceTree = "<group>"; };
 		3682F0A22B84173100ABF344 /* Podfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Podfile; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		3683FDA22CAE32180031F149 /* product.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = product.storekit; path = Pods/product.storekit; sourceTree = SOURCE_ROOT; };
+		3683FDA82CB5A28F0031F149 /* product.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = product.storekit; path = Pods/product.storekit; sourceTree = SOURCE_ROOT; };
 		3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPageView.swift; sourceTree = "<group>"; };
 		3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerContainerView.swift; sourceTree = "<group>"; };
 		368A27362B977F5A0001BBCA /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
@@ -392,7 +392,6 @@
 				36C458B92B7421100060355F /* podsApp.swift */,
 				36004B412B9000DF00423AB1 /* PodView.swift */,
 				36B3CF882C86894600265F91 /* SubscriptionManager.swift */,
-				3683FDA22CAE32180031F149 /* product.storekit */,
 				3615072D2B7EE48E0060974A /* CreatePodView.swift */,
 				36291B7F2B8166F9000B5F38 /* CarouselView.swift */,
 				362170AE2B90EF0C00DA93EE /* ItemView.swift */,
@@ -409,6 +408,7 @@
 				36C458BD2B7421110060355F /* Assets.xcassets */,
 				36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */,
 				36C458BF2B7421110060355F /* Preview Content */,
+				3683FDA82CB5A28F0031F149 /* product.storekit */,
 			);
 			path = pods;
 			sourceTree = "<group>";
@@ -579,7 +579,7 @@
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
 				36E097362C4C74CE00F354E6 /* .lldbinit in Resources */,
-				3683FDA32CAE32180031F149 /* product.storekit in Resources */,
+				3683FDA92CB5A28F0031F149 /* product.storekit in Resources */,
 				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
 				367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
@@ -951,7 +951,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -1018,7 +1018,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;

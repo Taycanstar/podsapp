@@ -1,6 +1,6 @@
 {
   "appPolicies" : {
-    "eula" : "",
+    "eula" : "1. Acceptance of Terms\nBy accessing and using Podstack or any other services provided by Humuli (\"Services\"), you agree to be bound by these Terms of Service (\"Terms\"), all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws. If you do not agree with any of these terms, you are prohibited from using or accessing the Services.\n\n\n2. Description of Services\nHumuli provides a variety of AI-driven applications designed to facilitate the creation, management, sharing of digital content (Podstack). These services integrate various functionalities tailored to enhance personal and professional productivity.\n\n\n3. Registration and Account Integrity\nUsers are required to register and create an account to use certain features of the Services. You agree to provide accurate, current, and complete information during the registration process and to update such information to keep it accurate, current, and complete. Humuli reserves the right to suspend or terminate accounts that are suspected of containing inaccurate or incomplete information.\n\n\n4. User Conduct\nUsers are expected to use the Services in a responsible and legal manner. Prohibited activities include but are not limited to uploading illegal content, infringing on intellectual property, and engaging in behavior that is fraudulent, offensive, or harmful to others.\n\n\n5. Subscription Terms\n5.1. Subscription Options: We offer the following subscription tiers:\nPodstack Plus Monthly: $5.99 per month\nPodstack Plus Yearly: $47.90 per year\nPodstack Team Monthly: $44.99 per month\nPodstack Team Yearly: $419.99 per year\n5.2. Auto-Renewal: All subscriptions are set to automatically renew at the end of each billing period unless cancelled at least 24 hours before the renewal date.\n5.3. Cancellation: You can cancel your subscription at any time through your account settings or by contacting our customer support. Upon cancellation, you will continue to have access to the subscribed features until the end of your current billing period.\n5.4. Refunds: As per Apple's standard policy, we do not provide refunds for partial subscription periods. Refund requests for special circumstances will be handled on a case-by-case basis.\n5.5. Price Changes: We reserve the right to change subscription prices. Any price changes will be communicated to you in advance and will apply to the next billing cycle.\n\n\n6. Intellectual Property\nAll content and software associated with the Services are the property of Humuli or its licensors and are protected by copyright and intellectual property laws. Users may not duplicate, copy, or reuse any portion of the HTML/CSS, JavaScript, or visual design elements without express written permission from Humuli.\n\n\n7. User-Generated Content\nUsers retain ownership of the content they upload but grant Humuli a non-exclusive, transferable, sub-licensable, royalty-free, worldwide license to use, reproduce, and distribute such content within the Services and in connection with Humuli's marketing and promotional activities.\n\n\n8. Termination\nHumuli reserves the right to terminate your access to any or all of the Services without notice or liability, for any reason, including but not limited to breach of these Terms. Upon termination, your right to use the Services will immediately cease.\n\n\n9. Changes to Terms\nHumuli reserves the right, at its sole discretion, to modify or replace these Terms at any time. By continuing to access or use the Services after those revisions become effective, you agree to be bound by the revised terms.\n\n\n10. Disclaimer of Warranties\nThe Services are provided \"as is\". Humuli disclaims all warranties of any kind, express or implied, including, without limitation, the warranties of merchantability, fitness for a particular purpose, and non-infringement.\n\n\n11. Limitation of Liability\nIn no event will Humuli, its affiliates, employees, agents, or licensors be liable for any damages, direct or indirect, arising out of the use or inability to use the Services, even if advised of the possibility of such damages.\n\n\n12. Governing Law\nThese Terms shall be governed by the laws of the State of Texas without regard to its conflict of law provisions.\n\n\n13. Contact Information\nIf you have any questions about these Terms, please contact us at:\n\nEmail: support@humuli.com",
     "policies" : [
       {
         "locale" : "en_US",
@@ -9,7 +9,7 @@
       }
     ]
   },
-  "identifier" : "278943D2",
+  "identifier" : "D84A5AA0",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -17,18 +17,15 @@
 
   ],
   "settings" : {
-    "_applicationInternalID" : "6504493649",
-    "_developerTeamID" : "TN4N9K5B77",
+    "_askToBuyEnabled" : true,
+    "_billingGracePeriodEnabled" : true,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 749613596.22634399,
     "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : true,
     "_storefront" : "USA",
     "_storeKitErrors" : [
       {
-        "current" : {
-          "index" : 2,
-          "type" : "generic"
-        },
+        "current" : null,
         "enabled" : false,
         "name" : "Load Products"
       },
@@ -76,11 +73,11 @@
   },
   "subscriptionGroups" : [
     {
-      "id" : "21551403",
+      "id" : "DC104F9D",
       "localizations" : [
 
       ],
-      "name" : "Podstack Plus",
+      "name" : "Podstack+",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -92,19 +89,19 @@
           "displayPrice" : "5.99",
           "familyShareable" : false,
           "groupNumber" : 1,
-          "internalID" : "6736410681",
+          "internalID" : "C55E80B6",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Enjoy Plus features billed monthly",
-              "displayName" : "Podstack Plus Monthly",
+              "description" : "",
+              "displayName" : "",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.plus.month",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Podstack Plus Monthly",
-          "subscriptionGroupID" : "21551403",
+          "referenceName" : "Podstack+ Monthly Plan",
+          "subscriptionGroupID" : "DC104F9D",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -117,22 +114,22 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "47.9",
+          "displayPrice" : "47.90",
           "familyShareable" : false,
-          "groupNumber" : 2,
-          "internalID" : "6736410777",
+          "groupNumber" : 1,
+          "internalID" : "C3769A5D",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Enjoy Plus features billed annually",
-              "displayName" : "Podstack Plus Yearly",
+              "description" : "",
+              "displayName" : "",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.plus.year",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Podstack Plus Yearly",
-          "subscriptionGroupID" : "21551403",
+          "referenceName" : "Podstack+ Annual Plan",
+          "subscriptionGroupID" : "DC104F9D",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -141,7 +138,7 @@
       ]
     },
     {
-      "id" : "21551350",
+      "id" : "36D85397",
       "localizations" : [
 
       ],
@@ -157,19 +154,19 @@
           "displayPrice" : "44.99",
           "familyShareable" : false,
           "groupNumber" : 1,
-          "internalID" : "6736410847",
+          "internalID" : "B4317AF9",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Enjoy Premium Team features billed monthly",
-              "displayName" : "Podstack Team Monthly",
+              "description" : "",
+              "displayName" : "",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.team.month",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Podstack Team Monthly",
-          "subscriptionGroupID" : "21551350",
+          "referenceName" : "Podstack Team Monthly Plan",
+          "subscriptionGroupID" : "36D85397",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -184,20 +181,20 @@
           ],
           "displayPrice" : "419.99",
           "familyShareable" : false,
-          "groupNumber" : 2,
-          "internalID" : "6736411039",
+          "groupNumber" : 1,
+          "internalID" : "C07C467A",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Enjoy Premium Team features billed annually",
-              "displayName" : "Podstack Team Yearly",
+              "description" : "",
+              "displayName" : "",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.team.year",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Podstack Team Yearly",
-          "subscriptionGroupID" : "21551350",
+          "referenceName" : "Podstack Team Annual Plan",
+          "subscriptionGroupID" : "36D85397",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
