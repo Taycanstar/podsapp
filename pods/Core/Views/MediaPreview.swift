@@ -43,6 +43,7 @@ struct MediaPreview: View {
                 let videoHeight = screenWidth * (1 / videoAspectRatio)
                 // Calculate the remaining height for the bottom segment
                 let bottomSegmentHeight = max(proxy.size.height - videoHeight, 0)
+
                 
                 
                 VStack(spacing:0) {
