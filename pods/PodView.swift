@@ -1,44 +1,84 @@
 import SwiftUI
 import AVFoundation
 
+//enum NavigationDestination: Hashable {
+//    case player(items: [PodItem], initialIndex: Int)
+//    case podInfo
+//    case podMembers
+//    case activityLog
+////    case trends
+//    case trends(podId: Int)
+//
+//    func hash(into hasher: inout Hasher) {
+//        switch self {
+//        case .player(let items, let initialIndex):
+//            hasher.combine("player")
+//            hasher.combine(items.map { $0.id })  // Assuming PodItem has an id property
+//            hasher.combine(initialIndex)
+//
+//        case .podInfo:
+//            hasher.combine("podInfo")
+//        case .podMembers:
+//            hasher.combine("podMembers")
+//        case .activityLog:
+//            hasher.combine("activityLog")
+//        case .trends:
+//                  hasher.combine("trends")
+//            
+//              
+//        }
+//    }
+//    static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
+//        switch (lhs, rhs) {
+//        case (.player(let items1, let index1), .player(let items2, let index2)):
+//            return items1.map { $0.id } == items2.map { $0.id } && index1 == index2
+//        case (.podInfo, .podInfo), (.podMembers, .podMembers), (.activityLog, .activityLog):
+//            return true
+//        default:
+//            return false
+//        }
+//    }
+//}
 enum NavigationDestination: Hashable {
-    case player(items: [PodItem], initialIndex: Int)
+    case player(item: PodItem)
     case podInfo
     case podMembers
     case activityLog
-//    case trends
     case trends(podId: Int)
 
     func hash(into hasher: inout Hasher) {
         switch self {
-        case .player(let items, let initialIndex):
+        case .player(let item):
             hasher.combine("player")
-            hasher.combine(items.map { $0.id })  // Assuming PodItem has an id property
-            hasher.combine(initialIndex)
+            hasher.combine(item.id)
         case .podInfo:
             hasher.combine("podInfo")
         case .podMembers:
             hasher.combine("podMembers")
         case .activityLog:
             hasher.combine("activityLog")
-        case .trends:
-                  hasher.combine("trends")
-            
-              
+        case .trends(let podId):
+            hasher.combine("trends")
+            hasher.combine(podId)
         }
     }
 
     static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
         switch (lhs, rhs) {
-        case (.player(let items1, let index1), .player(let items2, let index2)):
-            return items1.map { $0.id } == items2.map { $0.id } && index1 == index2
+        case (.player(let item1), .player(let item2)):
+            return item1.id == item2.id
         case (.podInfo, .podInfo), (.podMembers, .podMembers), (.activityLog, .activityLog):
             return true
+        case (.trends(let id1), .trends(let id2)):
+            return id1 == id2
         default:
             return false
         }
     }
 }
+
+
+
 struct PodView: View {
     @Binding var pod: Pod
     @Binding var needsRefresh: Bool
@@ -103,6 +143,7 @@ struct PodView: View {
     @State private var showCameraView = false
 
     @State private var isAddInputLoading = false
+    @StateObject private var videoPreloader = VideoPreloader()
     
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
@@ -197,8 +238,10 @@ struct PodView: View {
         }
         .navigationDestination(for: NavigationDestination.self) { destination in
             switch destination {
-            case .player(let items, let initialIndex):
-                PlayerContainerView(items: items, initialIndex: initialIndex)
+//            case .player(let items, let initialIndex):
+//                PlayerContainerView(items: items, initialIndex: initialIndex)
+            case .player(let item):
+                    SingleVideoPlayerView(item: item)
             case .podInfo:
                 PodInfoView(pod: $pod,
                             currentTitle: $currentTitle,
@@ -362,15 +405,34 @@ struct PodView: View {
                 case .success(let fullPod):
                     self.pod = fullPod
                     self.reorderedItems = fullPod.items
+                    // Preload videos after fetching pod details
+//                    self.videoPreloader.preloadVideos(for: self.reorderedItems)
                     self.podColumns = fullPod.columns
                     self.visibleColumns = fullPod.visibleColumns
                     self.currentTitle = fullPod.title
                     self.currentDescription = fullPod.description ?? ""
                     self.currentType = fullPod.type ?? ""
                     print("Pod details fetched successfully!")
+                    
+                    // Wait for at least the first video to be preloaded
+//                    self.waitForInitialPreload()
+                
                 case .failure(let error):
                     print("Failed to load pod details: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+    
+    
+    private func waitForInitialPreload() {
+        guard let firstItemId = reorderedItems.first?.id else {
+            return
+        }
+        
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            if self.videoPreloader.preloadProgress[firstItemId] ?? 0 >= 0.5 {
+                timer.invalidate()
             }
         }
     }
@@ -533,27 +595,49 @@ struct PodView: View {
         }
         .padding(.horizontal, 15)
     }
-
-    private func iconView(for item: PodItem , index: Int) -> some View {
+    
+    // Update the iconView function
+    private func iconView(for item: PodItem, index: Int) -> some View {
         Group {
             if item.videoURL != nil || item.imageURL != nil {
                 Image(systemName: "play")
                     .font(.system(size: 20))
                     .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
                     .onTapGesture {
-                                     navigationPath.append(NavigationDestination.player(items: reorderedItems, initialIndex: index))
-                                 }
+                        navigationPath.append(NavigationDestination.player(item: item))
+                    }
             } else {
                 Image(systemName: "camera")
                     .font(.system(size: 20))
                     .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
                     .onTapGesture {
-                                       selectedItemForMedia = item
-                                       showCameraView = true
-                                   }
+                        selectedItemForMedia = item
+                        showCameraView = true
+                    }
             }
         }
     }
+
+//    private func iconView(for item: PodItem , index: Int) -> some View {
+//        Group {
+//            if item.videoURL != nil || item.imageURL != nil {
+//                Image(systemName: "play")
+//                    .font(.system(size: 20))
+//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+//                    .onTapGesture {
+//                                     navigationPath.append(NavigationDestination.player(items: reorderedItems, initialIndex: index))
+//                                 }
+//            } else {
+//                Image(systemName: "camera")
+//                    .font(.system(size: 20))
+//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+//                    .onTapGesture {
+//                                       selectedItemForMedia = item
+//                                       showCameraView = true
+//                                   }
+//            }
+//        }
+//    }
 
 
     

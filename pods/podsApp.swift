@@ -13,6 +13,7 @@ struct podsApp: App {
     @StateObject var onboardingViewModel = OnboardingViewModel()
     @StateObject var uploadViewModel = UploadViewModel()
     @StateObject var homeViewModel = HomeViewModel()
+    @StateObject var videoPreloader = VideoPreloader()
     @StateObject private var themeManager = ThemeManager()
     @StateObject private var deepLinkHandler = DeepLinkHandler()
     @StateObject private var subscriptionManager = SubscriptionManager()
@@ -31,6 +32,7 @@ struct podsApp: App {
                 .environmentObject(homeViewModel)
                 .environmentObject(themeManager) 
                 .environmentObject(deepLinkHandler)
+                .environmentObject(videoPreloader)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {

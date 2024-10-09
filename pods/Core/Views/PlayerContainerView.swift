@@ -15,6 +15,7 @@ struct PlayerContainerView: View {
     var items: [PodItem]
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var sharedViewModel: SharedViewModel
+    @EnvironmentObject var videoPreloader: VideoPreloader
 
     init(items: [PodItem], initialIndex: Int) {
         self.items = items
@@ -23,7 +24,7 @@ struct PlayerContainerView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            PlayerPageView(items: items, currentIndex: $currentIndex)
+            PlayerPageView(items: items, currentIndex: $currentIndex, videoPreloader: videoPreloader)
                 .background(Color.black.edgesIgnoringSafeArea(.all))
                 .edgesIgnoringSafeArea(.all)
                 .toolbar {

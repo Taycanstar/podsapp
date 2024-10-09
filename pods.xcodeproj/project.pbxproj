@@ -49,6 +49,7 @@
 		368A27392B9818330001BBCA /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27382B9818330001BBCA /* InfoView.swift */; };
 		368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67172BDCC454000434E0 /* PodItemCellImage.swift */; };
 		368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368D67192BDD421B000434E0 /* MediaManager.swift */; };
+		3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694744B2CB70EFA00CD197F /* SingleVideoPlayerView.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -156,6 +157,7 @@
 		368A27382B9818330001BBCA /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
 		368D67172BDCC454000434E0 /* PodItemCellImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCellImage.swift; sourceTree = "<group>"; };
 		368D67192BDD421B000434E0 /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
+		3694744B2CB70EFA00CD197F /* SingleVideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleVideoPlayerView.swift; sourceTree = "<group>"; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -286,6 +288,7 @@
 			isa = PBXGroup;
 			children = (
 				3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */,
+				3694744B2CB70EFA00CD197F /* SingleVideoPlayerView.swift */,
 				368D67192BDD421B000434E0 /* MediaManager.swift */,
 				3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */,
 			);
@@ -742,6 +745,7 @@
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
+				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
