@@ -9,6 +9,7 @@ import SwiftUI
 import AVKit
 import AVFoundation
 import Combine
+import Network
 
 struct SingleVideoPlayerView: View {
     let item: PodItem
@@ -77,6 +78,9 @@ struct SingleVideoPlayerView: View {
     }
 }
 
+
+
+
 class PlayerManager: ObservableObject {
     @Published var currentPlayer: AVPlayer?
     @Published var isLoading = false
@@ -84,17 +88,71 @@ class PlayerManager: ObservableObject {
     
     private var looper: AVPlayerLooper?
     private var cancellables = Set<AnyCancellable>()
+    private let monitor = NWPathMonitor()
+    private var currentItemObserver: NSKeyValueObservation?
+    
+    init() {
+        setupNetworkMonitoring()
+    }
+    
+    private func setupNetworkMonitoring() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                self?.adjustSettingsForNetwork(path: path)
+            }
+        }
+        
+        let queue = DispatchQueue(label: "NetworkMonitor")
+        monitor.start(queue: queue)
+    }
+    
+    private func adjustSettingsForNetwork(path: NWPath) {
+        guard let player = currentPlayer, let playerItem = player.currentItem else { return }
+        
+        if path.usesInterfaceType(.cellular) {
+            playerItem.preferredPeakBitRate = 300_000 // Lower bit rate for cellular
+            playerItem.preferredForwardBufferDuration = 10 // Increase buffer duration
+        } else if path.usesInterfaceType(.wifi) {
+            playerItem.preferredPeakBitRate = 1_500_000 // Higher bit rate for Wi-Fi
+            playerItem.preferredForwardBufferDuration = 5 // Default buffer duration
+        }
+        
+        // Ensure playback starts or resumes after network change
+        if player.timeControlStatus != .playing {
+            player.play()
+        }
+    }
     
     func loadVideo(for item: PodItem) {
-        guard let url = item.videoURL else { return }
+        guard let url = item.videoURL else {
+            self.error = NSError(domain: "InvalidURL", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid video URL"])
+            return
+        }
         
         isLoading = true
         error = nil
         
         let asset = AVURLAsset(url: url)
-        asset.loadValuesAsynchronously(forKeys: ["playable"]) { [weak self] in
-            DispatchQueue.main.async {
-                self?.prepareToPlay(asset: asset)
+        
+        if #available(iOS 16.0, *) {
+            Task {
+                do {
+                    try await asset.load(.isPlayable)
+                    await MainActor.run {
+                        self.prepareToPlay(asset: asset)
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.error = error
+                        self.isLoading = false
+                    }
+                }
+            }
+        } else {
+            asset.loadValuesAsynchronously(forKeys: ["playable"]) { [weak self] in
+                DispatchQueue.main.async {
+                    self?.prepareToPlay(asset: asset)
+                }
             }
         }
     }
@@ -104,24 +162,25 @@ class PlayerManager: ObservableObject {
             let playerItem = AVPlayerItem(asset: asset)
             let player = AVQueuePlayer(playerItem: playerItem)
             
-            // Enable adaptive bitrate streaming
-            player.currentItem?.preferredPeakBitRate = 1_500_000 // 1.5 Mbps, adjust as needed
-            
-            // Configure AVPlayerItem for better performance on cellular
-            playerItem.preferredForwardBufferDuration = 5 // Buffer 5 seconds ahead
+            // Set initial network-friendly settings
+            playerItem.preferredPeakBitRate = 1_500_000
+            playerItem.preferredForwardBufferDuration = 5
             playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
             
             self.looper = AVPlayerLooper(player: player, templateItem: playerItem)
             
             // Observe buffering state
-            player.currentItem?.publisher(for: \.isPlaybackLikelyToKeepUp)
-                .sink { [weak self] isLikelyToKeepUp in
-                    self?.isLoading = !isLikelyToKeepUp
+            currentItemObserver = player.observe(\.currentItem?.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] _, _ in
+                DispatchQueue.main.async {
+                    self?.isLoading = !(player.currentItem?.isPlaybackLikelyToKeepUp ?? false)
                 }
-                .store(in: &cancellables)
+            }
             
             self.currentPlayer = player
             player.play()
+            
+            // Adjust settings based on current network condition
+            adjustSettingsForNetwork(path: monitor.currentPath)
         } catch {
             self.error = error
         }
@@ -144,6 +203,11 @@ class PlayerManager: ObservableObject {
         currentPlayer = nil
         looper = nil
         cancellables.removeAll()
+        currentItemObserver?.invalidate()
+    }
+    
+    deinit {
+        monitor.cancel()
     }
 }
 
