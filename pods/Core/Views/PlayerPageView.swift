@@ -30,7 +30,84 @@ struct Player : UIViewControllerRepresentable {
 }
 
 
-
+//
+//struct PlayerView: View {
+//    var items: [PodItem]
+//    let lifecycleDelegate: ViewLifecycleDelegate?
+//    @Binding var currentIndex: Int
+//    @State private var players: [Int: AVPlayer] = [:]
+//
+//    var body: some View {
+//        VStack(spacing: 0) {
+//            ForEach(items.indices, id: \.self) { index in
+//                let item = items[index]
+//                ZStack {
+//                    Color.black.edgesIgnoringSafeArea(.all)
+//                    
+//                    if let url = item.videoURL {
+//                        GeometryReader { geometry in
+//                            CustomVideoPlayer2(
+//                                url: url,
+//                                player: Binding(
+//                                    get: { self.players[index] },
+//                                    set: { self.players[index] = $0 }
+//                                ),
+//                                isCurrentVideo: index == currentIndex
+//                            )
+//                            .aspectRatio(contentMode: .fit)
+//                            .frame(width: geometry.size.width, height: geometry.size.height)
+//                            .onTapGesture {
+//                                if let player = players[index] {
+//                                    if player.timeControlStatus == .playing {
+//                                        player.pause()
+//                                    } else if index == currentIndex {
+//                                        player.play()
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        PodItemCellImage(item: item)
+//                            .id(item.id)
+//                    }
+//
+//                    VStack {
+//                        Spacer()
+//                        HStack(alignment: .bottom) {
+//                            VStack(alignment: .leading) {
+//                                Text(item.notes)
+//                            }
+//                            .foregroundStyle(.white)
+//                            .font(.body)
+//                            Spacer()
+//                        }
+//                        .padding(.bottom, 80)
+//                    }
+//                    .padding()
+//                }
+//                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+//            }
+//        }
+//        .background(Color.black)
+//        .onAppear {
+//            self.lifecycleDelegate?.onAppear()
+//            if let player = players[currentIndex] {
+//                player.play()
+//            }
+//        }
+//        .onDisappear {
+//            self.lifecycleDelegate?.onDisappear()
+//            for player in players.values {
+//                player.pause()
+//            }
+//        }
+//        .onChange(of: currentIndex) { oldIndex, newIndex in
+//            players[oldIndex]?.pause()
+//            players[newIndex]?.seek(to: .zero)
+//            players[newIndex]?.play()
+//        }
+//    }
+//}
 struct PlayerView: View {
     var items: [PodItem]
     let lifecycleDelegate: ViewLifecycleDelegate?
@@ -42,7 +119,7 @@ struct PlayerView: View {
             ForEach(items.indices, id: \.self) { index in
                 let item = items[index]
                 ZStack {
-                    Color.black.edgesIgnoringSafeArea(.all)
+                    Color.black.edgesIgnoringSafeArea(.all) // Black background to match video layout
                     
                     if let url = item.videoURL {
                         GeometryReader { geometry in
@@ -54,8 +131,9 @@ struct PlayerView: View {
                                 ),
                                 isCurrentVideo: index == currentIndex
                             )
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .frame(width: geometry.size.width, height: geometry.size.height) // Use full width and height
+                            .clipped() // Ensure no overflow
+                            .edgesIgnoringSafeArea(.all) // Video should cover all safe areas
                             .onTapGesture {
                                 if let player = players[index] {
                                     if player.timeControlStatus == .playing {
