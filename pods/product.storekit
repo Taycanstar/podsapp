@@ -75,7 +75,11 @@
     {
       "id" : "DC104F9D",
       "localizations" : [
-
+        {
+          "description" : "Enjoy Podstack with premium features",
+          "displayName" : "Podstack+",
+          "locale" : "en_US"
+        }
       ],
       "name" : "Podstack+",
       "subscriptions" : [
@@ -93,8 +97,8 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "",
-              "displayName" : "",
+              "description" : "Enjoy Plus features billed monthly",
+              "displayName" : "Podstack+ Monthly Plan",
               "locale" : "en_US"
             }
           ],
@@ -121,8 +125,8 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "",
-              "displayName" : "",
+              "description" : "Enjoy Plus features billed annually",
+              "displayName" : "Podstack+ Annual Plan",
               "locale" : "en_US"
             }
           ],
@@ -140,7 +144,11 @@
     {
       "id" : "36D85397",
       "localizations" : [
-
+        {
+          "description" : "Enjoy Podstack designed for teams",
+          "displayName" : "Podstack Team",
+          "locale" : "en_US"
+        }
       ],
       "name" : "Podstack Team",
       "subscriptions" : [
@@ -158,8 +166,8 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "",
-              "displayName" : "",
+              "description" : "Enjoy Premium Team features billed monthly",
+              "displayName" : "Podstack Team Monthly Plan",
               "locale" : "en_US"
             }
           ],
@@ -186,8 +194,8 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "",
-              "displayName" : "",
+              "description" : "Enjoy Premium Team features billed annually",
+              "displayName" : "Podstack Team Annual Plan",
               "locale" : "en_US"
             }
           ],

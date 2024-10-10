@@ -45,12 +45,12 @@ struct SingleVideoPlayerView: View {
                 }
             }
             
-            VStack {
-                Spacer()
-                Text(item.notes ?? "")
-                    .foregroundColor(.white)
-                    .padding()
-            }
+//            VStack {
+//                Spacer()
+//                Text(item.notes ?? "")
+//                    .foregroundColor(.white)
+//                    .padding()
+//            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
