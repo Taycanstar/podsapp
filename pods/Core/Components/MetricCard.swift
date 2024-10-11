@@ -15,6 +15,9 @@ struct MetricCard: View {
     var titleFontWeight: Font.Weight = .semibold
     var valueFontSize: CGFloat = 18
     var valueFontWeight: Font.Weight = .bold
+    var unitFontSize: CGFloat = 12
+    var unitFontWeight: Font.Weight = .semibold
+    
     var action: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     
@@ -30,8 +33,7 @@ struct MetricCard: View {
                         .font(.system(size: valueFontSize, weight: valueFontWeight))
                     
                     Text(unit)
-                        .font(.caption)
-                        .fontWeight(.semibold)
+                        .font(.system(size: unitFontSize, weight: unitFontWeight))
                         .foregroundColor(.secondary)
                 }
             }
@@ -51,7 +53,11 @@ struct MetricCard: View {
         .buttonStyle(PlainButtonStyle())
     }
     
+//    private func formattedValue(_ value: Double) -> String {
+//        return String(format: "%.2f", value)
+//    }
     private func formattedValue(_ value: Double) -> String {
-        return String(format: "%.2f", value)
+        return String(Int(round(value)))
     }
+
 }

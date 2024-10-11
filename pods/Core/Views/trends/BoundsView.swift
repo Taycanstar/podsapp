@@ -58,7 +58,7 @@ struct BoundsView: View {
     let selectedTimeRange: TimeRange
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 10) {
             MetricCard(
                 title: "Maximum value",
                 value: maxValue,

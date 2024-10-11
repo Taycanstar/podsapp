@@ -53,6 +53,8 @@
 		3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694744D2CB9B31500CD197F /* FullAnalyticsView.swift */; };
 		369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474512CB9B8CB00CD197F /* BoundsView.swift */; };
 		369474562CB9C0B600CD197F /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474552CB9C0B600CD197F /* MetricCard.swift */; };
+		369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */; };
+		3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -164,6 +166,8 @@
 		3694744D2CB9B31500CD197F /* FullAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullAnalyticsView.swift; sourceTree = "<group>"; };
 		369474512CB9B8CB00CD197F /* BoundsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BoundsView.swift; path = Pods/Core/Views/trends/BoundsView.swift; sourceTree = SOURCE_ROOT; };
 		369474552CB9C0B600CD197F /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricCard.swift; path = Pods/Core/Components/MetricCard.swift; sourceTree = SOURCE_ROOT; };
+		369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConsistencyTrackerView.swift; path = Pods/Core/Views/trends/ConsistencyTrackerView.swift; sourceTree = SOURCE_ROOT; };
+		369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceVariabilityView.swift; sourceTree = "<group>"; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -356,6 +360,8 @@
 				365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */,
 				363201382C9CFDCF00BC1815 /* TrendsView.swift */,
 				369474512CB9B8CB00CD197F /* BoundsView.swift */,
+				369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */,
+				369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */,
 			);
 			path = trends;
 			sourceTree = "<group>";
@@ -749,6 +755,7 @@
 				367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */,
 				364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */,
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
+				369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
@@ -761,6 +768,7 @@
 				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
 				36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */,
 				362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */,
+				3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,

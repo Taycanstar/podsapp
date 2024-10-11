@@ -29,6 +29,8 @@ struct FullAnalyticsView: View {
 //                BoundsView(column: column, activityLogs: activityLogs)
                 ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                ConsistencyTrackerView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -38,7 +40,7 @@ struct FullAnalyticsView: View {
         .onAppear {
                    updateProcessedData()
                }
-        .onChange(of: selectedTimeRange) { _ in
+        .onChange(of: selectedTimeRange) { _, _ in
                  updateProcessedData()
              }
     }
