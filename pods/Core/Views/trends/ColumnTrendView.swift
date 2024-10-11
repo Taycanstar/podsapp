@@ -71,7 +71,7 @@ struct ColumnTrendView: View {
                         .frame(height: 300)
                         .id("chart")
                     }
-                    .frame(height: 320) // Fixed height for the scroll view
+                    .frame(height: 320)
                     .onAppear {
                         scrollToMostRecent(proxy: proxy)
                     }
@@ -80,9 +80,10 @@ struct ColumnTrendView: View {
                     }
                 }
             }
+            .frame(height: 320)
         }
-        .padding()
-        .navigationBarTitle(column.name, displayMode: .inline)
+//        .padding()
+//        .navigationBarTitle(column.name, displayMode: .inline)
         .onAppear {
             updateChartData()
         }

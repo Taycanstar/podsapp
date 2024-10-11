@@ -48,7 +48,8 @@ struct ColumnDetailView: View {
     let activityLogs: [PodItemActivityLog]
 
     var body: some View {
-        ColumnTrendView(column: column, activityLogs: activityLogs)
-//        Text("Hi")
+//        ColumnTrendView(column: column, activityLogs: activityLogs)
+        FullAnalyticsView(column: column, activityLogs: activityLogs)
+
     }
 }
