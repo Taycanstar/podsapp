@@ -52,10 +52,7 @@ struct MetricCard: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
-//    private func formattedValue(_ value: Double) -> String {
-//        return String(format: "%.2f", value)
-//    }
+
     private func formattedValue(_ value: Double) -> String {
         return String(Int(round(value)))
     }

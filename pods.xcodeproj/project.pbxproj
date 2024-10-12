@@ -55,6 +55,7 @@
 		369474562CB9C0B600CD197F /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474552CB9C0B600CD197F /* MetricCard.swift */; };
 		369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */; };
 		3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */; };
+		3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -168,6 +169,7 @@
 		369474552CB9C0B600CD197F /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricCard.swift; path = Pods/Core/Components/MetricCard.swift; sourceTree = SOURCE_ROOT; };
 		369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConsistencyTrackerView.swift; path = Pods/Core/Views/trends/ConsistencyTrackerView.swift; sourceTree = SOURCE_ROOT; };
 		369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceVariabilityView.swift; sourceTree = "<group>"; };
+		3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DetailedMetricView.swift; path = Pods/Core/Views/trends/DetailedMetricView.swift; sourceTree = SOURCE_ROOT; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 				369474512CB9B8CB00CD197F /* BoundsView.swift */,
 				369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */,
 				369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */,
+				3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */,
 			);
 			path = trends;
 			sourceTree = "<group>";
@@ -772,6 +775,7 @@
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
+				3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
