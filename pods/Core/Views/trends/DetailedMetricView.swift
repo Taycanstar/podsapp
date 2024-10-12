@@ -26,7 +26,8 @@ struct DetailedMetricView: View {
             VStack(alignment: .leading, spacing: 20) {
                 Text(description)
                     .font(.body)
-                
+                    .kerning(0.5)
+                    .lineSpacing(2)
 //                VStack(alignment: .leading, spacing: 10) {
 //                    Text("Analysis")
 //                        .font(.title2)
@@ -36,8 +37,9 @@ struct DetailedMetricView: View {
 //                        .font(.body)
 //                }
             }
-            .padding(.vertical, 25)
-            .padding(.horizontal)
+            .padding(.top, 40)
+            .padding(.bottom, 25)
+            .padding(.horizontal, 16)
             
             Spacer()
         }
@@ -48,7 +50,7 @@ struct DetailedMetricView: View {
             ToolbarItem(placement: .principal) {
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(colorScheme == .dark ? .white : Color.accentColor)
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -56,7 +58,7 @@ struct DetailedMetricView: View {
                 }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18))
-                        .foregroundColor(colorScheme == .dark ? .white : Color.accentColor)
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
                 }
             }
         }
@@ -88,9 +90,12 @@ struct DetailedMetricView: View {
     
     private var backgroundEffect: some View {
         ZStack {
-            Color.accentColor
-                .opacity(0.3)
-                .blur(radius: 50)
+//            Color.accentColor
+//                .opacity(0.3)
+//                .blur(radius: 50)
+            (colorScheme == .dark ? Color.accentColor : Color.clear)
+                       .opacity(0.3)
+                       .blur(radius: 50)
             
             Rectangle()
                 .fill(.ultraThinMaterial)

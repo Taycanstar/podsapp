@@ -19,17 +19,19 @@ struct FullAnalyticsView: View {
     let activityLogs: [PodItemActivityLog]
     @State private var selectedTimeRange: TimeRange = .day
     @State private var processedData: [ProcessedDataPoint] = []
+    @State private var currentStreak: Int = 0
+        @State private var longestStreak: Int = 0
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 timeRangeSelector
-//                ColumnTrendView(column: column, activityLogs: activityLogs)
-//                BoundsView(column: column, activityLogs: activityLogs)
+
                 ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
-                ConsistencyTrackerView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+//                ConsistencyTrackerView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
                 PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 Spacer()
             }
@@ -74,7 +76,85 @@ struct FullAnalyticsView: View {
         case .month:
             processedData = processMonthlyData()
         }
+        calculateStreaks()
     }
+    private func calculateStreaks() {
+            let sortedData = processedData.sorted { $0.date < $1.date }
+            var current = 0
+            var longest = 0
+            var lastDate: Date?
+            let calendar = Calendar.current
+            let today = Date()
+            
+            for point in sortedData {
+                if let last = lastDate {
+                    switch selectedTimeRange {
+                    case .day:
+                        let dayDifference = calendar.dateComponents([.day], from: calendar.startOfDay(for: last), to: calendar.startOfDay(for: point.date)).day ?? 0
+                        if dayDifference == 1 {
+                            current += 1
+                        } else if dayDifference > 1 {
+                            longest = max(longest, current)
+                            current = 1
+                        }
+                    case .week:
+                        let weekDifference = calendar.dateComponents([.weekOfYear], from: last, to: point.date).weekOfYear ?? 0
+                        if weekDifference == 1 {
+                            current += 1
+                        } else if weekDifference > 1 {
+                            longest = max(longest, current)
+                            current = 1
+                        }
+                    case .month:
+                        let monthDifference = calendar.dateComponents([.month], from: last, to: point.date).month ?? 0
+                        if monthDifference == 1 {
+                            current += 1
+                        } else if monthDifference > 1 {
+                            longest = max(longest, current)
+                            current = 1
+                        }
+                    }
+                } else {
+                    current = 1
+                }
+                lastDate = point.date
+            }
+            
+            // Check if the current streak is still valid
+            if let lastLogDate = lastDate {
+                switch selectedTimeRange {
+                case .day:
+                    let daysSinceLastLog = calendar.dateComponents([.day], from: calendar.startOfDay(for: lastLogDate), to: calendar.startOfDay(for: today)).day ?? 0
+                    if daysSinceLastLog > 1 {
+                        current = 0
+                    }
+                case .week:
+                    if !calendar.isDate(lastLogDate, equalTo: today, toGranularity: .weekOfYear) {
+                        let weeksSinceLastLog = calendar.dateComponents([.weekOfYear], from: lastLogDate, to: today).weekOfYear ?? 0
+                        if weeksSinceLastLog > 1 {
+                            current = 0
+                        }
+                    }
+                case .month:
+                    if !calendar.isDate(lastLogDate, equalTo: today, toGranularity: .month) {
+                        let monthsSinceLastLog = calendar.dateComponents([.month], from: lastLogDate, to: today).month ?? 0
+                        if monthsSinceLastLog > 1 {
+                            current = 0
+                        }
+                    }
+                }
+            } else {
+                current = 0  // No logs at all
+            }
+            
+            longest = max(longest, current)
+            
+            currentStreak = current
+            longestStreak = longest
+            
+            print("Time Range: \(selectedTimeRange), Current Streak: \(currentStreak), Longest Streak: \(longestStreak)")
+            print("Last log date: \(lastDate?.description ?? "N/A"), Today: \(today.description)")
+        }
     
     private func processDailyData() -> [ProcessedDataPoint] {
         // Process daily data

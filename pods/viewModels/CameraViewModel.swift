@@ -127,27 +127,7 @@ struct Team: Identifiable, Codable {
         self.role = role
     }
 }
-//struct Workspace: Identifiable, Codable {
-//    var id: Int
-//    var name: String
-//    var description: String?
-//    var coverPhoto: URL?
-//    var icon: URL?
-//    var isMain: Bool
-//    let profileInitial: String?
-//    let profileColor: String?
-//    
-//    init(id: Int, name: String, description: String, coverPhoto: URL? = nil, icon: URL? = nil, isMain: Bool, profileInitial: String?, profileColor: String?) {
-//        self.id = id
-//        self.name = name
-//        self.description = description
-//        self.coverPhoto = coverPhoto
-//        self.icon = icon
-//        self.isMain = isMain
-//        self.profileInitial = profileInitial
-//        self.profileColor = profileColor
-//    }
-//}
+
 
 struct Workspace: Identifiable, Codable {
     var id: Int
