@@ -122,7 +122,7 @@
 		0F703D10ADA524ACB9298442 /* Pods-pods-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-pods-podsUITests/Pods-pods-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_podsTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		318FA7B7FE47A42EB705EC9E /* Pods-pods-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-pods-podsUITests/Pods-pods-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
-		36004B412B9000DF00423AB1 /* PodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodView.swift; sourceTree = "<group>"; };
+		36004B412B9000DF00423AB1 /* PodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodView.swift; sourceTree = "<group>"; wrapsLines = 1; };
 		360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltCameraView.swift; sourceTree = "<group>"; };
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };

@@ -1,50 +1,14 @@
 import SwiftUI
 import AVFoundation
 
-//enum NavigationDestination: Hashable {
-//    case player(items: [PodItem], initialIndex: Int)
-//    case podInfo
-//    case podMembers
-//    case activityLog
-////    case trends
-//    case trends(podId: Int)
-//
-//    func hash(into hasher: inout Hasher) {
-//        switch self {
-//        case .player(let items, let initialIndex):
-//            hasher.combine("player")
-//            hasher.combine(items.map { $0.id })  // Assuming PodItem has an id property
-//            hasher.combine(initialIndex)
-//
-//        case .podInfo:
-//            hasher.combine("podInfo")
-//        case .podMembers:
-//            hasher.combine("podMembers")
-//        case .activityLog:
-//            hasher.combine("activityLog")
-//        case .trends:
-//                  hasher.combine("trends")
-//            
-//              
-//        }
-//    }
-//    static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
-//        switch (lhs, rhs) {
-//        case (.player(let items1, let index1), .player(let items2, let index2)):
-//            return items1.map { $0.id } == items2.map { $0.id } && index1 == index2
-//        case (.podInfo, .podInfo), (.podMembers, .podMembers), (.activityLog, .activityLog):
-//            return true
-//        default:
-//            return false
-//        }
-//    }
-//}
+
 enum NavigationDestination: Hashable {
     case player(item: PodItem)
     case podInfo
     case podMembers
     case activityLog
     case trends(podId: Int)
+    case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -60,6 +24,9 @@ enum NavigationDestination: Hashable {
         case .trends(let podId):
             hasher.combine("trends")
             hasher.combine(podId)
+        case .fullAnalytics(let column, _):
+                    hasher.combine("fullAnalytics")
+                    hasher.combine(column.name)
         }
     }
 
@@ -71,6 +38,8 @@ enum NavigationDestination: Hashable {
             return true
         case (.trends(let id1), .trends(let id2)):
             return id1 == id2
+        case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
+                    return column1.name == column2.name
         default:
             return false
         }
@@ -144,6 +113,8 @@ struct PodView: View {
 
     @State private var isAddInputLoading = false
     @StateObject private var videoPreloader = VideoPreloader()
+    
+    @State private var pendingNavigation: NavigationDestination?
     
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
@@ -238,8 +209,6 @@ struct PodView: View {
         }
         .navigationDestination(for: NavigationDestination.self) { destination in
             switch destination {
-//            case .player(let items, let initialIndex):
-//                PlayerContainerView(items: items, initialIndex: initialIndex)
             case .player(let item):
                     SingleVideoPlayerView(item: item)
             case .podInfo:
@@ -257,12 +226,13 @@ struct PodView: View {
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
-//                ActivityLogView(activityLogs: activityLogs)
                 ActivityLogView(podId: pod.id)
-//            case .trends:
             case .trends(let podId):
-//                ItemTrendsView(podItems: reorderedItems, activityLogs: activityLogs, podColumns: podColumns)
+
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
+            case .fullAnalytics(let column, let logs):
+                            FullAnalyticsView(column: column, activityLogs: logs)
+                        
                             
             }
         }
@@ -358,11 +328,26 @@ struct PodView: View {
                         }
                     ),
                     onSave: { _ in },
-                    networkManager: networkManager
+                    networkManager: networkManager,
+                    onViewTrendsTapped: {
+                                                let relevantLogs = activityLogs.filter { $0.itemId == item.id && $0.columnValues[column.name] != nil }
+                                                pendingNavigation = .fullAnalytics(column: column, logs: relevantLogs)
+                                            }
+                   
                 )
                 .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
             }
         }
+        .onAppear {
+                   fetchActivityLogs()
+               }
+        .onChange(of: showColumnEditSheet) { newValue in
+                     if !newValue, let pendingNav = pendingNavigation {
+                         navigationPath.append(pendingNav)
+                         pendingNavigation = nil
+                     }
+                 }
+      
         
         .sheet(isPresented: $showCardSheet) {
             if let index = selectedItemIndex {
@@ -396,6 +381,22 @@ struct PodView: View {
     }
         .navigationBarHidden(true)
     }
+    
+    private func fetchActivityLogs() {
+       
+         networkManager.fetchPodActivityLogs(podId: pod.id) { result in
+             DispatchQueue.main.async {
+                 
+                 switch result {
+                 case .success(let logs):
+                     self.activityLogs = logs
+                 case .failure(let error):
+                     print("Failed to fetch activity logs: \(error)")
+                     // Handle error (e.g., show an alert to the user)
+                 }
+             }
+         }
+     }
     
     
     private func fetchFullPodDetails() {
@@ -1031,8 +1032,8 @@ struct ColumnEditView: View {
     @State private var errorMessage = ""
     @State private var textValue: String = ""
     @EnvironmentObject var viewModel: OnboardingViewModel
-    
     let networkManager: NetworkManager
+    let onViewTrendsTapped: () -> Void
 
     var body: some View {
         NavigationView {
@@ -1056,6 +1057,10 @@ struct ColumnEditView: View {
                             .padding(.horizontal)
                             .focused($isFocused)
                     }
+                    if columnType == "number" {
+                                            viewTrendsButton
+                                        }
+                                        
                     Spacer()
                 }
                 .background(backgroundColor)
@@ -1088,6 +1093,27 @@ struct ColumnEditView: View {
     private var backgroundColor: Color {
         colorScheme == .dark ? Color(rgb: 44,44,44) : .white
     }
+    
+    private var viewTrendsButton: some View {
+           Button(action: {
+               presentationMode.wrappedValue.dismiss()
+               onViewTrendsTapped()
+           }) {
+               HStack(spacing: 5) {
+                   Image(systemName: "chart.line.uptrend.xyaxis")
+                       .font(.system(size: 14, weight: .regular))
+                   Text("View Trends")
+                       .font(.system(size: 14, weight: .regular))
+               }
+               .padding(.vertical, 10)
+               .padding(.horizontal, 15)
+               .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+               .foregroundColor(.accentColor)
+           }
+           .buttonStyle(PlainButtonStyle())
+           .padding(.top, 20)
+       }
+
 
     private func saveValue() {
 
@@ -1503,57 +1529,6 @@ struct CardDetailView: View {
         }
     }
 
-//    private func saveChanges() {
-//        // Filter out unchanged or empty fields
-//        var updatedColumnValues: [String: ColumnValue] = [:]
-//        
-//        for (key, value) in columnValues {
-//            if let originalValue = item.columnValues?[key] {
-//                // Extract the actual value from ColumnValue and compare appropriately
-//                switch originalValue {
-//                case .string(let originalStringValue):
-//                    if originalStringValue != value { // Compare string values
-//                        updatedColumnValues[key] = .string(value)
-//                    }
-//                case .number(let originalNumberValue):
-//                    if let intValue = Int(value), originalNumberValue != intValue { // Compare number values
-//                        updatedColumnValues[key] = .number(intValue)
-//                    }
-//                case .null:
-//                    if !value.isEmpty { // If the original value was null but now there's a value
-//                        updatedColumnValues[key] = .string(value)
-//                    }
-//                }
-//            } else {
-//                // If the value is new or doesn't exist, update it
-//                if let intValue = Int(value) {
-//                    updatedColumnValues[key] = .number(intValue)
-//                } else if value.isEmpty {
-//                    updatedColumnValues[key] = .null
-//                } else {
-//                    updatedColumnValues[key] = .string(value)
-//                }
-//            }
-//        }
-//        
-//        networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-//            DispatchQueue.main.async {
-//                switch result {
-//                case .success:
-////                    self.item.metadata = self.itemName
-////                    self.item.columnValues = updatedColumnValues
-////                    self.presentationMode.wrappedValue.dismiss()
-//                    self.item.metadata = self.itemName
-//                    self.item.notes = self.itemNotes // Update the item's notes
-//                    self.item.columnValues = updatedColumnValues
-//                    self.presentationMode.wrappedValue.dismiss()
-//                case .failure(let error):
-//                    print("Failed to update pod item: \(error)")
-//                }
-//            }
-//        }
-//    }
-    
     private func saveChanges() {
          var hasChanges = false
          var updatedColumnValues: [String: ColumnValue] = [:]
