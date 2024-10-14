@@ -189,7 +189,7 @@ struct ContentView: View {
                         canCreateNewTeam: subscriptionInfo.canCreateNewTeam
                     )
                     
-                    self.printSubscriptionInfo(source: "Network")
+//                    self.printSubscriptionInfo(source: "Network")
                     
                 case .failure(let error):
                     print("Failed to fetch subscription info: \(error.localizedDescription)")

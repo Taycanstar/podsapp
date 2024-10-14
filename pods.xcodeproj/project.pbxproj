@@ -56,6 +56,7 @@
 		369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */; };
 		3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */; };
 		3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */; };
+		3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3694745D2CBC619200CD197F /* StoreKit.framework */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -170,6 +171,7 @@
 		369474572CB9D14600CD197F /* ConsistencyTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConsistencyTrackerView.swift; path = Pods/Core/Views/trends/ConsistencyTrackerView.swift; sourceTree = SOURCE_ROOT; };
 		369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceVariabilityView.swift; sourceTree = "<group>"; };
 		3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DetailedMetricView.swift; path = Pods/Core/Views/trends/DetailedMetricView.swift; sourceTree = SOURCE_ROOT; };
+		3694745D2CBC619200CD197F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -232,6 +234,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */,
+				3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,6 +473,7 @@
 		A8CF5237E841CC0CB47CFC88 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3694745D2CBC619200CD197F /* StoreKit.framework */,
 				2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */,
 				7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */,
 				A0C6B5CEE1B4DF7C2A254720 /* Pods_Podstack_podsUITests.framework */,

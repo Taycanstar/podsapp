@@ -17,7 +17,7 @@
 
   ],
   "settings" : {
-    "_askToBuyEnabled" : true,
+    "_askToBuyEnabled" : false,
     "_billingGracePeriodEnabled" : true,
     "_failTransactionsEnabled" : false,
     "_locale" : "en_US",

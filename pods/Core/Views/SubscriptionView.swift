@@ -199,18 +199,18 @@ struct ActiveSubscriptionView: View {
                 .foregroundColor(.gray)
             }
         }
-        .onChange(of: isManagingSubscriptions) { newValue, _ in
-             if newValue == false {
-                 Task {
-                     await subscriptionManager.checkCurrentEntitlements()
-                 }
-             }
-         }
-         .onAppear {
-             Task {
-                 await subscriptionManager.checkCurrentEntitlements()
-             }
-         }
+//        .onChange(of: isManagingSubscriptions) { newValue, _ in
+//             if newValue == false {
+//                 Task {
+//                     await subscriptionManager.checkCurrentEntitlements()
+//                 }
+//             }
+//         }
+//         .onAppear {
+//             Task {
+//                 await subscriptionManager.checkCurrentEntitlements()
+//             }
+//         }
 
         .padding()
         .background(Color("mdBg"))
@@ -505,7 +505,7 @@ struct PricingView: View {
                                        userEmail: viewModel.email,
                                        onboardingViewModel: viewModel
                                    )
-                                   await subscriptionManager.forceSubscriptionCheck()
+//                                   await subscriptionManager.forceSubscriptionCheck()
                                    presentationMode.wrappedValue.dismiss()
                                } catch {
                                    errorMessage = error.localizedDescription
