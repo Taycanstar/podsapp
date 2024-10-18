@@ -3822,30 +3822,35 @@ class NetworkManager {
            }
        }
 
-       func cancelSubscription(userEmail: String) async throws -> [String: Any] {
-           guard let url = URL(string: "\(baseUrl)/cancel-subscription/") else {
-               throw NetworkError.invalidURL
-           }
+    func cancelSubscription(userEmail: String) async throws -> [String: Any] {
+            guard let url = URL(string: "\(baseUrl)/cancel-subscription/") else {
+                throw NetworkError.invalidURL
+            }
 
-           let body: [String: Any] = ["user_email": userEmail]
+            let body: [String: Any] = [
+                "user_email": userEmail
+            ]
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-           var request = URLRequest(url: url)
-           request.httpMethod = "POST"
-           request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-           request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, response) = try await URLSession.shared.data(for: request)
 
-           let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
 
-           guard let httpResponse = response as? HTTPURLResponse else {
-               throw NetworkError.invalidResponse
-           }
-
-           if httpResponse.statusCode == 200 {
-               return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-           } else {
-               throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
-           }
-       }
+            if httpResponse.statusCode == 200 {
+                guard let jsonResult = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    throw NetworkError.decodingError
+                }
+                return jsonResult
+            } else {
+                throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
+            }
+        }
     
     func deleteActivityLog(logId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/delete-activity-log/\(logId)/") else {

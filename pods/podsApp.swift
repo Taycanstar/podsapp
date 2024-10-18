@@ -33,6 +33,7 @@ struct podsApp: App {
                 .environmentObject(themeManager) 
                 .environmentObject(deepLinkHandler)
                 .environmentObject(videoPreloader)
+                .environmentObject(subscriptionManager)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {
