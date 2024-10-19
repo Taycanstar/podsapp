@@ -28,7 +28,7 @@ struct SubscriptionView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             if subscriptionManager.hasActiveSubscription() {
-                                ActiveSubscriptionView(viewModel: _viewModel)
+                            ActiveSubscriptionView(viewModel: _viewModel) 
                             } else {
                                 NoSubscriptionView(geometry: geometry)
                             }
@@ -49,6 +49,12 @@ struct SubscriptionView: View {
                      await fetchSubscriptionInfo()
                  }
              }
+    
+        .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+                   Task {
+                       await fetchSubscriptionInfo()
+                   }
+               }
       
         .onDisappear {
             isTabBarVisible.wrappedValue = true

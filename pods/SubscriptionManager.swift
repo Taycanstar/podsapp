@@ -30,7 +30,9 @@ class SubscriptionManager: ObservableObject {
           if let email = onboardingViewModel?.email {
               await fetchSubscriptionInfo(for: email)
           }
-       
+          
+          // Post a notification that the subscription has been updated
+                NotificationCenter.default.post(name: .subscriptionUpdated, object: nil)
       }
     
     
@@ -68,9 +70,7 @@ class SubscriptionManager: ObservableObject {
             }
         }
     }
-//    func hasActiveSubscription() -> Bool {
-//            return subscriptionInfo?.status == "active" && subscriptionInfo?.plan != nil && subscriptionInfo?.plan != "None"
-//        }
+
     func hasActiveSubscription() -> Bool {
         print("Checking subscription status...")
         print("subscriptionInfo: \(String(describing: subscriptionInfo))")
@@ -268,6 +268,9 @@ class SubscriptionManager: ObservableObject {
                               onboardingViewModel: onboardingViewModel
                           )
                     await updateSubscriptionStatus()
+                    
+                    // Post a notification that the subscription has been updated
+                    NotificationCenter.default.post(name: .subscriptionUpdated, object: nil)
                   
                 case .unverified:
                     print("Purchase unverified")
