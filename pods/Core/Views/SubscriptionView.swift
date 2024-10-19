@@ -27,20 +27,12 @@ struct SubscriptionView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            if viewModel.hasActiveSubscription() {
+                            if subscriptionManager.hasActiveSubscription() {
                                 ActiveSubscriptionView(viewModel: _viewModel)
                             } else {
                                 NoSubscriptionView(geometry: geometry)
                             }
-                            // Debug info
-                                                   VStack(alignment: .leading) {
-                                                       Text("Debug Info:")
-                                                           .font(.headline)
-                                                       Text("Subscription Status: \(subscriptionManager.subscriptionInfo?.status ?? "Unknown")")
-                                                       Text("Plan: \(subscriptionManager.subscriptionInfo?.plan ?? "None")")
-                                                       Text("Expires At: \(subscriptionManager.subscriptionInfo?.expiresAt ?? "N/A")")
-                                                       Text("Renews: \(subscriptionManager.subscriptionInfo?.renews == true ? "Yes" : "No")")
-                                                   }
+
                         }
                         .padding()
                     }
@@ -52,10 +44,12 @@ struct SubscriptionView: View {
         .onAppear {
                  isTabBarVisible.wrappedValue = false
                  subscriptionManager.setOnboardingViewModel(viewModel)
+            testDateParsing()
                  Task {
                      await fetchSubscriptionInfo()
                  }
              }
+      
         .onDisappear {
             isTabBarVisible.wrappedValue = true
         }
@@ -75,6 +69,18 @@ struct SubscriptionView: View {
                 Text("Subscription")
                     .font(.headline)
             }
+        }
+    }
+    
+    func testDateParsing() {
+        let dateString = "2024-11-17T05:26:20.494385+00:00"
+        if let date = ISO8601DateFormatter.fullFormatter.date(from: dateString) {
+            print("Successfully parsed date: \(date)")
+            let currentDate = Date()
+            print("Current date: \(currentDate)")
+            print("Is future date: \(date > currentDate)")
+        } else {
+            print("Failed to parse date")
         }
     }
     func fetchSubscriptionInfo() async {
@@ -199,50 +205,6 @@ struct ActiveSubscriptionView: View {
                    }
                }
 
-            
-//            Button(action: {
-//                showCancelAlert = true
-//            }) {
-//                Text("Cancel Subscription")
-//                    .font(.system(size: 16))
-//                    .fontWeight(.regular)
-//                    .foregroundColor(.red)
-//                    .frame(maxWidth: .infinity)
-//                    .padding()
-//                    .background(Color.red.opacity(0.1))
-//                    .cornerRadius(10)
-//            }
-//            .alert(isPresented: $showCancelAlert) {
-//                Alert(
-//                    title: Text("Cancel Subscription"),
-//                    message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(formatSubscriptionDate(viewModel.subscriptionExpiresAt ?? "at the end of the billing period"))."),
-//                    primaryButton: .destructive(Text("Cancel Subscription")) {
-////                        viewModel.cancelSubscription()
-//                        cancelSubscription()
-//                        print("tapped cancel")
-//                    },
-//                    secondaryButton: .cancel()
-//                )
-//            }
-//            Button(action: {
-//               
-//                          openManageSubscriptions()
-//           
-//                isManagingSubscriptions = true
-//
-//                      }) {
-//                          Text("Manage Subscription")
-//                              .font(.system(size: 16))
-//                              .fontWeight(.regular)
-//                              .foregroundColor(.blue)
-//                              .frame(maxWidth: .infinity)
-//                              .padding()
-//                              .background(Color.blue.opacity(0.1))
-//                              .cornerRadius(10)
-//                      }
-            
-
-//
             VStack {
                 HStack {
                     Text("By continuing, you agree to the ")
@@ -297,24 +259,6 @@ struct ActiveSubscriptionView: View {
             }
         }
         
-//        private func getCurrentSubscriptionPrice() -> String {
-//            if let plan = subscriptionManager.subscriptionInfo?.plan {
-//                if plan.contains("Plus") {
-//                    return subscriptionManager.monthlyPrice(for: .plusMonthly)
-//                } else if plan.contains("Team") {
-//                    return subscriptionManager.monthlyPrice(for: .teamMonthly)
-//                }
-//            }
-//            return "Unknown"
-//        }
-//        
-//        private func getSubscriptionStatusText() -> String {
-//            guard let expiresAt = subscriptionManager.subscriptionInfo?.expiresAt else {
-//                return "Unknown"
-//            }
-//            let formattedDate = formatSubscriptionDate(expiresAt)
-//            return subscriptionManager.subscriptionInfo?.renews == true ? "Renews \(formattedDate)" : "Expires \(formattedDate)"
-//        }
     private func getCurrentSubscriptionPrice() -> String {
            if let plan = subscriptionManager.subscriptionInfo?.plan {
                if plan.contains("Plus") {
@@ -345,9 +289,19 @@ struct ActiveSubscriptionView: View {
        }
 
     private func renewSubscription() {
-         // Implement the renewal logic here
-         print("Renewing subscription")
-     }
+        Task {
+            do {
+                try await subscriptionManager.renewSubscription(userEmail: viewModel.email)
+                print("Subscription renewed successfully")
+                // Optionally, you can show a success message or update the UI
+            } catch {
+                print("Error renewing subscription: \(error)")
+                
+            }
+        }
+    }
+    
+    
     
     private func openManageSubscriptions() {
          if #available(iOS 15.0, *) {
@@ -748,10 +702,4 @@ func formatSubscriptionDate(_ dateString: String) -> String {
     return "Unknown"
 }
 
-extension ISO8601DateFormatter {
-    static let fullFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
-}
+

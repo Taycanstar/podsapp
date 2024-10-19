@@ -10,6 +10,8 @@ class SubscriptionManager: ObservableObject {
     @Published var purchasedSubscriptions: [Product] = []
     @Published var subscriptionInfo: SubscriptionInfo?
 
+    @Published var isLoading: Bool = false
+
     init() {
         Task {
             await fetchProducts()
@@ -28,6 +30,7 @@ class SubscriptionManager: ObservableObject {
           if let email = onboardingViewModel?.email {
               await fetchSubscriptionInfo(for: email)
           }
+       
       }
     
     
@@ -69,42 +72,45 @@ class SubscriptionManager: ObservableObject {
 //            return subscriptionInfo?.status == "active" && subscriptionInfo?.plan != nil && subscriptionInfo?.plan != "None"
 //        }
     func hasActiveSubscription() -> Bool {
-            print("Checking subscription status...")
-            print("subscriptionInfo: \(String(describing: subscriptionInfo))")
-            
-            guard let subscriptionInfo = subscriptionInfo else {
-                print("No subscription info available")
-                return false
-            }
-            
-            print("Subscription status: \(subscriptionInfo.status)")
-            
-            if subscriptionInfo.status == "active" {
-                print("Subscription is active")
-                return true
-            }
-            
-            if subscriptionInfo.status == "cancelled" {
-                print("Subscription is cancelled, checking expiration date")
-                if let expiresAtString = subscriptionInfo.expiresAt {
-                    print("Expiration date string: \(expiresAtString)")
-                    let dateFormatter = ISO8601DateFormatter.fullFormatter
-                    if let expiresAt = dateFormatter.date(from: expiresAtString) {
-                        print("Parsed expiration date: \(expiresAt)")
-                        let isStillActive = expiresAt > Date()
-                        print("Is still active: \(isStillActive)")
-                        return isStillActive  // This is the key change - we return true if the expiration date is in the future
-                    } else {
-                        print("Failed to parse expiration date")
-                    }
-                } else {
-                    print("No expiration date found for cancelled subscription")
-                }
-            }
-            
-            print("Subscription is not active")
+        print("Checking subscription status...")
+        print("subscriptionInfo: \(String(describing: subscriptionInfo))")
+        
+        guard let subscriptionInfo = subscriptionInfo else {
+            print("No subscription info available")
             return false
         }
+        
+        print("Subscription status: \(subscriptionInfo.status)")
+        
+        if subscriptionInfo.status == "active" {
+            print("Subscription is active")
+            return true
+        }
+        
+        if subscriptionInfo.status == "cancelled" {
+            print("Subscription is cancelled, checking expiration date")
+            if let expiresAtString = subscriptionInfo.expiresAt {
+                print("Expiration date string: \(expiresAtString)")
+                let dateFormatter = ISO8601DateFormatter.fullFormatter
+                if let expiresAt = dateFormatter.date(from: expiresAtString) {
+                    print("Parsed expiration date: \(expiresAt)")
+                    let currentDate = Date()
+                    print("Current date: \(currentDate)")
+                    let isStillActive = expiresAt > currentDate
+                    print("Is still active: \(isStillActive)")
+                    return isStillActive
+                } else {
+                    print("Failed to parse expiration date")
+                    print("Date formatter used: \(dateFormatter.string(from: Date()))")
+                }
+            } else {
+                print("No expiration date found for cancelled subscription")
+            }
+        }
+        
+        print("Subscription is not active")
+        return false
+    }
 
        func isSubscriptionCancelled() -> Bool {
            return subscriptionInfo?.status == "cancelled"
@@ -177,6 +183,28 @@ class SubscriptionManager: ObservableObject {
     }
     
     @MainActor
+      func renewSubscription(userEmail: String) async throws {
+          print("Starting renewSubscription for email: \(userEmail)")
+
+          let networkManager = NetworkManager()
+          do {
+              let result = try await networkManager.renewSubscription(userEmail: userEmail)
+              print("Subscription renewal result: \(result)")
+              
+              if let status = result["status"] as? String, status == "success" {
+                  print("Subscription renewed successfully")
+                  await updateSubscriptionStatus()
+              } else {
+                  throw SubscriptionError.renewalFailed
+              }
+          } catch {
+              print("Error during renewal: \(error)")
+              throw error
+          }
+      }
+
+    
+    @MainActor
     func updatePurchasedSubscriptions() async {
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result {
@@ -239,6 +267,7 @@ class SubscriptionManager: ObservableObject {
                               userEmail: userEmail,
                               onboardingViewModel: onboardingViewModel
                           )
+                    await updateSubscriptionStatus()
                   
                 case .unverified:
                     print("Purchase unverified")
@@ -409,6 +438,7 @@ enum SubscriptionError: Error {
     case unknown
     case productNotFound
     case userEmailNotFound
+    case renewalFailed
     
     var localizedDescription: String {
         switch self {
@@ -424,9 +454,12 @@ enum SubscriptionError: Error {
             return "The requested product could not be found."
         case .userEmailNotFound:
                     return "User email not found."
+        case .renewalFailed:
+                   return "Failed to renew the subscription. Please try again later."
+               }
         }
     }
-}
+
 
 enum SubscriptionTier: String, CaseIterable {
     case none = "None"
@@ -491,4 +524,12 @@ enum SubscriptionTier: String, CaseIterable {
 extension Notification.Name {
     static let subscriptionPurchased = Notification.Name("subscriptionPurchased")
     static let subscriptionUpdated = Notification.Name("subscriptionUpdated")
+}
+
+extension ISO8601DateFormatter {
+    static let fullFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
+        return formatter
+    }()
 }

@@ -3246,75 +3246,7 @@ class NetworkManager {
           }.resume()
       }
 
-//    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
-//            completion(.failure(NetworkError.invalidURL))
-//            return
-//        }
-//
-//        let serializedColumnData = podColumns.compactMap { column -> [String: Any]? in
-//            guard let value = columnValues[column.name] else { return nil }
-//            
-//            let serializedValue: Any
-//            switch value {
-//            case .string(let str):
-//                serializedValue = str
-//            case .number(let num):
-//                serializedValue = num
-//            case .null:
-//                serializedValue = NSNull()
-//            }
-//            
-//            return [
-//                "name": column.name,
-//                "type": column.type,
-//                "value": serializedValue
-//            ]
-//        }
-//
-//        let body: [String: Any] = [
-//            "itemId": itemId,
-//            "podId": podId,
-//            "userEmail": userEmail,
-//            "columnData": serializedColumnData,
-//            "notes": notes
-//        ]
-//
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-//
-//        do {
-//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-//        } catch {
-//            completion(.failure(NetworkError.encodingError))
-//            return
-//        }
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                print("Network error: \(error.localizedDescription)")
-//                completion(.failure(error))
-//                return
-//            }
-//
-//            guard let data = data else {
-//                print("No data received from server")
-//                completion(.failure(NetworkError.noData))
-//                return
-//            }
-//
-//            do {
-//                let decoder = JSONDecoder()
-//                let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
-//                let activityLog = PodItemActivityLog(from: logJSON)
-//                completion(.success(activityLog))
-//            } catch {
-//                print("JSON parsing error: \(error.localizedDescription)")
-//                completion(.failure(error))
-//            }
-//        }.resume()
-//    }
+
     func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
             completion(.failure(NetworkError.invalidURL))
@@ -3831,6 +3763,37 @@ class NetworkManager {
                 "user_email": userEmail
             ]
             
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            if httpResponse.statusCode == 200 {
+                guard let jsonResult = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    throw NetworkError.decodingError
+                }
+                return jsonResult
+            } else {
+                throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
+            }
+        }
+
+    
+    func renewSubscription(userEmail: String) async throws -> [String: Any] {
+            guard let url = URL(string: "\(baseUrl)/renew-subscription/") else {
+                throw NetworkError.invalidURL
+            }
+
+            let body: [String: Any] = [
+                "user_email": userEmail
+            ]
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
