@@ -69,7 +69,7 @@ struct WelcomeView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.black)
             
-            Text("Improve your daily life by becoming more organized and creative")
+            Text("Making advanced analytics accessible to everyone, everywhere.")
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
         }
@@ -197,9 +197,11 @@ struct WelcomeView: View {
 
     // Sample data structure for the info section
     private let infoData = [
-        InfoItem(icon: "record.circle", title: "Organize with video", subtitle: "Create video-integrated ordered collections", color: .red),
-        InfoItem(icon: "film.stack.fill", title: "Stack Pods", subtitle: "Stack collections called pods, each containing video items", color: .green),
-        InfoItem(icon: "waveform", title: "Transcribe videos", subtitle: "Automate item labeling by converting audio within the video into text", color: Color(red: 35/255, green: 108/255, blue: 255/255))
+        InfoItem(icon: "film.stack.fill", title: "Built for Every Task", subtitle: "Organize tasks witth Pods, add items, and measure them with columns.", color: .green),
+        InfoItem(icon: "chart.line.uptrend.xyaxis", title: "Analytics for Everyone", subtitle: "Turn your data into clear trends and insights.", color: Color.accentColor),
+        InfoItem(icon: "record.circle", title: "Full Video Integration", subtitle: "Add media to all items to add clarity and context to your tasks.", color: .red)
+        
+  
     ]
 }
 

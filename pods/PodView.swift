@@ -358,7 +358,7 @@ struct PodView: View {
                                allItems: Binding<[PodItem]>(
                                 get: { self.reorderedItems },
                                 set: { self.reorderedItems = $0 }
-                               ))
+                               ), visibleColumns: $visibleColumns)
             }
         }
         
@@ -1237,7 +1237,9 @@ struct CardDetailView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var itemNotes: String
     
-    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>) {
+    @Binding var visibleColumns: [String]
+    
+    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
         self._podColumns = podColumns
@@ -1259,6 +1261,7 @@ struct CardDetailView: View {
         self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
         self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
+        self._visibleColumns = visibleColumns
     }
     
     var body: some View {
@@ -1521,6 +1524,13 @@ struct CardDetailView: View {
                         item.columnValues = [:]
                     }
                     item.columnValues?[newColumnName] = .null
+                    
+                    // Automatically make the new column visible if there are fewer than 3 visible columns
+                                       // and this is one of the first three columns being added
+//                                       if visibleColumns.isEmpty && podColumns.count <= 3 {
+//                                           visibleColumns.append(newColumnName)
+//                                           updateVisibleColumnsOnServer()
+//                                       }
                     print("New column added successfully with type: \(newColumnType)")
                 case .failure(let error):
                     print("Failed to add new column: \(error)")
@@ -1528,6 +1538,18 @@ struct CardDetailView: View {
             }
         }
     }
+    
+    private func updateVisibleColumnsOnServer() {
+           networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
+               switch result {
+               case .success:
+                   print("Visible columns updated successfully")
+               case .failure(let error):
+                   print("Failed to update visible columns: \(error)")
+                   // You might want to show an alert to the user here
+               }
+           }
+       }
 
     private func saveChanges() {
          var hasChanges = false
@@ -1728,6 +1750,7 @@ struct LogActivityView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showNotesInput = false
     var onActivityLogged: (PodItemActivityLog) -> Void
+    @State private var skippedColumns: Set<String> = []
 
     init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
         self.item = item
@@ -1751,54 +1774,70 @@ struct LogActivityView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         ForEach(podColumns, id: \.name) { column in
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(column.name)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 5)
-                                    .kerning(0.2)
-                                
-                                if column.type == "text" {
-                                    TextField("", text: Binding(
-                                        get: { self.stringValue(for: column.name) },
-                                        set: { self.columnValues[column.name] = .string($0) }
-                                    ))
-                                    .foregroundColor(.primary)
-                                    .textFieldStyle(PlainTextFieldStyle())
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                    )
-                                } else if column.type == "number" {
-                                    Button(action: {
-                                        withAnimation {
-                                            if expandedColumn == column.name {
-                                                expandedColumn = nil
-                                            } else {
-                                                expandedColumn = column.name
+                            if !skippedColumns.contains(column.name) {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    HStack {
+                                        Text(column.name)
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.primary)
+                                            .padding(.horizontal, 5)
+                                            .kerning(0.2)
+                                        
+                                        Spacer()
+                                        
+                                        Button("Skip") {
+                                            withAnimation {
+                                                skippedColumns.insert(column.name)
+                                                columnValues[column.name] = .null
                                             }
                                         }
-                                    }) {
-                                        Text(self.stringValue(for: column.name))
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.vertical, 12)
-                                            .padding(.horizontal)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                            )
+                                        .padding(.horizontal, 10)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.red)
                                     }
                                     
-                                    if expandedColumn == column.name {
-                                        InlineNumberPicker(value: Binding(
-                                            get: { self.numberValue(for: column.name) },
-                                            set: { self.columnValues[column.name] = .number($0) }
+                                    if column.type == "text" {
+                                        TextField("", text: Binding(
+                                            get: { self.stringValue(for: column.name) },
+                                            set: { self.columnValues[column.name] = .string($0) }
                                         ))
-                                        .frame(height: 150)
-                                        .transition(.opacity)
+                                        .foregroundColor(.primary)
+                                        .textFieldStyle(PlainTextFieldStyle())
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                        )
+                                    } else if column.type == "number" {
+                                        Button(action: {
+                                            withAnimation {
+                                                if expandedColumn == column.name {
+                                                    expandedColumn = nil
+                                                } else {
+                                                    expandedColumn = column.name
+                                                }
+                                            }
+                                        }) {
+                                            Text(self.stringValue(for: column.name))
+                                                .foregroundColor(.primary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, 12)
+                                                .padding(.horizontal)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                                )
+                                        }
+                                        
+                                        if expandedColumn == column.name {
+                                            InlineNumberPicker(value: Binding(
+                                                get: { self.numberValue(for: column.name) },
+                                                set: { self.columnValues[column.name] = .number($0) }
+                                            ))
+                                            .frame(height: 150)
+                                            .transition(.opacity)
+                                        }
                                     }
                                 }
                             }
@@ -1882,7 +1921,8 @@ struct LogActivityView: View {
             podId: podId,
             userEmail: viewModel.email,
             columnValues: columnValues,
-            podColumns: podColumns,
+//            podColumns: podColumns,
+            podColumns: podColumns.filter { !skippedColumns.contains($0.name) },
             notes: activityNote
         ) { result in
             DispatchQueue.main.async {
@@ -1948,3 +1988,4 @@ struct CustomTextEditor: UIViewRepresentable {
         }
     }
 }
+

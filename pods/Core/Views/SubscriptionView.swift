@@ -13,7 +13,7 @@ struct SubscriptionView: View {
 //    @StateObject private var subscriptionManager = SubscriptionManager()
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     
-    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+    let displayedTiers: [SubscriptionTier] = [.plusMonthly]
     
     @State private var isLoading = true
  
@@ -352,71 +352,35 @@ struct NoSubscriptionView: View {
     let geometry: GeometryProxy
     @EnvironmentObject var viewModel: OnboardingViewModel
 
-    @State private var selectedTab = 0
     @State private var showPricingSheet = false
-    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+    let displayedTier: SubscriptionTier = .plusMonthly
     @StateObject private var subscriptionManager = SubscriptionManager()
     
     var body: some View {
         VStack(spacing: 10) {
-            // Title card with arrows
-            HStack {
-                Button(action: {
-                    withAnimation {
-                        selectedTab = max(0, selectedTab - 1)
-                    }
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.accentColor)
-                }
-                .opacity(selectedTab > 0 ? 1 : 0.3)
-                
-                Spacer()
-                
-                Text(displayedTiers[selectedTab].name)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation {
-                        selectedTab = min(1, selectedTab + 1)
-                    }
-                }) {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.accentColor)
-                }
-                .opacity(selectedTab < 1 ? 1 : 0.3)
-            }
-            .padding()
-            .background(Color("mdBg"))
-            .cornerRadius(15)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
-            .padding(.horizontal)
-            .padding(.top, 10)
-            
-            // TabView with subscription tiers
-            TabView(selection: $selectedTab) {
-                SubscriptionTierView(tier: .plusMonthly)
-                    .tag(0)
-                SubscriptionTierView(tier: .teamMonthly)
-                    .tag(1)
-            }
-            .padding(.top, 15)
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .frame(height: geometry.size.height * 0.6)
-
-            PageIndicator(currentPage: selectedTab, pageCount: 2)
+            // Title card
+            Text(displayedTier.name)
+                .font(.headline)
+                .fontWeight(.bold)
                 .padding()
-      
+                .background(Color("mdBg"))
+                .cornerRadius(15)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal)
+                .padding(.top, 10)
+            
+            // Subscription tier view
+            SubscriptionTierView(tier: .plusMonthly)
+                .padding(.top, 15)
+                .frame(height: geometry.size.height * 0.6)
+
             Button(action: {
                 showPricingSheet = true
             }) {
-                Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
+                Text("Starting at \(subscriptionManager.startingPrice(for: displayedTier))")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -428,10 +392,11 @@ struct NoSubscriptionView: View {
             .padding(.bottom, 20)
             
             Spacer()
+            
+            // Terms and Privacy Policy
             VStack {
                 HStack {
                     Text("By continuing, you agree to the ")
-                    
                     Text("Terms")
                         .foregroundColor(Color.accentColor)
                         .underline()
@@ -440,9 +405,7 @@ struct NoSubscriptionView: View {
                                 UIApplication.shared.open(url)
                             }
                         }
-                    
                     Text(" and ")
-                    
                     Text("Privacy Policy")
                         .foregroundColor(Color.accentColor)
                         .underline()
@@ -457,10 +420,124 @@ struct NoSubscriptionView: View {
             }
         }
         .sheet(isPresented: $showPricingSheet) {
-            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: SubscriptionManager())
+            PricingView(tier: displayedTier, subscriptionManager: SubscriptionManager())
         }
     }
 }
+
+//struct NoSubscriptionView: View {
+//    let geometry: GeometryProxy
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//
+//    @State private var selectedTab = 0
+//    @State private var showPricingSheet = false
+//    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
+//    @StateObject private var subscriptionManager = SubscriptionManager()
+//    
+//    var body: some View {
+//        VStack(spacing: 10) {
+//            // Title card with arrows
+//            HStack {
+//                Button(action: {
+//                    withAnimation {
+//                        selectedTab = max(0, selectedTab - 1)
+//                    }
+//                }) {
+//                    Image(systemName: "chevron.left")
+//                        .foregroundColor(.accentColor)
+//                }
+//                .opacity(selectedTab > 0 ? 1 : 0.3)
+//                
+//                Spacer()
+//                
+//                Text(displayedTiers[selectedTab].name)
+//                    .font(.headline)
+//                    .fontWeight(.bold)
+//                
+//                Spacer()
+//                
+//                Button(action: {
+//                    withAnimation {
+//                        selectedTab = min(1, selectedTab + 1)
+//                    }
+//                }) {
+//                    Image(systemName: "chevron.right")
+//                        .foregroundColor(.accentColor)
+//                }
+//                .opacity(selectedTab < 1 ? 1 : 0.3)
+//            }
+//            .padding()
+//            .background(Color("mdBg"))
+//            .cornerRadius(15)
+//            .overlay(
+//                RoundedRectangle(cornerRadius: 15)
+//                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+//            )
+//            .padding(.horizontal)
+//            .padding(.top, 10)
+//            
+//            // TabView with subscription tiers
+//            TabView(selection: $selectedTab) {
+//                SubscriptionTierView(tier: .plusMonthly)
+//                    .tag(0)
+//                SubscriptionTierView(tier: .teamMonthly)
+//                    .tag(1)
+//            }
+//            .padding(.top, 15)
+//            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+//            .frame(height: geometry.size.height * 0.6)
+//
+//            PageIndicator(currentPage: selectedTab, pageCount: 2)
+//                .padding()
+//      
+//            Button(action: {
+//                showPricingSheet = true
+//            }) {
+//                Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
+//                    .font(.headline)
+//                    .foregroundColor(.white)
+//                    .frame(maxWidth: .infinity)
+//                    .padding()
+//                    .background(Color.accentColor)
+//                    .cornerRadius(10)
+//            }
+//            .padding(.horizontal)
+//            .padding(.bottom, 20)
+//            
+//            Spacer()
+//            VStack {
+//                HStack {
+//                    Text("By continuing, you agree to the ")
+//                    
+//                    Text("Terms")
+//                        .foregroundColor(Color.accentColor)
+//                        .underline()
+//                        .onTapGesture {
+//                            if let url = URL(string: "http://humuli.com/policies/terms") {
+//                                UIApplication.shared.open(url)
+//                            }
+//                        }
+//                    
+//                    Text(" and ")
+//                    
+//                    Text("Privacy Policy")
+//                        .foregroundColor(Color.accentColor)
+//                        .underline()
+//                        .onTapGesture {
+//                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+//                                UIApplication.shared.open(url)
+//                            }
+//                        }
+//                }
+//                .font(.footnote)
+//                .foregroundColor(.gray)
+//            }
+//        }
+//        .sheet(isPresented: $showPricingSheet) {
+//            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: SubscriptionManager())
+//        }
+//    }
+//}
 
 // Existing SubscriptionTierView, PageIndicator, and PricingView remain unchanged
 

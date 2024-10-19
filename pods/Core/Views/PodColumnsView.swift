@@ -171,6 +171,12 @@ struct PodColumnsView: View {
                 case .success:
                     let newColumn = PodColumn(name: title, type: type)
                     podColumns.append(newColumn)
+                    
+//                    // Automatically make the new column visible if there are fewer than 3 visible columns
+//                                      if visibleColumns.count < 3 {
+//                                          visibleColumns.append(title)
+//                                          updateVisibleColumnsOnServer()
+//                                      }
                     showAddColumn = false
                 case .failure(let error):
                     print("Failed to add new column: \(error)")
@@ -179,4 +185,16 @@ struct PodColumnsView: View {
             }
         }
     }
+    
+    private func updateVisibleColumnsOnServer() {
+           networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
+               switch result {
+               case .success:
+                   print("Visible columns updated successfully")
+               case .failure(let error):
+                   print("Failed to update visible columns: \(error)")
+                   // Here you might want to show an alert to the user
+               }
+           }
+       }
 }

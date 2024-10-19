@@ -394,7 +394,7 @@ class SubscriptionManager: ObservableObject {
         case .none:
             return "Free"
         case .plusMonthly, .plusYearly:
-            return "$3.99/month"
+            return "$47.90 per year"
         case .teamMonthly, .teamYearly:
             return "$6.99 per seat/month"
         }
