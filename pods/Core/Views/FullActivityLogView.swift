@@ -171,6 +171,8 @@ struct FullActivityLogView: View {
             return str
         case .number(let num):
             return "\(num)"
+        case .time(let timeValue):
+                return timeValue.toString
         case .null:
             return "" // This case should never be reached due to the filter
         }

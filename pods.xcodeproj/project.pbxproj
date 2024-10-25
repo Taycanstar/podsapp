@@ -57,6 +57,7 @@
 		3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */; };
 		3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */; };
 		3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3694745D2CBC619200CD197F /* StoreKit.framework */; };
+		369474612CCA97F800CD197F /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 369474602CCA97F800CD197F /* Mixpanel */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -233,6 +234,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				369474612CCA97F800CD197F /* Mixpanel in Frameworks */,
 				E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */,
 				3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */,
 			);
@@ -592,6 +594,9 @@
 				Base,
 			);
 			mainGroup = 36C458AD2B7421100060355F;
+			packageReferences = (
+				3694745F2CCA97F800CD197F /* XCRemoteSwiftPackageReference "mixpanel-swift" */,
+			);
 			productRefGroup = 36C458B72B7421100060355F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -1221,6 +1226,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3694745F2CCA97F800CD197F /* XCRemoteSwiftPackageReference "mixpanel-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mixpanel/mixpanel-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		369474602CCA97F800CD197F /* Mixpanel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3694745F2CCA97F800CD197F /* XCRemoteSwiftPackageReference "mixpanel-swift" */;
+			productName = Mixpanel;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 36C458AE2B7421100060355F /* Project object */;
 }

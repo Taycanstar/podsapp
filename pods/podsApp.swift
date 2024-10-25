@@ -6,6 +6,7 @@
 //
 import GoogleSignIn
 import SwiftUI
+import Mixpanel
 
 @main
 struct podsApp: App {
@@ -101,6 +102,19 @@ class DeepLinkHandler: ObservableObject {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        if let mixpanelToken = ConfigurationManager.shared.getValue(forKey: "MP_TOKEN") as? String {
+            Mixpanel.initialize(token: mixpanelToken, trackAutomaticEvents: false)
+            print("Mixpanel set!")
+            
+            // Send a test event to verify Mixpanel initialization
+            Mixpanel.mainInstance().track(event: "Test Initialization Event")
+            print("Test Initialization Event sent to Mixpanel")
+        } else {
+            print("Error: MP_TOKEN is missing or not a valid String.")
+        }
+
+
    
         // Restore previous sign-in state if available
         GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in

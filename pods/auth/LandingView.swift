@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices  // For Apple Sign In
 import GoogleSignIn
 import CryptoKit
+import Mixpanel
 
 struct LandingView: View {
     // Background color as specified
@@ -122,9 +123,10 @@ struct LandingView: View {
                 return
             }
 
-                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo in
+                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
                         if success {
                             print("Token sent successfully")
+                            let userIdString = "\(userId ?? 0)"
                             if isNewUser {
                                 // Update view model and navigate to welcome view
                                 UserDefaults.standard.set(true, forKey: "isAuthenticated")
@@ -135,6 +137,9 @@ struct LandingView: View {
                                 viewModel.email = email ?? ""
                                 viewModel.username = username ?? ""
                                 viewModel.activeTeamId = activeTeamId
+                                
+                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+                                viewModel.userId = userId ?? 0
                                 
                                 if let subscriptionInfo = subscriptionInfo {
                                     viewModel.updateSubscriptionInfo(
@@ -147,6 +152,13 @@ struct LandingView: View {
                                     )
                                 }
                                 
+                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+                                Mixpanel.mainInstance().people.set(properties: [
+                                    "$email": viewModel.email,
+                                    "$name": viewModel.username
+                                ])
+
+                                
                                 viewModel.currentStep = .welcome
                             } else {
                                 viewModel.currentStep = .landing
@@ -158,6 +170,8 @@ struct LandingView: View {
                                 viewModel.email = email ?? ""
                                 viewModel.username = username ?? ""
                                 viewModel.activeTeamId = activeTeamId
+                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+                                viewModel.userId = userId ?? 0
                                 
                                 if let subscriptionInfo = subscriptionInfo {
                                     viewModel.updateSubscriptionInfo(
@@ -171,6 +185,12 @@ struct LandingView: View {
                                 }
                                 
                                 self.isAuthenticated = true
+                                
+                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+                                                        Mixpanel.mainInstance().people.set(properties: [
+                                                            "$email": viewModel.email,
+                                                            "$name": viewModel.username
+                                                        ])
                             }
                         } else {
                             print("Failed to send token: \(message ?? "Unknown error")")
@@ -208,9 +228,10 @@ struct LandingView: View {
             
             print("Sending original nonce to backend: \(nonce)")
             
-            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo in
+            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
                 if success {
                     DispatchQueue.main.async {
+                        let userIdString = "\(userId ?? 0)"
                         if isNewUser {
                             UserDefaults.standard.set(true, forKey: "isAuthenticated")
                             UserDefaults.standard.set(email, forKey: "userEmail")
@@ -220,6 +241,8 @@ struct LandingView: View {
                             viewModel.email = email ?? ""
                             viewModel.username = username ?? ""
                             viewModel.activeTeamId = activeTeamId
+                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+                            viewModel.userId = userId ?? 0
                             
                             if let subscriptionInfo = subscriptionInfo {
                                 viewModel.updateSubscriptionInfo(
@@ -240,6 +263,9 @@ struct LandingView: View {
                             UserDefaults.standard.set(username, forKey: "username")
                             UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
                             
+                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+                            viewModel.userId = userId ?? 0
+                            
                             viewModel.email = email ?? ""
                             viewModel.username = username ?? ""
                             viewModel.activeTeamId = activeTeamId
@@ -256,6 +282,12 @@ struct LandingView: View {
                             }
                             
                             self.isAuthenticated = true
+                            
+                            Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+                                                    Mixpanel.mainInstance().people.set(properties: [
+                                                        "$email": viewModel.email,
+                                                        "$name": viewModel.username
+                                                    ])
                         }
                     }
                 } else {

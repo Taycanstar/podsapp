@@ -1,4 +1,5 @@
 import SwiftUI
+import Mixpanel
 
 struct WelcomeView: View {
     @State private var password: String = ""
@@ -143,13 +144,17 @@ struct WelcomeView: View {
             self.isAuthenticated = true
             self.showTourView = true
         } else {
-            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam in
+            networkManager.login(identifier: viewModel.email.isEmpty ? viewModel.username : viewModel.email, password: viewModel.password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId in
                 DispatchQueue.main.async {
                     isLoading = false
                     if success {
+                        let userIdString = "\(userId ?? 0)"
                         self.isAuthenticated = true
                         self.showTourView = true
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                        UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+                                   self.viewModel.userId = userId
+                     
                         if let email = email {
                             UserDefaults.standard.set(email, forKey: "userEmail")
                             viewModel.email = email
@@ -183,6 +188,13 @@ struct WelcomeView: View {
                             seats: subscriptionSeats,
                             canCreateNewTeam: canCreateNewTeam
                         )
+                        
+                        // Mixpanel: Identify the user and set properties
+                                               Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+                                               Mixpanel.mainInstance().people.set(properties: [
+                                                   "$email": viewModel.email,
+                                                   "$name": viewModel.username
+                                               ])
 
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing
@@ -197,7 +209,7 @@ struct WelcomeView: View {
 
     // Sample data structure for the info section
     private let infoData = [
-        InfoItem(icon: "film.stack.fill", title: "Built for Every Task", subtitle: "Organize tasks witth Pods, add items, and measure them with columns.", color: .green),
+        InfoItem(icon: "film.stack.fill", title: "Built for Every Task", subtitle: "Organize tasks with Pods, add items, and measure them with columns.", color: .green),
         InfoItem(icon: "chart.line.uptrend.xyaxis", title: "Analytics for Everyone", subtitle: "Turn your data into clear trends and insights.", color: Color.accentColor),
         InfoItem(icon: "record.circle", title: "Full Video Integration", subtitle: "Add media to all items to add clarity and context to your tasks.", color: .red)
         

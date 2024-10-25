@@ -335,7 +335,7 @@ struct PodView: View {
                                             }
                    
                 )
-                .presentationDetents([.height(UIScreen.main.bounds.height / 4)])
+                .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
             }
         }
         .onAppear {
@@ -536,7 +536,7 @@ struct PodView: View {
                        
                        HStack {
                            ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
-//                               columnView(name: column.name, value: reorderedItems[index].columnValues?[column.name] ?? .null)
+
                                columnView(name: column.name, item: reorderedItems[index])
                                    .onTapGesture {
                                        selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
@@ -652,6 +652,9 @@ struct PodView: View {
             case .number(let numberValue):
                 Text("\(numberValue) \(name)")
                     .font(.system(size: 14))
+            case .time(let timeValue):
+                        Text("\(timeValue.toString) \(name)")
+                            .font(.system(size: 14))
             case .null:
                 Text(name)
                     .font(.system(size: 14))
@@ -1034,6 +1037,7 @@ struct ColumnEditView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     let networkManager: NetworkManager
     let onViewTrendsTapped: () -> Void
+  
 
     var body: some View {
         NavigationView {
@@ -1056,10 +1060,31 @@ struct ColumnEditView: View {
                             )
                             .padding(.horizontal)
                             .focused($isFocused)
+                    }else if columnType == "time" {
+                        Text(textValue)
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 50)
+                            .padding(.horizontal)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                            )
+                        
+                        InlineTimePicker(timeValue: Binding(
+                            get: {
+                                TimeValue.fromString(textValue) ??
+                                    TimeValue(hours: 0, minutes: 0, seconds: 0)
+                            },
+                            set: { newValue in
+                                textValue = newValue.toString
+                            }
+                        ))
+                        .frame(height: 150)
                     }
-                    if columnType == "number" {
-                                            viewTrendsButton
-                                        }
+                        if columnType == "number" || columnType == "time" {
+                                                viewTrendsButton
+                                            }
                                         
                     Spacer()
                 }
@@ -1107,7 +1132,7 @@ struct ColumnEditView: View {
                }
                .padding(.vertical, 10)
                .padding(.horizontal, 15)
-               .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+               .background(backgroundColor)
                .foregroundColor(.accentColor)
            }
            .buttonStyle(PlainButtonStyle())
@@ -1122,6 +1147,8 @@ struct ColumnEditView: View {
                newValue = .string(textValue)
            } else if columnType == "number", let numberValue = Int(textValue) {
                newValue = .number(numberValue)
+           } else if columnType == "time", let timeValue = TimeValue.fromString(textValue) {
+               newValue = .time(timeValue)  // Add this case
            } else {
                newValue = .null
            }
@@ -1151,6 +1178,8 @@ struct ColumnEditView: View {
             return value
         case .number(let value):
             return String(value)
+        case .time(let timeValue):
+                return timeValue.toString
         case .null:
             return ""
         }
@@ -1252,6 +1281,7 @@ struct CardDetailView: View {
                 switch value {
                 case .string(let str): initialColumnValues[column.name] = str
                 case .number(let num): initialColumnValues[column.name] = String(num)
+                case .time(let timeValue): initialColumnValues[column.name] = timeValue.toString
                 case .null: initialColumnValues[column.name] = ""
                 }
             } else {
@@ -1325,6 +1355,40 @@ struct CardDetailView: View {
                                             InlineNumberPicker(value: Binding(
                                                 get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
                                                 set: { self.columnValues[column.name] = String($0) }
+                                            ))
+                                            .frame(height: 150)
+                                            .transition(.opacity)
+                                        }
+                                    } else if column.type == "time" {
+                                        Button(action: {
+                                            withAnimation {
+                                                if expandedColumn == column.name {
+                                                    expandedColumn = nil
+                                                } else {
+                                                    expandedColumn = column.name
+                                                }
+                                            }
+                                        }) {
+                                            Text(self.columnValues[column.name] ?? "")
+                                                .foregroundColor(.primary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, 12)
+                                                .padding(.horizontal)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                                )
+                                        }
+                                        
+                                        if expandedColumn == column.name {
+                                            InlineTimePicker(timeValue: Binding(
+                                                get: {
+                                                    TimeValue.fromString(self.columnValues[column.name] ?? "00:00:00") ??
+                                                        TimeValue(hours: 0, minutes: 0, seconds: 0)
+                                                },
+                                                set: { newValue in
+                                                    self.columnValues[column.name] = newValue.toString
+                                                }
                                             ))
                                             .frame(height: 150)
                                             .transition(.opacity)
@@ -1551,73 +1615,158 @@ struct CardDetailView: View {
            }
        }
 
+//    private func saveChanges() {
+//         var hasChanges = false
+//         var updatedColumnValues: [String: ColumnValue] = [:]
+//         
+//         for (key, value) in columnValues {
+//             if let originalValue = item.columnValues?[key] {
+//                 switch originalValue {
+//                 case .string(let originalStringValue):
+//                     if originalStringValue != value {
+//                         updatedColumnValues[key] = .string(value)
+//                         hasChanges = true
+//                     } else {
+//                         updatedColumnValues[key] = originalValue
+//                     }
+//                 case .number(let originalNumberValue):
+//                     if let intValue = Int(value), originalNumberValue != intValue {
+//                         updatedColumnValues[key] = .number(intValue)
+//                         hasChanges = true
+//                     } else {
+//                         updatedColumnValues[key] = originalValue
+//                     }
+//                 case .null:
+//                     if !value.isEmpty {
+//                         updatedColumnValues[key] = .string(value)
+//                         hasChanges = true
+//                     } else {
+//                         updatedColumnValues[key] = originalValue
+//                     }
+//                 }
+//             } else {
+//                 if let intValue = Int(value) {
+//                     updatedColumnValues[key] = .number(intValue)
+//                     hasChanges = true
+//                 } else if !value.isEmpty {
+//                     updatedColumnValues[key] = .string(value)
+//                     hasChanges = true
+//                 } else {
+//                     updatedColumnValues[key] = .null
+//                 }
+//             }
+//         }
+//         
+//         // Check if item name or notes have changed
+//         if itemName != item.metadata || itemNotes != (item.notes ?? "") {
+//             hasChanges = true
+//         }
+//         
+//         // Only update if there are changes
+//         if hasChanges {
+//             networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+//                 DispatchQueue.main.async {
+//                     switch result {
+//                     case .success:
+//                         self.item.metadata = self.itemName
+//                         self.item.notes = self.itemNotes
+//                         self.item.columnValues = updatedColumnValues
+//                     case .failure(let error):
+//                         print("Failed to update pod item: \(error)")
+//                     }
+//                     self.presentationMode.wrappedValue.dismiss()
+//                 }
+//             }
+//         } else {
+//             // If no changes, just dismiss the view
+//             self.presentationMode.wrappedValue.dismiss()
+//         }
+//     }
     private func saveChanges() {
-         var hasChanges = false
-         var updatedColumnValues: [String: ColumnValue] = [:]
-         
-         for (key, value) in columnValues {
-             if let originalValue = item.columnValues?[key] {
-                 switch originalValue {
-                 case .string(let originalStringValue):
-                     if originalStringValue != value {
-                         updatedColumnValues[key] = .string(value)
-                         hasChanges = true
-                     } else {
-                         updatedColumnValues[key] = originalValue
-                     }
-                 case .number(let originalNumberValue):
-                     if let intValue = Int(value), originalNumberValue != intValue {
-                         updatedColumnValues[key] = .number(intValue)
-                         hasChanges = true
-                     } else {
-                         updatedColumnValues[key] = originalValue
-                     }
-                 case .null:
-                     if !value.isEmpty {
-                         updatedColumnValues[key] = .string(value)
-                         hasChanges = true
-                     } else {
-                         updatedColumnValues[key] = originalValue
-                     }
-                 }
-             } else {
-                 if let intValue = Int(value) {
-                     updatedColumnValues[key] = .number(intValue)
-                     hasChanges = true
-                 } else if !value.isEmpty {
-                     updatedColumnValues[key] = .string(value)
-                     hasChanges = true
-                 } else {
-                     updatedColumnValues[key] = .null
-                 }
-             }
-         }
-         
-         // Check if item name or notes have changed
-         if itemName != item.metadata || itemNotes != (item.notes ?? "") {
-             hasChanges = true
-         }
-         
-         // Only update if there are changes
-         if hasChanges {
-             networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-                 DispatchQueue.main.async {
-                     switch result {
-                     case .success:
-                         self.item.metadata = self.itemName
-                         self.item.notes = self.itemNotes
-                         self.item.columnValues = updatedColumnValues
-                     case .failure(let error):
-                         print("Failed to update pod item: \(error)")
-                     }
-                     self.presentationMode.wrappedValue.dismiss()
-                 }
-             }
-         } else {
-             // If no changes, just dismiss the view
-             self.presentationMode.wrappedValue.dismiss()
-         }
-     }
+        var hasChanges = false
+        var updatedColumnValues: [String: ColumnValue] = [:]
+        
+        for (key, value) in columnValues {
+            if let originalValue = item.columnValues?[key] {
+                switch originalValue {
+                case .string(let originalStringValue):
+                    if originalStringValue != value {
+                        updatedColumnValues[key] = .string(value)
+                        hasChanges = true
+                    } else {
+                        updatedColumnValues[key] = originalValue
+                    }
+                case .number(let originalNumberValue):
+                    if let intValue = Int(value), originalNumberValue != intValue {
+                        updatedColumnValues[key] = .number(intValue)
+                        hasChanges = true
+                    } else {
+                        updatedColumnValues[key] = originalValue
+                    }
+                case .time(let originalTimeValue):
+                    if let timeValue = TimeValue.fromString(value), originalTimeValue != timeValue {
+                        updatedColumnValues[key] = .time(timeValue)
+                        hasChanges = true
+                    } else {
+                        updatedColumnValues[key] = originalValue
+                    }
+                case .null:
+                    if !value.isEmpty {
+                        // Try to parse as time first
+                        if let timeValue = TimeValue.fromString(value) {
+                            updatedColumnValues[key] = .time(timeValue)
+                            hasChanges = true
+                        } else if let intValue = Int(value) {
+                            updatedColumnValues[key] = .number(intValue)
+                            hasChanges = true
+                        } else {
+                            updatedColumnValues[key] = .string(value)
+                            hasChanges = true
+                        }
+                    } else {
+                        updatedColumnValues[key] = originalValue
+                    }
+                }
+            } else {
+                // Try to parse as time first
+                if let timeValue = TimeValue.fromString(value) {
+                    updatedColumnValues[key] = .time(timeValue)
+                    hasChanges = true
+                } else if let intValue = Int(value) {
+                    updatedColumnValues[key] = .number(intValue)
+                    hasChanges = true
+                } else if !value.isEmpty {
+                    updatedColumnValues[key] = .string(value)
+                    hasChanges = true
+                } else {
+                    updatedColumnValues[key] = .null
+                }
+            }
+        }
+        
+        // Rest of the method remains the same
+        if itemName != item.metadata || itemNotes != (item.notes ?? "") {
+            hasChanges = true
+        }
+        
+        if hasChanges {
+            networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self.item.metadata = self.itemName
+                        self.item.notes = self.itemNotes
+                        self.item.columnValues = updatedColumnValues
+                    case .failure(let error):
+                        print("Failed to update pod item: \(error)")
+                    }
+                    self.presentationMode.wrappedValue.dismiss()
+                }
+            }
+        } else {
+            self.presentationMode.wrappedValue.dismiss()
+        }
+    }
 }
 
 struct AddColumnView: View {
@@ -1629,9 +1778,23 @@ struct AddColumnView: View {
     @Environment(\.presentationMode) var presentationMode
     
     
+    // Add the computed property here, right after your properties
+      private var columnTypeIcon: String {
+          switch columnType {
+          case .number:
+              return "number"
+          case .text:
+              return "textformat"
+          case .time:
+              return "timer"
+          }
+      }
+    
+    
     enum ColumnType: String, CaseIterable {
         case number = "number"
         case text = "text"
+        case time = "time"
         
         var displayText: String {
             switch self {
@@ -1639,6 +1802,8 @@ struct AddColumnView: View {
                 return "Number"
             case .text:
                 return "Text"
+            case .time:
+                return "Time"
             }
         }
     }
@@ -1667,7 +1832,7 @@ struct AddColumnView: View {
                         
                         // Pod Mode Selection
                         HStack {
-                            Image(systemName: (columnType == .number ? "number" :"textformat"))
+                            Image(systemName: (columnTypeIcon))
                                 .foregroundColor(.accentColor)
                             Text("Column Type")
                             Spacer()
@@ -1711,6 +1876,8 @@ struct AddColumnView: View {
             )
         }
     }
+    
+
     
     private var borderColor: Color {
         colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
@@ -1838,6 +2005,37 @@ struct LogActivityView: View {
                                             .frame(height: 150)
                                             .transition(.opacity)
                                         }
+                                    } else if column.type == "time" {
+                                        Button(action: {
+                                            withAnimation {
+                                                if expandedColumn == column.name {
+                                                    expandedColumn = nil
+                                                } else {
+                                                    expandedColumn = column.name
+                                                }
+                                            }
+                                        }) {
+                                            Text(self.stringValue(for: column.name))
+                                                .foregroundColor(.primary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, 12)
+                                                .padding(.horizontal)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                                )
+                                        }
+                                        
+                                        if expandedColumn == column.name {
+                                            InlineTimePicker(timeValue: Binding(
+                                                get: { self.timeValue(for: column.name) },
+                                                set: { newValue in
+                                                    self.columnValues[column.name] = .time(newValue)
+                                                }
+                                            ))
+                                            .frame(height: 150)
+                                            .transition(.opacity)
+                                        }
                                     }
                                 }
                             }
@@ -1898,14 +2096,41 @@ struct LogActivityView: View {
             )
         }
     }
-
-    private func stringValue(for columnName: String) -> String {
-        switch columnValues[columnName] ?? .null {
-        case .string(let value): return value
-        case .number(let value): return String(value)
-        case .null: return ""
+//
+//    private func stringValue(for columnName: String) -> String {
+//        switch columnValues[columnName] ?? .null {
+//        case .string(let value): return value
+//        case .number(let value): return String(value)
+//        case .null: return ""
+//        }
+//    }
+    // Add these helper methods to your view:
+        private func timeValue(for columnName: String) -> TimeValue {
+            switch columnValues[columnName] ?? .null {
+            case .time(let value):
+                return value
+            case .number(let seconds):
+                return TimeValue.fromSeconds(seconds)
+            case .string(let value):
+                return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+            case .null:
+                return TimeValue(hours: 0, minutes: 0, seconds: 0)
+            }
         }
-    }
+
+        // Update your existing stringValue method:
+        private func stringValue(for columnName: String) -> String {
+            switch columnValues[columnName] ?? .null {
+            case .string(let value):
+                return value
+            case .number(let value):
+                return String(value)
+            case .time(let value):
+                return value.toString
+            case .null:
+                return ""
+            }
+        }
 
     private func numberValue(for columnName: String) -> Int {
         switch columnValues[columnName] ?? .null {
@@ -1989,3 +2214,45 @@ struct CustomTextEditor: UIViewRepresentable {
     }
 }
 
+struct InlineTimePicker: View {
+    @Binding var timeValue: TimeValue
+    
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                // Hours Picker
+                Picker("Hours", selection: $timeValue.hours) {
+                    ForEach(0...23, id: \.self) { hour in
+                        Text("\(hour)h")
+                            .tag(hour)
+                    }
+                }
+                .pickerStyle(WheelPickerStyle())
+                .frame(width: geometry.size.width / 3)
+                .clipped()
+                
+                // Minutes Picker
+                Picker("Minutes", selection: $timeValue.minutes) {
+                    ForEach(0...59, id: \.self) { minute in
+                        Text("\(minute)m")
+                            .tag(minute)
+                    }
+                }
+                .pickerStyle(WheelPickerStyle())
+                .frame(width: geometry.size.width / 3)
+                .clipped()
+                
+                // Seconds Picker
+                Picker("Seconds", selection: $timeValue.seconds) {
+                    ForEach(0...59, id: \.self) { second in
+                        Text("\(second)s")
+                            .tag(second)
+                    }
+                }
+                .pickerStyle(WheelPickerStyle())
+                .frame(width: geometry.size.width / 3)
+                .clipped()
+            }
+        }
+    }
+}

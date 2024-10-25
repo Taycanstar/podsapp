@@ -323,24 +323,66 @@ struct PodItemJSON: Codable {
 
 }
 
+//enum ColumnValue: Codable {
+//    case string(String)
+//    case number(Int)
+//    case null
+//
+//    init(from decoder: Decoder) throws {
+//        let container = try decoder.singleValueContainer()
+//        if container.decodeNil() {
+//            self = .null
+//        } else if let stringValue = try? container.decode(String.self) {
+//            self = .string(stringValue)
+//        } else if let intValue = try? container.decode(Int.self) {
+//            self = .number(intValue)
+//        } else {
+//            throw DecodingError.typeMismatch(ColumnValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected String, Double, or null"))
+//        }
+//    }
+//
+//    func encode(to encoder: Encoder) throws {
+//        var container = encoder.singleValueContainer()
+//        switch self {
+//        case .string(let value):
+//            try container.encode(value)
+//        case .number(let value):
+//            try container.encode(value)
+//        case .null:
+//            try container.encodeNil()
+//        }
+//    }
+//}
 enum ColumnValue: Codable {
     case string(String)
     case number(Int)
+    case time(TimeValue)  // New case
     case null
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if container.decodeNil() {
             self = .null
         } else if let stringValue = try? container.decode(String.self) {
-            self = .string(stringValue)
+            // If the string matches our time format (HH:MM:SS), decode as time
+            if let timeValue = TimeValue.fromString(stringValue) {
+                self = .time(timeValue)
+            } else {
+                self = .string(stringValue)
+            }
         } else if let intValue = try? container.decode(Int.self) {
             self = .number(intValue)
         } else {
-            throw DecodingError.typeMismatch(ColumnValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected String, Double, or null"))
+            throw DecodingError.typeMismatch(
+                ColumnValue.self,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Expected String, Int, or null"
+                )
+            )
         }
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -348,9 +390,48 @@ enum ColumnValue: Codable {
             try container.encode(value)
         case .number(let value):
             try container.encode(value)
+        case .time(let timeValue):
+            try container.encode(timeValue.toString)  // Encode time as "HH:MM:SS" string
         case .null:
             try container.encodeNil()
         }
+    }
+}
+
+// Add this struct to handle time values
+struct TimeValue: Codable, Equatable {
+    var hours: Int
+    var minutes: Int
+    var seconds: Int
+    
+    var toString: String {
+        String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+    
+    static func fromString(_ string: String) -> TimeValue? {
+        let components = string.split(separator: ":")
+        guard components.count == 3,
+              let hours = Int(components[0]),
+              let minutes = Int(components[1]),
+              let seconds = Int(components[2]),
+              hours >= 0 && hours <= 23,
+              minutes >= 0 && minutes <= 59,
+              seconds >= 0 && seconds <= 59
+        else {
+            return nil
+        }
+        return TimeValue(hours: hours, minutes: minutes, seconds: seconds)
+    }
+    
+    var totalSeconds: Int {
+        hours * 3600 + minutes * 60 + seconds
+    }
+    
+    static func fromSeconds(_ totalSeconds: Int) -> TimeValue {
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        return TimeValue(hours: hours, minutes: minutes, seconds: seconds)
     }
 }
 

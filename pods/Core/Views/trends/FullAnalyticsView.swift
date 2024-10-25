@@ -201,6 +201,9 @@ struct FullAnalyticsView: View {
         switch columnValue {
         case .number(let value): return Double(value)
         case .string(let value): return Double(value)
+        case .time(let timeValue):
+                // Convert time to total seconds as a Double
+                return Double(timeValue.totalSeconds)
         case .null: return nil
         }
     }

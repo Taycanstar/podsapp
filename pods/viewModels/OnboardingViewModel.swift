@@ -20,6 +20,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var activeWorkspaceId: Int?
     @Published var profileInitial: String = ""
     @Published var profileColor: String = ""
+    @Published var userId: Int?
     
     // Add these new properties for subscription information
     @Published var subscriptionStatus: String = "none"

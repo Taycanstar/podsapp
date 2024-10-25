@@ -154,6 +154,8 @@ struct ActivityLogItemView: View {
                 return str.isEmpty ? nil : "\(str) \(key)"
             case .number(let num):
                 return "\(num) \(key)"
+            case .time(let timeValue):
+                        return "\(timeValue.toString) \(key)"
             case .null:
                 return nil
             }
