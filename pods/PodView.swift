@@ -335,7 +335,7 @@ struct PodView: View {
                                             }
                    
                 )
-                .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
             }
         }
         .onAppear {
@@ -1064,13 +1064,9 @@ struct ColumnEditView: View {
                         Text(textValue)
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 50)
+                            .padding(.top, 40)
                             .padding(.horizontal)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-                            )
-                        
+                     
                         InlineTimePicker(timeValue: Binding(
                             get: {
                                 TimeValue.fromString(textValue) ??
