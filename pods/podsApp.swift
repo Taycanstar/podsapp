@@ -107,9 +107,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             Mixpanel.initialize(token: mixpanelToken, trackAutomaticEvents: false)
             print("Mixpanel set!")
             
-            // Send a test event to verify Mixpanel initialization
-            Mixpanel.mainInstance().track(event: "Test Initialization Event")
-            print("Test Initialization Event sent to Mixpanel")
         } else {
             print("Error: MP_TOKEN is missing or not a valid String.")
         }

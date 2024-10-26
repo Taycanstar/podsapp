@@ -276,6 +276,12 @@ class SubscriptionManager: ObservableObject {
                                 userEmail: userEmail,
                                 onboardingViewModel: onboardingViewModel
                             )
+                            
+                            Mixpanel.mainInstance().track(event: "Subscription Purchase", properties: [
+                                "Plan": planType == .annual ? "Annual" : "Monthly",
+                                "Tier": tier.rawValue,
+                            ])
+
                         case .unverified:
                             print("Latest transaction unverified")
                         }

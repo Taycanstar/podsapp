@@ -641,21 +641,7 @@ struct PricingView: View {
                 .padding()
                 
                 Button(action: {
-//                    Task {
-//                               do {
-//                                   try await subscriptionManager.purchase(
-//                                       tier: tier,
-//                                       planType: selectedPlan,
-//                                       userEmail: viewModel.email,
-//                                       onboardingViewModel: viewModel
-//                                   )
-//
-//                                   presentationMode.wrappedValue.dismiss()
-//                               } catch {
-//                                   errorMessage = error.localizedDescription
-//                                   showError = true
-//                               }
-//                           }
+
                     Task {
                                       do {
                                           try await subscriptionManager.purchase(
