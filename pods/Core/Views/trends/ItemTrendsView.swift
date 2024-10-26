@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Mixpanel
 
 struct ItemTrendsView: View {
     let podId: Int
@@ -19,12 +20,16 @@ struct ItemTrendsView: View {
             ForEach(podItems, id: \.id) { item in
                 VStack(spacing: 0) {
                     HStack {
-                        NavigationLink(destination: TrendsView(activityLogs: viewModel.activityLogs[item.id] ?? [], podColumns: podColumns)) {
+                        NavigationLink(destination: TrendsView(activityLogs: viewModel.activityLogs[item.id] ?? [], podColumns: podColumns)
+                            .onAppear{
+                                Mixpanel.mainInstance().track(event: "Tapped Item Trends", properties: ["item_id": item.id])
+                            }){
                             Text(item.metadata)
                                 .font(.system(size: 16))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 18)
                         }
+                      
                     }
                     .padding(.horizontal, 17)
                     .buttonStyle(PlainButtonStyle())
@@ -32,6 +37,7 @@ struct ItemTrendsView: View {
                     Divider()
                         .background(colorScheme == .dark ? Color(rgb: 71, 71, 71) : Color(rgb: 219, 223, 236))
                 }
+               
             }
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)

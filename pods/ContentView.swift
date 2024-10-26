@@ -156,9 +156,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
                  fetchSubscriptionInfo()
              }
-             .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
-                 forceRefresh.toggle()
-             }
+//             .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+//                 forceRefresh.toggle()
+//             }
         .onChange(of: isAuthenticated) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
         }

@@ -16,8 +16,7 @@ class NetworkManager {
 
   
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   
-//
+
 //    let baseUrl = "http://192.168.1.79:8000"
 
     let baseUrl = "http://172.20.10.3:8000"
@@ -3791,6 +3790,7 @@ class NetworkManager {
                throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
            }
        }
+   
 
     func updateSubscription(userEmail: String, productId: String, transactionId: String) async throws -> [String: Any] {
            guard let url = URL(string: "\(baseUrl)/update-subscription/") else {

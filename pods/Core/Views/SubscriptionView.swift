@@ -28,7 +28,7 @@ struct SubscriptionView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             if subscriptionManager.hasActiveSubscription() {
-                            ActiveSubscriptionView(viewModel: _viewModel) 
+                            ActiveSubscriptionView(viewModel: _viewModel)
                             } else {
                                 NoSubscriptionView(geometry: geometry)
                             }
@@ -51,10 +51,11 @@ struct SubscriptionView: View {
              }
     
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
-                   Task {
-                       await fetchSubscriptionInfo()
-                   }
-               }
+            Task {
+                await fetchSubscriptionInfo()
+            }
+        }
+
       
         .onDisappear {
             isTabBarVisible.wrappedValue = true
@@ -433,7 +434,7 @@ struct NoSubscriptionView: View {
 //    @State private var showPricingSheet = false
 //    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
 //    @StateObject private var subscriptionManager = SubscriptionManager()
-//    
+//
 //    var body: some View {
 //        VStack(spacing: 10) {
 //            // Title card with arrows
@@ -447,15 +448,15 @@ struct NoSubscriptionView: View {
 //                        .foregroundColor(.accentColor)
 //                }
 //                .opacity(selectedTab > 0 ? 1 : 0.3)
-//                
+//
 //                Spacer()
-//                
+//
 //                Text(displayedTiers[selectedTab].name)
 //                    .font(.headline)
 //                    .fontWeight(.bold)
-//                
+//
 //                Spacer()
-//                
+//
 //                Button(action: {
 //                    withAnimation {
 //                        selectedTab = min(1, selectedTab + 1)
@@ -475,7 +476,7 @@ struct NoSubscriptionView: View {
 //            )
 //            .padding(.horizontal)
 //            .padding(.top, 10)
-//            
+//
 //            // TabView with subscription tiers
 //            TabView(selection: $selectedTab) {
 //                SubscriptionTierView(tier: .plusMonthly)
@@ -489,7 +490,7 @@ struct NoSubscriptionView: View {
 //
 //            PageIndicator(currentPage: selectedTab, pageCount: 2)
 //                .padding()
-//      
+//
 //            Button(action: {
 //                showPricingSheet = true
 //            }) {
@@ -503,12 +504,12 @@ struct NoSubscriptionView: View {
 //            }
 //            .padding(.horizontal)
 //            .padding(.bottom, 20)
-//            
+//
 //            Spacer()
 //            VStack {
 //                HStack {
 //                    Text("By continuing, you agree to the ")
-//                    
+//
 //                    Text("Terms")
 //                        .foregroundColor(Color.accentColor)
 //                        .underline()
@@ -517,9 +518,9 @@ struct NoSubscriptionView: View {
 //                                UIApplication.shared.open(url)
 //                            }
 //                        }
-//                    
+//
 //                    Text(" and ")
-//                    
+//
 //                    Text("Privacy Policy")
 //                        .foregroundColor(Color.accentColor)
 //                        .underline()

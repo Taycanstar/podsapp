@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Mixpanel
 
 struct PodOptionsView: View {
     @Binding var showPodOptionsSheet: Bool
@@ -81,9 +82,9 @@ struct PodOptionsView: View {
 
                     MenuItemView(iconName: "chart.line.uptrend.xyaxis", text: "Trends", action: {
                         dismiss()
-//                            navigationAction(.trends)
+
                         navigationAction(.trends(podId: podId))
-                     
+                        Mixpanel.mainInstance().track(event: "Tapped Trends")
                         HapticFeedback.generate()
                     }, color: .primary)
                     

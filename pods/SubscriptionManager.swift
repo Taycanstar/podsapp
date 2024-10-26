@@ -3,6 +3,7 @@
 import SwiftUI
 import StoreKit
 import Foundation
+import Mixpanel
 
 class SubscriptionManager: ObservableObject {
     @Published var products: [Product] = []
@@ -35,18 +36,18 @@ class SubscriptionManager: ObservableObject {
                 NotificationCenter.default.post(name: .subscriptionUpdated, object: nil)
       }
     
-    
-    
+    @MainActor // Add MainActor here too since it modifies published property
     func checkCurrentEntitlements() async {
-            for await result in Transaction.currentEntitlements {
-                if case .verified(let transaction) = result {
-                    if let product = self.products.first(where: { $0.id == transaction.productID }) {
-                        self.purchasedSubscriptions.append(product)
-                    }
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                if let product = self.products.first(where: { $0.id == transaction.productID }) {
+                    self.purchasedSubscriptions.append(product)
                 }
             }
         }
+    }
 
+    @MainActor
     func fetchSubscriptionInfo(for email: String) async {
         print("Fetching subscription info for email: \(email)")
         let networkManager = NetworkManager()
@@ -194,6 +195,12 @@ class SubscriptionManager: ObservableObject {
               if let status = result["status"] as? String, status == "success" {
                   print("Subscription renewed successfully")
                   await updateSubscriptionStatus()
+                  
+                  Mixpanel.mainInstance().track(event: "Subscription Renewal", properties: [
+                      "Plan": subscriptionInfo?.plan ?? "Unknown",
+                      "Renewed": true
+                  ])
+
               } else {
                   throw SubscriptionError.renewalFailed
               }
@@ -233,6 +240,7 @@ class SubscriptionManager: ObservableObject {
         
         NotificationCenter.default.post(name: .subscriptionPurchased, object: nil)
     }
+ 
 
     @MainActor
     func purchase(tier: SubscriptionTier, planType: PricingView.PlanType, userEmail: String, onboardingViewModel: OnboardingViewModel) async throws {
@@ -256,22 +264,31 @@ class SubscriptionManager: ObservableObject {
             case .success(let verificationResult):
                 switch verificationResult {
                 case .verified(let transaction):
-
-                    print("Purchase success: \(transaction.productID)")
-                          await handleVerifiedTransaction(transaction)
-                          print("Syncing purchase with backend...")
-
-                          await syncPurchaseWithBackend(
-                              productId: transaction.productID,
-                              transactionId: transaction.id.description,  // Add this line
-                              userEmail: userEmail,
-                              onboardingViewModel: onboardingViewModel
-                          )
+                    // Perform backend sync
+                    if let latestVerification = await Transaction.latest(for: transaction.productID) {
+                        switch latestVerification {
+                        case .verified(let latestTransaction):
+                            print("Latest transaction ID: \(latestTransaction.id)")
+                            
+                            try await syncPurchaseWithBackend(
+                                productId: latestTransaction.productID,
+                                transactionId: String(latestTransaction.id),
+                                userEmail: userEmail,
+                                onboardingViewModel: onboardingViewModel
+                            )
+                        case .unverified:
+                            print("Latest transaction unverified")
+                        }
+                    }
+                    
+                    await transaction.finish()
+                    
+                    // Update the subscription status
                     await updateSubscriptionStatus()
                     
-                    // Post a notification that the subscription has been updated
+                    // Post a notification to update the view
                     NotificationCenter.default.post(name: .subscriptionUpdated, object: nil)
-                  
+                    
                 case .unverified:
                     print("Purchase unverified")
                     throw SubscriptionError.purchaseUnverified
@@ -292,55 +309,76 @@ class SubscriptionManager: ObservableObject {
         }
     }
 
-    func syncPurchaseWithBackend(productId: String, transactionId: String, userEmail: String, onboardingViewModel: OnboardingViewModel) async {
-        print("Attempting to get receipt data...")
+    
+    func syncPurchaseWithBackend(productId: String, transactionId: String, userEmail: String, onboardingViewModel: OnboardingViewModel) async throws {
+        print("Syncing purchase with backend...")
+        print("Product ID: \(productId)")
+        print("Transaction ID: \(transactionId)")
+        print("User Email: \(userEmail)")
         
-        guard let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
-              FileManager.default.fileExists(atPath: appStoreReceiptURL.path) else {
-            print("App Store receipt not found")
-            return
-        }
+        let networkManager = NetworkManager()
+        print("Calling purchaseSubscription endpoint...")
+        let purchaseResult = try await networkManager.purchaseSubscription(
+            userEmail: userEmail,
+            productId: productId,
+            transactionId: transactionId
+        )
         
-        do {
-            let receiptData = try Data(contentsOf: appStoreReceiptURL)
-                    let receiptString = receiptData.base64EncodedString()
-                        .replacingOccurrences(of: "\n", with: "")
-                        .replacingOccurrences(of: "\r", with: "")
-            print("Full receipt string: \(receiptString)")
-            
-            print("Successfully retrieved receipt data")
-            print("Receipt data length: \(receiptString.count)")
-            print("Receipt string (first 100 characters): \(String(receiptString.prefix(100)))")
-            
-            let finalTransactionId = transactionId == "0" ? UUID().uuidString : transactionId
-                
-                print("Final Transaction ID: \(finalTransactionId)")
-            
-            let networkManager = NetworkManager()
-            do {
-                print("Calling purchaseSubscription endpoint with productId: \(productId), userEmail: \(userEmail)")
-                let purchaseResult = try await networkManager.purchaseSubscription(
-                    userEmail: userEmail,
-                    productId: productId,
-                    transactionId: finalTransactionId
-//                    receiptData: receiptString
-                )
-                
-                print("Backend sync result: \(purchaseResult)")
-                await updateSubscriptionStatus()
-                // Rest of the function remains the same
-            } catch {
-                print("Failed to sync purchase with backend: \(error)")
-                if let nsError = error as NSError? {
-                    print("Error domain: \(nsError.domain)")
-                    print("Error code: \(nsError.code)")
-                    print("Error userInfo: \(nsError.userInfo)")
-                }
-            }
-        } catch {
-            print("Couldn't read receipt data with error: \(error.localizedDescription)")
-        }
+        print("Backend sync result: \(purchaseResult)")
+        await updateSubscriptionStatus()
     }
+
+
+//    func syncPurchaseWithBackend(productId: String, transactionId: String, userEmail: String, onboardingViewModel: OnboardingViewModel) async {
+//        print("Attempting to get receipt data...")
+//        
+//        guard let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
+//              FileManager.default.fileExists(atPath: appStoreReceiptURL.path) else {
+//            print("App Store receipt not found")
+//            return
+//        }
+//        
+//        do {
+//            let receiptData = try Data(contentsOf: appStoreReceiptURL)
+//                    let receiptString = receiptData.base64EncodedString()
+//                        .replacingOccurrences(of: "\n", with: "")
+//                        .replacingOccurrences(of: "\r", with: "")
+//            print("Full receipt string: \(receiptString)")
+//            
+//            print("Successfully retrieved receipt data")
+//            print("Receipt data length: \(receiptString.count)")
+//            print("Receipt string (first 100 characters): \(String(receiptString.prefix(100)))")
+//            
+//            let finalTransactionId = transactionId == "0" ? UUID().uuidString : transactionId
+//                
+//                print("Final Transaction ID: \(finalTransactionId)")
+//            
+//            let networkManager = NetworkManager()
+//            do {
+//                print("Calling purchaseSubscription endpoint with productId: \(productId), userEmail: \(userEmail)")
+//                let purchaseResult = try await networkManager.purchaseSubscription(
+//                    userEmail: userEmail,
+//                    productId: productId,
+//                    transactionId: finalTransactionId
+////                    receiptData: receiptString
+//                )
+//                
+//                print("Backend sync result: \(purchaseResult)")
+//                await updateSubscriptionStatus()
+//                // Rest of the function remains the same
+//            } catch {
+//                print("Failed to sync purchase with backend: \(error)")
+//                if let nsError = error as NSError? {
+//                    print("Error domain: \(nsError.domain)")
+//                    print("Error code: \(nsError.code)")
+//                    print("Error userInfo: \(nsError.userInfo)")
+//                }
+//                throw error
+//            }
+//        } catch {
+//            print("Couldn't read receipt data with error: \(error.localizedDescription)")
+//        }
+//    }
     
     @MainActor
         func handleSubscriptionChange(_ transaction: StoreKit.Transaction) async {
@@ -371,6 +409,12 @@ class SubscriptionManager: ObservableObject {
             let result = try await networkManager.cancelSubscription(userEmail: userEmail)
             print("Subscription cancellation result: \(result)")
             await updateSubscriptionStatus()
+            
+            Mixpanel.mainInstance().track(event: "Subscription Cancellation", properties: [
+                "Plan": subscriptionInfo?.plan ?? "Unknown",
+                "End Date": getSubscriptionEndDate()?.description ?? "Unknown"
+            ])
+
         } catch {
             print("Error during cancellation: \(error)")
             throw error
@@ -536,3 +580,4 @@ extension ISO8601DateFormatter {
         return formatter
     }()
 }
+

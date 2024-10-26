@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Mixpanel
 
 enum TimeRange: String, CaseIterable {
     case day = "Day"
@@ -30,7 +31,6 @@ struct FullAnalyticsView: View {
 
                 ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
-//                ConsistencyTrackerView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
                 PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 Spacer()
@@ -41,7 +41,14 @@ struct FullAnalyticsView: View {
         .navigationBarTitle(column.name, displayMode: .inline)
         .onAppear {
                    updateProcessedData()
+            Mixpanel.mainInstance().time(event: "Viewed Trends")
                }
+        .onDisappear {
+            Mixpanel.mainInstance().track(event: "Viewed Trends", properties: [
+                "column_name": column.name,
+                "time_range": selectedTimeRange.rawValue
+            ])
+        }
         .onChange(of: selectedTimeRange) { _, _ in
                  updateProcessedData()
              }
