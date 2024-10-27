@@ -94,6 +94,110 @@ struct LandingView: View {
             .ignoresSafeArea()
         }
     }
+//    func handleGoogleSignIn() {
+//        guard let clientID = ConfigurationManager.shared.getValue(forKey: "GOOGLE_CLIENT_ID") as? String else {
+//            print("Missing configuration values for google client")
+//            return
+//        }
+//        
+//        let signInConfig = GIDConfiguration(clientID: clientID)
+//        
+//        guard let presentingViewController = getRootViewController() else {
+//            fatalError("Failed to retrieve root view controller.")
+//        }
+//        
+//        // Remove the birthday scope
+//        GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController, hint: nil, additionalScopes: ["profile"]) { signInResult, error in
+//            if let error = error {
+//                print("Google Sign-In error: \(error.localizedDescription)")
+//                return
+//            }
+//            
+//            guard let result = signInResult else {
+//                print("No sign-in result")
+//                return
+//            }
+//            
+//            guard let idToken = result.user.idToken?.tokenString else {
+//                print("Error: No ID token found")
+//                return
+//            }
+//
+//                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
+//                        if success {
+//                            print("Token sent successfully")
+//                            let userIdString = "\(userId ?? 0)"
+//                            if isNewUser {
+//                                // Update view model and navigate to welcome view
+//                                UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                                UserDefaults.standard.set(email, forKey: "userEmail")
+//                                UserDefaults.standard.set(username, forKey: "username")
+//                                UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                                
+//                                viewModel.email = email ?? ""
+//                                viewModel.username = username ?? ""
+//                                viewModel.activeTeamId = activeTeamId
+//                                
+//                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+//                                viewModel.userId = userId ?? 0
+//                                
+//                                if let subscriptionInfo = subscriptionInfo {
+//                                    viewModel.updateSubscriptionInfo(
+//                                        status: subscriptionInfo.status,
+//                                        plan: subscriptionInfo.plan,
+//                                        expiresAt: subscriptionInfo.expiresAt,
+//                                        renews: subscriptionInfo.renews,
+//                                        seats: subscriptionInfo.seats,
+//                                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+//                                    )
+//                                }
+//                                
+//                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+//                                Mixpanel.mainInstance().people.set(properties: [
+//                                    "$email": viewModel.email,
+//                                    "$name": viewModel.username
+//                                ])
+//
+//                                
+//                                viewModel.currentStep = .welcome
+//                            } else {
+//                                viewModel.currentStep = .landing
+//                                UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                                UserDefaults.standard.set(email, forKey: "userEmail")
+//                                UserDefaults.standard.set(username, forKey: "username")
+//                                UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                                
+//                                viewModel.email = email ?? ""
+//                                viewModel.username = username ?? ""
+//                                viewModel.activeTeamId = activeTeamId
+//                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+//                                viewModel.userId = userId ?? 0
+//                                
+//                                if let subscriptionInfo = subscriptionInfo {
+//                                    viewModel.updateSubscriptionInfo(
+//                                        status: subscriptionInfo.status,
+//                                        plan: subscriptionInfo.plan,
+//                                        expiresAt: subscriptionInfo.expiresAt,
+//                                        renews: subscriptionInfo.renews,
+//                                        seats: subscriptionInfo.seats,
+//                                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+//                                    )
+//                                }
+//                                
+//                                self.isAuthenticated = true
+//                                
+//                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+//                                                        Mixpanel.mainInstance().people.set(properties: [
+//                                                            "$email": viewModel.email,
+//                                                            "$name": viewModel.username
+//                                                        ])
+//                            }
+//                        } else {
+//                            print("Failed to send token: \(message ?? "Unknown error")")
+//                        }
+//                    }
+//            }
+//        }
     func handleGoogleSignIn() {
         guard let clientID = ConfigurationManager.shared.getValue(forKey: "GOOGLE_CLIENT_ID") as? String else {
             print("Missing configuration values for google client")
@@ -106,7 +210,6 @@ struct LandingView: View {
             fatalError("Failed to retrieve root view controller.")
         }
         
-        // Remove the birthday scope
         GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController, hint: nil, additionalScopes: ["profile"]) { signInResult, error in
             if let error = error {
                 print("Google Sign-In error: \(error.localizedDescription)")
@@ -123,82 +226,61 @@ struct LandingView: View {
                 return
             }
 
-                NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
-                        if success {
-                            print("Token sent successfully")
-                            let userIdString = "\(userId ?? 0)"
-                            if isNewUser {
-                                // Update view model and navigate to welcome view
-                                UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                                UserDefaults.standard.set(email, forKey: "userEmail")
-                                UserDefaults.standard.set(username, forKey: "username")
-                                UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-                                
-                                viewModel.email = email ?? ""
-                                viewModel.username = username ?? ""
-                                viewModel.activeTeamId = activeTeamId
-                                
-                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
-                                viewModel.userId = userId ?? 0
-                                
-                                if let subscriptionInfo = subscriptionInfo {
-                                    viewModel.updateSubscriptionInfo(
-                                        status: subscriptionInfo.status,
-                                        plan: subscriptionInfo.plan,
-                                        expiresAt: subscriptionInfo.expiresAt,
-                                        renews: subscriptionInfo.renews,
-                                        seats: subscriptionInfo.seats,
-                                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
-                                    )
-                                }
-                                
-                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
-                                Mixpanel.mainInstance().people.set(properties: [
-                                    "$email": viewModel.email,
-                                    "$name": viewModel.username
-                                ])
+            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId, isNewUser in
+                if success {
+                    print("Token sent successfully")
+                    let userIdString = String(userId ?? 0)
 
-                                
-                                viewModel.currentStep = .welcome
-                            } else {
-                                viewModel.currentStep = .landing
-                                UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                                UserDefaults.standard.set(email, forKey: "userEmail")
-                                UserDefaults.standard.set(username, forKey: "username")
-                                UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-                                
-                                viewModel.email = email ?? ""
-                                viewModel.username = username ?? ""
-                                viewModel.activeTeamId = activeTeamId
-                                UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
-                                viewModel.userId = userId ?? 0
-                                
-                                if let subscriptionInfo = subscriptionInfo {
-                                    viewModel.updateSubscriptionInfo(
-                                        status: subscriptionInfo.status,
-                                        plan: subscriptionInfo.plan,
-                                        expiresAt: subscriptionInfo.expiresAt,
-                                        renews: subscriptionInfo.renews,
-                                        seats: subscriptionInfo.seats,
-                                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
-                                    )
-                                }
-                                
-                                self.isAuthenticated = true
-                                
-                                Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
-                                                        Mixpanel.mainInstance().people.set(properties: [
-                                                            "$email": viewModel.email,
-                                                            "$name": viewModel.username
-                                                        ])
-                            }
+                    DispatchQueue.main.async {
+                        // Save auth state
+                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        UserDefaults.standard.set(username, forKey: "username")
+                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                        UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
+                        UserDefaults.standard.set(userId, forKey: "userId")
+
+                        // Update view model
+                        viewModel.email = email ?? ""
+                        viewModel.username = username ?? ""
+                        viewModel.activeTeamId = activeTeamId
+                        viewModel.activeWorkspaceId = activeWorkspaceId
+                        viewModel.userId = userId ?? 0
+
+                        // Update subscription info
+                        viewModel.updateSubscriptionInfo(
+                            status: subscriptionStatus ?? "none",
+                            plan: subscriptionPlan,
+                            expiresAt: subscriptionExpiresAt,
+                            renews: subscriptionRenews,
+                            seats: subscriptionSeats,
+                            canCreateNewTeam: canCreateNewTeam
+                        )
+
+                        // Mixpanel tracking
+                        Mixpanel.mainInstance().identify(distinctId: userIdString)
+                        Mixpanel.mainInstance().people.set(properties: [
+                            "$email": viewModel.email,
+                            "$name": viewModel.username
+                        ])
+                        
+                        print("Debug - isNewUser value: \(isNewUser)")
+                        if isNewUser {
+                            viewModel.currentStep = .welcome
                         } else {
-                            print("Failed to send token: \(message ?? "Unknown error")")
+                            // Set authenticated state
+                            self.isAuthenticated = true
                         }
+                   
+                        
+                        
                     }
+                } else {
+                    print("Failed to send token: \(message ?? "Unknown error")")
+                }
             }
         }
-    
+    }
 
 
     func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
@@ -214,7 +296,7 @@ struct LandingView: View {
         print("Generated nonce: \(nonce)")
         print("SHA256 hashed nonce: \(hashedNonce)")
     }
-
+    
     func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .success(let authResults):
@@ -228,79 +310,146 @@ struct LandingView: View {
             
             print("Sending original nonce to backend: \(nonce)")
             
-            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
+            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId, isNewUser in
                 if success {
+                    let userIdString = String(userId ?? 0)
+
                     DispatchQueue.main.async {
-                        let userIdString = "\(userId ?? 0)"
+                        // Save auth state
+                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        UserDefaults.standard.set(username, forKey: "username")
+                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+                        UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
+                        UserDefaults.standard.set(userId, forKey: "userId")
+
+                        // Update view model
+                        viewModel.email = email ?? ""
+                        viewModel.username = username ?? ""
+                        viewModel.activeTeamId = activeTeamId
+                        viewModel.activeWorkspaceId = activeWorkspaceId
+                        viewModel.userId = userId ?? 0
+
+                        // Update subscription info
+                        viewModel.updateSubscriptionInfo(
+                            status: subscriptionStatus ?? "none",
+                            plan: subscriptionPlan,
+                            expiresAt: subscriptionExpiresAt,
+                            renews: subscriptionRenews,
+                            seats: subscriptionSeats,
+                            canCreateNewTeam: canCreateNewTeam
+                        )
+
+                        // Mixpanel tracking
+                        Mixpanel.mainInstance().identify(distinctId: userIdString)
+                        Mixpanel.mainInstance().people.set(properties: [
+                            "$email": viewModel.email,
+                            "$name": viewModel.username
+                        ])
+
                         if isNewUser {
-                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                            UserDefaults.standard.set(email, forKey: "userEmail")
-                            UserDefaults.standard.set(username, forKey: "username")
-                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-                            
-                            viewModel.email = email ?? ""
-                            viewModel.username = username ?? ""
-                            viewModel.activeTeamId = activeTeamId
-                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
-                            viewModel.userId = userId ?? 0
-                            
-                            if let subscriptionInfo = subscriptionInfo {
-                                viewModel.updateSubscriptionInfo(
-                                    status: subscriptionInfo.status,
-                                    plan: subscriptionInfo.plan,
-                                    expiresAt: subscriptionInfo.expiresAt,
-                                    renews: subscriptionInfo.renews,
-                                    seats: subscriptionInfo.seats,
-                                    canCreateNewTeam: subscriptionInfo.canCreateNewTeam
-                                )
-                            }
-                            
                             viewModel.currentStep = .welcome
                         } else {
-                            viewModel.currentStep = .landing
-                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                            UserDefaults.standard.set(email, forKey: "userEmail")
-                            UserDefaults.standard.set(username, forKey: "username")
-                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-                            
-                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
-                            viewModel.userId = userId ?? 0
-                            
-                            viewModel.email = email ?? ""
-                            viewModel.username = username ?? ""
-                            viewModel.activeTeamId = activeTeamId
-                            
-                            if let subscriptionInfo = subscriptionInfo {
-                                viewModel.updateSubscriptionInfo(
-                                    status: subscriptionInfo.status,
-                                    plan: subscriptionInfo.plan,
-                                    expiresAt: subscriptionInfo.expiresAt,
-                                    renews: subscriptionInfo.renews,
-                                    seats: subscriptionInfo.seats,
-                                    canCreateNewTeam: subscriptionInfo.canCreateNewTeam
-                                )
-                            }
-                            
+                            // Set authenticated state
                             self.isAuthenticated = true
-                            
-                            Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
-                                                    Mixpanel.mainInstance().people.set(properties: [
-                                                        "$email": viewModel.email,
-                                                        "$name": viewModel.username
-                                                    ])
                         }
+                       
                     }
                 } else {
                     print("Apple Sign In failed: \(message ?? "Unknown error")")
-                    if let error = message {
-                                      print("Detailed error: \(error)")
-                                  }
                 }
             }
         case .failure(let error):
             print("Authorization failed: \(error.localizedDescription)")
         }
     }
+
+//    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+//        switch result {
+//        case .success(let authResults):
+//            guard let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential,
+//                  let appleIDToken = appleIDCredential.identityToken,
+//                  let idTokenString = String(data: appleIDToken, encoding: .utf8),
+//                  let nonce = currentNonce else {
+//                print("Unable to fetch identity token or nonce")
+//                return
+//            }
+//            
+//            print("Sending original nonce to backend: \(nonce)")
+//            
+//            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, isNewUser, email, username, activeTeamId, subscriptionInfo, userId in
+//                if success {
+//                    DispatchQueue.main.async {
+//                        let userIdString = "\(userId ?? 0)"
+//                        if isNewUser {
+//                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                            UserDefaults.standard.set(email, forKey: "userEmail")
+//                            UserDefaults.standard.set(username, forKey: "username")
+//                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                            
+//                            viewModel.email = email ?? ""
+//                            viewModel.username = username ?? ""
+//                            viewModel.activeTeamId = activeTeamId
+//                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+//                            viewModel.userId = userId ?? 0
+//                            
+//                            if let subscriptionInfo = subscriptionInfo {
+//                                viewModel.updateSubscriptionInfo(
+//                                    status: subscriptionInfo.status,
+//                                    plan: subscriptionInfo.plan,
+//                                    expiresAt: subscriptionInfo.expiresAt,
+//                                    renews: subscriptionInfo.renews,
+//                                    seats: subscriptionInfo.seats,
+//                                    canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+//                                )
+//                            }
+//                            
+//                            viewModel.currentStep = .welcome
+//                        } else {
+//                            viewModel.currentStep = .landing
+//                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                            UserDefaults.standard.set(email, forKey: "userEmail")
+//                            UserDefaults.standard.set(username, forKey: "username")
+//                            UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                            
+//                            UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+//                            viewModel.userId = userId ?? 0
+//                            
+//                            viewModel.email = email ?? ""
+//                            viewModel.username = username ?? ""
+//                            viewModel.activeTeamId = activeTeamId
+//                            
+//                            if let subscriptionInfo = subscriptionInfo {
+//                                viewModel.updateSubscriptionInfo(
+//                                    status: subscriptionInfo.status,
+//                                    plan: subscriptionInfo.plan,
+//                                    expiresAt: subscriptionInfo.expiresAt,
+//                                    renews: subscriptionInfo.renews,
+//                                    seats: subscriptionInfo.seats,
+//                                    canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+//                                )
+//                            }
+//                            
+//                            self.isAuthenticated = true
+//                            
+//                            Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+//                                                    Mixpanel.mainInstance().people.set(properties: [
+//                                                        "$email": viewModel.email,
+//                                                        "$name": viewModel.username
+//                                                    ])
+//                        }
+//                    }
+//                } else {
+//                    print("Apple Sign In failed: \(message ?? "Unknown error")")
+//                    if let error = message {
+//                                      print("Detailed error: \(error)")
+//                                  }
+//                }
+//            }
+//        case .failure(let error):
+//            print("Authorization failed: \(error.localizedDescription)")
+//        }
+//    }
 
         
         func getRootViewController() -> UIViewController? {

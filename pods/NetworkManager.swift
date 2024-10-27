@@ -1320,10 +1320,9 @@ class NetworkManager {
         print("Starting transcription request to backend.")
         task.resume()
     }
-    
-    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?, Int?) -> Void) {
+    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?, Int?, Bool) -> Void) {
         guard let url = URL(string: "\(baseUrl)/google-login/") else {
-            completion(false, "Invalid URL", false, nil, nil, nil, nil, nil)
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
             return
         }
 
@@ -1337,57 +1336,77 @@ class NetworkManager {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("Network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
+                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
                 return
             }
 
             guard let data = data else {
+                print("No data received from server")
                 DispatchQueue.main.async {
-                    completion(false, "No data from server", false, nil, nil, nil, nil, nil)
+                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
                 return
             }
 
             do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                   let token = json["token"] as? String,
-                   let isNewUser = json["is_new_user"] as? Bool,
-                   let email = json["email"] as? String,
-                   let username = json["username"] as? String,
-                   let activeTeamId = json["activeTeamId"] as? Int,
-                   let userId = json["userId"] as? Int,  // Add userId here
-                   let subscriptionData = json["subscription"] as? [String: Any] {
-                    
-                    let subscriptionInfo = SubscriptionInfo(
-                        status: subscriptionData["status"] as? String ?? "none",
-                        plan: subscriptionData["plan"] as? String,
-                        expiresAt: subscriptionData["expiresAt"] as? String,
-                        renews: subscriptionData["renews"] as? Bool ?? false,
-                        seats: subscriptionData["seats"] as? Int,
-                        canCreateNewTeam: subscriptionData["canCreateNewTeam"] as? Bool ?? false
-                    )
-                    
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    let token = json["token"] as? String
+                    let email = json["email"] as? String
+                    let username = json["username"] as? String
+                    let activeTeamId = (json["activeTeamId"] as? NSNumber)?.intValue
+                    let activeWorkspaceId = (json["activeWorkspaceId"] as? NSNumber)?.intValue
+                    let profileInitial = json["profileInitial"] as? String
+                    let profileColor = json["profileColor"] as? String
+                    let subscriptionStatus = json["subscriptionStatus"] as? String
+                    let subscriptionPlan = json["subscriptionPlan"] as? String
+                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                    let canCreateNewTeam = json["canCreateNewTeam"] as? Bool ?? false
+                    let userId = (json["userId"] as? NSNumber)?.intValue
+                    let isNewUser = json["isNewUser"] as? Bool ?? false
+
+                    print("Debug - Server Response: \(json)")
+
                     DispatchQueue.main.async {
-                        completion(true, nil, isNewUser, email, username, activeTeamId, subscriptionInfo, userId)  // Pass userId here
+                        completion(
+                            token != nil,
+                            nil,
+                            email,
+                            username,
+                            activeTeamId,
+                            activeWorkspaceId,
+                            profileInitial,
+                            profileColor,
+                            subscriptionStatus,
+                            subscriptionPlan,
+                            subscriptionExpiresAt,
+                            subscriptionRenews,
+                            subscriptionSeats,
+                            canCreateNewTeam,
+                            userId,
+                            isNewUser
+                        )
                     }
                 } else {
                     DispatchQueue.main.async {
-                        completion(false, "Invalid data from server", false, nil, nil, nil, nil, nil)
+                        completion(false, "Invalid data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
+                    completion(false, "Failed to parse response: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
             }
         }.resume()
     }
 
-    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?, Int?) -> Void) {
+    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?, Int?, Bool) -> Void) {
         guard let url = URL(string: "\(baseUrl)/apple-login/") else {
-            completion(false, "Invalid URL", false, nil, nil, nil, nil, nil)
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
             return
         }
 
@@ -1396,8 +1415,6 @@ class NetworkManager {
             "nonce": nonce
         ]
         let finalBody = try? JSONSerialization.data(withJSONObject: body)
-
-        print("Sending to backend - Token: \(idToken.prefix(10))..., Nonce: \(nonce)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -1408,7 +1425,7 @@ class NetworkManager {
             if let error = error {
                 print("Network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
+                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
                 return
             }
@@ -1416,56 +1433,69 @@ class NetworkManager {
             guard let data = data else {
                 print("No data received from server")
                 DispatchQueue.main.async {
-                    completion(false, "No data received from server", false, nil, nil, nil, nil, nil)
+                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
                 return
             }
 
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("Raw server response: \(responseString)")
-            }
-
             do {
                 if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    let success = json["token"] != nil
-                    let isNewUser = json["is_new_user"] as? Bool ?? false
+                    let token = json["token"] as? String
                     let email = json["email"] as? String
                     let username = json["username"] as? String
-                    let activeTeamId = json["activeTeamId"] as? Int
-                    let userId = json["userId"] as? Int  // Add userId extraction
-                    
-                    var subscriptionInfo: SubscriptionInfo?
-                    if let subscriptionData = json["subscription"] as? [String: Any] {
-                        subscriptionInfo = SubscriptionInfo(
-                            status: subscriptionData["status"] as? String ?? "none",
-                            plan: subscriptionData["plan"] as? String,
-                            expiresAt: subscriptionData["expiresAt"] as? String,
-                            renews: subscriptionData["renews"] as? Bool ?? false,
-                            seats: subscriptionData["seats"] as? Int,
-                            canCreateNewTeam: subscriptionData["canCreateNewTeam"] as? Bool ?? false
-                        )
-                    }
-                    
+                    let activeTeamId = (json["activeTeamId"] as? NSNumber)?.intValue
+                    let activeWorkspaceId = (json["activeWorkspaceId"] as? NSNumber)?.intValue
+                    let profileInitial = json["profileInitial"] as? String
+                    let profileColor = json["profileColor"] as? String
+                    let subscriptionStatus = json["subscriptionStatus"] as? String
+                    let subscriptionPlan = json["subscriptionPlan"] as? String
+                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                    let canCreateNewTeam = json["canCreateNewTeam"] as? Bool ?? false
+                    let userId = (json["userId"] as? NSNumber)?.intValue
+                    let isNewUser = json["isNewUser"] as? Bool ?? false
+
+                    print("Debug - Server Response: \(json)")
+                 
+                    print("Debug - Raw isNewUser from backend: \(String(describing: json["isNewUser"]))")
+
                     DispatchQueue.main.async {
-                        completion(success, nil, isNewUser, email, username, activeTeamId, subscriptionInfo, userId)  // Pass userId here
+                        completion(
+                            token != nil,
+                            nil,
+                            email,
+                            username,
+                            activeTeamId,
+                            activeWorkspaceId,
+                            profileInitial,
+                            profileColor,
+                            subscriptionStatus,
+                            subscriptionPlan,
+                            subscriptionExpiresAt,
+                            subscriptionRenews,
+                            subscriptionSeats,
+                            canCreateNewTeam,
+                            userId,
+                            isNewUser
+                        )
                     }
                 } else {
                     DispatchQueue.main.async {
-                        completion(false, "Invalid response format", false, nil, nil, nil, nil, nil)
+                        completion(false, "Invalid data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    completion(false, "Failed to parse response: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
+                    completion(false, "Failed to parse response: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
                 }
             }
         }.resume()
     }
-
-
-//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?) -> Void) {
+    
+//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?, Int?) -> Void) {
 //        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-//            completion(false, "Invalid URL", false, nil, nil, nil, nil)
+//            completion(false, "Invalid URL", false, nil, nil, nil, nil, nil)
 //            return
 //        }
 //
@@ -1480,14 +1510,14 @@ class NetworkManager {
 //        URLSession.shared.dataTask(with: request) { data, response, error in
 //            if let error = error {
 //                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil)
+//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
 //                }
 //                return
 //            }
 //
 //            guard let data = data else {
 //                DispatchQueue.main.async {
-//                    completion(false, "No data from server", false, nil, nil, nil, nil)
+//                    completion(false, "No data from server", false, nil, nil, nil, nil, nil)
 //                }
 //                return
 //            }
@@ -1499,6 +1529,7 @@ class NetworkManager {
 //                   let email = json["email"] as? String,
 //                   let username = json["username"] as? String,
 //                   let activeTeamId = json["activeTeamId"] as? Int,
+//                   let userId = json["userId"] as? Int,  // Add userId here
 //                   let subscriptionData = json["subscription"] as? [String: Any] {
 //                    
 //                    let subscriptionInfo = SubscriptionInfo(
@@ -1511,24 +1542,24 @@ class NetworkManager {
 //                    )
 //                    
 //                    DispatchQueue.main.async {
-//                        completion(true, nil, isNewUser, email, username, activeTeamId, subscriptionInfo)
+//                        completion(true, nil, isNewUser, email, username, activeTeamId, subscriptionInfo, userId)  // Pass userId here
 //                    }
 //                } else {
 //                    DispatchQueue.main.async {
-//                        completion(false, "Invalid data from server", false, nil, nil, nil, nil)
+//                        completion(false, "Invalid data from server", false, nil, nil, nil, nil, nil)
 //                    }
 //                }
 //            } catch {
 //                DispatchQueue.main.async {
-//                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil, nil)
+//                    completion(false, "Failed to parse server response: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
 //                }
 //            }
 //        }.resume()
 //    }
-//    
-//    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?) -> Void) {
+//
+//    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, Bool, String?, String?, Int?, SubscriptionInfo?, Int?) -> Void) {
 //        guard let url = URL(string: "\(baseUrl)/apple-login/") else {
-//            completion(false, "Invalid URL", false, nil, nil, nil, nil)
+//            completion(false, "Invalid URL", false, nil, nil, nil, nil, nil)
 //            return
 //        }
 //
@@ -1549,7 +1580,7 @@ class NetworkManager {
 //            if let error = error {
 //                print("Network error: \(error.localizedDescription)")
 //                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil)
+//                    completion(false, "Request failed: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
 //                }
 //                return
 //            }
@@ -1557,7 +1588,7 @@ class NetworkManager {
 //            guard let data = data else {
 //                print("No data received from server")
 //                DispatchQueue.main.async {
-//                    completion(false, "No data received from server", false, nil, nil, nil, nil)
+//                    completion(false, "No data received from server", false, nil, nil, nil, nil, nil)
 //                }
 //                return
 //            }
@@ -1573,6 +1604,7 @@ class NetworkManager {
 //                    let email = json["email"] as? String
 //                    let username = json["username"] as? String
 //                    let activeTeamId = json["activeTeamId"] as? Int
+//                    let userId = json["userId"] as? Int  // Add userId extraction
 //                    
 //                    var subscriptionInfo: SubscriptionInfo?
 //                    if let subscriptionData = json["subscription"] as? [String: Any] {
@@ -1587,20 +1619,21 @@ class NetworkManager {
 //                    }
 //                    
 //                    DispatchQueue.main.async {
-//                        completion(success, nil, isNewUser, email, username, activeTeamId, subscriptionInfo)
+//                        completion(success, nil, isNewUser, email, username, activeTeamId, subscriptionInfo, userId)  // Pass userId here
 //                    }
 //                } else {
 //                    DispatchQueue.main.async {
-//                        completion(false, "Invalid response format", false, nil, nil, nil, nil)
+//                        completion(false, "Invalid response format", false, nil, nil, nil, nil, nil)
 //                    }
 //                }
 //            } catch {
 //                DispatchQueue.main.async {
-//                    completion(false, "Failed to parse response: \(error.localizedDescription)", false, nil, nil, nil, nil)
+//                    completion(false, "Failed to parse response: \(error.localizedDescription)", false, nil, nil, nil, nil, nil)
 //                }
 //            }
 //        }.resume()
 //    }
+
     func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, notes: String, email: String, completion: @escaping (Bool, String?) -> Void) {
         let dispatchGroup = DispatchGroup()
         var uploadErrors = [String]()
