@@ -85,6 +85,7 @@ struct PodOptionsView: View {
 
                         navigationAction(.trends(podId: podId))
                         Mixpanel.mainInstance().track(event: "Tapped Trends")
+                 
                         HapticFeedback.generate()
                     }, color: .primary)
                     

@@ -19,6 +19,7 @@ struct FullAnalyticsView: View {
     let column: PodColumn
     let activityLogs: [PodItemActivityLog]
     @State private var selectedTimeRange: TimeRange = .day
+    @State private var selectedTimeUnit: TimeUnit = .seconds
     @State private var processedData: [ProcessedDataPoint] = []
     @State private var currentStreak: Int = 0
         @State private var longestStreak: Int = 0
@@ -27,9 +28,20 @@ struct FullAnalyticsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                timeRangeSelector
+//                timeRangeSelector
+                HStack(spacing: 16) {
+                    timeRangeSelector
+                    
+                    if column.type == "time" {
+                        DropdownButton(
+                            label: "Time Unit",
+                            options: TimeUnit.allCases,
+                            selectedOption: $selectedTimeUnit
+                        )
+                    }
+                }
 
-                ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
                 BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
                 ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
                 PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)

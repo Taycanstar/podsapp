@@ -1,6 +1,6 @@
 import SwiftUI
 import AVFoundation
-
+import Mixpanel
 
 enum NavigationDestination: Hashable {
     case player(item: PodItem)
@@ -144,7 +144,10 @@ struct PodView: View {
                 PodViewHeaderSection(
                                        selectedView: $selectedView,
                                        podTitle: currentTitle,
-                                       showPodOptionsSheet: { showPodOptionsSheet = true },
+                                       showPodOptionsSheet: {
+                                           showPodOptionsSheet = true
+                                           Mixpanel.mainInstance().track(event: "Tapped Pod Options")
+                                       },
                                        onDismiss: { dismiss() }  // Add this line
                                    )
                 

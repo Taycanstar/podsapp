@@ -15,7 +15,7 @@ struct TrendsView: View {
 
     var body: some View {
         List {
-            ForEach(podColumns.filter { $0.type == "number" }, id: \.name) { column in
+            ForEach(podColumns.filter { $0.type == "number" || $0.type == "time" }, id: \.name) { column in
                 VStack(spacing: 0) {
                     HStack {
                         NavigationLink(destination: ColumnDetailView(column: column, activityLogs: activityLogs)

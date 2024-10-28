@@ -58,6 +58,7 @@
 		3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */; };
 		3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3694745D2CBC619200CD197F /* StoreKit.framework */; };
 		369474612CCA97F800CD197F /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 369474602CCA97F800CD197F /* Mixpanel */; };
+		369474632CD0031000CD197F /* DropdownButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474622CD0031000CD197F /* DropdownButton.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -173,6 +174,7 @@
 		369474592CB9D53F00CD197F /* PerformanceVariabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceVariabilityView.swift; sourceTree = "<group>"; };
 		3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DetailedMetricView.swift; path = Pods/Core/Views/trends/DetailedMetricView.swift; sourceTree = SOURCE_ROOT; };
 		3694745D2CBC619200CD197F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		369474622CD0031000CD197F /* DropdownButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropdownButton.swift; sourceTree = "<group>"; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -309,6 +311,7 @@
 				368D67192BDD421B000434E0 /* MediaManager.swift */,
 				3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */,
 				369474552CB9C0B600CD197F /* MetricCard.swift */,
+				369474622CD0031000CD197F /* DropdownButton.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -812,6 +815,7 @@
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				36D0440E2C70078500B01998 /* SelectPodView.swift in Sources */,
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
+				369474632CD0031000CD197F /* DropdownButton.swift in Sources */,
 				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
 				3680C26B2C7E127D00D66167 /* ActivityLogView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
