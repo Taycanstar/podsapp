@@ -42,9 +42,9 @@ struct FullAnalyticsView: View {
                 }
 
                 ColumnTrendView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
-                BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
                 ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
-                PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange)
+                PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)

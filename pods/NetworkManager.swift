@@ -956,6 +956,49 @@ class NetworkManager {
         }.resume()
     }
 
+    func fetchUserActivityLogs(podId: Int, userEmail: String, completion: @escaping (Result<[PodItemActivityLog], Error>) -> Void) {
+        let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "\(baseUrl)/get-user-activity-logs/\(podId)/\(encodedEmail)/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(ActivityLogResponse.self, from: data)
+                
+                let activityLogs = try response.logs.compactMap { jsonLog -> PodItemActivityLog? in
+                    do {
+                        return try PodItemActivityLog(from: jsonLog)
+                    } catch {
+                        print("Error converting log: \(error)")
+                        return nil
+                    }
+                }
+                
+                completion(.success(activityLogs))
+            } catch {
+                print("Decoding error: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
     func fetchWorkspacesForUser(email: String, completion: @escaping (Bool, [Workspace]?, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/get-user-workspaces/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else {
@@ -4012,6 +4055,87 @@ class NetworkManager {
         }
         
      
+    }
+    
+    func sendMessageToSydney(message: String, activityLogs: [PodItemActivityLog], completion: @escaping (Result<String, Error>) -> Void) {
+        let urlString = "\(baseUrl)/sydney-chat/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Convert activity logs to a serializable format
+        let logsData = activityLogs.map { log -> [String: Any] in
+            let serializedColumnValues = log.columnValues.mapValues { columnValue -> Any in
+                switch columnValue {
+                case .string(let str):
+                    return str
+                case .number(let num):
+                    return num
+                case .time(let timeValue):
+                    return timeValue.toString
+                case .null:
+                    return NSNull()
+                }
+            }
+            
+            return [
+                "id": log.id,
+                "itemId": log.itemId,
+                "itemLabel": log.itemLabel,
+                "userEmail": log.userEmail,
+                "userName": log.userName,
+                "loggedAt": ISO8601DateFormatter().string(from: log.loggedAt),
+                "columnValues": serializedColumnValues,
+                "notes": log.notes
+            ]
+        }
+        
+        let payload: [String: Any] = [
+            "message": message,
+            "activity_logs": logsData
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+            request.httpBody = jsonData
+        } catch {
+            print("JSON serialization error: \(error)")
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(SydneyResponse.self, from: data)
+                completion(.success(response.response))
+            } catch {
+                print("Decoding error: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+
+
+    struct SydneyResponse: Codable {
+        let response: String
     }
 }
 

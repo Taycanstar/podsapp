@@ -9,6 +9,7 @@ enum NavigationDestination: Hashable {
     case activityLog
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
+    case sydney(podId: Int)
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -27,6 +28,9 @@ enum NavigationDestination: Hashable {
         case .fullAnalytics(let column, _):
                     hasher.combine("fullAnalytics")
                     hasher.combine(column.name)
+        case .sydney(let podId):
+            hasher.combine("sydney")
+            hasher.combine(podId)
         }
     }
 
@@ -37,6 +41,8 @@ enum NavigationDestination: Hashable {
         case (.podInfo, .podInfo), (.podMembers, .podMembers), (.activityLog, .activityLog):
             return true
         case (.trends(let id1), .trends(let id2)):
+            return id1 == id2
+        case (.sydney(let id1), .sydney(let id2)):
             return id1 == id2
         case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
                     return column1.name == column2.name
@@ -235,6 +241,8 @@ struct PodView: View {
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
             case .fullAnalytics(let column, let logs):
                             FullAnalyticsView(column: column, activityLogs: logs)
+            case .sydney(let podId):
+                SydneyView(podId: podId)
                         
                             
             }
@@ -1614,73 +1622,7 @@ struct CardDetailView: View {
            }
        }
 
-//    private func saveChanges() {
-//         var hasChanges = false
-//         var updatedColumnValues: [String: ColumnValue] = [:]
-//         
-//         for (key, value) in columnValues {
-//             if let originalValue = item.columnValues?[key] {
-//                 switch originalValue {
-//                 case .string(let originalStringValue):
-//                     if originalStringValue != value {
-//                         updatedColumnValues[key] = .string(value)
-//                         hasChanges = true
-//                     } else {
-//                         updatedColumnValues[key] = originalValue
-//                     }
-//                 case .number(let originalNumberValue):
-//                     if let intValue = Int(value), originalNumberValue != intValue {
-//                         updatedColumnValues[key] = .number(intValue)
-//                         hasChanges = true
-//                     } else {
-//                         updatedColumnValues[key] = originalValue
-//                     }
-//                 case .null:
-//                     if !value.isEmpty {
-//                         updatedColumnValues[key] = .string(value)
-//                         hasChanges = true
-//                     } else {
-//                         updatedColumnValues[key] = originalValue
-//                     }
-//                 }
-//             } else {
-//                 if let intValue = Int(value) {
-//                     updatedColumnValues[key] = .number(intValue)
-//                     hasChanges = true
-//                 } else if !value.isEmpty {
-//                     updatedColumnValues[key] = .string(value)
-//                     hasChanges = true
-//                 } else {
-//                     updatedColumnValues[key] = .null
-//                 }
-//             }
-//         }
-//         
-//         // Check if item name or notes have changed
-//         if itemName != item.metadata || itemNotes != (item.notes ?? "") {
-//             hasChanges = true
-//         }
-//         
-//         // Only update if there are changes
-//         if hasChanges {
-//             networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-//                 DispatchQueue.main.async {
-//                     switch result {
-//                     case .success:
-//                         self.item.metadata = self.itemName
-//                         self.item.notes = self.itemNotes
-//                         self.item.columnValues = updatedColumnValues
-//                     case .failure(let error):
-//                         print("Failed to update pod item: \(error)")
-//                     }
-//                     self.presentationMode.wrappedValue.dismiss()
-//                 }
-//             }
-//         } else {
-//             // If no changes, just dismiss the view
-//             self.presentationMode.wrappedValue.dismiss()
-//         }
-//     }
+
     private func saveChanges() {
         var hasChanges = false
         var updatedColumnValues: [String: ColumnValue] = [:]

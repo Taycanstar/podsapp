@@ -59,6 +59,7 @@
 		3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3694745D2CBC619200CD197F /* StoreKit.framework */; };
 		369474612CCA97F800CD197F /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 369474602CCA97F800CD197F /* Mixpanel */; };
 		369474632CD0031000CD197F /* DropdownButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474622CD0031000CD197F /* DropdownButton.swift */; };
+		369474672CD5365400CD197F /* SydneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369474662CD5365400CD197F /* SydneyView.swift */; };
 		36963A212C1CAEA200E53EF5 /* AddItemContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */; };
 		36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36963A222C1E17D800E53EF5 /* DataControlsView.swift */; };
 		3696B9592B98306C00D211D7 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3696B9582B98306C00D211D7 /* SignupView.swift */; };
@@ -175,6 +176,7 @@
 		3694745B2CB9F07B00CD197F /* DetailedMetricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DetailedMetricView.swift; path = Pods/Core/Views/trends/DetailedMetricView.swift; sourceTree = SOURCE_ROOT; };
 		3694745D2CBC619200CD197F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		369474622CD0031000CD197F /* DropdownButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropdownButton.swift; sourceTree = "<group>"; };
+		369474662CD5365400CD197F /* SydneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SydneyView.swift; sourceTree = "<group>"; };
 		36963A202C1CAEA200E53EF5 /* AddItemContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemContainerView.swift; sourceTree = "<group>"; };
 		36963A222C1E17D800E53EF5 /* DataControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlsView.swift; sourceTree = "<group>"; };
 		3696B9582B98306C00D211D7 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
@@ -330,6 +332,7 @@
 				3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */,
 				3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */,
 				362125EE2C6041F3009D3E7C /* PodOptionsView.swift */,
+				369474662CD5365400CD197F /* SydneyView.swift */,
 				362516642C6E5D26009CA5B0 /* PodColumnsView.swift */,
 				362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */,
 				36D0440D2C70078500B01998 /* SelectPodView.swift */,
@@ -791,6 +794,7 @@
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
+				369474672CD5365400CD197F /* SydneyView.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
@@ -1000,7 +1004,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -1030,7 +1034,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1067,7 +1071,7 @@
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
 				CONN_STRING_EASTUS = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_WESTUS = "BlobEndpoint=https://humulistoragewest.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:58:47Z&st=2024-06-18T15:58:47Z&spr=https&sig=GDA2msstsdWoztCPrXPOUQL3%2F6jYJqKfL8tDj8tu7NQ%3D";
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pods/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TN4N9K5B77;
@@ -1097,7 +1101,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

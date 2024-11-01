@@ -11,6 +11,7 @@ struct BoundsView: View {
     let column: PodColumn
     let processedData: [ProcessedDataPoint]
     let selectedTimeRange: TimeRange
+    let selectedTimeUnit: TimeUnit
     
     @State private var selectedMetric: (title: String, value: Double, unit: String)?
     
@@ -42,21 +43,37 @@ struct BoundsView: View {
         MetricCard(
             title: title,
             value: value,
-            unit: column.name,
+//            unit: column.name,
+            unit: column.type == "time" ? selectedTimeUnit.abbreviation : column.name,
             action: { navigateToBoundDetail(title: title, value: value) }
         )
     }
     
-    private var maxValue: Double {
-        processedData.map { $0.value }.max() ?? 0
-    }
+    private func formatValue(_ value: Double) -> String {
+         if value.truncatingRemainder(dividingBy: 1) == 0 {
+             return "\(Int(value))"
+         } else {
+             return String(format: "%.1f", value)
+         }
+     }
     
-    private var minValue: Double {
-        processedData.map { $0.value }.min() ?? 0
-    }
+
+    private var maxValue: Double {
+         let value = processedData.map { $0.value }.max() ?? 0
+         return column.type == "time" ? selectedTimeUnit.convert(value) : value
+     }
+     
+     private var minValue: Double {
+         let value = processedData.map { $0.value }.min() ?? 0
+         return column.type == "time" ? selectedTimeUnit.convert(value) : value
+     }
     
     private func navigateToBoundDetail(title: String, value: Double) {
-        selectedMetric = (title: title, value: value, unit: column.name)
+        selectedMetric = (title: title,
+                          value: value,
+//                          unit: column.name
+                          unit: column.type == "time" ? selectedTimeUnit.abbreviation : column.name
+        )
     }
     
     private func getDescription(for title: String) -> String {

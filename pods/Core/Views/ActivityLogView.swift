@@ -1,40 +1,5 @@
 import SwiftUI
 
-//struct ActivityLogView: View {
-////    let activityLogs: [PodItemActivityLog]
-//    @State private var activityLogs: [PodItemActivityLog]
-//    @Environment(\.dismiss) private var dismiss
-//    
-//    init(activityLogs: [PodItemActivityLog]) {
-//           _activityLogs = State(initialValue: activityLogs)
-//       }
-//
-//    
-//    var body: some View {
-//        ZStack {
-//            Color("mxdBg").edgesIgnoringSafeArea(.all)
-//            
-//            ScrollView {
-//                LazyVStack(alignment: .leading, spacing: 10) {
-//                    ForEach(activityLogs) { log in
-////                        ActivityLogItemView(log: log)
-//                        ActivityLogItemView(log: log, onDelete: { deletedLog in
-//                                                   removeLog(deletedLog)
-//                                               })
-//                    }
-//                }
-//                .padding()
-//            }
-//        }
-////        .navigationBarBackButtonHidden(true)
-//        .navigationTitle("Activity Log")
-//        .navigationBarTitleDisplayMode(.inline)
-//    }
-//    
-//    private func removeLog(_ log: PodItemActivityLog) {
-//            activityLogs.removeAll { $0.id == log.id }
-//        }
-//}
 
 struct ActivityLogView: View {
     @State private var activityLogs: [PodItemActivityLog]

@@ -54,7 +54,11 @@ struct MetricCard: View {
     }
 
     private func formattedValue(_ value: Double) -> String {
-        return String(Int(round(value)))
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(value))"
+        } else {
+            return String(format: "%.1f", value)
+        }
     }
 
 }

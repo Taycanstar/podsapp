@@ -97,6 +97,15 @@ struct PodOptionsView: View {
                      
                         HapticFeedback.generate()
                     }, color: .primary)
+                    
+                    MenuItemView(iconName: "sparkles", text: "Sydney Pod Assistant", action: {
+                        dismiss()
+//                        onActivityLogSelected()
+                     
+                            navigationAction(.sydney(podId: podId))
+                     
+                        HapticFeedback.generate()
+                    }, color: .primary)
 
                     
                     Divider().padding(.vertical, 5)

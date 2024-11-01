@@ -11,6 +11,7 @@ struct PerformanceVariabilityView: View {
     let processedData: [ProcessedDataPoint]
     let selectedTimeRange: TimeRange
     @State private var selectedMetric: (title: String, value: Double, unit: String)?
+    let selectedTimeUnit: TimeUnit
     
     var body: some View {
         metricCardWithNavigation(title: "Performance variability", value: standardDeviation)
@@ -49,7 +50,10 @@ struct PerformanceVariabilityView: View {
     }
     
     private var standardDeviation: Double {
-        let values = processedData.map { $0.value }
+//        let values = processedData.map { $0.value }
+        let values = processedData.map {
+                column.type == "time" ? selectedTimeUnit.convert($0.value) : $0.value
+            }
         guard !values.isEmpty else { return 0 }
         
         let mean = values.reduce(0, +) / Double(values.count)
@@ -57,16 +61,13 @@ struct PerformanceVariabilityView: View {
         return sqrt(sumOfSquaredAvgDiff / Double(values.count))
     }
     
+
     private var variabilityUnit: String {
-        switch selectedTimeRange {
-        case .day:
-            return "\(column.name)"
-        case .week:
-            return "\(column.name)"
-        case .month:
-            return "\(column.name)"
-        }
-    }
+           if column.type == "time" {
+               return selectedTimeUnit.abbreviation
+           }
+           return column.name
+       }
     
     private func getDescription() -> String {
         return "Performance variability measures how much your \(column.name) fluctuates over time. A lower value indicates more consistent performance, while a higher value suggests greater variation in your results."
