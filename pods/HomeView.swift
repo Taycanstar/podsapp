@@ -26,34 +26,52 @@ struct HomeView: View {
        @Binding var newPodId: Int?
     @State private var lastSubscriptionRefresh: Date?
     @Environment(\.isTabBarVisible) var isTabBarVisible
+    @State private var isLoading = true
+    
+    
     var body: some View {
            NavigationView {
                ZStack(alignment: .top) {
-                   ScrollView {
-         
-                       
-                       LazyVStack(spacing: 0) {
-                           RecentlyVisitedHeader(showSheet: $showSheet, headerTitle: $selectedHeaderOption)
-                           ForEach(podsToDisplay) { pod in
-                               PodCard(pod: pod)
-                               if pod.id != podsToDisplay.last?.id {
-                                   Divider().padding(.horizontal)
+                   if isLoading {
+                       // Loading view
+                       VStack {
+                           Spacer()
+                           ProgressView()
+                               .scaleEffect(1.2)
+                               .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+              
+                           Spacer()
+                       }
+                       .frame(maxWidth: .infinity, maxHeight: .infinity)
+                       .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
+                   } else {
+                       ScrollView {
+             
+                           
+                           LazyVStack(spacing: 0) {
+                               RecentlyVisitedHeader(showSheet: $showSheet, headerTitle: $selectedHeaderOption)
+                               ForEach(podsToDisplay) { pod in
+                                   PodCard(pod: pod)
+                                   if pod.id != podsToDisplay.last?.id {
+                                       Divider().padding(.horizontal)
+                                   }
                                }
                            }
+                           .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white)
+                           .cornerRadius(10)
+                           .overlay(
+                               RoundedRectangle(cornerRadius: 10)
+                                   .stroke(colorScheme == .dark ? Color(rgb: 70,70,70) : Color(rgb: 220, 220, 220), lineWidth: 0.3)
+                           )
+                           .padding(.horizontal)
+                           .padding(.bottom, 150)
+                           .padding(.top, 60) // Add padding for the header
+                        
                        }
-                       .background(colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white)
-                       .cornerRadius(10)
-                       .overlay(
-                           RoundedRectangle(cornerRadius: 10)
-                               .stroke(colorScheme == .dark ? Color(rgb: 70,70,70) : Color(rgb: 220, 220, 220), lineWidth: 0.3)
-                       )
-                       .padding(.horizontal)
-                       .padding(.bottom, 150)
-                       .padding(.top, 60) // Add padding for the header
-                    
-                   }
 
-                   .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
+                       .background(colorScheme == .dark ? Color(rgb:14,14,14) : Color(rgb: 246, 246, 246))
+                   }
+     
               
                    
                    HomeHeaderView()
@@ -143,9 +161,9 @@ struct HomeView: View {
     }
     
     private func fetchPodsAndWorkspacesIfNeeded() {
-      
-              homeViewModel.fetchPodsForUser(email: viewModel.email) { 
-                  
+        isLoading = true
+              homeViewModel.fetchPodsForUser(email: viewModel.email) {
+                  isLoading = false
               }
         
           homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
@@ -757,7 +775,7 @@ struct HomeHeaderView: View {
             
             // Content
             HStack {
-                Image(colorScheme == .dark ? "fullwte" : "fullblk")
+                Image(colorScheme == .dark ? "new_dark" : "new_light")
                     .resizable()
                     .scaledToFit()
                     .frame(height: 25)

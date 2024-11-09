@@ -21,6 +21,9 @@ struct ColumnTrendView: View {
     private let extraMonths: Int = 1
     let selectedTimeUnit: TimeUnit
     
+    @State private var selectedX: Date?
+    @State private var selectedY: Double?
+    @State private var isDragging = false
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
 
@@ -32,6 +35,40 @@ struct ColumnTrendView: View {
                             .frame(width: calculateChartWidth())
                             .frame(height: 300)
                             .id("chart")
+                            .chartOverlay { proxy in
+                                GeometryReader { geometry in
+                                    Rectangle()
+                                        .fill(.clear)
+                                        .contentShape(Rectangle())
+                                        .simultaneousGesture( // Change from .gesture to .simultaneousGesture
+                                            DragGesture(minimumDistance: 0)
+                                                .onChanged { value in
+                                                    let origin = geometry[proxy.plotAreaFrame].origin
+                                                    let location = CGPoint(
+                                                        x: value.location.x - origin.x,
+                                                        y: value.location.y - origin.y
+                                                    )
+                                                    
+                                                    // Convert location to chart coordinates
+                                                    if let date: Date = proxy.value(atX: location.x),
+                                                       let value: Double = proxy.value(atY: location.y) {
+                                                        
+                                                        // Find closest data point
+                                                        if let closestPoint = findClosestDataPoint(to: date) {
+                                                            selectedX = closestPoint.date
+                                                            selectedY = column.type == "time" ?
+                                                                selectedTimeUnit.convert(closestPoint.value) :
+                                                                closestPoint.value
+                                                            isDragging = true
+                                                        }
+                                                    }
+                                                }
+                                                .onEnded { _ in
+                                                    isDragging = false
+                                                }
+                                        )
+                                }
+                            }
                     }
                     .frame(height: 320)
                     .onAppear {
@@ -42,6 +79,11 @@ struct ColumnTrendView: View {
             .frame(height: 320)
         }
     }
+    
+    private func findClosestDataPoint(to date: Date) -> ProcessedDataPoint? {
+         return processedData.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
+     }
+     
     
     private var chart: some View {
         Chart(processedData) { datapoint in
@@ -60,6 +102,27 @@ struct ColumnTrendView: View {
                 y: .value("Value", column.type == "time" ? selectedTimeUnit.convert(datapoint.value) : datapoint.value)
             )
             .foregroundStyle(Color.accentColor)
+            // Add rule marks for selection indicator
+                 if let selectedX = selectedX, datapoint.date == selectedX {
+                     RuleMark(
+                         x: .value("Selected", selectedX)
+                     )
+                     .foregroundStyle(Color.gray.opacity(0.3))
+                     
+                     PointMark(
+                         x: .value("Selected", selectedX),
+                         y: .value("Value", column.type == "time" ? selectedTimeUnit.convert(datapoint.value) : datapoint.value)
+                     )
+                     .foregroundStyle(Color.accentColor)
+                     .annotation {
+                         VStack {
+                             Text(datapoint.value, format: .number.precision(.fractionLength(2)))
+                                 .font(.caption)
+                                 .foregroundColor(.secondary)
+                         }
+                     }
+                 }
+             
         }
         .chartXAxis {
             AxisMarks(values: .stride(by: strideBy)) { value in
@@ -94,12 +157,6 @@ struct ColumnTrendView: View {
                 }
             }
         }
-//        .chartYAxis {
-//            AxisMarks(position: .trailing)
-//        }
-//        .chartXScale(domain: extendedDateRange)
-//        .chartYAxisLabel(column.name, position: .trailing)
-//        .chartXAxisLabel(selectedTimeRange.rawValue, position: .bottomTrailing)
         .chartYAxis {
                   AxisMarks(position: .trailing) { value in
                       AxisValueLabel {
@@ -213,3 +270,5 @@ enum TimeUnit: String, CaseIterable {
         }
     }
 }
+
+

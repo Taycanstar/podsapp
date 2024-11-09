@@ -76,12 +76,12 @@
       "id" : "DC104F9D",
       "localizations" : [
         {
-          "description" : "Enjoy Podstack with premium features",
-          "displayName" : "Podstack+",
+          "description" : "Enjoy Pods with premium features",
+          "displayName" : "Pods+",
           "locale" : "en_US"
         }
       ],
-      "name" : "Podstack+",
+      "name" : "Pods+",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -98,13 +98,13 @@
           "localizations" : [
             {
               "description" : "Enjoy Plus features billed monthly",
-              "displayName" : "Podstack+ Monthly Plan",
+              "displayName" : "Pods+ Monthly Plan",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.plus.month",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Podstack+ Monthly Plan",
+          "referenceName" : "Pods+ Monthly Plan",
           "subscriptionGroupID" : "DC104F9D",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
@@ -126,13 +126,13 @@
           "localizations" : [
             {
               "description" : "Enjoy Plus features billed annually",
-              "displayName" : "Podstack+ Annual Plan",
+              "displayName" : "Pods+ Annual Plan",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.humuli.pods.plus.year",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Podstack+ Annual Plan",
+          "referenceName" : "Pods+ Annual Plan",
           "subscriptionGroupID" : "DC104F9D",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

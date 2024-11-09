@@ -24,7 +24,7 @@ struct TeamInvitationView: View {
             VStack(spacing: 0) { // Combine the image and content vertically
                 // Header Image
                 HStack {
-                    Image(colorScheme == .dark ? "fullwte" : "fullblk")
+                    Image(colorScheme == .dark ? "new_dark" : "new_light")
                         .resizable()
                         .scaledToFit()
                         .frame(height: 25)
@@ -55,7 +55,7 @@ struct TeamInvitationView: View {
                                       
                                       Text("\(invitation.userName)")
                                           .bold() +
-                                      Text(" (\(invitation.userEmail)) has invited you to use Podstack together, in a team called ")
+                                      Text(" (\(invitation.userEmail)) has invited you to use Pods together, in a team called ")
                                           .foregroundColor(.primary) +
                                       Text("\(invitation.teamName)")
                                           .foregroundColor(.primary)

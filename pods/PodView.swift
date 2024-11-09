@@ -121,6 +121,7 @@ struct PodView: View {
     @StateObject private var videoPreloader = VideoPreloader()
     
     @State private var pendingNavigation: NavigationDestination?
+    @State private var isLoading = true
     
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
@@ -157,35 +158,51 @@ struct PodView: View {
                                        onDismiss: { dismiss() }  // Add this line
                                    )
                 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        switch selectedView {
-                        case .list:
-                            listView
-                        case .table:
-                            Text("Table View")
-                        case .calendar:
-                            Text("Calendar View")
-                        }
-                        
-                        if isCreatingNewItem {
-                            newItemInputView
-                            
-                                .padding(.bottom, 45)
-                        } else {
-                            
-                            
-                            addItemButton
-                                .padding(.bottom, 45)
-                            
-                            
-                            
-                        }
-                    }
-                    
-                }
                 
-                .padding(.bottom, keyboardOffset)
+                               if isLoading {
+                                   VStack {
+                                       Spacer()
+                                       ProgressView()
+                                           .scaleEffect(1.2)
+                                           .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                       Text("Loading items...")
+                                           .foregroundColor(.gray)
+                                           .padding(.top, 10)
+                                       Spacer()
+                                   }
+                               } else {
+                                   
+                                   ScrollView {
+                                       VStack(spacing: 12) {
+                                           switch selectedView {
+                                           case .list:
+                                               listView
+                                           case .table:
+                                               Text("Table View")
+                                           case .calendar:
+                                               Text("Calendar View")
+                                           }
+                                           
+                                           if isCreatingNewItem {
+                                               newItemInputView
+                                               
+                                                   .padding(.bottom, 45)
+                                           } else {
+                                               
+                                               
+                                               addItemButton
+                                                   .padding(.bottom, 45)
+                                               
+                                               
+                                               
+                                           }
+                                       }
+                                       
+                                   }
+                                   
+                                   .padding(.bottom, keyboardOffset)
+                               }
+         
                 
             }
             
@@ -411,6 +428,7 @@ struct PodView: View {
     
     
     private func fetchFullPodDetails() {
+        isLoading = true
         networkManager.fetchFullPodDetails(email: viewModel.email, podId: pod.id) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -432,6 +450,7 @@ struct PodView: View {
                 case .failure(let error):
                     print("Failed to load pod details: \(error.localizedDescription)")
                 }
+                isLoading = false
             }
         }
     }
@@ -630,28 +649,6 @@ struct PodView: View {
         }
     }
 
-//    private func iconView(for item: PodItem , index: Int) -> some View {
-//        Group {
-//            if item.videoURL != nil || item.imageURL != nil {
-//                Image(systemName: "play")
-//                    .font(.system(size: 20))
-//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-//                    .onTapGesture {
-//                                     navigationPath.append(NavigationDestination.player(items: reorderedItems, initialIndex: index))
-//                                 }
-//            } else {
-//                Image(systemName: "camera")
-//                    .font(.system(size: 20))
-//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-//                    .onTapGesture {
-//                                       selectedItemForMedia = item
-//                                       showCameraView = true
-//                                   }
-//            }
-//        }
-//    }
-
-
     
     private func columnView(name: String, item: PodItem) -> some View {
         let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
@@ -820,6 +817,7 @@ struct PodView: View {
     }
     
     private func refreshPodItems() {
+        isLoading = true
         DispatchQueue.global(qos: .background).async {
             networkManager.fetchItemsForPod(podId: pod.id) { items, error in
                 DispatchQueue.main.async {
@@ -829,6 +827,7 @@ struct PodView: View {
                     } else {
                         print("Failed to fetch items for pod: \(error ?? "Unknown error")")
                     }
+                    isLoading = false
                 }
             }
         }

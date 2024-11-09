@@ -516,16 +516,16 @@ enum SubscriptionError: Error {
 
 enum SubscriptionTier: String, CaseIterable {
     case none = "None"
-    case plusMonthly = "Podstack Plus Monthly"
-    case plusYearly = "Podstack Plus Yearly"
-    case teamMonthly = "Podstack Team Monthly"
-    case teamYearly = "Podstack Team Yearly"
+    case plusMonthly = "Pods Plus Monthly"
+    case plusYearly = "Pods Plus Yearly"
+    case teamMonthly = "Pods Team Monthly"
+    case teamYearly = "Pods Team Yearly"
     
     var name: String {
         switch self {
         case .none: return "Free"
-        case .plusMonthly, .plusYearly: return "Podstack+"
-        case .teamMonthly, .teamYearly: return "Podstack Team"
+        case .plusMonthly, .plusYearly: return "Pods+"
+        case .teamMonthly, .teamYearly: return "Pods Team"
         }
     }
     
