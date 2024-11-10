@@ -4058,8 +4058,8 @@ class NetworkManager {
      
     }
     
-    func sendMessageToSydney(message: String, activityLogs: [PodItemActivityLog], completion: @escaping (Result<String, Error>) -> Void) {
-        let urlString = "\(baseUrl)/sydney-chat/"
+    func sendMessageToGracie(message: String, activityLogs: [PodItemActivityLog], completion: @escaping (Result<String, Error>) -> Void) {
+        let urlString = "\(baseUrl)/gracie-chat/"
         
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
@@ -4124,7 +4124,7 @@ class NetworkManager {
             
             do {
                 let decoder = JSONDecoder()
-                let response = try decoder.decode(SydneyResponse.self, from: data)
+                let response = try decoder.decode(GracieResponse.self, from: data)
                 completion(.success(response.response))
             } catch {
                 print("Decoding error: \(error)")
@@ -4135,7 +4135,7 @@ class NetworkManager {
 
 
 
-    struct SydneyResponse: Codable {
+    struct GracieResponse: Codable {
         let response: String
     }
 }

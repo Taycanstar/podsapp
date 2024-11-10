@@ -9,7 +9,7 @@ enum NavigationDestination: Hashable {
     case activityLog
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
-    case sydney(podId: Int)
+    case gracie(podId: Int)
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -28,8 +28,8 @@ enum NavigationDestination: Hashable {
         case .fullAnalytics(let column, _):
                     hasher.combine("fullAnalytics")
                     hasher.combine(column.name)
-        case .sydney(let podId):
-            hasher.combine("sydney")
+        case .gracie(let podId):
+            hasher.combine("gracie")
             hasher.combine(podId)
         }
     }
@@ -42,7 +42,7 @@ enum NavigationDestination: Hashable {
             return true
         case (.trends(let id1), .trends(let id2)):
             return id1 == id2
-        case (.sydney(let id1), .sydney(let id2)):
+        case (.gracie(let id1), .gracie(let id2)):
             return id1 == id2
         case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
                     return column1.name == column2.name
@@ -255,8 +255,8 @@ struct PodView: View {
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
             case .fullAnalytics(let column, let logs):
                             FullAnalyticsView(column: column, activityLogs: logs)
-            case .sydney(let podId):
-                SydneyView(podId: podId)
+            case .gracie(let podId):
+                GracieView(podId: podId)
                         
                             
             }

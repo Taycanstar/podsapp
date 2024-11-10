@@ -98,11 +98,11 @@ struct PodOptionsView: View {
                         HapticFeedback.generate()
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "sparkles", text: "Sydney Pod Assistant", action: {
+                    MenuItemView(iconName: "sparkles", text: "Gracie Pod Assistant", action: {
                         dismiss()
 //                        onActivityLogSelected()
                      
-                            navigationAction(.sydney(podId: podId))
+                            navigationAction(.gracie(podId: podId))
                      
                         HapticFeedback.generate()
                     }, color: .primary)

@@ -8,7 +8,7 @@ struct Message: Identifiable {
     let timestamp: Date
 }
 
-struct SydneyView: View {
+struct GracieView: View {
     @State private var messages: [Message] = []
     @State private var newMessage = ""
     @State private var messageCount = 0
@@ -106,7 +106,7 @@ struct SydneyView: View {
                 alignment: .top
             )
         }
-        .navigationTitle("Sydney Pod Assistant")
+        .navigationTitle("Gracie Pod Assistant")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             setupInitialMessages()
@@ -120,7 +120,7 @@ struct SydneyView: View {
      }
     private func setupInitialMessages() {
          messages = [
-             Message(content: "Hello! How I'm Sydney, what do you want to know about the Pod?", isFromUser: false, timestamp: Date())
+             Message(content: "Hi! I'm Gracie, you can ask me anything about your progress and insights.", isFromUser: false, timestamp: Date())
          ]
          messageCount = messages.count
      }
@@ -137,22 +137,22 @@ struct SydneyView: View {
          isLoading = true
         isTyping = true
          
-         // Send message to Sydney with activity logs
-         networkManager.sendMessageToSydney(message: trimmedMessage, activityLogs: activityLogs) { result in
+         // Send message to Gracie with activity logs
+         networkManager.sendMessageToGracie(message: trimmedMessage, activityLogs: activityLogs) { result in
              DispatchQueue.main.async {
                  isLoading = false
                  isTyping = false
                  switch result {
                  case .success(let response):
-                     let sydneyMessage = Message(content: response, isFromUser: false, timestamp: Date())
-                     messages.append(sydneyMessage)
+                     let gracieMessage = Message(content: response, isFromUser: false, timestamp: Date())
+                     messages.append(gracieMessage)
                      messageCount += 1
                      
                  case .failure(let error):
                      let errorMessage = Message(content: "I apologize, but I'm having trouble processing your request at the moment. Please try again.", isFromUser: false, timestamp: Date())
                      messages.append(errorMessage)
                      messageCount += 1
-                     print("Sydney chat error: \(error)")
+                     print("Gracie chat error: \(error)")
                  }
              }
          }
@@ -268,7 +268,7 @@ extension UIScrollView {
     }
 }
 
-extension SydneyView {
+extension GracieView {
     private var scrollView: UIScrollView? {
         UIApplication.shared.windows.first?.rootViewController?.view.findScrollView()
     }
