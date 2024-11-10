@@ -221,32 +221,6 @@ struct GracieView: View {
     }
 }
 
-//struct MessageBubble: View {
-//    let message: Message
-//    
-//    var body: some View {
-//        HStack {
-//            if message.isFromUser { Spacer() }
-//            
-//            Text(message.content)
-//                .padding(.horizontal, 16)
-//                .padding(.vertical, 10)
-//                .background(
-//                    message.isFromUser ?
-//                    Color.blue :
-//                    Color(.systemGray5)
-//                )
-//                .foregroundColor(
-//                    message.isFromUser ?
-//                    .white :
-//                    .primary
-//                )
-//                .clipShape(BubbleShape(isFromUser: message.isFromUser))
-//            
-//            if !message.isFromUser { Spacer() }
-//        }
-//    }
-//}
 
 struct MessageBubble: View {
     let message: Message
