@@ -3387,7 +3387,7 @@ class NetworkManager {
       }
 
 
-    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
+    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, loggedAt: Date, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -3420,7 +3420,8 @@ class NetworkManager {
             "podId": podId,
             "userEmail": userEmail,
             "columnData": serializedColumnData,
-            "notes": notes
+            "notes": notes,
+            "loggedAt": loggedAt.ISO8601Format()
         ]
 
         var request = URLRequest(url: url)

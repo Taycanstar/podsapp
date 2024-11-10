@@ -22,6 +22,7 @@
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
+		3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
 		3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */; };
@@ -143,6 +144,7 @@
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
+		3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerWheel.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
 		3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamOptionsView.swift; sourceTree = "<group>"; };
@@ -312,6 +314,7 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */,
 				3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */,
 				3694744B2CB70EFA00CD197F /* SingleVideoPlayerView.swift */,
 				368D67192BDD421B000434E0 /* MediaManager.swift */,
@@ -803,6 +806,7 @@
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,
+				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,

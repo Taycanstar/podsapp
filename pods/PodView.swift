@@ -165,9 +165,6 @@ struct PodView: View {
                                        ProgressView()
                                            .scaleEffect(1.2)
                                            .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                                       Text("Loading items...")
-                                           .foregroundColor(.gray)
-                                           .padding(.top, 10)
                                        Spacer()
                                    }
                                } else {
@@ -1858,6 +1855,8 @@ struct LogActivityView: View {
     @State private var showNotesInput = false
     var onActivityLogged: (PodItemActivityLog) -> Void
     @State private var skippedColumns: Set<String> = []
+    @State private var selectedDate: Date = Date()
+    @State private var showDatePicker = false
 
     init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
         self.item = item
@@ -1889,9 +1888,7 @@ struct LogActivityView: View {
                                             .foregroundColor(.primary)
                                             .padding(.horizontal, 5)
                                             .kerning(0.2)
-                                        
                                         Spacer()
-                                        
                                         Button("Skip") {
                                             withAnimation {
                                                 skippedColumns.insert(column.name)
@@ -1902,7 +1899,6 @@ struct LogActivityView: View {
                                         .font(.system(size: 13))
                                         .foregroundColor(.red)
                                     }
-                                    
                                     if column.type == "text" {
                                         TextField("", text: Binding(
                                             get: { self.stringValue(for: column.name) },
@@ -1936,7 +1932,6 @@ struct LogActivityView: View {
                                                         .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
                                                 )
                                         }
-                                        
                                         if expandedColumn == column.name {
                                             InlineNumberPicker(value: Binding(
                                                 get: { self.numberValue(for: column.name) },
@@ -1978,6 +1973,35 @@ struct LogActivityView: View {
                                         }
                                     }
                                 }
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 5) {
+                            Button(action: {
+                                withAnimation {
+                                    showDatePicker.toggle()
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "calendar")
+                                        .foregroundColor(.gray)
+                                    Text("Date")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(formatDate(selectedDate))
+                                        .foregroundColor(.accentColor)
+                                }
+                                .padding(.vertical, 12)
+                                .padding(.horizontal)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                                )
+                            }
+                            
+                            if showDatePicker {
+                                DatePickerWheel(selectedDate: $selectedDate)
+                                    .frame(height: 150)
+                                    .transition(.opacity)
                             }
                         }
                     }
@@ -2036,15 +2060,18 @@ struct LogActivityView: View {
             )
         }
     }
-//
-//    private func stringValue(for columnName: String) -> String {
-//        switch columnValues[columnName] ?? .null {
-//        case .string(let value): return value
-//        case .number(let value): return String(value)
-//        case .null: return ""
-//        }
-//    }
-    // Add these helper methods to your view:
+    
+    private func formatDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Today, \(date.formatted(date: .omitted, time: .shortened))"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday, \(date.formatted(date: .omitted, time: .shortened))"
+        } else {
+            return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+        }
+    }
+
         private func timeValue(for columnName: String) -> TimeValue {
             switch columnValues[columnName] ?? .null {
             case .time(let value):
@@ -2057,8 +2084,6 @@ struct LogActivityView: View {
                 return TimeValue(hours: 0, minutes: 0, seconds: 0)
             }
         }
-
-        // Update your existing stringValue method:
         private func stringValue(for columnName: String) -> String {
             switch columnValues[columnName] ?? .null {
             case .string(let value):
@@ -2079,6 +2104,31 @@ struct LogActivityView: View {
         }
     }
 
+//    private func submitActivity() {
+//        isSubmitting = true
+//        NetworkManager().createActivityLog(
+//            itemId: item.id,
+//            podId: podId,
+//            userEmail: viewModel.email,
+//            columnValues: columnValues,
+////            podColumns: podColumns,
+//            podColumns: podColumns.filter { !skippedColumns.contains($0.name) },
+//            notes: activityNote
+//        ) { result in
+//            DispatchQueue.main.async {
+//                isSubmitting = false
+//                switch result {
+//                case .success(let newLog):
+//                    print("Activity logged successfully")
+//                    onActivityLogged(newLog)
+//                    presentationMode.wrappedValue.dismiss()
+//                case .failure(let error):
+//                    print("Failed to log activity: \(error)")
+//                    errorMessage = error.localizedDescription
+//                }
+//            }
+//        }
+//    }
     private func submitActivity() {
         isSubmitting = true
         NetworkManager().createActivityLog(
@@ -2086,20 +2136,20 @@ struct LogActivityView: View {
             podId: podId,
             userEmail: viewModel.email,
             columnValues: columnValues,
-//            podColumns: podColumns,
             podColumns: podColumns.filter { !skippedColumns.contains($0.name) },
-            notes: activityNote
+            notes: activityNote,
+            loggedAt: selectedDate  // Add this line
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
                 switch result {
-                case .success(let newLog):
-                    print("Activity logged successfully")
-                    onActivityLogged(newLog)
-                    presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Failed to log activity: \(error)")
-                    errorMessage = error.localizedDescription
+                    case .success(let newLog):
+                        print("Activity logged successfully")
+                        onActivityLogged(newLog)
+                        presentationMode.wrappedValue.dismiss()
+                    case .failure(let error):
+                        print("Failed to log activity: \(error)")
+                        errorMessage = error.localizedDescription
                 }
             }
         }
