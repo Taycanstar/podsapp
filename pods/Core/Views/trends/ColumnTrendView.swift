@@ -101,11 +101,26 @@ struct ColumnTrendView: View {
                     y: .value("Value", column.type == "time" ? selectedTimeUnit.convert(datapoint.value) : datapoint.value)
                 )
                 .foregroundStyle(Color.accentColor)
+//                .annotation {
+//                    VStack {
+//                        Text(datapoint.value, format: .number.precision(.fractionLength(2)))
+//                            .font(.caption)
+//                            .foregroundColor(.secondary)
+//                    }
+//                }
                 .annotation {
                     VStack {
-                        Text(datapoint.value, format: .number.precision(.fractionLength(2)))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if floor(datapoint.value) == datapoint.value {
+                            // For whole numbers
+                            Text(Int(datapoint.value), format: .number)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            // For decimal numbers
+                            Text(datapoint.value, format: .number.precision(.fractionLength(1)))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }
