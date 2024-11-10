@@ -22,6 +22,7 @@ struct ColumnTrendView: View {
     @State private var selectedX: Date?
     @State private var selectedY: Double?
     @State private var isDragging = false
+    @Binding var proxy: ScrollViewProxy?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -65,7 +66,11 @@ struct ColumnTrendView: View {
                             }
                     }
                     .frame(height: 320)
-                    .onAppear { scrollToMostRecent(proxy: proxy) }
+//                    .onAppear { scrollToMostRecent(proxy: proxy) }
+                    .onAppear {
+                        self.proxy = proxy  // Store the ScrollViewProxy when view appears
+                        scrollToMostRecent(proxy: proxy)
+                    }
                 }
             }
             .frame(height: 320)
@@ -101,13 +106,6 @@ struct ColumnTrendView: View {
                     y: .value("Value", column.type == "time" ? selectedTimeUnit.convert(datapoint.value) : datapoint.value)
                 )
                 .foregroundStyle(Color.accentColor)
-//                .annotation {
-//                    VStack {
-//                        Text(datapoint.value, format: .number.precision(.fractionLength(2)))
-//                            .font(.caption)
-//                            .foregroundColor(.secondary)
-//                    }
-//                }
                 .annotation {
                     VStack {
                         if floor(datapoint.value) == datapoint.value {
@@ -125,17 +123,27 @@ struct ColumnTrendView: View {
                 }
             }
         }
+
         .chartXAxis {
             AxisMarks(values: .stride(by: selectedXAxisInterval.calendarComponent)) { value in
                 if let date = value.as(Date.self), date <= extendedDateRange.upperBound {
                     AxisValueLabel {
                         VStack(alignment: .leading) {
                             switch selectedXAxisInterval {
-                            case .hour: Text(date, format: .dateTime.hour())
-                            case .day: Text(date, format: .dateTime.day())
-                            case .week: Text("W\(Calendar.current.component(.weekOfYear, from: date))")
-                            case .month: Text(date, format: .dateTime.month(.abbreviated))
-                            case .quarter: Text("Q\(Calendar.current.component(.quarter, from: date))")
+//                            case .hour:
+//                                Text(date, format: .dateTime.hour())
+                            case .day:
+                                if Calendar.current.component(.day, from: date) == 1 {
+                                    Text(date, format: .dateTime.month(.abbreviated).day())
+                                } else {
+                                    Text(date, format: .dateTime.day())
+                                }
+                            case .week:
+                                Text(date, format: .dateTime.month(.abbreviated).day())
+                            case .month:
+                                Text(date, format: .dateTime.month(.abbreviated))
+                            case .quarter:
+                                Text("Q\(Calendar.current.component(.quarter, from: date))")
                             }
                         }
                     }
@@ -144,6 +152,10 @@ struct ColumnTrendView: View {
                 }
             }
         }
+
+
+
+
         .chartYAxis {
             AxisMarks(position: .trailing) { value in
                 AxisValueLabel {
@@ -192,6 +204,7 @@ struct ColumnTrendView: View {
         return startDate...endDate
     }
 
+
     private func calculateChartWidth() -> CGFloat {
         let calendar = Calendar.current
         let now = Date()
@@ -200,11 +213,24 @@ struct ColumnTrendView: View {
         case .today, .yesterday, .last7Days, .last30Days:
             let startDate = extendedDateRange.lowerBound
             let numberOfDays = Int(ceil(now.timeIntervalSince(startDate) / (24 * 60 * 60))) + 1
-            return max(CGFloat(numberOfDays) * dayWidth, CGFloat(processedData.count + extraDays) * (dayWidth + minGapBetweenPoints)) + rightPaddingWidth
+            return max(CGFloat(numberOfDays) * dayWidth,
+                      CGFloat(processedData.count + extraDays) * (dayWidth + minGapBetweenPoints)) + rightPaddingWidth
             
         case .last3Months, .last6Months, .last12Months:
-            let numberOfMonths = calendar.dateComponents([.month], from: extendedDateRange.lowerBound, to: now).month ?? 0
-            return max(CGFloat(numberOfMonths + 1) * monthWidth, CGFloat(processedData.count + extraMonths) * (monthWidth + minGapBetweenPoints)) + rightPaddingWidth
+            if selectedXAxisInterval == .day || selectedXAxisInterval == .week {
+                // Use the same tight spacing approach we had for days
+                let startDate = extendedDateRange.lowerBound
+                let numberOfUnits = selectedXAxisInterval == .day ?
+                    Int(ceil(now.timeIntervalSince(startDate) / (24 * 60 * 60))) + 1 :
+                    Int(ceil(now.timeIntervalSince(startDate) / (7 * 24 * 60 * 60))) + 1
+                let adjustedMinGap: CGFloat = 5
+                return max(CGFloat(numberOfUnits) * dayWidth,
+                          CGFloat(processedData.count) * (dayWidth + adjustedMinGap)) + rightPaddingWidth
+            } else {
+                let numberOfMonths = calendar.dateComponents([.month], from: extendedDateRange.lowerBound, to: now).month ?? 0
+                return max(CGFloat(numberOfMonths + 1) * monthWidth,
+                          CGFloat(processedData.count + extraMonths) * (monthWidth + minGapBetweenPoints)) + rightPaddingWidth
+            }
         }
     }
 

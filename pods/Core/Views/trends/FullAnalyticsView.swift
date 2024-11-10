@@ -13,6 +13,7 @@ struct FullAnalyticsView: View {
     @State private var currentStreak: Int = 0
     @State private var longestStreak: Int = 0
     @Environment(\.colorScheme) private var colorScheme
+    @State private var chartProxy: ScrollViewProxy? = nil
     
     var body: some View {
         ScrollView {
@@ -35,7 +36,8 @@ struct FullAnalyticsView: View {
                     processedData: processedData,
                     selectedTimeRange: selectedTimeRange,
                     selectedTimeUnit: selectedTimeUnit,
-                    selectedXAxisInterval: selectedXAxisInterval
+                    selectedXAxisInterval: selectedXAxisInterval,
+                    proxy: $chartProxy
                 )
                 BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
                 ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
@@ -59,10 +61,28 @@ struct FullAnalyticsView: View {
             ])
         }
         .onChange(of: selectedTimeRange) { _, _ in
-            setDefaultsForTimeRange() // Set defaults when time range changes
-            updateProcessedData()
+             setDefaultsForTimeRange()
+             updateProcessedData()
+             scrollToRecentData()
+         }
+         .onChange(of: selectedXAxisInterval) { _, _ in
+             scrollToRecentData()
+         }
+         .onChange(of: selectedMeasurement) { _, _ in
+             updateProcessedData()
+             scrollToRecentData()
+         }
+    }
+    
+    
+    private func scrollToRecentData() {
+        if let proxy = chartProxy {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    proxy.scrollTo("chart", anchor: .trailing)
+                }
+            }
         }
-        .onChange(of: selectedMeasurement) { _, _ in updateProcessedData() } // Recalculate data when measurement changes
     }
     
     private func setDefaultsForTimeRange() {
@@ -285,7 +305,7 @@ enum TimeRange: String, CaseIterable {
 }
 
 enum XAxisInterval: String, CaseIterable {
-    case hour = "Hour"
+//    case hour = "Hour"
     case day = "Day"
     case week = "Week"
     case month = "Month"
@@ -293,7 +313,7 @@ enum XAxisInterval: String, CaseIterable {
     
     var calendarComponent: Calendar.Component {
         switch self {
-        case .hour: return .hour
+//        case .hour: return .hour
         case .day: return .day
         case .week: return .weekOfYear
         case .month: return .month
