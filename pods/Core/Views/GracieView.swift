@@ -20,6 +20,8 @@ struct GracieView: View {
     @State private var isLoading = false
     @State private var isTyping = false
     @State private var showScrollButton = false
+    @State private var textEditorHeight: CGFloat = 40
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,22 +85,62 @@ struct GracieView: View {
             
             // Message input area
             HStack(spacing: 12) {
-                TextField("Message", text: $newMessage)
-                    .padding(12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(20)
-                    .focused($isFocused)
+//                TextField("Message", text: $newMessage)
+//                    .padding(12)
+//                    .background(Color(.systemGray6))
+//                    .cornerRadius(20)
+//                    .focused($isFocused)
+                ZStack(alignment: .leading) {
+                    TextEditor(text: $newMessage)
+                    
+                        .frame(height: min(max(40, textEditorHeight), 100)) // Grows between 40-100
+                        .scrollContentBackground(.hidden) // Removes default background
+                        .cornerRadius(20)
+                        .focused($isFocused)
+//
+//                        .padding(.trailing, 8)
+//                        .padding(.top, 8)
+                        .onChange(of: newMessage) { _ in
+                            // Dynamically calculate height based on content
+                            let size = CGSize(width: UIScreen.main.bounds.width - 100, height: .infinity)
+                            let estimatedSize = newMessage.boundingRect(
+                                with: size,
+                                options: .usesLineFragmentOrigin,
+                                attributes: [.font: UIFont.systemFont(ofSize: 17)],
+                                context: nil
+                            )
+                            textEditorHeight = estimatedSize.height + 20 // Add padding
+                        }
+                    
+                    
+                    if newMessage.isEmpty {
+                        Text("Message")
+                            .foregroundColor(Color(.placeholderText))
+                            .padding(.leading, 12)
+                            .padding(.top, 8)
+                    }
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 100)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+                .padding(.horizontal, 12)
+           
                 
                 Button(action: sendMessage) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
                         .foregroundColor(.blue)
                 }
+             
                 .disabled(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            .padding(.leading, 12)
            
-            .padding()
-            .background(Color(.systemBackground))
+            .padding(.vertical, 12)
+       
+                .background(Color("dkBg"))
+//            .background(colorScheme == .dark ? Color("mdBg") : borderColor)
             .overlay(
                 Rectangle()
                     .frame(height: 1)
@@ -106,6 +148,7 @@ struct GracieView: View {
                 alignment: .top
             )
         }
+        .background(Color("dkBg").ignoresSafeArea())
         .navigationTitle("Gracie Pod Assistant")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -113,6 +156,11 @@ struct GracieView: View {
             fetchActivityLogs()
         }
     }
+    
+    private var borderColor: Color {
+        colorScheme == .dark ? Color(rgb: 71, 71, 71) : Color(rgb: 219, 223, 236)
+    }
+    
      private func scrollToBottom(proxy: ScrollViewProxy) {
          withAnimation {
              proxy.scrollTo("messagesEnd", anchor: .bottom)
@@ -173,6 +221,33 @@ struct GracieView: View {
     }
 }
 
+//struct MessageBubble: View {
+//    let message: Message
+//    
+//    var body: some View {
+//        HStack {
+//            if message.isFromUser { Spacer() }
+//            
+//            Text(message.content)
+//                .padding(.horizontal, 16)
+//                .padding(.vertical, 10)
+//                .background(
+//                    message.isFromUser ?
+//                    Color.blue :
+//                    Color(.systemGray5)
+//                )
+//                .foregroundColor(
+//                    message.isFromUser ?
+//                    .white :
+//                    .primary
+//                )
+//                .clipShape(BubbleShape(isFromUser: message.isFromUser))
+//            
+//            if !message.isFromUser { Spacer() }
+//        }
+//    }
+//}
+
 struct MessageBubble: View {
     let message: Message
     
@@ -180,13 +255,17 @@ struct MessageBubble: View {
         HStack {
             if message.isFromUser { Spacer() }
             
-            Text(message.content)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+            TextEditor(text: .constant(message.content))
+                .disabled(true)
+                .textSelection(.enabled)  // This makes it copyable
+                .frame(height: message.content.height(width: UIScreen.main.bounds.width * 0.7))
+                .scrollContentBackground(.hidden)  // Remove default background
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(
                     message.isFromUser ?
-                    Color.blue :
-                    Color(.systemGray5)
+                    Color.accentColor :
+                        Color(.systemGray5)
                 )
                 .foregroundColor(
                     message.isFromUser ?
@@ -197,6 +276,20 @@ struct MessageBubble: View {
             
             if !message.isFromUser { Spacer() }
         }
+    }
+}
+
+// Add this extension to calculate text height
+extension String {
+    func height(width: CGFloat) -> CGFloat {
+        let size = CGSize(width: width, height: .infinity)
+        let estimatedSize = self.boundingRect(
+            with: size,
+            options: .usesLineFragmentOrigin,
+            attributes: [.font: UIFont.systemFont(ofSize: 17)],
+            context: nil
+        )
+        return estimatedSize.height + 10 // Add some padding
     }
 }
 
