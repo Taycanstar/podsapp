@@ -103,6 +103,7 @@ struct PodView: View {
     
     @State private var currentTitle: String
     @State private var currentDescription: String
+    @State private var currentInstructions: String
     @State private var currentType: String
     @State private var itemsWithRecentActivity: Set<Int> = Set()
     
@@ -131,6 +132,7 @@ struct PodView: View {
         self._visibleColumns = State(initialValue: pod.wrappedValue.visibleColumns)
         self._currentTitle = State(initialValue: pod.wrappedValue.title)
         self._currentDescription = State(initialValue: pod.wrappedValue.description ?? "")
+        self._currentInstructions = State(initialValue: pod.wrappedValue.instructions ?? "")
         self._currentType = State(initialValue: pod.wrappedValue.type ?? "")
     }
 
@@ -196,9 +198,14 @@ struct PodView: View {
                                        }
                                        
                                    }
+                                   .refreshable {
+                                       fetchFullPodDetails(showLoadingIndicator: false)
+                                   }
+
                                    
                                    .padding(.bottom, keyboardOffset)
                                }
+               
          
                 
             }
@@ -239,11 +246,15 @@ struct PodView: View {
                             currentTitle: $currentTitle,
                             currentDescription: $currentDescription,
                             currentType: $currentType,
-                            onSave: { updatedTitle, updatedDescription, updatedType in
+                            currentInstructions: $currentInstructions,
+                        
+                            onSave: { updatedTitle, updatedDescription, updatedInstructions, updatedType in
                     self.currentTitle = updatedTitle
                     self.currentDescription = updatedDescription
+                    self.currentInstructions = updatedInstructions
                     self.currentType = updatedType
                     self.needsRefresh = true
+                    fetchFullPodDetails()
                 }
                 )
             case .podMembers:
@@ -374,18 +385,39 @@ struct PodView: View {
                  }
       
         
+//        .sheet(isPresented: $showCardSheet) {
+//            if let index = selectedItemIndex {
+//                CardDetailView(item: Binding<PodItem>(
+//                    get: { self.reorderedItems[index] },
+//                    set: { self.reorderedItems[index] = $0 }
+//                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager,
+//                               allItems: Binding<[PodItem]>(
+//                                get: { self.reorderedItems },
+//                                set: { self.reorderedItems = $0 }
+//                               ), visibleColumns: $visibleColumns)
+//            }
+//        }
         .sheet(isPresented: $showCardSheet) {
             if let index = selectedItemIndex {
-                CardDetailView(item: Binding<PodItem>(
-                    get: { self.reorderedItems[index] },
-                    set: { self.reorderedItems[index] = $0 }
-                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager,
-                               allItems: Binding<[PodItem]>(
-                                get: { self.reorderedItems },
-                                set: { self.reorderedItems = $0 }
-                               ), visibleColumns: $visibleColumns)
+                CardDetailView(
+                    item: Binding<PodItem>(
+                        get: { self.reorderedItems[index] },
+                        set: { self.reorderedItems[index] = $0 }
+                    ),
+                    podId: pod.id,
+                    podColumns: $podColumns,
+                    networkManager: networkManager,
+                    allItems: Binding<[PodItem]>(
+                        get: { self.reorderedItems },
+                        set: { self.reorderedItems = $0 }
+                    ),
+                    visibleColumns: $visibleColumns
+                )
+                .id(reorderedItems[index].notes)  // Add this line to force view recreation
             }
         }
+       
+
         
         .sheet(isPresented: $showLogActivitySheet) {
             if let index = selectedItemIndex {
@@ -424,8 +456,10 @@ struct PodView: View {
      }
     
     
-    private func fetchFullPodDetails() {
-        isLoading = true
+    private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
+        if showLoadingIndicator {
+              isLoading = true
+          }
         networkManager.fetchFullPodDetails(email: viewModel.email, podId: pod.id) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -438,6 +472,7 @@ struct PodView: View {
                     self.visibleColumns = fullPod.visibleColumns
                     self.currentTitle = fullPod.title
                     self.currentDescription = fullPod.description ?? ""
+                    self.currentInstructions = fullPod.instructions ?? ""
                     self.currentType = fullPod.type ?? ""
                     print("Pod details fetched successfully!")
                     
@@ -447,7 +482,9 @@ struct PodView: View {
                 case .failure(let error):
                     print("Failed to load pod details: \(error.localizedDescription)")
                 }
-                isLoading = false
+                if showLoadingIndicator {
+                              isLoading = false
+                          }
             }
         }
     }
@@ -1430,7 +1467,7 @@ struct CardDetailView: View {
                     
                     
                 }
-                
+
                 
                 .navigationBarItems(
                     leading: Button(action: {

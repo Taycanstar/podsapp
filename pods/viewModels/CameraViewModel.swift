@@ -189,8 +189,6 @@ struct PodItem: Identifiable {
     var notes: String
     var defaultColumnValues: [String: ColumnValue]?
     var userColumnValues: [String: ColumnValue]?
-//    var columnValues: [String: ColumnValue]?
-
     var columnValues: [String: ColumnValue]? {
             get {
                 return userColumnValues ?? defaultColumnValues ?? [:]
@@ -276,6 +274,7 @@ struct Pod: Identifiable {
     var visibleColumns: [String] = []
     var role: String?
     var description: String?
+    var instructions: String?
     var type: String?
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLog]?
@@ -299,6 +298,7 @@ struct PodJSON: Codable {
     var visibleColumns: [String]
     var role: String?
     var description: String?
+    var instructions: String?
     var type: String?
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLogJSON]?
@@ -424,9 +424,9 @@ extension Pod {
         self.visibleColumns = podJSON.visibleColumns
         self.role = podJSON.role
         self.description = podJSON.description
+        self.instructions = podJSON.instructions
         self.type = podJSON.type
         self.teamId = podJSON.teamId
-//        self.recentActivityLogs = podJSON.recentActivityLogs?.compactMap { PodItemActivityLog(from: $0) }
         if let recentActivityLogs = podJSON.recentActivityLogs {
                   self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
                       do {

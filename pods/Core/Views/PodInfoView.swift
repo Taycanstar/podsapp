@@ -10,9 +10,10 @@ import SwiftUI
 struct PodInfoView: View {
     @Binding var pod: Pod
     @Binding var currentTitle: String
-        @Binding var currentDescription: String
-        @Binding var currentType: String
-    let onSave: (String, String, String) -> Void
+    @Binding var currentDescription: String
+    @Binding var currentInstructions: String
+    @Binding var currentType: String
+    let onSave: (String, String, String, String) -> Void
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Environment(\.isTabBarVisible) var isTabBarVisible
     @Environment(\.colorScheme) var colorScheme
@@ -26,10 +27,11 @@ struct PodInfoView: View {
         pod.role == "owner" || pod.role == "admin"
     }
 
-    init(pod: Binding<Pod>,currentTitle: Binding<String>, currentDescription: Binding<String>, currentType: Binding<String>, onSave: @escaping (String, String, String) -> Void) {
+    init(pod: Binding<Pod>,currentTitle: Binding<String>, currentDescription: Binding<String>, currentType: Binding<String>, currentInstructions: Binding<String>, onSave: @escaping (String, String, String, String) -> Void) {
         self._pod = pod
           self._currentTitle = currentTitle
           self._currentDescription = currentDescription
+          self._currentInstructions = currentInstructions
           self._currentType = currentType
           self.onSave = onSave
           self._selectedPodType = State(initialValue: PodType(rawValue: currentType.wrappedValue.lowercased()) ?? .main)
@@ -68,6 +70,47 @@ struct PodInfoView: View {
                     
                     Divider()
                         .background(borderColor)
+                    
+//                    VStack(alignment: .leading, spacing: 20) {
+//                        // Pod Name Section
+//                        Section(header: Text("Custom Pod instructions").font(.system(size: 14))) {
+//                            TextField("Enter Pod instructions", text: $currentInstructions)
+//                                .font(.system(size: 16))
+//                                .fontWeight(.semibold)
+//                                .background(Color("mxdBg"))
+//                                .disabled(!canEditPod)
+//                            
+//                        }
+//                    }
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Pod Instructions Section
+                        Section(header: Text("Custom Pod instructions").font(.system(size: 14))) {
+                            ZStack {
+                                // Background with desired color and rounded corners
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color("mxdBg"))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(borderColor, lineWidth: 1)
+                                    )
+
+                                // TextEditor with transparent background
+                                TextEditor(text: $currentInstructions)
+                                    .padding(8) // Adjust padding as needed
+                                    .font(.system(size: 16))
+                                    .fontWeight(.semibold)
+                                    .frame(minHeight: 100)  // Provide minimum height for better usability
+                                    .foregroundColor(.primary)
+                                    .scrollContentBackground(.hidden) // Hide the default background
+                                    .disabled(!canEditPod)
+                            }
+                            .padding(.horizontal, -4)  // Adjust if necessary
+                        }
+                    }
+
+                        
+                        Divider()
+                            .background(borderColor)
 
                     Button(action: {
                         print("tapped pod type")
@@ -232,12 +275,13 @@ struct PodInfoView: View {
             podId: pod.id,
             title: currentTitle,
             description: currentDescription,
+            instructions: currentInstructions,
             type: currentType.lowercased()
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let (updatedTitle, updatedDescription, updatedType)):
-                    self.onSave(updatedTitle, updatedDescription, updatedType)
+                case .success(let (updatedTitle, updatedDescription, updatedInstructions, updatedType)):
+                    self.onSave(updatedTitle, updatedDescription, updatedInstructions, updatedType)
                     self.presentationMode.wrappedValue.dismiss()
                 case .failure(let error):
                     print("Failed to update pod: \(error)")
