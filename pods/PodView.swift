@@ -1114,23 +1114,7 @@ struct ColumnEditView: View {
                             )
                             .padding(.horizontal)
                             .focused($isFocused)
-//                        TextField("", text: Binding(
-//                            get: { String(describing: value) },
-//                            set: { newValue in
-//                                if let number = Double(newValue) {
-//                                    value = .number(number)
-//                                }
-//                            }
-//                        ))
-//                        .keyboardType(.decimalPad)
-//                        .textFieldStyle(PlainTextFieldStyle())
-//                        .padding()
-//                        .background(
-//                            RoundedRectangle(cornerRadius: 10)
-//                                .stroke(Color.accentColor, lineWidth: 2)
-//                        )
-//                        .padding(.horizontal)
-//                        .focused($isFocused)
+
                     }else if columnType == "time" {
                         Text(textValue)
                             .foregroundColor(.primary)
@@ -1240,18 +1224,7 @@ struct ColumnEditView: View {
         showingError = true
     }
     
-//    private func stringValue(from columnValue: ColumnValue) -> String {
-//        switch columnValue {
-//        case .string(let value):
-//            return value
-//        case .number(let value):
-//            return String(value)
-//        case .time(let timeValue):
-//                return timeValue.toString
-//        case .null:
-//            return ""
-//        }
-//    }
+
     private func stringValue(from columnValue: ColumnValue) -> String {
         return String(describing: columnValue)
     }
@@ -1348,18 +1321,7 @@ struct CardDetailView: View {
         self._allItems = allItems
         
         var initialColumnValues: [String: String] = [:]
-//        for column in podColumns.wrappedValue {
-//            if let value = item.wrappedValue.columnValues?[column.name] {
-//                switch value {
-//                case .string(let str): initialColumnValues[column.name] = str
-//                case .number(let num): initialColumnValues[column.name] = String(num)
-//                case .time(let timeValue): initialColumnValues[column.name] = timeValue.toString
-//                case .null: initialColumnValues[column.name] = ""
-//                }
-//            } else {
-//                initialColumnValues[column.name] = ""
-//            }
-//        }
+
         for column in podColumns.wrappedValue {
             if let value = item.wrappedValue.columnValues?[column.name] {
                 initialColumnValues[column.name] = value.description
@@ -1421,33 +1383,7 @@ struct CardDetailView: View {
                                                 )
                                         )
                                     } else if column.type == "number" {
-//                                        Button(action: {
-//                                            withAnimation {
-//                                                if expandedColumn == column.name {
-//                                                    expandedColumn = nil
-//                                                } else {
-//                                                    expandedColumn = column.name
-//                                                }
-//                                            }
-//                                        }) {
-//                                            Text(self.columnValues[column.name] ?? "")
-//                                                .foregroundColor(.primary)
-//                                                .frame(maxWidth: .infinity, alignment: .leading)
-//                                                .padding(.vertical, 12)
-//                                                .padding(.horizontal)
-//                                                .background(
-//                                                    RoundedRectangle(cornerRadius: 12)
-//                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-//                                                )
-//                                        }
-//                                        
-//                                        if expandedColumn == column.name {
-//                                            InlineNumberPicker(value: Binding(
-//                                                get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
-//                                                set: { self.columnValues[column.name] = String($0) }
-//                                            ))
-//                                            .frame(height: 150)
-//                                            .transition(.opacity)
+
 //                                        }
                                         TextField("", text: Binding(
                                             get: { self.columnValues[column.name] ?? "" },
@@ -1702,13 +1638,7 @@ struct CardDetailView: View {
                         item.columnValues = [:]
                     }
                     item.columnValues?[newColumnName] = .null
-                    
-                    // Automatically make the new column visible if there are fewer than 3 visible columns
-                                       // and this is one of the first three columns being added
-//                                       if visibleColumns.isEmpty && podColumns.count <= 3 {
-//                                           visibleColumns.append(newColumnName)
-//                                           updateVisibleColumnsOnServer()
-//                                       }
+
                     print("New column added successfully with type: \(newColumnType)")
                 case .failure(let error):
                     print("Failed to add new column: \(error)")
@@ -1729,92 +1659,6 @@ struct CardDetailView: View {
            }
        }
 
-//
-//    private func saveChanges() {
-//        var hasChanges = false
-//        var updatedColumnValues: [String: ColumnValue] = [:]
-//        
-//        for (key, value) in columnValues {
-//            if let originalValue = item.columnValues?[key] {
-//                switch originalValue {
-//                case .string(let originalStringValue):
-//                    if originalStringValue != value {
-//                        updatedColumnValues[key] = .string(value)
-//                        hasChanges = true
-//                    } else {
-//                        updatedColumnValues[key] = originalValue
-//                    }
-//                case .number(let originalNumberValue):
-//                    if let intValue = Int(value), originalNumberValue != intValue {
-//                        updatedColumnValues[key] = .number(intValue)
-//                        hasChanges = true
-//                    } else {
-//                        updatedColumnValues[key] = originalValue
-//                    }
-//                case .time(let originalTimeValue):
-//                    if let timeValue = TimeValue.fromString(value), originalTimeValue != timeValue {
-//                        updatedColumnValues[key] = .time(timeValue)
-//                        hasChanges = true
-//                    } else {
-//                        updatedColumnValues[key] = originalValue
-//                    }
-//                case .null:
-//                    if !value.isEmpty {
-//                        // Try to parse as time first
-//                        if let timeValue = TimeValue.fromString(value) {
-//                            updatedColumnValues[key] = .time(timeValue)
-//                            hasChanges = true
-//                        } else if let intValue = Int(value) {
-//                            updatedColumnValues[key] = .number(intValue)
-//                            hasChanges = true
-//                        } else {
-//                            updatedColumnValues[key] = .string(value)
-//                            hasChanges = true
-//                        }
-//                    } else {
-//                        updatedColumnValues[key] = originalValue
-//                    }
-//                }
-//            } else {
-//                // Try to parse as time first
-//                if let timeValue = TimeValue.fromString(value) {
-//                    updatedColumnValues[key] = .time(timeValue)
-//                    hasChanges = true
-//                } else if let intValue = Int(value) {
-//                    updatedColumnValues[key] = .number(intValue)
-//                    hasChanges = true
-//                } else if !value.isEmpty {
-//                    updatedColumnValues[key] = .string(value)
-//                    hasChanges = true
-//                } else {
-//                    updatedColumnValues[key] = .null
-//                }
-//            }
-//        }
-//        
-//        // Rest of the method remains the same
-//        if itemName != item.metadata || itemNotes != (item.notes ?? "") {
-//            hasChanges = true
-//        }
-//        
-//        if hasChanges {
-//            networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
-//                DispatchQueue.main.async {
-//                    switch result {
-//                    case .success:
-//                        self.item.metadata = self.itemName
-//                        self.item.notes = self.itemNotes
-//                        self.item.columnValues = updatedColumnValues
-//                    case .failure(let error):
-//                        print("Failed to update pod item: \(error)")
-//                    }
-//                    self.presentationMode.wrappedValue.dismiss()
-//                }
-//            }
-//        } else {
-//            self.presentationMode.wrappedValue.dismiss()
-//        }
-//    }
     private func saveChanges() {
         var hasChanges = false
         var updatedColumnValues: [String: ColumnValue] = [:]
