@@ -1336,7 +1336,8 @@ struct CardDetailView: View {
     @State private var expandedColumn: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var itemNotes: String
-    
+    @FocusState private var focusedField: String?
+
     @Binding var visibleColumns: [String]
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
@@ -1347,18 +1348,26 @@ struct CardDetailView: View {
         self._allItems = allItems
         
         var initialColumnValues: [String: String] = [:]
+//        for column in podColumns.wrappedValue {
+//            if let value = item.wrappedValue.columnValues?[column.name] {
+//                switch value {
+//                case .string(let str): initialColumnValues[column.name] = str
+//                case .number(let num): initialColumnValues[column.name] = String(num)
+//                case .time(let timeValue): initialColumnValues[column.name] = timeValue.toString
+//                case .null: initialColumnValues[column.name] = ""
+//                }
+//            } else {
+//                initialColumnValues[column.name] = ""
+//            }
+//        }
         for column in podColumns.wrappedValue {
             if let value = item.wrappedValue.columnValues?[column.name] {
-                switch value {
-                case .string(let str): initialColumnValues[column.name] = str
-                case .number(let num): initialColumnValues[column.name] = String(num)
-                case .time(let timeValue): initialColumnValues[column.name] = timeValue.toString
-                case .null: initialColumnValues[column.name] = ""
-                }
+                initialColumnValues[column.name] = value.description
             } else {
                 initialColumnValues[column.name] = ""
             }
         }
+
         self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
         self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
@@ -1393,43 +1402,77 @@ struct CardDetailView: View {
                                             get: { self.columnValues[column.name] ?? "" },
                                             set: { self.columnValues[column.name] = $0 }
                                         ))
+                                        .focused($focusedField, equals: column.name)
                                         .foregroundColor(.primary)
                                         .textFieldStyle(PlainTextFieldStyle())
                                         .padding(.vertical, 12)
                                         .padding(.horizontal)
+//                                        .background(
+//                                            RoundedRectangle(cornerRadius: 12)
+//                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+//                                        )
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                                .stroke(
+                                                    focusedField == column.name
+                                                        ? Color.accentColor
+                                                        : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
+                                                    lineWidth: focusedField == column.name ? 2 : 1
+                                                )
                                         )
                                     } else if column.type == "number" {
-                                        Button(action: {
-                                            withAnimation {
-                                                if expandedColumn == column.name {
-                                                    expandedColumn = nil
-                                                } else {
-                                                    expandedColumn = column.name
-                                                }
+//                                        Button(action: {
+//                                            withAnimation {
+//                                                if expandedColumn == column.name {
+//                                                    expandedColumn = nil
+//                                                } else {
+//                                                    expandedColumn = column.name
+//                                                }
+//                                            }
+//                                        }) {
+//                                            Text(self.columnValues[column.name] ?? "")
+//                                                .foregroundColor(.primary)
+//                                                .frame(maxWidth: .infinity, alignment: .leading)
+//                                                .padding(.vertical, 12)
+//                                                .padding(.horizontal)
+//                                                .background(
+//                                                    RoundedRectangle(cornerRadius: 12)
+//                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+//                                                )
+//                                        }
+//                                        
+//                                        if expandedColumn == column.name {
+//                                            InlineNumberPicker(value: Binding(
+//                                                get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
+//                                                set: { self.columnValues[column.name] = String($0) }
+//                                            ))
+//                                            .frame(height: 150)
+//                                            .transition(.opacity)
+//                                        }
+                                        TextField("", text: Binding(
+                                            get: { self.columnValues[column.name] ?? "" },
+                                            set: { newValue in
+                                                self.columnValues[column.name] = newValue
                                             }
-                                        }) {
-                                            Text(self.columnValues[column.name] ?? "")
-                                                .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .padding(.vertical, 12)
-                                                .padding(.horizontal)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
+                                        ))
+                                        .focused($focusedField, equals: column.name)
+                                        .keyboardType(.decimalPad)
+                                        .textFieldStyle(PlainTextFieldStyle())
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal)
+//                                        .background(
+//                                            RoundedRectangle(cornerRadius: 12)
+//                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                        )
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(
+                                                    focusedField == column.name
+                                                        ? Color.accentColor
+                                                        : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
+                                                    lineWidth: focusedField == column.name ? 2 : 1
                                                 )
-                                        }
-                                        
-                                        if expandedColumn == column.name {
-                                            InlineNumberPicker(value: Binding(
-                                                get: { Int(self.columnValues[column.name] ?? "0") ?? 0 },
-                                                set: { self.columnValues[column.name] = String($0) }
-                                            ))
-                                            .frame(height: 150)
-                                            .transition(.opacity)
-                                        }
+                                        )
                                     } else if column.type == "time" {
                                         Button(action: {
                                             withAnimation {
