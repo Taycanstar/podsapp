@@ -323,11 +323,71 @@ struct PodItemJSON: Codable {
 
 }
 
-enum ColumnValue: Codable {
+//enum ColumnValue: Codable {
+//    case string(String)
+//    case number(Int)
+//    case time(TimeValue)  // New case
+//    case null
+//    
+//    init(from decoder: Decoder) throws {
+//        let container = try decoder.singleValueContainer()
+//        if container.decodeNil() {
+//            self = .null
+//        } else if let stringValue = try? container.decode(String.self) {
+//            // If the string matches our time format (HH:MM:SS), decode as time
+//            if let timeValue = TimeValue.fromString(stringValue) {
+//                self = .time(timeValue)
+//            } else {
+//                self = .string(stringValue)
+//            }
+//        } else if let intValue = try? container.decode(Int.self) {
+//            self = .number(intValue)
+//        } else {
+//            throw DecodingError.typeMismatch(
+//                ColumnValue.self,
+//                DecodingError.Context(
+//                    codingPath: decoder.codingPath,
+//                    debugDescription: "Expected String, Int, or null"
+//                )
+//            )
+//        }
+//    }
+//    
+//    func encode(to encoder: Encoder) throws {
+//        var container = encoder.singleValueContainer()
+//        switch self {
+//        case .string(let value):
+//            try container.encode(value)
+//        case .number(let value):
+//            try container.encode(value)
+//        case .time(let timeValue):
+//            try container.encode(timeValue.toString)  // Encode time as "HH:MM:SS" string
+//        case .null:
+//            try container.encodeNil()
+//        }
+//    }
+//}
+enum ColumnValue: Codable, CustomStringConvertible  {
     case string(String)
-    case number(Int)
-    case time(TimeValue)  // New case
+    case number(Double)  // Using Double instead of Float
+    case time(TimeValue)
     case null
+    
+    
+    var description: String {
+          switch self {
+          case .string(let value): return value
+          case .number(let value):
+              let roundedNumber = round(value * 10) / 10
+              if roundedNumber.truncatingRemainder(dividingBy: 1) == 0 {
+                  return String(format: "%.0f", roundedNumber)
+              } else {
+                  return String(format: "%.1f", roundedNumber)
+              }
+          case .time(let value): return value.toString
+          case .null: return ""
+          }
+      }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -340,14 +400,16 @@ enum ColumnValue: Codable {
             } else {
                 self = .string(stringValue)
             }
+        } else if let doubleValue = try? container.decode(Double.self) {  // Changed to Double
+            self = .number(doubleValue)
         } else if let intValue = try? container.decode(Int.self) {
-            self = .number(intValue)
+            self = .number(Double(intValue))  // Convert Int to Double
         } else {
             throw DecodingError.typeMismatch(
                 ColumnValue.self,
                 DecodingError.Context(
                     codingPath: decoder.codingPath,
-                    debugDescription: "Expected String, Int, or null"
+                    debugDescription: "Expected String, Double, Int, or null"
                 )
             )
         }
@@ -361,7 +423,7 @@ enum ColumnValue: Codable {
         case .number(let value):
             try container.encode(value)
         case .time(let timeValue):
-            try container.encode(timeValue.toString)  // Encode time as "HH:MM:SS" string
+            try container.encode(timeValue.toString)
         case .null:
             try container.encodeNil()
         }

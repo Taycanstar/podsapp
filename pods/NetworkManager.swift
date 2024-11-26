@@ -15,9 +15,9 @@ enum NetworkError: Error {
 class NetworkManager {
 
 //  
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-//    let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://192.168.1.79:8000"
 
 //    let baseUrl = "http://172.20.10.3:8000"
 
@@ -2266,6 +2266,97 @@ class NetworkManager {
     }
 //
 
+//    func createPodItem(podId: Int, label: String, itemType: String?, notes: String, defaultColumnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "label": label,
+//            "notes": notes,
+//            "itemType": itemType ?? "",
+//            "defaultColumnValues": defaultColumnValues.mapValues { value -> Any in
+//                switch value {
+//                case .string(let str): return str
+//                case .number(let num): return num
+//                case .time(let timeValue): return timeValue.toString
+//                case .null: return NSNull()
+//                }
+//            }
+//        ]
+//
+//        print("Request body: \(body)")
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error: \(error)")
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let data = data else {
+//                print("No data received")
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//
+//            if let responseString = String(data: data, encoding: .utf8) {
+//                print("Raw response: \(responseString)")
+//            }
+//
+//            do {
+//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+//                    print("Parsed JSON: \(json)")
+//                    
+//                    if let error = json["error"] as? String {
+//                        print("Server error: \(error)")
+//                        completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: error])))
+//                        return
+//                    }
+//                    
+//                    if let itemData = json["item"] as? [String: Any] {
+//                        let id = itemData["id"] as? Int ?? 0
+//                        let label = itemData["label"] as? String ?? ""
+//                        let itemType = itemData["itemType"] as? String
+//                        let notes = itemData["notes"] as? String ?? ""
+//                        let defaultColumnValues = (itemData["defaultColumnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
+//                            if let stringValue = value as? String {
+////                                return .string(stringValue)
+//                                // Try to parse as time first if it matches the format
+//                                                       if let timeValue = TimeValue.fromString(stringValue) {
+//                                                           return .time(timeValue)
+//                                                       }
+//                                                       return .string(stringValue)
+//                            } else if let intValue = value as? Int {
+//                                return .number(intValue)
+//                            } else if value is NSNull {
+//                                return .null
+//                            }
+//                            return nil
+//                        } ?? [:]
+//                        
+//                        let newItem = PodItem(id: id, metadata: label, itemType: itemType, notes: notes, defaultColumnValues: defaultColumnValues, userColumnValues: nil)
+//                        completion(.success(newItem))
+//                    } else {
+//                        print("Failed to parse item data")
+//                        completion(.failure(NetworkError.decodingError))
+//                    }
+//                } else {
+//                    print("Failed to parse JSON")
+//                    completion(.failure(NetworkError.decodingError))
+//                }
+//            } catch {
+//                print("JSON parsing error: \(error)")
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
     func createPodItem(podId: Int, label: String, itemType: String?, notes: String, defaultColumnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))
@@ -2279,7 +2370,7 @@ class NetworkManager {
             "defaultColumnValues": defaultColumnValues.mapValues { value -> Any in
                 switch value {
                 case .string(let str): return str
-                case .number(let num): return num
+                case .number(let num): return num  // This will automatically handle Double
                 case .time(let timeValue): return timeValue.toString
                 case .null: return NSNull()
                 }
@@ -2327,14 +2418,14 @@ class NetworkManager {
                         let notes = itemData["notes"] as? String ?? ""
                         let defaultColumnValues = (itemData["defaultColumnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
                             if let stringValue = value as? String {
-//                                return .string(stringValue)
-                                // Try to parse as time first if it matches the format
-                                                       if let timeValue = TimeValue.fromString(stringValue) {
-                                                           return .time(timeValue)
-                                                       }
-                                                       return .string(stringValue)
+                                if let timeValue = TimeValue.fromString(stringValue) {
+                                    return .time(timeValue)
+                                }
+                                return .string(stringValue)
+                            } else if let doubleValue = value as? Double {
+                                return .number(doubleValue)
                             } else if let intValue = value as? Int {
-                                return .number(intValue)
+                                return .number(Double(intValue))  // Convert Int to Double
                             } else if value is NSNull {
                                 return .null
                             }
@@ -2357,7 +2448,6 @@ class NetworkManager {
             }
         }.resume()
     }
-
     
     func updatePodItem(itemId: Int, newLabel: String, newNotes: String, newColumnValues: [String: ColumnValue], userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/update-pod-item/\(itemId)/") else {
