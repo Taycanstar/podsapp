@@ -1312,6 +1312,8 @@ struct CardDetailView: View {
     @FocusState private var focusedField: String?
 
     @Binding var visibleColumns: [String]
+    @State private var hasUnsavedChanges = false
+    
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
@@ -1396,10 +1398,7 @@ struct CardDetailView: View {
                                         .textFieldStyle(PlainTextFieldStyle())
                                         .padding(.vertical, 12)
                                         .padding(.horizontal)
-//                                        .background(
-//                                            RoundedRectangle(cornerRadius: 12)
-//                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-//                                        )
+
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
@@ -1480,20 +1479,33 @@ struct CardDetailView: View {
 
                 
                 .navigationBarItems(
-                    leading: Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                        saveChanges()
-                    }) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.primary)
-                    },
-                    trailing: Button(action: {
-                        showItemOptions = true
-                    }) {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundColor(.primary)
-                    }
-                )
+                            leading: Button(action: {
+                                // Simply dismiss without saving
+                                presentationMode.wrappedValue.dismiss()
+                            }) {
+                                Image(systemName: "xmark")
+                                    .foregroundColor(.primary)
+                            },
+                            trailing: HStack(spacing: 12) {
+                                Button(action: {
+                                    showItemOptions = true
+                                }) {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundColor(.primary)
+                                }
+                                
+                                // Only show Done button if there are unsaved changes
+                                if hasUnsavedChanges {
+                                    Button(action: {
+                                        saveChanges()
+                                    }) {
+                                        Text("Done")
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
+                            }
+                        )
                 .navigationBarTitle("Edit Item", displayMode: .inline)
                 .allowsHitTesting(!showItemOptions)
             }
@@ -1516,6 +1528,15 @@ struct CardDetailView: View {
             }
             .edgesIgnoringSafeArea(.all)
         }
+        .onChange(of: itemName) { _, newValue in
+                  checkForChanges()
+              }
+              .onChange(of: itemNotes) { _, newValue in
+                  checkForChanges()
+              }
+              .onChange(of: columnValues) { _, newValue in
+                  checkForChanges()
+              }
         .onAppear {
             itemOptionsOffset = UIScreen.main.bounds.height
         }
@@ -1529,6 +1550,53 @@ struct CardDetailView: View {
                 secondaryButton: .cancel())}
         
     }
+    
+    private func checkForChanges() {
+            hasUnsavedChanges = false
+            
+            // Check if item name changed
+            if itemName != item.metadata {
+                hasUnsavedChanges = true
+                return
+            }
+            
+            // Check if notes changed
+            if itemNotes != (item.notes ?? "") {
+                hasUnsavedChanges = true
+                return
+            }
+            
+            // Check if column values changed
+            for (key, value) in columnValues {
+                if let originalValue = item.columnValues?[key] {
+                    switch originalValue {
+                    case .string(let originalStringValue):
+                        if originalStringValue != value {
+                            hasUnsavedChanges = true
+                            return
+                        }
+                    case .number(let originalNumberValue):
+                        if let doubleValue = Double(value), originalNumberValue != doubleValue {
+                            hasUnsavedChanges = true
+                            return
+                        }
+                    case .time(let originalTimeValue):
+                        if let timeValue = TimeValue.fromString(value), originalTimeValue != timeValue {
+                            hasUnsavedChanges = true
+                            return
+                        }
+                    case .null:
+                        if !value.isEmpty {
+                            hasUnsavedChanges = true
+                            return
+                        }
+                    }
+                } else if !value.isEmpty {
+                    hasUnsavedChanges = true
+                    return
+                }
+            }
+        }
     
     
     private func moveItemToPod(_ toPodId: Int) {
