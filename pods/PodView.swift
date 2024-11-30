@@ -1305,6 +1305,7 @@ struct CardDetailView: View {
     @State private var columnVariants: [String] = []
 
 
+
     
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
@@ -1362,13 +1363,7 @@ struct CardDetailView: View {
                                                Spacer()
                                                
                                                Button(action: {
-                                                   // Initialize column variants if needed and add a new variant
-//                                                   withAnimation {
-//                                                       if columnVariants[column.name] == nil {
-//                                                           columnVariants[column.name] = []
-//                                                       }
-//                                                       columnVariants[column.name]?.append("")
-//                                                   }
+
                                                    print("tapped variants")
                                                }) {
                                                    Text("Create variant")
@@ -1459,7 +1454,7 @@ struct CardDetailView: View {
                                 }
                             }
                             VStack(alignment: .leading) {
-                                Text("Description")
+                                Text("Notes")
                                     .font(.system(size: 15))
                                     .foregroundColor(.primary)
                                     .padding(.horizontal, 5)
@@ -1967,7 +1962,7 @@ struct LogActivityView: View {
     let podId: Int
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
-    @State private var columnValues: [String: ColumnValue]
+    @State private var columnValues: [String: [ColumnValue]]
     @State private var activityNote: String = ""
     @State private var expandedColumn: String?
     @State private var isSubmitting = false
@@ -1979,14 +1974,30 @@ struct LogActivityView: View {
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
     @FocusState private var focusedField: String?
+    @State private var groupedRowsCount: [String: Int] = [:]
 
-    init(item: PodItem, podColumns: [PodColumn], podId: Int,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
+    init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
         self.item = item
         self.podColumns = podColumns
         self.podId = podId
         self.onActivityLogged = onActivityLogged
-        _columnValues = State(initialValue: item.columnValues ?? [:])
+        
+        // Convert single values to arrays
+        var arrayColumnValues: [String: [ColumnValue]] = [:]
+        if let initialValues = item.columnValues {
+            for (key, value) in initialValues {
+                arrayColumnValues[key] = [value]
+            }
+        }
+        _columnValues = State(initialValue: arrayColumnValues)
     }
+    
+    private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
+          let singularColumns = columns.filter { $0.groupingType == "singular" }
+          let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+          
+          return [singularColumns, groupedColumns].filter { !$0.isEmpty }
+      }
 
     var body: some View {
         NavigationView {
@@ -2001,90 +2012,74 @@ struct LogActivityView: View {
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
-                        ForEach(podColumns, id: \.name) { column in
-                            if !skippedColumns.contains(column.name) {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    HStack {
-                                        Text(column.name)
-                                            .font(.system(size: 16))
-                                            .fontWeight(.semibold)
-                                            .fontDesign(.rounded)
-                                            .foregroundColor(.primary)
-                                            .padding(.horizontal, 5)
-                                            .kerning(0.2)
-                                        Spacer()
-//                                        Button("Skip") {
-//                                            withAnimation {
-//                                                skippedColumns.insert(column.name)
-//                                                columnValues[column.name] = .null
-//                                            }
-//                                        }
-                                        .padding(.horizontal, 10)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.red)
-                                    }
-                                    if column.type == "text" {
-                                        TextField("", text: Binding(
-                                            get: { self.stringValue(for: column.name) },
-                                            set: { self.columnValues[column.name] = .string($0) }
-                                        ))
-                                        .foregroundColor(.primary)
-                                        .textFieldStyle(PlainTextFieldStyle())
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal)
-                                        .background(Color("iosnp"))
-                                        .cornerRadius(8)
-                                    } else if column.type == "number" {
-                                            TextField("", text: Binding(
-                                                get: { String(describing: self.columnValues[column.name] ?? .null) },
-                                                set: { newValue in
-                                                    if let number = Double(newValue) {
-                                                        self.columnValues[column.name] = .number(number)
-                                                    }
-                                                }
-                                            ))
-                                            .focused($focusedField, equals: column.name)
-                                            .keyboardType(.decimalPad)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .padding(.vertical, 12)
-                                            .padding(.horizontal)
-                                            .background(Color("iosnp"))
-                                            .cornerRadius(8)
-                                            .transition(.opacity)
-                                        
-                                    } else if column.type == "time" {
-                                        Button(action: {
-                                            withAnimation {
-                                                if expandedColumn == column.name {
-                                                    expandedColumn = nil
-                                                } else {
-                                                    expandedColumn = column.name
-                                                }
-                                            }
-                                        }) {
-                                            Text(self.stringValue(for: column.name))
-                                                .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .padding(.vertical, 12)
-                                                .padding(.horizontal)
-                                                .background(Color("iosnp"))
-                                                .cornerRadius(8)
-                                        }
-                                        
-                                        if expandedColumn == column.name {
-                                            InlineTimePicker(timeValue: Binding(
-                                                get: { self.timeValue(for: column.name) },
-                                                set: { newValue in
-                                                    self.columnValues[column.name] = .time(newValue)
-                                                }
-                                            ))
-                                            .frame(height: 150)
-                                            .transition(.opacity)
-                                        }
+                        let columnGroups = groupColumns(podColumns)
+                        ForEach(columnGroups.indices, id: \.self) { groupIndex in
+                            let columnGroup = columnGroups[groupIndex]
+                            if columnGroup.first?.groupingType == "singular" {
+                                // Singular columns - vertical layout
+                                ForEach(columnGroup, id: \.name) { column in
+                                    if !skippedColumns.contains(column.name) {
+                                        ColumnInputView(
+                                            column: column,
+                                            columnValues: $columnValues,
+                                            expandedColumn: $expandedColumn,
+                                            focusedField: _focusedField
+                                        )
                                     }
                                 }
+                            } else {
+                                // Grouped columns - horizontal layout
+                                VStack(alignment: .leading, spacing: 10) {
+                                    // Column names row
+                                    HStack(spacing: 15) {
+                                        ForEach(columnGroup, id: \.name) { column in
+                                            if !skippedColumns.contains(column.name) {
+                                                Text(column.name)
+                                                    .font(.system(size: 16))
+                                                    .fontWeight(.semibold)
+                                                    .fontDesign(.rounded)
+                                                    .foregroundColor(.primary)
+                                                    .kerning(0.2)
+                                                    .frame(maxWidth: .infinity)
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Multiple rows of input fields
+                                       ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
+                                           HStack(spacing: 15) {
+                                               ForEach(columnGroup, id: \.name) { column in
+                                                   if !skippedColumns.contains(column.name) {
+                                                       ColumnInputField(
+                                                           column: column,
+                                                           rowIndex: rowIndex,
+                                                           columnValues: $columnValues,
+                                                           expandedColumn: $expandedColumn,
+                                                           focusedField: _focusedField
+                                                       )
+                                                       .frame(maxWidth: .infinity)
+                                                   }
+                                               }
+                                           }
+                                       }
+                                    // Add entry button
+                                       Button(action: {
+                                           // Add your logic here to create a new row of inputs
+                                           withAnimation {
+                                                     let groupType = columnGroup.first?.groupingType ?? ""
+                                                     groupedRowsCount[groupType] = (groupedRowsCount[groupType] ?? 1) + 1
+                                                 }
+                                       }) {
+                                           Text("Add Entry")
+                                               .foregroundColor(.accentColor)
+                                       }
+                                       .frame(maxWidth: .infinity)
+                                       .padding(.top, 8)
+                                }
+                                .padding(.vertical, 5)
                             }
                         }
+                        
                         VStack(alignment: .leading, spacing: 5) {
                             Button(action: {
                                 withAnimation {
@@ -2133,10 +2128,6 @@ struct LogActivityView: View {
                                 .frame(height: 100)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal)
-//                                .background(
-//                                    RoundedRectangle(cornerRadius: 12)
-//                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-//                                )
                                 .background(Color("iosnp"))
                                 .cornerRadius(8)
                         }
@@ -2146,8 +2137,10 @@ struct LogActivityView: View {
                                 showNotesInput = true
                             }
                         }) {
-                            Text("+ Add notes")
+                            Text("Add Notes")
                                 .foregroundColor(.accentColor)
+                                .frame(maxWidth: .infinity)
+                                .multilineTextAlignment(.center)
                         }
                     }
 
@@ -2188,38 +2181,48 @@ struct LogActivityView: View {
         }
     }
 
-        private func timeValue(for columnName: String) -> TimeValue {
-            switch columnValues[columnName] ?? .null {
-            case .time(let value):
-                return value
-            case .number(let seconds):
-                return TimeValue.fromSeconds(Int(seconds))
-            case .string(let value):
-                return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
-            case .null:
-                return TimeValue(hours: 0, minutes: 0, seconds: 0)
-            }
-            
+
+    
+    private func timeValue(for columnName: String) -> TimeValue {
+        let values = columnValues[columnName]?.first ?? .null
+        switch values {
+        case .time(let value):
+            return value
+        case .number(let seconds):
+            return TimeValue.fromSeconds(Int(seconds))
+        case .string(let value):
+            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+        case .null:
+            return TimeValue(hours: 0, minutes: 0, seconds: 0)
         }
+    }
 
     private func stringValue(for columnName: String) -> String {
-        return String(describing: columnValues[columnName] ?? .null)
+        return String(describing: columnValues[columnName]?.first ?? .null)
     }
 
     private func numberValue(for columnName: String) -> Double {
-        switch columnValues[columnName] ?? .null {
-        case .number(let value): return value
-        default: return 0
+        if case .number(let value) = columnValues[columnName]?.first ?? .null {
+            return value
         }
+        return 0
     }
 
     private func submitActivity() {
         isSubmitting = true
+        // Convert array values back to single values for API
+           var apiColumnValues: [String: ColumnValue] = [:]
+           for (key, values) in columnValues {
+               if let firstValue = values.first {
+                   apiColumnValues[key] = firstValue
+               }
+           }
+        
         NetworkManager().createActivityLog(
             itemId: item.id,
             podId: podId,
             userEmail: viewModel.email,
-            columnValues: columnValues,
+            columnValues: apiColumnValues,
             podColumns: podColumns.filter { !skippedColumns.contains($0.name) },
             notes: activityNote,
             loggedAt: selectedDate  // Add this line
@@ -2237,6 +2240,119 @@ struct LogActivityView: View {
                 }
             }
         }
+    }
+}
+
+struct ColumnInputView: View {
+    let column: PodColumn
+    @Binding var columnValues: [String: [ColumnValue]]
+    @Binding var expandedColumn: String?
+    @FocusState var focusedField: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(column.name)
+                .font(.system(size: 16))
+                .fontWeight(.semibold)
+                .fontDesign(.rounded)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 5)
+                .kerning(0.2)
+            
+            ColumnInputField(
+                column: column,
+                rowIndex: 0, // Single row for non-grouped columns
+                columnValues: $columnValues,
+                expandedColumn: $expandedColumn,
+                focusedField: _focusedField
+            )
+        }
+    }
+}
+
+struct ColumnInputField: View {
+    let column: PodColumn
+    let rowIndex: Int
+    @Binding var columnValues: [String: [ColumnValue]]
+    @Binding var expandedColumn: String?
+    @FocusState var focusedField: String?
+    
+    var body: some View {
+        Group {
+            if column.type == "text" {
+                TextField("", text: Binding(
+                    get: { stringValue(for: column.name, rowIndex: rowIndex) },
+                    set: { updateValue(.string($0), for: column.name, rowIndex: rowIndex) }
+                ))
+                .multilineTextAlignment(.center)
+                .textFieldStyle(PlainTextFieldStyle())
+            } else if column.type == "number" {
+                TextField("", text: Binding(
+                    get: { stringValue(for: column.name, rowIndex: rowIndex) },
+                    set: { newValue in
+                        if let number = Double(newValue) {
+                            updateValue(.number(number), for: column.name, rowIndex: rowIndex)
+                        }
+                    }
+                ))
+                .focused($focusedField, equals: column.name)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.center)
+                .textFieldStyle(PlainTextFieldStyle())
+            } else if column.type == "time" {
+                Button(action: {
+                    withAnimation {
+                        expandedColumn = (expandedColumn == column.name) ? nil : column.name
+                    }
+                }) {
+                    Text(stringValue(for: column.name, rowIndex: rowIndex))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                
+                if expandedColumn == column.name {
+                    InlineTimePicker(timeValue: Binding(
+                        get: { timeValue(for: column.name, rowIndex: rowIndex) },
+                        set: { updateValue(.time($0), for: column.name, rowIndex: rowIndex) }
+                    ))
+                    .frame(height: 150)
+                    .transition(.opacity)
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(8)
+    }
+    
+    private func stringValue(for columnName: String, rowIndex: Int) -> String {
+        let values = columnValues[columnName] ?? []
+        return rowIndex < values.count ? String(describing: values[rowIndex]) : ""
+    }
+    
+    private func timeValue(for columnName: String, rowIndex: Int) -> TimeValue {
+        let values = columnValues[columnName] ?? []
+        guard rowIndex < values.count else { return TimeValue(hours: 0, minutes: 0, seconds: 0) }
+        
+        switch values[rowIndex] {
+        case .time(let value):
+            return value
+        case .number(let seconds):
+            return TimeValue.fromSeconds(Int(seconds))
+        case .string(let value):
+            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+        case .null:
+            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+        }
+    }
+    
+    private func updateValue(_ value: ColumnValue, for columnName: String, rowIndex: Int) {
+        var values = columnValues[columnName] ?? []
+        while values.count <= rowIndex {
+            values.append(.null)
+        }
+        values[rowIndex] = value
+        columnValues[columnName] = values
     }
 }
 
