@@ -160,6 +160,13 @@ struct PodColumn: Codable, Identifiable {
     var id: String { name }
     var name: String
     var type: String
+    var groupingType: String?
+    
+    private enum CodingKeys: String, CodingKey {
+          case name
+          case type
+          case groupingType = "grouping_type" 
+      }
 }
 
 
@@ -470,7 +477,7 @@ struct TimeValue: Codable, Equatable {
 
 struct PodResponse: Codable {
     let pods: [PodJSON]
-    let totalPods: Int
+//    let totalPods: Int
 }
 
 extension Pod {

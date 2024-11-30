@@ -21,6 +21,7 @@ struct PodColumnsView: View {
     
 
     @Binding var visibleColumns: [String]
+    @State private var selectedMenuColumn: String?
 
     var body: some View {
         NavigationView {
@@ -30,7 +31,8 @@ struct PodColumnsView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(podColumns, id: \.name) { column in
+//                            ForEach(podColumns, id: \.name) { column in
+                            ForEach(Array(podColumns.enumerated()), id: \.element.name) { index, column in
                                 HStack {
                                     Button(action: {
                                         toggleColumnVisibility(column.name)
@@ -42,6 +44,40 @@ struct PodColumnsView: View {
                                     
                                     Text(column.name)
                                     Spacer()
+                                    Menu {
+                                        Button("Singular") {
+                                            updateColumnGrouping(index: index, groupingType: "singular")
+                                        }
+                                        Button("Grouped") {
+                                            updateColumnGrouping(index: index, groupingType: "grouped")
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+//                                            Text(column.groupingType ?? "Singular")
+                                            Text(column.groupingType.map { $0.capitalized } ?? "Singular")
+                                                .foregroundColor(.gray)
+                                                .font(.system(size: 14))
+                                                .fontWeight(.medium)
+                                                .onAppear {
+                                                               print("Column: \(column.name), Grouping Type: \(column.groupingType ?? "nil")")
+                                                           }
+                                            Image(systemName: selectedMenuColumn == column.name ? "chevron.up" : "chevron.down")
+                                                .foregroundColor(.gray)
+                                                .font(.system(size: 12))
+                                        }
+                                        .padding(0)
+//                                        .padding(.horizontal, 8)
+//                                        .padding(.vertical, 4)
+//                                        .background(Color.gray.opacity(0.1))
+//                                        .cornerRadius(6)
+                                    }
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        withAnimation {
+                                            selectedMenuColumn = selectedMenuColumn == column.name ? nil : column.name
+                                        }
+                                    })
+                                    .padding(.trailing, 8)
+                                
                                     Button(action: {
                                         columnToDelete = column
                                         showDeleteConfirmation = true
@@ -68,6 +104,7 @@ struct PodColumnsView: View {
                     }
                   
                 }
+              
                 .background(Color("mdBg"))
                 
                 
@@ -76,6 +113,7 @@ struct PodColumnsView: View {
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
             }
+       
             .navigationBarTitle("Pod Columns", displayMode: .inline)
             .navigationBarItems(
                 leading: Button("Cancel") {
@@ -87,6 +125,7 @@ struct PodColumnsView: View {
             )
         }
         .background(Color("mdBg"))
+        
         .confirmationDialog(
             "Delete \(columnToDelete?.name ?? "")?",
             isPresented: $showDeleteConfirmation,
@@ -104,6 +143,26 @@ struct PodColumnsView: View {
     
     }
     
+    private func updateColumnGrouping(index: Int, groupingType: String) {
+        let columnName = podColumns[index].name
+        podColumns[index].groupingType = groupingType  // Update locally for UI
+
+        networkManager.updateColumnGrouping(podId: podId, columnName: columnName, groupingType: groupingType) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Column grouping updated successfully.")
+                case .failure(let error):
+                    print("Failed to update column grouping: \(error.localizedDescription)")
+                    // Optionally, revert the change locally if the update fails
+                    podColumns[index].groupingType = podColumns[index].groupingType // Revert change
+                }
+            }
+        }
+
+        selectedMenuColumn = nil // Close the menu after selection
+    }
+
     private func toggleColumnVisibility(_ columnName: String) {
             if visibleColumns.contains(columnName) {
                 visibleColumns.removeAll { $0 == columnName }
@@ -172,11 +231,6 @@ struct PodColumnsView: View {
                     let newColumn = PodColumn(name: title, type: type)
                     podColumns.append(newColumn)
                     
-//                    // Automatically make the new column visible if there are fewer than 3 visible columns
-//                                      if visibleColumns.count < 3 {
-//                                          visibleColumns.append(title)
-//                                          updateVisibleColumnsOnServer()
-//                                      }
                     showAddColumn = false
                 case .failure(let error):
                     print("Failed to add new column: \(error)")

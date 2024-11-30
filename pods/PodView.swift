@@ -385,18 +385,7 @@ struct PodView: View {
                  }
       
         
-//        .sheet(isPresented: $showCardSheet) {
-//            if let index = selectedItemIndex {
-//                CardDetailView(item: Binding<PodItem>(
-//                    get: { self.reorderedItems[index] },
-//                    set: { self.reorderedItems[index] = $0 }
-//                ), podId: pod.id, podColumns: $podColumns, networkManager: networkManager,
-//                               allItems: Binding<[PodItem]>(
-//                                get: { self.reorderedItems },
-//                                set: { self.reorderedItems = $0 }
-//                               ), visibleColumns: $visibleColumns)
-//            }
-//        }
+
         .sheet(isPresented: $showCardSheet) {
             if let index = selectedItemIndex {
                 CardDetailView(
@@ -464,10 +453,9 @@ struct PodView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let fullPod):
+                    print("Fetched Pod Columns: \(fullPod.columns)")
                     self.pod = fullPod
                     self.reorderedItems = fullPod.items
-                    // Preload videos after fetching pod details
-//                    self.videoPreloader.preloadVideos(for: self.reorderedItems)
                     self.podColumns = fullPod.columns
                     self.visibleColumns = fullPod.visibleColumns
                     self.currentTitle = fullPod.title
@@ -850,7 +838,7 @@ struct PodView: View {
                     print("Pod deleted successfully.")
                     if let index = homeViewModel.pods.firstIndex(where: { $0.id == pod.id }) {
                         homeViewModel.pods.remove(at: index)
-                        homeViewModel.totalPods -= 1
+                      
                     }
                     presentationMode.wrappedValue.dismiss()
                 } else {
@@ -1314,6 +1302,10 @@ struct CardDetailView: View {
     @Binding var visibleColumns: [String]
     @State private var hasUnsavedChanges = false
     
+    @State private var columnVariants: [String] = []
+
+
+    
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
@@ -1355,11 +1347,35 @@ struct CardDetailView: View {
                             
                             ForEach(podColumns, id: \.name) { column in
                                 VStack(alignment: .leading) {
-                                    Text(column.name)
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 5)
-                                        .kerning(0.2)
+//                                    Text(column.name)
+//                                        .font(.system(size: 15))
+//                                        .foregroundColor(.primary)
+//                                        .padding(.horizontal, 5)
+//                                        .kerning(0.2)
+                                    HStack {
+                                               Text(column.name)
+                                                   .font(.system(size: 15))
+                                                   .foregroundColor(.primary)
+                                                   .padding(.horizontal, 5)
+                                                   .kerning(0.2)
+                                               
+                                               Spacer()
+                                               
+                                               Button(action: {
+                                                   // Initialize column variants if needed and add a new variant
+//                                                   withAnimation {
+//                                                       if columnVariants[column.name] == nil {
+//                                                           columnVariants[column.name] = []
+//                                                       }
+//                                                       columnVariants[column.name]?.append("")
+//                                                   }
+                                                   print("tapped variants")
+                                               }) {
+                                                   Text("Create variant")
+                                                       .foregroundColor(.accentColor)
+                                                       .font(.system(size: 14))
+                                               }
+                                           }
                                     
                                     if column.type == "text" {
                                         TextField("", text: Binding(
@@ -1371,22 +1387,19 @@ struct CardDetailView: View {
                                         .textFieldStyle(PlainTextFieldStyle())
                                         .padding(.vertical, 12)
                                         .padding(.horizontal)
-//                                        .background(
-//                                            RoundedRectangle(cornerRadius: 12)
-//                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-//                                        )
+                                        
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
                                                     focusedField == column.name
-                                                        ? Color.accentColor
-                                                        : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
+                                                    ? Color.accentColor
+                                                    : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
                                                     lineWidth: focusedField == column.name ? 2 : 1
                                                 )
                                         )
                                     } else if column.type == "number" {
-
-//                                        }
+                                        
+                                        //                                        }
                                         TextField("", text: Binding(
                                             get: { self.columnValues[column.name] ?? "" },
                                             set: { newValue in
@@ -1398,13 +1411,13 @@ struct CardDetailView: View {
                                         .textFieldStyle(PlainTextFieldStyle())
                                         .padding(.vertical, 12)
                                         .padding(.horizontal)
-
+                                        
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
                                                     focusedField == column.name
-                                                        ? Color.accentColor
-                                                        : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
+                                                    ? Color.accentColor
+                                                    : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
                                                     lineWidth: focusedField == column.name ? 2 : 1
                                                 )
                                         )
@@ -1433,7 +1446,7 @@ struct CardDetailView: View {
                                             InlineTimePicker(timeValue: Binding(
                                                 get: {
                                                     TimeValue.fromString(self.columnValues[column.name] ?? "00:00:00") ??
-                                                        TimeValue(hours: 0, minutes: 0, seconds: 0)
+                                                    TimeValue(hours: 0, minutes: 0, seconds: 0)
                                                 },
                                                 set: { newValue in
                                                     self.columnValues[column.name] = newValue.toString

@@ -9,7 +9,7 @@ class HomeViewModel: ObservableObject {
     @Published var isItemViewActive: Bool = false
     @Published var isLoading = false
     @Published var recentlyVisitedPodIds: [Int] = []
-    @Published var totalPods: Int = 0
+
     @Published var teams: [Team] = []
 
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
@@ -20,7 +20,7 @@ class HomeViewModel: ObservableObject {
                 switch result {
                 case .success(let newPods):
                     self?.pods = newPods
-                    self?.totalPods = newPods.count
+        
                     self?.objectWillChange.send()
                 case .failure(let error):
                     print("Error fetching pods: \(error)")

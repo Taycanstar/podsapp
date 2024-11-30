@@ -1026,7 +1026,7 @@
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Pods;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
@@ -1042,7 +1042,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1093,7 +1093,7 @@
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Pods;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
@@ -1109,7 +1109,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

@@ -815,40 +815,7 @@ class NetworkManager {
             }
         }.resume()
     }
-//    func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
-//          let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
-//          
-//          guard let url = URL(string: urlString) else {
-//              completion(.failure(NetworkError.invalidURL))
-//              return
-//          }
-//          
-//          var request = URLRequest(url: url)
-//          request.httpMethod = "GET"
-//          
-//          URLSession.shared.dataTask(with: request) { data, response, error in
-//              if let error = error {
-//                  completion(.failure(error))
-//                  return
-//              }
-//              
-//              guard let data = data else {
-//                  completion(.failure(NetworkError.noData))
-//                  return
-//              }
-//              
-//              do {
-//                  let decoder = JSONDecoder()
-//                  decoder.dateDecodingStrategy = .iso8601
-//                  let podJSON = try decoder.decode(PodJSON.self, from: data)
-//                  let pod = Pod(from: podJSON)
-//                  completion(.success(pod))
-//              } catch {
-//                  print("Decoding error: \(error)")
-//                  completion(.failure(error))
-//              }
-//          }.resume()
-//      }
+
     func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
          let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
          
@@ -2596,6 +2563,53 @@ class NetworkManager {
                }
            }.resume()
        }
+    
+    func updateColumnGrouping(podId: Int, columnName: String, groupingType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/update-column-grouping/\(podId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = [
+            "name": columnName,
+            "grouping_type": groupingType
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            switch httpResponse.statusCode {
+            case 200:
+                completion(.success(()))
+            default:
+                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
+            }
+        }.resume()
+    }
+
     
  
         func updateVisibleColumns(podId: Int, columns: [String], completion: @escaping (Result<Void, Error>) -> Void) {

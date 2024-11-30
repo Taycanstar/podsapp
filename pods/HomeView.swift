@@ -28,6 +28,9 @@ struct HomeView: View {
     @Environment(\.isTabBarVisible) var isTabBarVisible
     @State private var isLoading = true
     
+    @State private var cachedPodsToDisplay: [Pod] = []
+
+    
     
     var body: some View {
            NavigationView {
@@ -50,9 +53,9 @@ struct HomeView: View {
                            
                            LazyVStack(spacing: 0) {
                                RecentlyVisitedHeader(showSheet: $showSheet, headerTitle: $selectedHeaderOption)
-                               ForEach(podsToDisplay) { pod in
+                               ForEach(cachedPodsToDisplay) { pod in
                                    PodCard(pod: pod)
-                                   if pod.id != podsToDisplay.last?.id {
+                                   if pod.id != cachedPodsToDisplay.last?.id {
                                        Divider().padding(.horizontal)
                                    }
                                }
@@ -86,6 +89,10 @@ struct HomeView: View {
 
 
                }
+               .onChange(of: selectedHeaderOption) { _ in
+                              updateCachedPodsToDisplay()
+                          }
+                  
                .refreshable {
                     refreshPods()
                }
@@ -149,35 +156,92 @@ struct HomeView: View {
         homeViewModel.pods.filter { $0.workspace == selectedHeaderOption }
     }
 
+//    private var podsToDisplay: [Pod] {
+//        switch selectedHeaderOption {
+//        case "Favorites":
+//            return favoritePods
+//        case "Recently visited":
+//            return recentlyVisitedPods
+//        default:
+//            return workspacePods
+//        }
+//    }
+//    
+//
+//    private func fetchPodsAndWorkspacesIfNeeded() {
+//        // Remove the hasInitiallyFetched check
+//        isLoading = true
+//        homeViewModel.fetchPodsForUser(email: viewModel.email) { [self] in
+//            DispatchQueue.main.async {
+//                self.isLoading = false
+//                print("Loading complete, updating UI.")
+//            }
+//        }
+//        homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
+//    }
+
+    private func fetchPodsAndWorkspacesIfNeeded() {
+            print("Starting fetch...")
+            isLoading = true
+            homeViewModel.fetchPodsForUser(email: viewModel.email) {
+                print("Pods fetch completed")
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.updateCachedPodsToDisplay()
+                    print("isLoading set to false, pods count: \(homeViewModel.pods.count)")
+                }
+            }
+            homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
+        }
+
+
     private var podsToDisplay: [Pod] {
+        print("Computing podsToDisplay")
         switch selectedHeaderOption {
         case "Favorites":
-            return favoritePods
+            let pods = favoritePods
+            print("Returning \(pods.count) favorite pods")
+            return pods
         case "Recently visited":
-            return recentlyVisitedPods
+            let pods = recentlyVisitedPods
+            print("Returning \(pods.count) recent pods")
+            return pods
         default:
-            return workspacePods
+            let pods = workspacePods
+            print("Returning \(pods.count) workspace pods")
+            return pods
         }
     }
     
-    private func fetchPodsAndWorkspacesIfNeeded() {
-        isLoading = true
-              homeViewModel.fetchPodsForUser(email: viewModel.email) {
-                  isLoading = false
-              }
-        
-          homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
-      }
     
-
-    
-    private func refreshPods() {
-        DispatchQueue.global(qos: .background).async {
-            homeViewModel.fetchPodsForUser(email: viewModel.email) {
-                // Additional actions after refresh if needed
+//    private func refreshPods() {
+//        DispatchQueue.global(qos: .background).async {
+//            homeViewModel.fetchPodsForUser(email: viewModel.email) {
+//                // Additional actions after refresh if needed
+//            }
+//        }
+//    }
+    private func updateCachedPodsToDisplay() {
+            switch selectedHeaderOption {
+            case "Favorites":
+                cachedPodsToDisplay = homeViewModel.pods.filter { $0.isFavorite ?? false }
+            case "Recently visited":
+                cachedPodsToDisplay = homeViewModel.pods.filter { $0.lastVisited != nil }
+                    .sorted { $0.lastVisited! > $1.lastVisited! }
+            default:
+                cachedPodsToDisplay = homeViewModel.pods.filter { $0.workspace == selectedHeaderOption }
             }
         }
-    }
+
+        private func refreshPods() {
+            DispatchQueue.global(qos: .background).async {
+                homeViewModel.fetchPodsForUser(email: viewModel.email) {
+                    DispatchQueue.main.async {
+                        self.updateCachedPodsToDisplay()
+                    }
+                }
+            }
+        }
 
     private func saveChangesAndExitEditMode() {
         isEditMode = false
@@ -235,162 +299,6 @@ struct HomeView: View {
     }
 
 
-}
-
-
-
-struct ItemRow: View {
-    @Binding var item: PodItem
-    let isEditing: Bool
-    let onTapNavigate: () -> Void
-    @EnvironmentObject var homeViewModel: HomeViewModel
-    @Binding var isAnyItemEditing: Bool
-    @Binding var showDoneButton: Bool
-    @Binding var editingItemId: Int?
-
-    @FocusState private var isMetadataFocused: Bool
-    @FocusState private var isNotesFocused: Bool
-    @State private var showNotesPlaceholder: Bool = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField("", text: $item.metadata)
-                    .focused($isMetadataFocused)
-                    .font(.body)
-                    .onTapGesture {
-                        if !isEditing {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                isMetadataFocused = true
-                                showDoneButton = true
-                                isAnyItemEditing = true
-                                editingItemId = item.id
-                                showNotesPlaceholder = true
-                            }
-                        }
-                    }
-                
-                Spacer()
-                
-                HStack(spacing: 5) {
-                    if let thumbnailURL = item.thumbnailURL {
-                        AsyncImage(url: thumbnailURL) { image in
-                            image.resizable()
-                        } placeholder: {
-                            ProgressView()
-                        }
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 30, height: 30)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 14))
-                }
-                .onTapGesture(perform: onTapNavigate)
-            }
-
-            if !item.notes.isEmpty || showNotesPlaceholder {
-                ZStack(alignment: .topLeading) {
-                    TextEditor(text: $item.notes)
-                        .focused($isNotesFocused)
-                        .font(.footnote)
-                        .foregroundColor(.gray)
-                        .frame(height: max(20, calculateHeight(for: item.notes)))
-                        .background(Color.clear)
-                        .opacity(item.notes.isEmpty ? 0.6 : 1)
-                        .onTapGesture {
-                            if !isEditing {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    isNotesFocused = true
-                                    showDoneButton = true
-                                    isAnyItemEditing = true
-                                    editingItemId = item.id
-                                }
-                            }
-                        }
-                    
-                    if item.notes.isEmpty {
-                        Text("Add note")
-                            .font(.footnote)
-                            .foregroundColor(.gray)
-                            .padding(.top, 7)
-                            .padding(.leading, 5)
-                            .allowsHitTesting(false)
-                    }
-                }
-                .padding(.leading, -5)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(.vertical, 10)
-        .padding(.leading, 15)
-        .contentShape(Rectangle())
-        .disabled(isEditing)
-        .onChange(of: isMetadataFocused) {_,  focused in
-            if !focused && item.notes.isEmpty {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showNotesPlaceholder = false
-                }
-            }
-        }
-        .onChange(of: isNotesFocused) { _, focused in
-            if focused {
-                showNotesPlaceholder = true
-            } else if !focused && item.notes.isEmpty {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showNotesPlaceholder = false
-                }
-            }
-        }
-    }
-    
-    private func calculateHeight(for text: String) -> CGFloat {
-        let font = UIFont.preferredFont(forTextStyle: .footnote)
-        let attributes = [NSAttributedString.Key.font: font]
-        let size = (text as NSString).boundingRect(
-            with: CGSize(width: UIScreen.main.bounds.width - 80, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: attributes,
-            context: nil
-        ).size
-        
-        return size.height + 10 // Add some padding
-    }
-}
-struct PodTitleRow: View {
-    @Binding var pod: Pod
-    let isExpanded: Bool
-    var onExpandCollapseTapped: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-    @Binding var needsRefresh: Bool
-
-    var body: some View {
-        HStack {
-//            ZStack{
-//                NavigationLink(destination: PodView(pod: $pod, needsRefresh: $needsRefresh)){ EmptyView() }.opacity(0.0)
-//                    .padding(.trailing, -5).frame(width:0, height:0)
-//                Text(pod.title)
-//                    .font(.system(size: 16, weight: .bold, design: .rounded))
-//                    .padding(.leading, 0) // Apply padding to the text element itself
-//                    .foregroundColor(colorScheme == .dark ? .white : .black)
-//            }
-            Spacer()
-            Button(action: onExpandCollapseTapped) {
-                HStack {
-                    Text("\(pod.items.count)")
-                        .foregroundColor(.gray)
-                        .padding(.trailing, 4) // Adjust as necessary for alignment
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .foregroundColor(.gray)
-                        .padding(.trailing, 0)
-                }
-            }
-        }
-        .cornerRadius(10)
-        .padding(.vertical, 17)
-        .padding(.horizontal, 15)
-    }
 }
 
 
