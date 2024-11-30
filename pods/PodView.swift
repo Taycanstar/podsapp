@@ -2006,17 +2006,19 @@ struct LogActivityView: View {
                                 VStack(alignment: .leading, spacing: 5) {
                                     HStack {
                                         Text(column.name)
-                                            .font(.system(size: 15))
+                                            .font(.system(size: 16))
+                                            .fontWeight(.semibold)
+                                            .fontDesign(.rounded)
                                             .foregroundColor(.primary)
                                             .padding(.horizontal, 5)
                                             .kerning(0.2)
                                         Spacer()
-                                        Button("Skip") {
-                                            withAnimation {
-                                                skippedColumns.insert(column.name)
-                                                columnValues[column.name] = .null
-                                            }
-                                        }
+//                                        Button("Skip") {
+//                                            withAnimation {
+//                                                skippedColumns.insert(column.name)
+//                                                columnValues[column.name] = .null
+//                                            }
+//                                        }
                                         .padding(.horizontal, 10)
                                         .font(.system(size: 13))
                                         .foregroundColor(.red)
@@ -2030,41 +2032,10 @@ struct LogActivityView: View {
                                         .textFieldStyle(PlainTextFieldStyle())
                                         .padding(.vertical, 12)
                                         .padding(.horizontal)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                        )
+                                        .background(Color("iosnp"))
+                                        .cornerRadius(8)
                                     } else if column.type == "number" {
-//                                        Button(action: {
-//                                            withAnimation {
-//                                                if expandedColumn == column.name {
-//                                                    expandedColumn = nil
-//                                                } else {
-//                                                    expandedColumn = column.name
-//                                                }
-//                                            }
-//                                        }) {
-//                                            Text(self.stringValue(for: column.name))
-//                                                .foregroundColor(.primary)
-//                                                .frame(maxWidth: .infinity, alignment: .leading)
-//                                                .padding(.vertical, 12)
-//                                                .padding(.horizontal)
-//                                                .background(
-//                                                    RoundedRectangle(cornerRadius: 12)
-//                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-//                                                )
-//                                        }
-//                                        if expandedColumn == column.name {
-//                                            InlineNumberPicker(value: Binding(
-//                                                get: { self.numberValue(for: column.name) },
-//                                                set: { self.columnValues[column.name] = .number($0) }
-//                                            ))
-//                                            .frame(height: 150)
-//                                            .transition(.opacity)
-//                                        }
-                                   
                                             TextField("", text: Binding(
-//
                                                 get: { String(describing: self.columnValues[column.name] ?? .null) },
                                                 set: { newValue in
                                                     if let number = Double(newValue) {
@@ -2077,15 +2048,8 @@ struct LogActivityView: View {
                                             .textFieldStyle(PlainTextFieldStyle())
                                             .padding(.vertical, 12)
                                             .padding(.horizontal)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(
-                                                        focusedField == column.name
-                                                            ? Color.accentColor
-                                                            : (colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237)),
-                                                        lineWidth: focusedField == column.name ? 2 : 1
-                                                    )
-                                            )
+                                            .background(Color("iosnp"))
+                                            .cornerRadius(8)
                                             .transition(.opacity)
                                         
                                     } else if column.type == "time" {
@@ -2103,10 +2067,8 @@ struct LogActivityView: View {
                                                 .frame(maxWidth: .infinity, alignment: .leading)
                                                 .padding(.vertical, 12)
                                                 .padding(.horizontal)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                                )
+                                                .background(Color("iosnp"))
+                                                .cornerRadius(8)
                                         }
                                         
                                         if expandedColumn == column.name {
@@ -2140,10 +2102,12 @@ struct LogActivityView: View {
                                 }
                                 .padding(.vertical, 12)
                                 .padding(.horizontal)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                )
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 12)
+//                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                )
+                                .background(Color("iosnp"))
+                                .cornerRadius(8)
                             }
                             
                             if showDatePicker {
@@ -2158,19 +2122,23 @@ struct LogActivityView: View {
                     if showNotesInput {
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Notes")
-                                .font(.system(size: 15))
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .fontDesign(.rounded)
                                 .foregroundColor(.primary)
                                 .padding(.horizontal, 5)
                                 .kerning(0.2)
                             
-                            CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("mxdBg")))
+                            CustomTextEditor(text: $activityNote, backgroundColor: UIColor(Color("iosnp")))
                                 .frame(height: 100)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                )
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 12)
+//                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+//                                )
+                                .background(Color("iosnp"))
+                                .cornerRadius(8)
                         }
                     } else {
                         Button(action: {
@@ -2191,7 +2159,7 @@ struct LogActivityView: View {
                 }
                 .padding()
             }
-            .background(Color("mxdBg").edgesIgnoringSafeArea(.all)) // Apply background color
+            .background(Color("iosbg").edgesIgnoringSafeArea(.all)) // Apply background color
             .navigationTitle("Log Activity")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
@@ -2233,18 +2201,7 @@ struct LogActivityView: View {
             }
             
         }
-//        private func stringValue(for columnName: String) -> String {
-//            switch columnValues[columnName] ?? .null {
-//            case .string(let value):
-//                return value
-//            case .number(let value):
-//                return String(value)
-//            case .time(let value):
-//                return value.toString
-//            case .null:
-//                return ""
-//            }
-//        }
+
     private func stringValue(for columnName: String) -> String {
         return String(describing: columnValues[columnName] ?? .null)
     }
