@@ -22,6 +22,10 @@ struct PodColumnsView: View {
     @State private var hasUnsavedChanges = false
     @Binding var visibleColumns: [String]
     @State private var selectedMenuColumn: String?
+    @State private var editedNames: [String: String] = [:]
+    
+    @State private var originalColumns: [PodColumn] = []
+    @State private var originalVisibleColumns: [String] = []
 
     var body: some View {
         NavigationView {
@@ -41,8 +45,15 @@ struct PodColumnsView: View {
                                            }
                                            .disabled(visibleColumns.count == 3 && !visibleColumns.contains(column.name))
                                            
-                                           Text(column.name)
-                                               .foregroundColor(.primary)
+//                                           Text(column.name)
+//                                               .foregroundColor(.primary)
+                                           TextField("", text: Binding(
+                                               get: { editedNames[column.name] ?? column.name },
+                                               set: { newValue in
+                                                   editedNames[column.name] = newValue
+                                                   hasUnsavedChanges = true
+                                               }
+                                           ))
                                            Spacer()
                                            Menu {
                                                Button("Singular") {
@@ -86,11 +97,17 @@ struct PodColumnsView: View {
                                        hasUnsavedChanges = true
                                    }
                                    .onDelete { indexSet in
-                                                                 if let index = indexSet.first {
-                                                                     let column = podColumns[index]
-                                                                     columnToDelete = column
-                                                                     showDeleteConfirmation = true
-                                                                 }
+                                       if let index = indexSet.first {
+                                                     let column = podColumns[index]
+                                                     podColumns.remove(at: index)
+                                                     hasUnsavedChanges = true
+                                                     // Remove from visible columns if needed
+                                                     if let visibleIndex = visibleColumns.firstIndex(of: column.name) {
+                                                         visibleColumns.remove(at: visibleIndex)
+                                                     }
+                                                     // Remove from edited names if needed
+                                                     editedNames.removeValue(forKey: column.name)
+                                                 }
                                                              }
                                                              .listRowBackground(Color("iosnp"))
                       
@@ -141,9 +158,17 @@ struct PodColumnsView: View {
                 }
             }
             .navigationBarTitle("Pod Columns", displayMode: .inline)
+            .onAppear {
+                           // Store original state when view appears
+                           originalColumns = podColumns
+                           originalVisibleColumns = visibleColumns
+                       }
             .navigationBarItems(
                 leading: Button("Cancel") {
-                    isPresented = false
+                    podColumns = originalColumns
+                                      visibleColumns = originalVisibleColumns
+                                      editedNames = [:]
+                                      isPresented = false
                 },
                 trailing: Group {
                     if hasUnsavedChanges {
@@ -156,20 +181,6 @@ struct PodColumnsView: View {
             )
         }
         .background(Color("iosbg"))
-        .confirmationDialog(
-            "Delete \(columnToDelete?.name ?? "")?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let column = columnToDelete {
-                    deleteColumn(column)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action cannot be undone.")
-        }
     
     }
     
@@ -184,25 +195,13 @@ struct PodColumnsView: View {
         HapticFeedback.generateLigth()
     }
     
-    private func updateColumnGrouping(index: Int, groupingType: String) {
-        let columnName = podColumns[index].name
-        podColumns[index].groupingType = groupingType
-        hasUnsavedChanges = true
-        
-        networkManager.updateColumnGrouping(podId: podId, columnName: columnName, groupingType: groupingType) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    print("Column grouping updated successfully.")
-                case .failure(let error):
-                    print("Failed to update column grouping: \(error.localizedDescription)")
-                    podColumns[index].groupingType = podColumns[index].groupingType
-                }
-            }
+    // Modify updateColumnGrouping to not make backend calls
+        private func updateColumnGrouping(index: Int, groupingType: String) {
+            podColumns[index].groupingType = groupingType
+            hasUnsavedChanges = true
+            selectedMenuColumn = nil
         }
-        selectedMenuColumn = nil
-    }
-    
+
 
     
 //        private func saveChanges() {
@@ -219,24 +218,53 @@ struct PodColumnsView: View {
 //                }
 //            }
 //        }
+//    private func saveChanges() {
+//        let columnOrder = podColumns.map { $0.name }
+//        networkManager.updateColumnOrder(podId: podId, columnOrder: columnOrder) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success:
+//                    networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
+//                        DispatchQueue.main.async {
+//                            switch result {
+//                            case .success:
+//                                isPresented = false
+//                            case .failure(let error):
+//                                print("Failed to update visible columns: \(error)")
+//                            }
+//                        }
+//                    }
+//                case .failure(let error):
+//                    print("Failed to update column order: \(error)")
+//                }
+//            }
+//        }
+//    }
+    
     private func saveChanges() {
-        let columnOrder = podColumns.map { $0.name }
-        networkManager.updateColumnOrder(podId: podId, columnOrder: columnOrder) { result in
+        // Apply edited names before saving
+        for (oldName, newName) in editedNames {
+            if let index = podColumns.firstIndex(where: { $0.name == oldName }) {
+                podColumns[index].name = newName
+                
+                // Update visibleColumns if needed
+                if let visibleIndex = visibleColumns.firstIndex(of: oldName) {
+                    visibleColumns[visibleIndex] = newName
+                }
+            }
+        }
+
+        networkManager.updatePodColumns(
+            podId: podId,
+            columns: podColumns,
+            visibleColumns: visibleColumns
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
-                        DispatchQueue.main.async {
-                            switch result {
-                            case .success:
-                                isPresented = false
-                            case .failure(let error):
-                                print("Failed to update visible columns: \(error)")
-                            }
-                        }
-                    }
+                    isPresented = false
                 case .failure(let error):
-                    print("Failed to update column order: \(error)")
+                    print("Failed to update columns: \(error)")
                 }
             }
         }
