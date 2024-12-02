@@ -1305,8 +1305,12 @@ struct CardDetailView: View {
     @State private var columnVariants: [String] = []
 
 
-
-    
+    @State private var groupedRowsCount: [String: Int] = [:]
+    private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
+            let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+            let singularColumns = columns.filter { $0.groupingType == "singular" }
+            return [groupedColumns, singularColumns].filter { !$0.isEmpty }
+        }
     
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
@@ -1335,7 +1339,7 @@ struct CardDetailView: View {
         ZStack {
             NavigationView {
                 ZStack {
-                    (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+                    (Color("iosbg"))
                         .edgesIgnoringSafeArea(.all)
                     
                     ScrollView {
@@ -1345,113 +1349,93 @@ struct CardDetailView: View {
                                 .font(.system(size: 18)).bold()
                                 .background(Color.clear)
                                 .focused($isItemNameFocused)
-                            
-                            ForEach(podColumns, id: \.name) { column in
-                                VStack(alignment: .leading) {
-//                                    Text(column.name)
-//                                        .font(.system(size: 15))
-//                                        .foregroundColor(.primary)
-//                                        .padding(.horizontal, 5)
-//                                        .kerning(0.2)
-                                    HStack {
-                                               Text(column.name)
-                                                   .font(.system(size: 15))
-                                                   .foregroundColor(.primary)
-                                                   .padding(.horizontal, 5)
-                                                   .kerning(0.2)
-                                               
-                                               Spacer()
-                                               
-                                               Button(action: {
-
-                                                   print("tapped variants")
-                                               }) {
-                                                   Text("Create variant")
-                                                       .foregroundColor(.accentColor)
-                                                       .font(.system(size: 14))
-                                               }
-                                           }
-                                    
-                                    if column.type == "text" {
-                                        TextField("", text: Binding(
-                                            get: { self.columnValues[column.name] ?? "" },
-                                            set: { self.columnValues[column.name] = $0 }
-                                        ))
-                                        .focused($focusedField, equals: column.name)
-                                        .foregroundColor(.primary)
-                                        .textFieldStyle(PlainTextFieldStyle())
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal)
-                                        
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(
-                                                    focusedField == column.name
-                                                    ? Color.accentColor
-                                                    : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
-                                                    lineWidth: focusedField == column.name ? 2 : 1
-                                                )
-                                        )
-                                    } else if column.type == "number" {
-                                        
-                                        //                                        }
-                                        TextField("", text: Binding(
-                                            get: { self.columnValues[column.name] ?? "" },
-                                            set: { newValue in
-                                                self.columnValues[column.name] = newValue
-                                            }
-                                        ))
-                                        .focused($focusedField, equals: column.name)
-                                        .keyboardType(.decimalPad)
-                                        .textFieldStyle(PlainTextFieldStyle())
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal)
-                                        
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(
-                                                    focusedField == column.name
-                                                    ? Color.accentColor
-                                                    : (colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 218, 222, 237)),
-                                                    lineWidth: focusedField == column.name ? 2 : 1
-                                                )
-                                        )
-                                    } else if column.type == "time" {
-                                        Button(action: {
-                                            withAnimation {
-                                                if expandedColumn == column.name {
-                                                    expandedColumn = nil
-                                                } else {
-                                                    expandedColumn = column.name
-                                                }
-                                            }
-                                        }) {
-                                            Text(self.columnValues[column.name] ?? "")
-                                                .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .padding(.vertical, 12)
-                                                .padding(.horizontal)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: colorScheme == .dark ? 1 : 1)
-                                                )
-                                        }
-                                        
-                                        if expandedColumn == column.name {
-                                            InlineTimePicker(timeValue: Binding(
-                                                get: {
-                                                    TimeValue.fromString(self.columnValues[column.name] ?? "00:00:00") ??
-                                                    TimeValue(hours: 0, minutes: 0, seconds: 0)
-                                                },
-                                                set: { newValue in
-                                                    self.columnValues[column.name] = newValue.toString
-                                                }
-                                            ))
-                                            .frame(height: 150)
-                                            .transition(.opacity)
-                                        }
-                                    }
-                                }
+                            let columnGroups = groupColumns(podColumns)
+                                                     ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+                                                         let columnGroup = columnGroups[groupIndex]
+                                                         
+                     if columnGroup.first?.groupingType == "singular" {
+                         // Singular columns - vertical layout
+                                                   ForEach(columnGroup, id: \.name) { column in
+                                                   
+                                                           VStack(alignment: .leading, spacing: 5) {
+                                                               Text(column.name)
+                                                                   .font(.system(size: 16))
+                                                                   .fontWeight(.semibold)
+                                                                   .fontDesign(.rounded)
+                                                                   .foregroundColor(.primary)
+                                                                   .kerning(0.2)
+                                                               
+                                                               columnInput(for: column)
+                                                                   .padding(.vertical, 8)
+                                                                   .background(Color("iosnp"))
+                                                                   .cornerRadius(8)
+                                                           }
+                                                      
+                                                   }
+                                                         } else {
+                                                             // Grouped columns - horizontal layout
+                                 VStack(alignment: .leading, spacing: 10) {
+                                     // Column names row
+                                     HStack(spacing: 15) {
+                                         ForEach(columnGroup, id: \.name) { column in
+                                             
+                                                 Text(column.name)
+                                                     .font(.system(size: 16))
+                                                     .fontWeight(.semibold)
+                                                     .fontDesign(.rounded)
+                                                     .foregroundColor(.primary)
+                                                     .kerning(0.2)
+                                                     .frame(maxWidth: .infinity)
+                                          
+                                         }
+                                     }
+                                     
+                                     // Multiple rows of input fields
+                                     ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
+                                         List {
+                                             HStack(spacing: 15) {
+                                                 ForEach(columnGroup, id: \.name) { column in
+                                                  
+                                                         groupedColumnInput(
+                                                             column: column,
+                                                             rowIndex: rowIndex,
+                                                             columnValues: $columnValues
+                                                         )
+                                                         .frame(maxWidth: .infinity)
+                                                     
+                                                 }
+                                             }
+                                             .listRowBackground(Color.clear)
+                                             .listRowInsets(EdgeInsets())
+                                             .listRowSeparator(.hidden)
+                                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                                 Button(role: .destructive) {
+                                                     withAnimation {
+                                                         deleteRow(at: rowIndex, in: columnGroup)
+                                                     }
+                                                 } label: {
+                                                     Label("Delete", systemImage: "trash")
+                                                 }
+                                             }
+                                         }
+                                         .listStyle(PlainListStyle())
+                                         .frame(height: 44)
+                                     }
+                                     
+                                     // Add entry button
+                                     Button(action: {
+                                         withAnimation {
+                                             addRow(for: columnGroup)
+                                         }
+                                     }) {
+                                         Text("Add Entry")
+                                             .foregroundColor(.accentColor)
+                                     }
+                                     .frame(maxWidth: .infinity)
+                                     .padding(.top, 8)
+                                 }
+                                 .padding(.top, 5)
+                                                         }
                             }
                             VStack(alignment: .leading) {
                                 Text("Notes")
@@ -1461,15 +1445,12 @@ struct CardDetailView: View {
                                     .kerning(0.2)
                                 
                                 
-                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(colorScheme == .dark ? Color(rgb: 14,14,14) : .white))
+                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(Color("iosnp")))
                                     .frame(height: 100)
                                     .padding(.vertical, 8)
                                     .padding(.horizontal)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                                    )
-
+                                    .background(Color("iosnp"))
+                                    .cornerRadius(12)
                             }
                             addColumnButton
                         }
@@ -1558,6 +1539,177 @@ struct CardDetailView: View {
                 secondaryButton: .cancel())}
         
     }
+
+private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
+      for column in columnGroup {
+          if var values = columnValues[column.name]?.components(separatedBy: ",") {
+              values.remove(at: index)
+              columnValues[column.name] = values.joined(separator: ",")
+          }
+      }
+      
+      let groupType = columnGroup.first?.groupingType ?? ""
+      if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+          groupedRowsCount[groupType] = currentCount - 1
+      }
+  }
+  
+    private func addRow(for columnGroup: [PodColumn]) {
+        let groupType = columnGroup.first?.groupingType ?? ""
+        let currentRowIndex = groupedRowsCount[groupType] ?? 1
+        
+        for column in columnGroup {
+            var values = columnValues[column.name]?.components(separatedBy: ",") ?? []
+            if column.type == "number" && values.first == "1" {
+                // Keep the sequential numbering logic
+                values.append("\(values.count + 1)")
+            } else {
+                // Get the last value and use it for the new row
+                let lastValue = values.last ?? ""
+                values.append(lastValue)
+            }
+            columnValues[column.name] = values.joined(separator: ",")
+        }
+        
+        groupedRowsCount[groupType] = currentRowIndex + 1
+    }
+
+@ViewBuilder
+private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: Binding<[String: String]>) -> some View {
+    let values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
+    let value = rowIndex < values.count ? values[rowIndex] : ""
+    
+    if column.type == "text" {
+        TextField("", text: Binding(
+            get: { value },
+            set: { newValue in
+                var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
+                while values.count <= rowIndex {
+                    values.append("")
+                }
+                values[rowIndex] = newValue
+                columnValues.wrappedValue[column.name] = values.joined(separator: ",")
+            }
+        ))
+        .textFieldStyle(PlainTextFieldStyle())
+        .padding(.vertical, 12)
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    } else if column.type == "number" {
+        TextField("", text: Binding(
+            get: { value },
+            set: { newValue in
+                var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
+                while values.count <= rowIndex {
+                    values.append("")
+                }
+                values[rowIndex] = newValue
+                columnValues.wrappedValue[column.name] = values.joined(separator: ",")
+            }
+        ))
+        .keyboardType(.decimalPad)
+        .textFieldStyle(PlainTextFieldStyle())
+        .padding(.vertical, 12)
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    } else if column.type == "time" {
+        Button(action: {
+            withAnimation {
+                expandedColumn = (expandedColumn == "\(column.name)_\(rowIndex)") ? nil : "\(column.name)_\(rowIndex)"
+            }
+        }) {
+            Text(value)
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal)
+                .background(Color("iosnp"))
+                .cornerRadius(12)
+        }
+        
+        if expandedColumn == "\(column.name)_\(rowIndex)" {
+            InlineTimePicker(timeValue: Binding(
+                get: {
+                    TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+                },
+                set: { newValue in
+                    var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
+                    while values.count <= rowIndex {
+                        values.append("")
+                    }
+                    values[rowIndex] = newValue.toString
+                    columnValues.wrappedValue[column.name] = values.joined(separator: ",")
+                }
+            ))
+            .frame(height: 150)
+            .transition(.opacity)
+        }
+    }
+}
+    
+    
+    @ViewBuilder
+       private func columnInput(for column: PodColumn) -> some View {
+           if column.type == "text" {
+               TextField("", text: Binding(
+                   get: { self.columnValues[column.name] ?? "" },
+                   set: { self.columnValues[column.name] = $0 }
+               ))
+               .focused($focusedField, equals: column.name)
+               .foregroundColor(.primary)
+               .textFieldStyle(PlainTextFieldStyle())
+               .padding(.vertical, 12)
+               .padding(.horizontal)
+               .cornerRadius(12)
+               .background(Color("iosnp")
+               )
+           } else if column.type == "number" {
+               TextField("", text: Binding(
+                   get: { self.columnValues[column.name] ?? "" },
+                   set: { self.columnValues[column.name] = $0 }
+               ))
+               .focused($focusedField, equals: column.name)
+               .keyboardType(.decimalPad)
+               .textFieldStyle(PlainTextFieldStyle())
+               .padding(.vertical, 12)
+               .padding(.horizontal)
+               .cornerRadius(12)
+               .background(Color("iosnp")
+               )
+           } else if column.type == "time" {
+               Button(action: {
+                   withAnimation {
+                       expandedColumn = (expandedColumn == column.name) ? nil : column.name
+                   }
+               }) {
+                   Text(self.columnValues[column.name] ?? "")
+                       .foregroundColor(.primary)
+                       .frame(maxWidth: .infinity, alignment: .leading)
+                       .padding(.vertical, 12)
+                       .padding(.horizontal)
+                       .background(
+                           RoundedRectangle(cornerRadius: 12)
+                               .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
+                       )
+               }
+               
+               if expandedColumn == column.name {
+                   InlineTimePicker(timeValue: Binding(
+                       get: {
+                           TimeValue.fromString(self.columnValues[column.name] ?? "00:00:00") ??
+                           TimeValue(hours: 0, minutes: 0, seconds: 0)
+                       },
+                       set: { newValue in
+                           self.columnValues[column.name] = newValue.toString
+                       }
+                   ))
+                   .frame(height: 150)
+                   .transition(.opacity)
+               }
+           }
+       }
     
     private func checkForChanges() {
             hasUnsavedChanges = false
@@ -1661,14 +1813,14 @@ struct CardDetailView: View {
                 addColumnOffset = UIScreen.main.bounds.height - 250
             }) {
                 HStack(spacing: 5) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .regular))
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20, weight: .regular))
                     Text("Add column")
-                        .font(.system(size: 14, weight: .regular))
+                        .font(.system(size: 16, weight: .regular))
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 15)
-                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+                .background(Color("iosbg"))
                 .foregroundColor(.accentColor)
             }
             .buttonStyle(PlainButtonStyle())
@@ -2101,32 +2253,32 @@ struct LogActivityView: View {
                                        Button(action: {
                                            // Add your logic here to create a new row of inputs
                                            withAnimation {
-                                                  let groupType = columnGroup.first?.groupingType ?? ""
-                                                  let currentRowIndex = groupedRowsCount[groupType] ?? 1
-                                                  
-                                                  // For each column in the group, set the new row's value
-                                                  for column in columnGroup {
-                                                      if !skippedColumns.contains(column.name) {
-                                                          var values = columnValues[column.name] ?? []
-                                                          let lastValue = values.last
-                                                          
-                                                          // For number type, check if the first value was 1
-                                                          if column.type == "number",
-                                                             case .number(let firstNum) = values.first,
-                                                             firstNum == 1 {
-                                                              // Add next number in sequence
-                                                              values.append(.number(Double(values.count + 1)))
-                                                          } else {
-                                                              // For all other cases, add null value
-                                                              values.append(.null)
-                                                          }
-                                                          
-                                                          columnValues[column.name] = values
-                                                      }
-                                                  }
-                                                  
-                                                  groupedRowsCount[groupType] = currentRowIndex + 1
-                                              }
+                                                   let groupType = columnGroup.first?.groupingType ?? ""
+                                                   let currentRowIndex = groupedRowsCount[groupType] ?? 1
+                                                   
+                                                   // For each column in the group, set the new row's value
+                                                   for column in columnGroup {
+                                                       if !skippedColumns.contains(column.name) {
+                                                           var values = columnValues[column.name] ?? []
+                                                           
+                                                           // For number type, check if the first value was 1
+                                                           if column.type == "number",
+                                                              case .number(let firstNum) = values.first,
+                                                              firstNum == 1 {
+                                                               // Add next number in sequence
+                                                               values.append(.number(Double(values.count + 1)))
+                                                           } else {
+                                                               // Copy the last value instead of adding .null
+                                                               let lastValue = values.last ?? .null
+                                                               values.append(lastValue)
+                                                           }
+                                                           
+                                                           columnValues[column.name] = values
+                                                       }
+                                                   }
+                                                   
+                                                   groupedRowsCount[groupType] = currentRowIndex + 1
+                                               }
                                        }) {
                                            Text("Add Entry")
                                                .foregroundColor(.accentColor)
