@@ -1993,11 +1993,13 @@ struct LogActivityView: View {
     }
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
-          let singularColumns = columns.filter { $0.groupingType == "singular" }
-          let groupedColumns = columns.filter { $0.groupingType == "grouped" }
-          
-          return [singularColumns, groupedColumns].filter { !$0.isEmpty }
-      }
+        let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+        let singularColumns = columns.filter { $0.groupingType == "singular" }
+        
+        // Return grouped first, then singular
+        return [groupedColumns, singularColumns].filter { !$0.isEmpty }
+    }
+
 
     var body: some View {
         NavigationView {
@@ -2013,7 +2015,7 @@ struct LogActivityView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         let columnGroups = groupColumns(podColumns)
-                        ForEach(columnGroups.indices, id: \.self) { groupIndex in
+                        ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
                             let columnGroup = columnGroups[groupIndex]
                             if columnGroup.first?.groupingType == "singular" {
                                 // Singular columns - vertical layout
@@ -2023,7 +2025,7 @@ struct LogActivityView: View {
                                             column: column,
                                             columnValues: $columnValues,
                                             expandedColumn: $expandedColumn,
-                                            focusedField: _focusedField
+                                            focusedField: _focusedField.projectedValue
                                         )
                                     }
                                 }
@@ -2046,29 +2048,85 @@ struct LogActivityView: View {
                                     }
                                     
                                     // Multiple rows of input fields
-                                       ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
-                                           HStack(spacing: 15) {
-                                               ForEach(columnGroup, id: \.name) { column in
-                                                   if !skippedColumns.contains(column.name) {
-                                                       ColumnInputField(
-                                                           column: column,
-                                                           rowIndex: rowIndex,
-                                                           columnValues: $columnValues,
-                                                           expandedColumn: $expandedColumn,
-                                                           focusedField: _focusedField
-                                                       )
-                                                       .frame(maxWidth: .infinity)
-                                                   }
-                                               }
-                                           }
-                                       }
+                                    ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
+                                        List {
+                                            HStack(spacing: 15) {
+                                                ForEach(Array(columnGroup.enumerated()), id: \.element.name) { columnIndex, column in
+                                                    if !skippedColumns.contains(column.name) {
+                                                        ColumnInputField(
+                                                            column: column,
+                                                            rowIndex: rowIndex,
+                                                            columnGroup: columnGroup,
+                                                            columnIndex: columnIndex,
+                                                            totalRows: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                                            columnValues: $columnValues,
+                                                            expandedColumn: $expandedColumn,
+                                                            focusedField: _focusedField.projectedValue
+                                                        )
+                                                        .frame(maxWidth: .infinity)
+                                                    }
+                                                }
+                                            }
+                                        
+                                            .listRowBackground(Color.clear)
+                                            .listRowInsets(EdgeInsets())
+                                                   .listRowSeparator(.hidden) // Hides bottom divider
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                                Button(role: .destructive) {
+                                                    withAnimation {
+                                                        // Remove this row's values from all columns
+                                                        for column in columnGroup {
+                                                            if var values = columnValues[column.name] {
+                                                                values.remove(at: rowIndex)
+                                                                columnValues[column.name] = values
+                                                            }
+                                                        }
+                                                        
+                                                        // Update the row count
+                                                        let groupType = columnGroup.first?.groupingType ?? ""
+                                                        if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+                                                            groupedRowsCount[groupType] = currentCount - 1
+                                                        }
+                                                    }
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                                
+                                            }
+                                        }
+                                        .listStyle(PlainListStyle())
+                                        .frame(height: 44) // Adjust this height as needed
+                                    }
                                     // Add entry button
                                        Button(action: {
                                            // Add your logic here to create a new row of inputs
                                            withAnimation {
-                                                     let groupType = columnGroup.first?.groupingType ?? ""
-                                                     groupedRowsCount[groupType] = (groupedRowsCount[groupType] ?? 1) + 1
-                                                 }
+                                                  let groupType = columnGroup.first?.groupingType ?? ""
+                                                  let currentRowIndex = groupedRowsCount[groupType] ?? 1
+                                                  
+                                                  // For each column in the group, set the new row's value
+                                                  for column in columnGroup {
+                                                      if !skippedColumns.contains(column.name) {
+                                                          var values = columnValues[column.name] ?? []
+                                                          let lastValue = values.last
+                                                          
+                                                          // For number type, check if the first value was 1
+                                                          if column.type == "number",
+                                                             case .number(let firstNum) = values.first,
+                                                             firstNum == 1 {
+                                                              // Add next number in sequence
+                                                              values.append(.number(Double(values.count + 1)))
+                                                          } else {
+                                                              // For all other cases, add null value
+                                                              values.append(.null)
+                                                          }
+                                                          
+                                                          columnValues[column.name] = values
+                                                      }
+                                                  }
+                                                  
+                                                  groupedRowsCount[groupType] = currentRowIndex + 1
+                                              }
                                        }) {
                                            Text("Add Entry")
                                                .foregroundColor(.accentColor)
@@ -2076,7 +2134,7 @@ struct LogActivityView: View {
                                        .frame(maxWidth: .infinity)
                                        .padding(.top, 8)
                                 }
-                                .padding(.vertical, 5)
+                                .padding(.top, 5)
                             }
                         }
                         
@@ -2095,12 +2153,8 @@ struct LogActivityView: View {
                                     Text(formatDate(selectedDate))
                                         .foregroundColor(.accentColor)
                                 }
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 14)
                                 .padding(.horizontal)
-//                                .background(
-//                                    RoundedRectangle(cornerRadius: 12)
-//                                        .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-//                                )
                                 .background(Color("iosnp"))
                                 .cornerRadius(8)
                             }
@@ -2152,6 +2206,32 @@ struct LogActivityView: View {
                 }
                 .padding()
             }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Button("Clear") {
+                        if let focusedField = focusedField {
+                            let components = focusedField.split(separator: "_").map(String.init)
+                            if components.count == 2,
+                               let rowIndexInt = Int(components[1]) {
+                                let columnName = String(components[0])
+                                columnValues[columnName] = columnValues[columnName]?.enumerated().map { index, value in
+                                    index == rowIndexInt ? .string("") : value  // Change this line
+                                }
+                            }
+                        }
+                    }
+                    .foregroundColor(.accentColor)
+                    
+                    Spacer()
+                    
+                    Button("Done") {
+                        focusedField = nil
+                    }
+                    .foregroundColor(.accentColor)
+                    .fontWeight(.medium)
+                }
+            }
+  
             .background(Color("iosbg").edgesIgnoringSafeArea(.all)) // Apply background color
             .navigationTitle("Log Activity")
             .navigationBarTitleDisplayMode(.inline)
@@ -2164,9 +2244,11 @@ struct LogActivityView: View {
                 },
                 trailing: Button("Done") {
                     submitActivity()
+                    HapticFeedback.generateLigth()
                 }
                 .foregroundColor(Color.accentColor)
             )
+  
         }
     }
     
@@ -2208,24 +2290,40 @@ struct LogActivityView: View {
         return 0
     }
 
+
     private func submitActivity() {
         isSubmitting = true
-        // Convert array values back to single values for API
-           var apiColumnValues: [String: ColumnValue] = [:]
-           for (key, values) in columnValues {
-               if let firstValue = values.first {
-                   apiColumnValues[key] = firstValue
-               }
-           }
+        
+        var apiColumnValues: [String: ColumnValue] = [:]
+        
+        for column in podColumns {
+            guard !skippedColumns.contains(column.name) else { continue }
+            
+            if column.groupingType == "grouped" {
+                if let values = columnValues[column.name] {
+                    // For grouped columns, store as JSON string
+                    let jsonArray = values.map { $0.description }
+                    if let jsonData = try? JSONSerialization.data(withJSONObject: jsonArray),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                        apiColumnValues[column.name] = .string(jsonString)
+                    }
+                }
+            } else {
+                // For singular columns, take first value as before
+                if let firstValue = columnValues[column.name]?.first {
+                    apiColumnValues[column.name] = firstValue
+                }
+            }
+        }
         
         NetworkManager().createActivityLog(
             itemId: item.id,
             podId: podId,
             userEmail: viewModel.email,
             columnValues: apiColumnValues,
-            podColumns: podColumns.filter { !skippedColumns.contains($0.name) },
+            podColumns: podColumns,
             notes: activityNote,
-            loggedAt: selectedDate  // Add this line
+            loggedAt: selectedDate
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
@@ -2247,7 +2345,7 @@ struct ColumnInputView: View {
     let column: PodColumn
     @Binding var columnValues: [String: [ColumnValue]]
     @Binding var expandedColumn: String?
-    @FocusState var focusedField: String?
+    let focusedField: FocusState<String?>.Binding
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -2261,10 +2359,13 @@ struct ColumnInputView: View {
             
             ColumnInputField(
                 column: column,
-                rowIndex: 0, // Single row for non-grouped columns
+                rowIndex: 0,
+                columnGroup: [column], // Single column group for non-grouped columns
+                columnIndex: 0,
+                totalRows: 1,
                 columnValues: $columnValues,
                 expandedColumn: $expandedColumn,
-                focusedField: _focusedField
+                focusedField: focusedField
             )
         }
     }
@@ -2273,9 +2374,14 @@ struct ColumnInputView: View {
 struct ColumnInputField: View {
     let column: PodColumn
     let rowIndex: Int
+    let columnGroup: [PodColumn] // Add this to know about all columns in the row
+      let columnIndex: Int // Add this to know current column position
+      let totalRows: Int
     @Binding var columnValues: [String: [ColumnValue]]
     @Binding var expandedColumn: String?
-    @FocusState var focusedField: String?
+    let focusedField: FocusState<String?>.Binding
+    
+
     
     var body: some View {
         Group {
@@ -2286,7 +2392,8 @@ struct ColumnInputField: View {
                 ))
                 .multilineTextAlignment(.center)
                 .textFieldStyle(PlainTextFieldStyle())
-            } else if column.type == "number" {
+            } // In ColumnInputField's body view, replace the number TextField section:
+            else if column.type == "number" {
                 TextField("", text: Binding(
                     get: { stringValue(for: column.name, rowIndex: rowIndex) },
                     set: { newValue in
@@ -2295,10 +2402,11 @@ struct ColumnInputField: View {
                         }
                     }
                 ))
-                .focused($focusedField, equals: column.name)
+                .focused(focusedField, equals: "\(column.name)_\(rowIndex)")
                 .keyboardType(.decimalPad)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(columnGroup.count > 1 ? .center : .leading)
                 .textFieldStyle(PlainTextFieldStyle())
+
             } else if column.type == "time" {
                 Button(action: {
                     withAnimation {
@@ -2319,7 +2427,7 @@ struct ColumnInputField: View {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, columnGroup.count > 1 ? 10 : 12)
         .padding(.horizontal)
         .background(Color("iosnp"))
         .cornerRadius(8)

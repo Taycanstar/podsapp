@@ -3354,39 +3354,100 @@ class NetworkManager {
       }
 
 
+//    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, loggedAt: Date, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let serializedColumnData = podColumns.compactMap { column -> [String: Any]? in
+//            guard let value = columnValues[column.name] else { return nil }
+//            
+//            let serializedValue: Any
+//            switch value {
+//            case .string(let str):
+//                serializedValue = str
+//            case .number(let num):
+//                serializedValue = num
+//            case .time(let timeValue):
+//                    serializedValue = timeValue.toString
+//            case .null:
+//                serializedValue = NSNull()
+//            }
+//            
+//            return [
+//                "name": column.name,
+//                "type": column.type,
+//                "value": serializedValue
+//            ]
+//        }
+//
+//        let body: [String: Any] = [
+//            "itemId": itemId,
+//            "podId": podId,
+//            "userEmail": userEmail,
+//            "columnData": serializedColumnData,
+//            "notes": notes,
+//            "loggedAt": loggedAt.ISO8601Format()
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error: \(error.localizedDescription)")
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let data = data else {
+//                print("No data received from server")
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//
+//            do {
+//                let decoder = JSONDecoder()
+//                let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
+//                let activityLog = try PodItemActivityLog(from: logJSON)
+//                completion(.success(activityLog))
+//            } catch {
+//                print("JSON parsing error: \(error.localizedDescription)")
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
+    
     func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, loggedAt: Date, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
 
-        let serializedColumnData = podColumns.compactMap { column -> [String: Any]? in
-            guard let value = columnValues[column.name] else { return nil }
-            
-            let serializedValue: Any
-            switch value {
-            case .string(let str):
-                serializedValue = str
-            case .number(let num):
-                serializedValue = num
-            case .time(let timeValue):
-                    serializedValue = timeValue.toString
-            case .null:
-                serializedValue = NSNull()
+        // Convert ColumnValue to serializable dictionary
+        let serializedColumnValues = columnValues.mapValues { columnValue -> Any in
+            switch columnValue {
+            case .string(let str): return str
+            case .number(let num): return num
+            case .time(let timeValue): return timeValue.toString
+            case .null: return NSNull()
             }
-            
-            return [
-                "name": column.name,
-                "type": column.type,
-                "value": serializedValue
-            ]
         }
 
         let body: [String: Any] = [
             "itemId": itemId,
             "podId": podId,
             "userEmail": userEmail,
-            "columnData": serializedColumnData,
+            "columnValues": serializedColumnValues,
             "notes": notes,
             "loggedAt": loggedAt.ISO8601Format()
         ]
@@ -3398,6 +3459,7 @@ class NetworkManager {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
+            print("Serialization error:", error)
             completion(.failure(NetworkError.encodingError))
             return
         }
@@ -3422,11 +3484,13 @@ class NetworkManager {
                 completion(.success(activityLog))
             } catch {
                 print("JSON parsing error: \(error.localizedDescription)")
+                if let dataString = String(data: data, encoding: .utf8) {
+                    print("Received data:", dataString)
+                }
                 completion(.failure(error))
             }
         }.resume()
     }
-    
     func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
             guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
                 completion(false, NSError(domain: "ConfigurationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No container name found."]))
@@ -4096,6 +4160,50 @@ class NetworkManager {
             } catch {
                 print("Decoding error: \(error)")
                 completion(.failure(error))
+            }
+        }.resume()
+    }
+    func updateColumnOrder(podId: Int, columnOrder: [String], completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/update-column-order/\(podId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = [
+            "columns": columnOrder
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            switch httpResponse.statusCode {
+            case 200:
+                completion(.success(()))
+            default:
+                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
             }
         }.resume()
     }
