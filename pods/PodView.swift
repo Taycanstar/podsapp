@@ -1301,8 +1301,7 @@ struct CardDetailView: View {
 
     @Binding var visibleColumns: [String]
     @State private var hasUnsavedChanges = false
-    
-    @State private var columnVariants: [String] = []
+
 
 
     @State private var groupedRowsCount: [String: Int] = [:]
@@ -1328,6 +1327,7 @@ struct CardDetailView: View {
                 initialColumnValues[column.name] = ""
             }
         }
+
 
         self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
@@ -1466,7 +1466,37 @@ struct CardDetailView: View {
                     
                 }
 
-                
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button("Clear") {
+                            if let focusedField = focusedField {
+                                let components = focusedField.split(separator: "_").map(String.init)
+                                if components.count == 2,
+                                   let rowIndexInt = Int(components[1]) {
+                                    // For grouped columns
+                                    let columnName = String(components[0])
+                                    var values = columnValues[columnName]?.components(separatedBy: ",") ?? []
+                                    if rowIndexInt < values.count {
+                                        values[rowIndexInt] = ""
+                                        columnValues[columnName] = values.joined(separator: ",")
+                                    }
+                                } else {
+                                    // For singular columns - just clear the value directly
+                                    columnValues[focusedField] = ""
+                                }
+                            }
+                        }
+                        .foregroundColor(.accentColor)
+                        
+                        Spacer()
+                        
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        .foregroundColor(.accentColor)
+                        .fontWeight(.medium)
+                    }
+                }
                 .navigationBarItems(
                             leading: Button(action: {
                                 // Simply dismiss without saving
@@ -1591,6 +1621,7 @@ private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: 
                 columnValues.wrappedValue[column.name] = values.joined(separator: ",")
             }
         ))
+        .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
         .textFieldStyle(PlainTextFieldStyle())
         .padding(.vertical, 12)
         .padding(.horizontal)
@@ -1608,6 +1639,7 @@ private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: 
                 columnValues.wrappedValue[column.name] = values.joined(separator: ",")
             }
         ))
+        .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
         .keyboardType(.decimalPad)
         .textFieldStyle(PlainTextFieldStyle())
         .padding(.vertical, 12)
