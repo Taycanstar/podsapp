@@ -160,6 +160,8 @@ struct MediaPreview: View {
                                               DispatchQueue.main.async {
                                                   cameraModel.configureSessionFor(mode: cameraModel.selectedCameraMode)
                                               }
+                          
+
                                   }) {
                                       Image(systemName: "checkmark")
                                           .foregroundColor(.black)

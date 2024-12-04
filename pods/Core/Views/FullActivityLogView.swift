@@ -165,6 +165,18 @@ struct FullActivityLogView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+//    private func valueString(for value: ColumnValue) -> String {
+//        switch value {
+//        case .string(let str):
+//            return str
+//        case .number(let num):
+//            return "\(num)"
+//        case .time(let timeValue):
+//                return timeValue.toString
+//        case .null:
+//            return "" // This case should never be reached due to the filter
+//        }
+//    }
     private func valueString(for value: ColumnValue) -> String {
         switch value {
         case .string(let str):
@@ -172,11 +184,15 @@ struct FullActivityLogView: View {
         case .number(let num):
             return "\(num)"
         case .time(let timeValue):
-                return timeValue.toString
+            return timeValue.toString
+        case .array(let array):
+            return array.map { $0.description }.joined(separator: ", ")
         case .null:
-            return "" // This case should never be reached due to the filter
+            return ""
         }
     }
+
+
     
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()

@@ -17,9 +17,9 @@ class NetworkManager {
 //  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-    let baseUrl = "http://192.168.1.79:8000"
+//    let baseUrl = "http://192.168.1.79:8000"
 
-//    let baseUrl = "http://172.20.10.3:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -2173,7 +2173,72 @@ class NetworkManager {
     }
 
     
-    func updatePodItemColumnValue(itemId: Int, columnName: String, value: ColumnValue, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//    func updatePodItemColumnValue(itemId: Int, columnName: String, value: ColumnValue, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/update-column-value/\(itemId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let jsonValue: Any
+//        switch value {
+//        case .string(let stringValue):
+//            jsonValue = stringValue
+//        case .number(let numberValue):
+//            jsonValue = numberValue
+//        case .time(let timeValue):
+//                jsonValue = timeValue.toString
+//        case .null:
+//            jsonValue = NSNull()
+//        }
+//
+//        let body: [String: Any] = [
+//            "column_name": columnName,
+//            "value": jsonValue,
+//            "user_email": userEmail
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                completion(.failure(NetworkError.invalidResponse))
+//                return
+//            }
+//
+//            switch httpResponse.statusCode {
+//            case 200:
+//                completion(.success(()))
+//            default:
+//                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                    completion(.failure(NetworkError.serverError(errorMessage)))
+//                } else {
+//                    completion(.failure(NetworkError.unknownError))
+//                }
+//            }
+//        }.resume()
+//    }
+    
+    func updatePodItemColumnValue(
+        itemId: Int,
+        columnName: String,
+        value: ColumnValue,
+        userEmail: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
         guard let url = URL(string: "\(baseUrl)/update-column-value/\(itemId)/") else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -2184,9 +2249,25 @@ class NetworkManager {
         case .string(let stringValue):
             jsonValue = stringValue
         case .number(let numberValue):
-            jsonValue = numberValue
+            jsonValue = "\(numberValue)" // Convert Double to String
         case .time(let timeValue):
-                jsonValue = timeValue.toString
+            jsonValue = timeValue.toString
+        case .array(let arrayValue):
+            // Convert array to a JSON-compatible format (array of strings)
+            jsonValue = arrayValue.map { element in
+                switch element {
+                case .string(let str):
+                    return str
+                case .number(let num):
+                    return "\(num)" // Convert Double to String
+                case .time(let timeValue):
+                    return timeValue.toString
+                case .null:
+                    return "" // Represent null values as empty strings
+                case .array:
+                    return "" // Nested arrays are not supported in this example
+                }
+            }
         case .null:
             jsonValue = NSNull()
         }
@@ -2231,7 +2312,8 @@ class NetworkManager {
             }
         }.resume()
     }
-//
+
+
 
 //    func createPodItem(podId: Int, label: String, itemType: String?, notes: String, defaultColumnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
 //        guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
@@ -2246,7 +2328,7 @@ class NetworkManager {
 //            "defaultColumnValues": defaultColumnValues.mapValues { value -> Any in
 //                switch value {
 //                case .string(let str): return str
-//                case .number(let num): return num
+//                case .number(let num): return num  // This will automatically handle Double
 //                case .time(let timeValue): return timeValue.toString
 //                case .null: return NSNull()
 //                }
@@ -2294,14 +2376,14 @@ class NetworkManager {
 //                        let notes = itemData["notes"] as? String ?? ""
 //                        let defaultColumnValues = (itemData["defaultColumnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
 //                            if let stringValue = value as? String {
-////                                return .string(stringValue)
-//                                // Try to parse as time first if it matches the format
-//                                                       if let timeValue = TimeValue.fromString(stringValue) {
-//                                                           return .time(timeValue)
-//                                                       }
-//                                                       return .string(stringValue)
+//                                if let timeValue = TimeValue.fromString(stringValue) {
+//                                    return .time(timeValue)
+//                                }
+//                                return .string(stringValue)
+//                            } else if let doubleValue = value as? Double {
+//                                return .number(doubleValue)
 //                            } else if let intValue = value as? Int {
-//                                return .number(intValue)
+//                                return .number(Double(intValue))  // Convert Int to Double
 //                            } else if value is NSNull {
 //                                return .null
 //                            }
@@ -2324,24 +2406,26 @@ class NetworkManager {
 //            }
 //        }.resume()
 //    }
-    func createPodItem(podId: Int, label: String, itemType: String?, notes: String, defaultColumnValues: [String: ColumnValue], completion: @escaping (Result<PodItem, Error>) -> Void) {
+    
+    func createPodItem(
+        podId: Int,
+        label: String,
+        itemType: String?,
+        notes: String,
+        defaultColumnValues: [String: ColumnValue],
+        completion: @escaping (Result<PodItem, Error>) -> Void
+    ) {
         guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
 
+        // Map ColumnValue to a JSON-compatible structure
         let body: [String: Any] = [
             "label": label,
             "notes": notes,
             "itemType": itemType ?? "",
-            "defaultColumnValues": defaultColumnValues.mapValues { value -> Any in
-                switch value {
-                case .string(let str): return str
-                case .number(let num): return num  // This will automatically handle Double
-                case .time(let timeValue): return timeValue.toString
-                case .null: return NSNull()
-                }
-            }
+            "defaultColumnValues": defaultColumnValues.mapValues { mapColumnValueToJSON($0) }
         ]
 
         print("Request body: \(body)")
@@ -2393,13 +2477,22 @@ class NetworkManager {
                                 return .number(doubleValue)
                             } else if let intValue = value as? Int {
                                 return .number(Double(intValue))  // Convert Int to Double
+                            } else if let arrayValue = value as? [Any] {
+                                return .array(arrayValue.compactMap { self.mapJSONToColumnValue($0) })
                             } else if value is NSNull {
                                 return .null
                             }
                             return nil
                         } ?? [:]
                         
-                        let newItem = PodItem(id: id, metadata: label, itemType: itemType, notes: notes, defaultColumnValues: defaultColumnValues, userColumnValues: nil)
+                        let newItem = PodItem(
+                            id: id,
+                            metadata: label,
+                            itemType: itemType,
+                            notes: notes,
+                            defaultColumnValues: defaultColumnValues,
+                            userColumnValues: nil
+                        )
                         completion(.success(newItem))
                     } else {
                         print("Failed to parse item data")
@@ -2415,6 +2508,101 @@ class NetworkManager {
             }
         }.resume()
     }
+
+    // Helper function to map ColumnValue to a JSON-compatible format
+    private func mapColumnValueToJSON(_ value: ColumnValue) -> Any {
+        switch value {
+        case .number(let num):
+            return num
+        case .string(let str):
+            return str
+        case .time(let timeValue):
+            return timeValue.toString
+        case .array(let array):
+            return array.map { mapColumnValueToJSON($0) }
+        case .null:
+            return NSNull()
+        }
+    }
+
+    // Helper function to map JSON back to ColumnValue
+    private func mapJSONToColumnValue(_ value: Any) -> ColumnValue? {
+        if let stringValue = value as? String {
+            if let timeValue = TimeValue.fromString(stringValue) {
+                return .time(timeValue)
+            }
+            return .string(stringValue)
+        } else if let doubleValue = value as? Double {
+            return .number(doubleValue)
+        } else if let intValue = value as? Int {
+            return .number(Double(intValue))  // Convert Int to Double
+        } else if let arrayValue = value as? [Any] {
+            return .array(arrayValue.compactMap { mapJSONToColumnValue($0) })
+        } else if value is NSNull {
+            return .null
+        }
+        return nil
+    }
+
+
+
+    
+//    func updatePodItem(itemId: Int, newLabel: String, newNotes: String, newColumnValues: [String: ColumnValue], userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/update-pod-item/\(itemId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let columnValuesJson = newColumnValues.mapValues { value -> Any in
+//            switch value {
+//            case .string(let str): return str
+//            case .number(let num): return num
+//            case .time(let timeValue): return timeValue.toString
+//            case .null: return NSNull()
+//            }
+//        }
+//
+//        let body: [String: Any] = [
+//            "label": newLabel,
+//            "notes": newNotes,
+//            "columnValues": columnValuesJson,
+//            "user_email": userEmail
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "PUT"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                completion(.failure(NetworkError.invalidResponse))
+//                return
+//            }
+//
+//            switch httpResponse.statusCode {
+//            case 200:
+//                completion(.success(()))
+//            default:
+//                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                    completion(.failure(NetworkError.serverError(errorMessage)))
+//                } else {
+//                    completion(.failure(NetworkError.unknownError))
+//                }
+//            }
+//        }.resume()
+//    }
     
     func updatePodItem(itemId: Int, newLabel: String, newNotes: String, newColumnValues: [String: ColumnValue], userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/update-pod-item/\(itemId)/") else {
@@ -2424,10 +2612,16 @@ class NetworkManager {
 
         let columnValuesJson = newColumnValues.mapValues { value -> Any in
             switch value {
-            case .string(let str): return str
-            case .number(let num): return num
-            case .time(let timeValue): return timeValue.toString
-            case .null: return NSNull()
+            case .string(let str):
+                return str
+            case .number(let num):
+                return num
+            case .time(let timeValue):
+                return timeValue.toString
+            case .array(let array):
+                return array.map { $0.description } // Convert array elements to strings
+            case .null:
+                return NSNull()
             }
         }
 
@@ -2472,52 +2666,99 @@ class NetworkManager {
             }
         }.resume()
     }
+
     
+//    func addColumnToPod(podId: Int, columnName: String, columnType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//           guard let url = URL(string: "\(baseUrl)/add-column-to-pod/\(podId)/") else {
+//               completion(.failure(NetworkError.invalidURL))
+//               return
+//           }
+//
+//           let body: [String: Any] = [
+//               "name": columnName,
+//               "type": columnType
+//           ]
+//
+//           var request = URLRequest(url: url)
+//           request.httpMethod = "POST"
+//           request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//           do {
+//               request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//           } catch {
+//               completion(.failure(NetworkError.encodingError))
+//               return
+//           }
+//
+//           URLSession.shared.dataTask(with: request) { data, response, error in
+//               if let error = error {
+//                   completion(.failure(error))
+//                   return
+//               }
+//
+//               guard let httpResponse = response as? HTTPURLResponse else {
+//                   completion(.failure(NetworkError.invalidResponse))
+//                   return
+//               }
+//
+//               switch httpResponse.statusCode {
+//               case 200:
+//                   completion(.success(()))
+//               default:
+//                   if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                       completion(.failure(NetworkError.serverError(errorMessage)))
+//                   } else {
+//                       completion(.failure(NetworkError.unknownError))
+//                   }
+//               }
+//           }.resume()
+//       }
     func addColumnToPod(podId: Int, columnName: String, columnType: String, completion: @escaping (Result<Void, Error>) -> Void) {
-           guard let url = URL(string: "\(baseUrl)/add-column-to-pod/\(podId)/") else {
-               completion(.failure(NetworkError.invalidURL))
-               return
-           }
+        guard let url = URL(string: "\(baseUrl)/add-column-to-pod/\(podId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
 
-           let body: [String: Any] = [
-               "name": columnName,
-               "type": columnType
-           ]
+        let body: [String: Any] = [
+            "name": columnName,
+            "type": columnType
+        ]
 
-           var request = URLRequest(url: url)
-           request.httpMethod = "POST"
-           request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-           do {
-               request.httpBody = try JSONSerialization.data(withJSONObject: body)
-           } catch {
-               completion(.failure(NetworkError.encodingError))
-               return
-           }
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
 
-           URLSession.shared.dataTask(with: request) { data, response, error in
-               if let error = error {
-                   completion(.failure(error))
-                   return
-               }
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
 
-               guard let httpResponse = response as? HTTPURLResponse else {
-                   completion(.failure(NetworkError.invalidResponse))
-                   return
-               }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
 
-               switch httpResponse.statusCode {
-               case 200:
-                   completion(.success(()))
-               default:
-                   if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
-                       completion(.failure(NetworkError.serverError(errorMessage)))
-                   } else {
-                       completion(.failure(NetworkError.unknownError))
-                   }
-               }
-           }.resume()
-       }
+            switch httpResponse.statusCode {
+            case 200:
+                completion(.success(()))
+            default:
+                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
+            }
+        }.resume()
+    }
+
     
     func deleteColumnFromPod(podId: Int, columnName: String, completion: @escaping (Result<Void, Error>) -> Void) {
            guard let url = URL(string: "\(baseUrl)/delete-column-from-pod/\(podId)/") else {
@@ -3427,7 +3668,80 @@ class NetworkManager {
 //        }.resume()
 //    }
     
-    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, loggedAt: Date, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
+//    func createActivityLog(itemId: Int, podId: Int, userEmail: String, columnValues: [String: ColumnValue], podColumns: [PodColumn], notes: String, loggedAt: Date, completion: @escaping (Result<PodItemActivityLog, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        // Convert ColumnValue to serializable dictionary
+//        let serializedColumnValues = columnValues.mapValues { columnValue -> Any in
+//            switch columnValue {
+//            case .string(let str): return str
+//            case .number(let num): return num
+//            case .time(let timeValue): return timeValue.toString
+//            case .null: return NSNull()
+//            }
+//        }
+//
+//        let body: [String: Any] = [
+//            "itemId": itemId,
+//            "podId": podId,
+//            "userEmail": userEmail,
+//            "columnValues": serializedColumnValues,
+//            "notes": notes,
+//            "loggedAt": loggedAt.ISO8601Format()
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            print("Serialization error:", error)
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error: \(error.localizedDescription)")
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let data = data else {
+//                print("No data received from server")
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//
+//            do {
+//                let decoder = JSONDecoder()
+//                let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
+//                let activityLog = try PodItemActivityLog(from: logJSON)
+//                completion(.success(activityLog))
+//            } catch {
+//                print("JSON parsing error: \(error.localizedDescription)")
+//                if let dataString = String(data: data, encoding: .utf8) {
+//                    print("Received data:", dataString)
+//                }
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
+    func createActivityLog(
+        itemId: Int,
+        podId: Int,
+        userEmail: String,
+        columnValues: [String: ColumnValue],
+        podColumns: [PodColumn],
+        notes: String,
+        loggedAt: Date,
+        completion: @escaping (Result<PodItemActivityLog, Error>) -> Void
+    ) {
         guard let url = URL(string: "\(baseUrl)/create-activity-log/") else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -3436,10 +3750,30 @@ class NetworkManager {
         // Convert ColumnValue to serializable dictionary
         let serializedColumnValues = columnValues.mapValues { columnValue -> Any in
             switch columnValue {
-            case .string(let str): return str
-            case .number(let num): return num
-            case .time(let timeValue): return timeValue.toString
-            case .null: return NSNull()
+            case .string(let str):
+                return str
+            case .number(let num):
+                return num as Any // Explicitly cast as Any
+            case .time(let timeValue):
+                return timeValue.toString
+            case .array(let array):
+                // Serialize array elements to JSON-compatible types
+                return array.map { element -> Any in
+                    switch element {
+                    case .string(let str):
+                        return str
+                    case .number(let num):
+                        return num as Any // Explicitly cast as Any
+                    case .time(let timeValue):
+                        return timeValue.toString
+                    case .null:
+                        return NSNull()
+                    case .array:
+                        return NSNull() // Nested arrays unsupported
+                    }
+                }
+            case .null:
+                return NSNull()
             }
         }
 
@@ -3451,6 +3785,8 @@ class NetworkManager {
             "notes": notes,
             "loggedAt": loggedAt.ISO8601Format()
         ]
+
+        print("Request body: \(body)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -3491,40 +3827,77 @@ class NetworkManager {
             }
         }.resume()
     }
+
+
+//    func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
+//            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+//                completion(false, NSError(domain: "ConfigurationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No container name found."]))
+//                return
+//            }
+//
+//            let blobName = UUID().uuidString + (mediaType == "video" ? ".mp4" : ".jpg")
+//            let contentType = mediaType == "video" ? "video/mp4" : "image/jpeg"
+//
+//            var fileData: Data?
+//            if let mediaURL = mediaURL, mediaType == "video" {
+//                do {
+//                    fileData = try Data(contentsOf: mediaURL)
+//                } catch {
+//                    completion(false, error)
+//                    return
+//                }
+//            } else if let image = image, mediaType == "image" {
+//                fileData = image.jpegData(compressionQuality: 0.8)
+//            }
+//
+//            guard let data = fileData else {
+//                completion(false, NSError(domain: "DataError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare file data."]))
+//                return
+//            }
+//
+//            uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: data, contentType: contentType) { success, blobUrl in
+//                if success, let url = blobUrl {
+//                    self.updateItemWithMediaUrl(podId: podId, itemId: itemId, mediaType: mediaType, mediaUrl: url, completion: completion)
+//                } else {
+//                    completion(false, NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to upload media to Azure Blob."]))
+//                }
+//            }
+//        }
+    
     func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
-            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-                completion(false, NSError(domain: "ConfigurationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No container name found."]))
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+            completion(false, NSError(domain: "ConfigurationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No container name found."]))
+            return
+        }
+
+        let blobName = UUID().uuidString + (mediaType == "video" ? ".mp4" : ".jpg")
+        let contentType = mediaType == "video" ? "video/mp4" : "image/jpeg"
+
+        var fileData: Data?
+        if let mediaURL = mediaURL, mediaType == "video" {
+            do {
+                fileData = try Data(contentsOf: mediaURL)
+            } catch {
+                completion(false, error)
                 return
             }
+        } else if let image = image, mediaType == "image" {
+            fileData = image.jpegData(compressionQuality: 0.8)
+        }
 
-            let blobName = UUID().uuidString + (mediaType == "video" ? ".mp4" : ".jpg")
-            let contentType = mediaType == "video" ? "video/mp4" : "image/jpeg"
+        guard let data = fileData else {
+            completion(false, NSError(domain: "DataError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare file data."]))
+            return
+        }
 
-            var fileData: Data?
-            if let mediaURL = mediaURL, mediaType == "video" {
-                do {
-                    fileData = try Data(contentsOf: mediaURL)
-                } catch {
-                    completion(false, error)
-                    return
-                }
-            } else if let image = image, mediaType == "image" {
-                fileData = image.jpegData(compressionQuality: 0.8)
-            }
-
-            guard let data = fileData else {
-                completion(false, NSError(domain: "DataError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare file data."]))
-                return
-            }
-
-            uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: data, contentType: contentType) { success, blobUrl in
-                if success, let url = blobUrl {
-                    self.updateItemWithMediaUrl(podId: podId, itemId: itemId, mediaType: mediaType, mediaUrl: url, completion: completion)
-                } else {
-                    completion(false, NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to upload media to Azure Blob."]))
-                }
+        uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: data, contentType: contentType) { success, blobUrl in
+            if success, let url = blobUrl {
+                self.updateItemWithMediaUrl(podId: podId, itemId: itemId, mediaType: mediaType, mediaUrl: url, completion: completion)
+            } else {
+                completion(false, NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to upload media to Azure Blob."]))
             }
         }
+    }
 
         private func updateItemWithMediaUrl(podId: Int, itemId: Int, mediaType: String, mediaUrl: String, completion: @escaping (Bool, Error?) -> Void) {
             let urlString = "\(baseUrl)/add-media-to-item/\(podId)/\(itemId)/"
@@ -4089,7 +4462,86 @@ class NetworkManager {
      
     }
     
-    func sendMessageToGracie(message: String, activityLogs: [PodItemActivityLog], completion: @escaping (Result<String, Error>) -> Void) {
+//    func sendMessageToGracie(message: String, activityLogs: [PodItemActivityLog], completion: @escaping (Result<String, Error>) -> Void) {
+//        let urlString = "\(baseUrl)/gracie-chat/"
+//        
+//        guard let url = URL(string: urlString) else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//        
+//        // Convert activity logs to a serializable format
+//        let logsData = activityLogs.map { log -> [String: Any] in
+//            let serializedColumnValues = log.columnValues.mapValues { columnValue -> Any in
+//                switch columnValue {
+//                case .string(let str):
+//                    return str
+//                case .number(let num):
+//                    return num
+//                case .time(let timeValue):
+//                    return timeValue.toString
+//                case .null:
+//                    return NSNull()
+//                }
+//            }
+//            
+//            return [
+//                "id": log.id,
+//                "itemId": log.itemId,
+//                "itemLabel": log.itemLabel,
+//                "userEmail": log.userEmail,
+//                "userName": log.userName,
+//                "loggedAt": ISO8601DateFormatter().string(from: log.loggedAt),
+//                "columnValues": serializedColumnValues,
+//                "notes": log.notes
+//            ]
+//        }
+//        
+//        let payload: [String: Any] = [
+//            "message": message,
+//            "activity_logs": logsData
+//        ]
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//        
+//        do {
+//            let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+//            request.httpBody = jsonData
+//        } catch {
+//            print("JSON serialization error: \(error)")
+//            completion(.failure(error))
+//            return
+//        }
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//            
+//            guard let data = data else {
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//            
+//            do {
+//                let decoder = JSONDecoder()
+//                let response = try decoder.decode(GracieResponse.self, from: data)
+//                completion(.success(response.response))
+//            } catch {
+//                print("Decoding error: \(error)")
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
+    
+    func sendMessageToGracie(
+        message: String,
+        activityLogs: [PodItemActivityLog],
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
         let urlString = "\(baseUrl)/gracie-chat/"
         
         guard let url = URL(string: urlString) else {
@@ -4104,11 +4556,27 @@ class NetworkManager {
                 case .string(let str):
                     return str
                 case .number(let num):
-                    return num
+                    return num // Keep numbers as `Double` for JSON compatibility
                 case .time(let timeValue):
                     return timeValue.toString
+                case .array(let array):
+                    // Map array elements to their serializable values
+                    return array.map { columnValue -> Any in
+                        switch columnValue {
+                        case .string(let str):
+                            return str
+                        case .number(let num):
+                            return num.description  // Convert to string since we're dealing with strings
+                        case .time(let timeValue):
+                            return timeValue.toString
+                        case .array(_):  // Handle nested arrays (though we shouldn't have any)
+                            return "Nested Array"
+                        case .null:
+                            return ""
+                        }
+                    }
                 case .null:
-                    return NSNull()
+                    return "" // Treat null values as empty strings for JSON compatibility
                 }
             }
             
@@ -4163,9 +4631,61 @@ class NetworkManager {
             }
         }.resume()
     }
+
+
+
+//    func updateColumnOrder(podId: Int, columnOrder: [String], completion: @escaping (Result<Void, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/update-column-order/\(podId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "columns": columnOrder
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                completion(.failure(NetworkError.invalidResponse))
+//                return
+//            }
+//
+//            switch httpResponse.statusCode {
+//            case 200:
+//                completion(.success(()))
+//            default:
+//                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                    completion(.failure(NetworkError.serverError(errorMessage)))
+//                } else {
+//                    completion(.failure(NetworkError.unknownError))
+//                }
+//            }
+//        }.resume()
+//    }
     func updateColumnOrder(podId: Int, columnOrder: [String], completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/update-column-order/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        guard !columnOrder.isEmpty else {
+            completion(.failure(NetworkError.invalidResponse))
             return
         }
 
@@ -4207,7 +4727,7 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
     func updatePodColumns(podId: Int, columns: [PodColumn], visibleColumns: [String], completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/update-pod-columns/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))

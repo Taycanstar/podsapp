@@ -462,7 +462,7 @@ struct PodView: View {
                     self.currentDescription = fullPod.description ?? ""
                     self.currentInstructions = fullPod.instructions ?? ""
                     self.currentType = fullPod.type ?? ""
-                    print("Pod details fetched successfully!")
+                    print("Pod details :", fullPod.items[7])
                     
                     // Wait for at least the first video to be preloaded
 //                    self.waitForInitialPreload()
@@ -670,31 +670,7 @@ struct PodView: View {
         }
     }
 
-    
-//    private func columnView(name: String, item: PodItem) -> some View {
-//        let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
-//        return VStack {
-//            switch value {
-//            case .string(let stringValue):
-//                Text("\(stringValue) \(name)")
-//                    .font(.system(size: 14))
-//            case .number(let numberValue):
-//                Text("\(numberValue) \(name)")
-//                    .font(.system(size: 14))
-//            case .time(let timeValue):
-//                        Text("\(timeValue.toString) \(name)")
-//                            .font(.system(size: 14))
-//            case .null:
-//                Text(name)
-//                    .font(.system(size: 14))
-//            }
-//        }
-//        .padding(.horizontal,6)
-//        .padding(.vertical,4)
-//        .cornerRadius(4)
-//        .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
-//        .cornerRadius(4)
-//    }
+
     private func columnView(name: String, item: PodItem) -> some View {
         let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
         return VStack {
@@ -1013,16 +989,7 @@ struct PodViewHeaderSection: View {
                 }
                 .padding()
                 
-                // View/Filter/Search section
-//                HStack(spacing: 10) {
-//                    viewSection
-//                    filterSection
-//                    Spacer()
-//                    searchSection
-//                }
-//                .padding(.horizontal)
-//                .padding(.top, 10)
-//                .padding(.bottom, 15)
+
             }
             .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
         }
@@ -1279,7 +1246,7 @@ struct CardDetailView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
     @State private var itemName: String
-    @State private var columnValues: [String: String]
+    @State private var columnValues: [String: ColumnValue]
     let networkManager: NetworkManager
     @State private var showAddColumn = false
     @State private var showItemOptions = false
@@ -1304,6 +1271,7 @@ struct CardDetailView: View {
 
 
 
+
     @State private var groupedRowsCount: [String: Int] = [:]
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
             let groupedColumns = columns.filter { $0.groupingType == "grouped" }
@@ -1311,29 +1279,49 @@ struct CardDetailView: View {
             return [groupedColumns, singularColumns].filter { !$0.isEmpty }
         }
     
-    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager,  allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
+    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
         self._podColumns = podColumns
         self.networkManager = networkManager
         self._allItems = allItems
-        
-        var initialColumnValues: [String: String] = [:]
-
-        for column in podColumns.wrappedValue {
-            if let value = item.wrappedValue.columnValues?[column.name] {
-                initialColumnValues[column.name] = value.description
-            } else {
-                initialColumnValues[column.name] = ""
-            }
-        }
-
-
-        self._columnValues = State(initialValue: initialColumnValues)
         self.podId = podId
         self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
         self._visibleColumns = visibleColumns
+
+        var initialColumnValues: [String: ColumnValue] = [:]
+        var initialGroupedRowsCount: [String: Int] = [:]
+
+        for column in podColumns.wrappedValue {
+            if let value = item.wrappedValue.columnValues?[column.name] {
+                if column.groupingType == "grouped" {
+                    if case .array(let columnValues) = value {
+                        initialColumnValues[column.name] = .array(columnValues)
+                        initialGroupedRowsCount[column.groupingType ?? ""] = columnValues.count
+                    } else {
+                        // If value is not an array, wrap it in an array
+                        initialColumnValues[column.name] = .array([value])
+                        initialGroupedRowsCount[column.groupingType ?? ""] = 1
+                    }
+                } else {
+                    initialColumnValues[column.name] = value
+                }
+            } else {
+                initialColumnValues[column.name] = .null
+                if column.groupingType == "grouped" {
+                    initialGroupedRowsCount[column.groupingType ?? ""] = 0
+                }
+            }
+        }
+        
+
+
+        self._columnValues = State(initialValue: initialColumnValues)
+        self._groupedRowsCount = State(initialValue: initialGroupedRowsCount)
+        
+        
     }
+
     
     var body: some View {
         ZStack {
@@ -1345,97 +1333,51 @@ struct CardDetailView: View {
                     ScrollView {
                         
                         VStack(alignment: .leading, spacing: 20) {
-                            TextField("Item Name", text: $itemName)
+//                            TextField("Item Name", text: $itemName)
+                            TextField("Item Name", text: Binding(
+                                get: { itemName },
+                                set: {
+                                    itemName = $0
+                                    checkForChanges()
+                                }
+                            ))
                                 .font(.system(size: 18)).bold()
                                 .background(Color.clear)
                                 .focused($isItemNameFocused)
                             let columnGroups = groupColumns(podColumns)
-                                                     ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
-                                                         let columnGroup = columnGroups[groupIndex]
-                                                         
-                     if columnGroup.first?.groupingType == "singular" {
-                         // Singular columns - vertical layout
-                                                   ForEach(columnGroup, id: \.name) { column in
-                                                   
-                                                           VStack(alignment: .leading, spacing: 5) {
-                                                               Text(column.name)
-                                                                   .font(.system(size: 16))
-                                                                   .fontWeight(.semibold)
-                                                                   .fontDesign(.rounded)
-                                                                   .foregroundColor(.primary)
-                                                                   .kerning(0.2)
-                                                               
-                                                               columnInput(for: column)
-                                                                   .padding(.vertical, 8)
-                                                                   .background(Color("iosnp"))
-                                                                   .cornerRadius(8)
-                                                           }
-                                                      
-                                                   }
-                                                         } else {
-                                                             // Grouped columns - horizontal layout
-                                 VStack(alignment: .leading, spacing: 10) {
-                                     // Column names row
-                                     HStack(spacing: 15) {
-                                         ForEach(columnGroup, id: \.name) { column in
-                                             
-                                                 Text(column.name)
-                                                     .font(.system(size: 16))
-                                                     .fontWeight(.semibold)
-                                                     .fontDesign(.rounded)
-                                                     .foregroundColor(.primary)
-                                                     .kerning(0.2)
-                                                     .frame(maxWidth: .infinity)
-                                          
-                                         }
-                                     }
-                                     
-                                     // Multiple rows of input fields
-                                     ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
-                                         List {
-                                             HStack(spacing: 15) {
-                                                 ForEach(columnGroup, id: \.name) { column in
-                                                  
-                                                         groupedColumnInput(
-                                                             column: column,
-                                                             rowIndex: rowIndex,
-                                                             columnValues: $columnValues
-                                                         )
-                                                         .frame(maxWidth: .infinity)
-                                                     
-                                                 }
-                                             }
-                                             .listRowBackground(Color.clear)
-                                             .listRowInsets(EdgeInsets())
-                                             .listRowSeparator(.hidden)
-                                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                                 Button(role: .destructive) {
-                                                     withAnimation {
-                                                         deleteRow(at: rowIndex, in: columnGroup)
-                                                     }
-                                                 } label: {
-                                                     Label("Delete", systemImage: "trash")
-                                                 }
-                                             }
-                                         }
-                                         .listStyle(PlainListStyle())
-                                         .frame(height: 44)
-                                     }
-                                     
-                                     // Add entry button
-                                     Button(action: {
-                                         withAnimation {
-                                             addRow(for: columnGroup)
-                                         }
-                                     }) {
-                                         Text("Add Entry")
-                                             .foregroundColor(.accentColor)
-                                     }
-                                     .frame(maxWidth: .infinity)
-                                     .padding(.top, 8)
-                                 }
-                                 .padding(.top, 5)
-                                                         }
+                            ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+                                let columnGroup = columnGroups[groupIndex]
+                                
+                                if columnGroup.first?.groupingType == "singular" {
+                                    ForEach(columnGroup, id: \.name) { column in
+                                        SingularColumnView(
+                                            column: column,
+                                            columnValues: $columnValues,        // Pass the binding
+                                            focusedField: _focusedField,        // Pass the FocusState
+                                            expandedColumn: $expandedColumn,
+                                            onValueChanged: checkForChanges
+                                        )
+                                    }
+                                } else {
+                                    GroupedColumnView(
+                                        columnGroup: columnGroup,
+                                        groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                        onAddRow: {
+                                            withAnimation {
+                                                addRow(for: columnGroup)
+                                            }
+                                        },
+                                        onDeleteRow: { rowIndex in
+                                            withAnimation {
+                                                deleteRow(at: rowIndex, in: columnGroup)
+                                            }
+                                        },
+                                        columnValues: $columnValues,         // Add this
+                                                   focusedField: _focusedField,         // Add this
+                                                   expandedColumn: $expandedColumn,
+                                        onValueChanged: checkForChanges
+                                    )
+                                }
                             }
                             VStack(alignment: .leading) {
                                 Text("Notes")
@@ -1444,8 +1386,15 @@ struct CardDetailView: View {
                                     .padding(.horizontal, 5)
                                     .kerning(0.2)
                                 
-                                
-                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(Color("iosnp")))
+//                                
+//                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(Color("iosnp")))
+                                CustomTextEditor(text: Binding(
+                                    get: { itemNotes },
+                                    set: {
+                                        itemNotes = $0
+                                        checkForChanges()
+                                    }
+                                ), backgroundColor: UIColor(Color("iosnp")))
                                     .frame(height: 100)
                                     .padding(.vertical, 8)
                                     .padding(.horizontal)
@@ -1470,22 +1419,23 @@ struct CardDetailView: View {
                     ToolbarItemGroup(placement: .keyboard) {
                         Button("Clear") {
                             if let focusedField = focusedField {
-                                let components = focusedField.split(separator: "_").map(String.init)
-                                if components.count == 2,
-                                   let rowIndexInt = Int(components[1]) {
-                                    // For grouped columns
-                                    let columnName = String(components[0])
-                                    var values = columnValues[columnName]?.components(separatedBy: ",") ?? []
-                                    if rowIndexInt < values.count {
-                                        values[rowIndexInt] = ""
-                                        columnValues[columnName] = values.joined(separator: ",")
-                                    }
-                                } else {
-                                    // For singular columns - just clear the value directly
-                                    columnValues[focusedField] = ""
-                                }
-                            }
-                        }
+                                  let components = focusedField.split(separator: "_").map(String.init)
+                                  if components.count == 2,
+                                     let rowIndexInt = Int(components[1]) {
+                                      // For grouped columns
+                                      let columnName = components[0]
+                                      if var columnValue = columnValues[columnName], case .array(var values) = columnValue {
+                                          if rowIndexInt < values.count {
+                                              values[rowIndexInt] = .null
+                                              columnValues[columnName] = .array(values)
+                                          }
+                                      }
+                                  } else {
+                                      // For singular columns - just clear the value directly
+                                      columnValues[focusedField] = .null
+                                  }
+                              }
+                          }
                         .foregroundColor(.accentColor)
                         
                         Spacer()
@@ -1547,15 +1497,7 @@ struct CardDetailView: View {
             }
             .edgesIgnoringSafeArea(.all)
         }
-        .onChange(of: itemName) { _, newValue in
-                  checkForChanges()
-              }
-              .onChange(of: itemNotes) { _, newValue in
-                  checkForChanges()
-              }
-              .onChange(of: columnValues) { _, newValue in
-                  checkForChanges()
-              }
+ 
         .onAppear {
             itemOptionsOffset = UIScreen.main.bounds.height
         }
@@ -1570,227 +1512,116 @@ struct CardDetailView: View {
         
     }
 
-private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
-      for column in columnGroup {
-          if var values = columnValues[column.name]?.components(separatedBy: ",") {
-              values.remove(at: index)
-              columnValues[column.name] = values.joined(separator: ",")
-          }
-      }
-      
-      let groupType = columnGroup.first?.groupingType ?? ""
-      if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
-          groupedRowsCount[groupType] = currentCount - 1
-      }
-  }
+    private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
+        for column in columnGroup {
+            if case .array(var values) = columnValues[column.name] ?? .array([]) {
+                if index < values.count {
+                    values.remove(at: index)
+                    columnValues[column.name] = .array(values)
+                }
+            }
+        }
+        
+        let groupType = columnGroup.first?.groupingType ?? ""
+        if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+            groupedRowsCount[groupType] = currentCount - 1
+        }
+        checkForChanges() 
+    }
   
     private func addRow(for columnGroup: [PodColumn]) {
         let groupType = columnGroup.first?.groupingType ?? ""
         let currentRowIndex = groupedRowsCount[groupType] ?? 1
         
         for column in columnGroup {
-            var values = columnValues[column.name]?.components(separatedBy: ",") ?? []
-            if column.type == "number" && values.first == "1" {
-                // Keep the sequential numbering logic
-                values.append("\(values.count + 1)")
-            } else {
-                // Get the last value and use it for the new row
-                let lastValue = values.last ?? ""
-                values.append(lastValue)
+            let currentValue = columnValues[column.name] ?? .array([])
+            var values: [ColumnValue] = []
+            
+            if case .array(let existingValues) = currentValue {
+                values = existingValues
             }
-            columnValues[column.name] = values.joined(separator: ",")
+            
+            if column.type == "number" {
+                if case .number(1.0) = values.first {
+                    values.append(.number(Double(values.count + 1)))
+                } else {
+                    values.append(values.last ?? .null)
+                }
+            } else {
+                values.append(values.last ?? .null)
+            }
+            
+            columnValues[column.name] = .array(values)
         }
         
         groupedRowsCount[groupType] = currentRowIndex + 1
+        checkForChanges()
     }
 
-@ViewBuilder
-private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: Binding<[String: String]>) -> some View {
-    let values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
-    let value = rowIndex < values.count ? values[rowIndex] : ""
-    
-    if column.type == "text" {
-        TextField("", text: Binding(
-            get: { value },
-            set: { newValue in
-                var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
-                while values.count <= rowIndex {
-                    values.append("")
-                }
-                values[rowIndex] = newValue
-                columnValues.wrappedValue[column.name] = values.joined(separator: ",")
-            }
-        ))
-        .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
-        .textFieldStyle(PlainTextFieldStyle())
-        .padding(.vertical, 12)
-        .padding(.horizontal)
-        .background(Color("iosnp"))
-        .cornerRadius(12)
-    } else if column.type == "number" {
-        TextField("", text: Binding(
-            get: { value },
-            set: { newValue in
-                var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
-                while values.count <= rowIndex {
-                    values.append("")
-                }
-                values[rowIndex] = newValue
-                columnValues.wrappedValue[column.name] = values.joined(separator: ",")
-            }
-        ))
-        .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
-        .keyboardType(.decimalPad)
-        .textFieldStyle(PlainTextFieldStyle())
-        .padding(.vertical, 12)
-        .padding(.horizontal)
-        .background(Color("iosnp"))
-        .cornerRadius(12)
-    } else if column.type == "time" {
-        Button(action: {
-            withAnimation {
-                expandedColumn = (expandedColumn == "\(column.name)_\(rowIndex)") ? nil : "\(column.name)_\(rowIndex)"
-            }
-        }) {
-            Text(value)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 12)
-                .padding(.horizontal)
-                .background(Color("iosnp"))
-                .cornerRadius(12)
+    private func checkForChanges() {
+        hasUnsavedChanges = false
+        
+        // Check item name
+        if itemName != item.metadata {
+            hasUnsavedChanges = true
+            return
         }
         
-        if expandedColumn == "\(column.name)_\(rowIndex)" {
-            InlineTimePicker(timeValue: Binding(
-                get: {
-                    TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
-                },
-                set: { newValue in
-                    var values = columnValues.wrappedValue[column.name]?.components(separatedBy: ",") ?? []
-                    while values.count <= rowIndex {
-                        values.append("")
-                    }
-                    values[rowIndex] = newValue.toString
-                    columnValues.wrappedValue[column.name] = values.joined(separator: ",")
-                }
-            ))
-            .frame(height: 150)
-            .transition(.opacity)
+        // Check notes
+        if itemNotes != (item.notes ?? "") {
+            hasUnsavedChanges = true
+            return
         }
-    }
-}
-    
-    
-    @ViewBuilder
-       private func columnInput(for column: PodColumn) -> some View {
-           if column.type == "text" {
-               TextField("", text: Binding(
-                   get: { self.columnValues[column.name] ?? "" },
-                   set: { self.columnValues[column.name] = $0 }
-               ))
-               .focused($focusedField, equals: column.name)
-               .foregroundColor(.primary)
-               .textFieldStyle(PlainTextFieldStyle())
-               .padding(.vertical, 12)
-               .padding(.horizontal)
-               .cornerRadius(12)
-               .background(Color("iosnp")
-               )
-           } else if column.type == "number" {
-               TextField("", text: Binding(
-                   get: { self.columnValues[column.name] ?? "" },
-                   set: { self.columnValues[column.name] = $0 }
-               ))
-               .focused($focusedField, equals: column.name)
-               .keyboardType(.decimalPad)
-               .textFieldStyle(PlainTextFieldStyle())
-               .padding(.vertical, 12)
-               .padding(.horizontal)
-               .cornerRadius(12)
-               .background(Color("iosnp")
-               )
-           } else if column.type == "time" {
-               Button(action: {
-                   withAnimation {
-                       expandedColumn = (expandedColumn == column.name) ? nil : column.name
-                   }
-               }) {
-                   Text(self.columnValues[column.name] ?? "")
-                       .foregroundColor(.primary)
-                       .frame(maxWidth: .infinity, alignment: .leading)
-                       .padding(.vertical, 12)
-                       .padding(.horizontal)
-                       .background(
-                           RoundedRectangle(cornerRadius: 12)
-                               .stroke(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:218,222,237), lineWidth: 1)
-                       )
-               }
-               
-               if expandedColumn == column.name {
-                   InlineTimePicker(timeValue: Binding(
-                       get: {
-                           TimeValue.fromString(self.columnValues[column.name] ?? "00:00:00") ??
-                           TimeValue(hours: 0, minutes: 0, seconds: 0)
-                       },
-                       set: { newValue in
-                           self.columnValues[column.name] = newValue.toString
-                       }
-                   ))
-                   .frame(height: 150)
-                   .transition(.opacity)
-               }
-           }
-       }
-    
-    private func checkForChanges() {
-            hasUnsavedChanges = false
+        
+        // Check column values including grouped columns
+        for (key, value) in columnValues {
+            let column = podColumns.first(where: { $0.name == key })
+            let isGrouped = column?.groupingType == "grouped"
             
-            // Check if item name changed
-            if itemName != item.metadata {
-                hasUnsavedChanges = true
-                return
-            }
-            
-            // Check if notes changed
-            if itemNotes != (item.notes ?? "") {
-                hasUnsavedChanges = true
-                return
-            }
-            
-            // Check if column values changed
-            for (key, value) in columnValues {
-                if let originalValue = item.columnValues?[key] {
-                    switch originalValue {
-                    case .string(let originalStringValue):
-                        if originalStringValue != value {
-                            hasUnsavedChanges = true
-                            return
-                        }
-                    case .number(let originalNumberValue):
-                        if let doubleValue = Double(value), originalNumberValue != doubleValue {
-                            hasUnsavedChanges = true
-                            return
-                        }
-                    case .time(let originalTimeValue):
-                        if let timeValue = TimeValue.fromString(value), originalTimeValue != timeValue {
-                            hasUnsavedChanges = true
-                            return
-                        }
-                    case .null:
-                        if !value.isEmpty {
+            if let originalValue = item.columnValues?[key] {
+                if isGrouped {
+                    // For grouped columns, compare arrays
+                    if case .array(let newArray) = value,
+                       case .array(let originalArray) = originalValue {
+                        let newDescriptions = newArray.map { $0.description }
+                        let originalDescriptions = originalArray.map { $0.description }
+                        if newDescriptions != originalDescriptions {
                             hasUnsavedChanges = true
                             return
                         }
                     }
-                } else if !value.isEmpty {
+                } else {
+                    // For singular columns
+                    if value.description != originalValue.description {
+                        hasUnsavedChanges = true
+                        return
+                    }
+                }
+            } else {
+                // If there's a new value where there wasn't one before
+                if case .null = value {
+                    // Skip null values
+                    continue
+                }
+                if !value.description.isEmpty {
+                    hasUnsavedChanges = true
+                    return
+                }
+            }
+        }
+        
+        // Check for deleted columns
+        if let originalColumns = item.columnValues?.keys {
+            for key in originalColumns {
+                if columnValues[key] == nil {
                     hasUnsavedChanges = true
                     return
                 }
             }
         }
     
-    
+    }
+
     private func moveItemToPod(_ toPodId: Int) {
         networkManager.moveItemToPod(itemId: item.id, fromPodId: podId, toPodId: toPodId) { result in
             DispatchQueue.main.async {
@@ -1892,13 +1723,13 @@ private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: 
                     let newColumn = PodColumn(name: newColumnName, type: newColumnType)
                     podColumns.append(newColumn)
                     
-                    columnValues[newColumnName] = ""
+                    columnValues[newColumnName] = .null  // Changed from "" to .null
                     
                     if item.columnValues == nil {
                         item.columnValues = [:]
                     }
                     item.columnValues?[newColumnName] = .null
-
+                    checkForChanges()
                     print("New column added successfully with type: \(newColumnType)")
                 case .failure(let error):
                     print("Failed to add new column: \(error)")
@@ -1908,103 +1739,430 @@ private func groupedColumnInput(column: PodColumn, rowIndex: Int, columnValues: 
     }
     
     private func updateVisibleColumnsOnServer() {
-           networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
-               switch result {
-               case .success:
-                   print("Visible columns updated successfully")
-               case .failure(let error):
-                   print("Failed to update visible columns: \(error)")
-                   // You might want to show an alert to the user here
-               }
-           }
-       }
-
+        networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
+            switch result {
+            case .success:
+                print("Visible columns updated successfully")
+            case .failure(let error):
+                print("Failed to update visible columns: \(error)")
+                // You might want to show an alert to the user here
+            }
+        }
+    }
+ 
     private func saveChanges() {
         var hasChanges = false
         var updatedColumnValues: [String: ColumnValue] = [:]
-        
-        for (key, value) in columnValues {
-            if let originalValue = item.columnValues?[key] {
-                switch originalValue {
-                case .string(let originalStringValue):
-                    if originalStringValue != value {
-                        updatedColumnValues[key] = .string(value)
-                        hasChanges = true
-                    } else {
-                        updatedColumnValues[key] = originalValue
-                    }
-                case .number(let originalNumberValue):
-                    if let doubleValue = Double(value), originalNumberValue != doubleValue {
-                        updatedColumnValues[key] = .number(doubleValue)
-                        hasChanges = true
-                    } else {
-                        updatedColumnValues[key] = originalValue
-                    }
-                case .time(let originalTimeValue):
-                    if let timeValue = TimeValue.fromString(value), originalTimeValue != timeValue {
-                        updatedColumnValues[key] = .time(timeValue)
-                        hasChanges = true
-                    } else {
-                        updatedColumnValues[key] = originalValue
-                    }
-                case .null:
-                    if !value.isEmpty {
-                        // Try to parse as time first
-                        if let timeValue = TimeValue.fromString(value) {
-                            updatedColumnValues[key] = .time(timeValue)
-                            hasChanges = true
-                        } else if let doubleValue = Double(value) {
-                            updatedColumnValues[key] = .number(doubleValue)
-                            hasChanges = true
-                        } else {
-                            updatedColumnValues[key] = .string(value)
-                            hasChanges = true
-                        }
-                    } else {
-                        updatedColumnValues[key] = originalValue
-                    }
+
+        print("Starting save changes for PodItemUserValue")
+
+        for (key, newValue) in columnValues {
+            guard let column = podColumns.first(where: { $0.name == key }) else {
+                continue
+            }
+            let isGrouped: Bool = (column.groupingType == "grouped")
+
+            let originalValue: ColumnValue = item.columnValues?[key] ?? .null
+
+            var updatedValue: ColumnValue = originalValue
+
+            if isGrouped {
+                // Handle grouped columns (arrays)
+                let newValuesArray: [ColumnValue]
+                if case .array(let array) = newValue {
+                    newValuesArray = array
+                } else {
+                    newValuesArray = [newValue]
+                }
+
+                let originalValuesArray: [ColumnValue]
+                if case .array(let array) = originalValue {
+                    originalValuesArray = array
+                } else {
+                    originalValuesArray = [originalValue]
+                }
+
+                let newDescriptions: [String] = newValuesArray.map { $0.description }
+                let originalDescriptions: [String] = originalValuesArray.map { $0.description }
+
+                if newDescriptions != originalDescriptions {
+                    updatedValue = .array(newValuesArray)
+                    hasChanges = true
                 }
             } else {
-                // Try to parse as time first
-                if let timeValue = TimeValue.fromString(value) {
-                    updatedColumnValues[key] = .time(timeValue)
+                // Handle singular columns
+                let newDescription: String = newValue.description
+                let originalDescription: String = originalValue.description
+
+                if newDescription != originalDescription {
+                    updatedValue = newValue
                     hasChanges = true
-                } else if let doubleValue = Double(value) {
-                    updatedColumnValues[key] = .number(doubleValue)
-                    hasChanges = true
-                } else if !value.isEmpty {
-                    updatedColumnValues[key] = .string(value)
-                    hasChanges = true
-                } else {
-                    updatedColumnValues[key] = .null
                 }
             }
+
+            updatedColumnValues[key] = updatedValue
         }
-        
-        // Rest of the method remains the same
+
+        // Check if item name or notes have changed
         if itemName != item.metadata || itemNotes != (item.notes ?? "") {
             hasChanges = true
         }
-        
+
         if hasChanges {
-            networkManager.updatePodItem(itemId: item.id, newLabel: itemName, newNotes: itemNotes, newColumnValues: updatedColumnValues, userEmail: viewModel.email) { result in
+            print("Updating PodItemUserValue with values:", updatedColumnValues)
+            networkManager.updatePodItem(
+                itemId: item.id,
+                newLabel: itemName,
+                newNotes: itemNotes,
+                newColumnValues: updatedColumnValues,
+                userEmail: viewModel.email
+            ) { (result: Result<Void, Error>) in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
+                        print("Successfully updated pod item user values")
                         self.item.metadata = self.itemName
                         self.item.notes = self.itemNotes
                         self.item.columnValues = updatedColumnValues
+                        self.presentationMode.wrappedValue.dismiss()
                     case .failure(let error):
                         print("Failed to update pod item: \(error)")
+                        // Handle the error as needed
                     }
-                    self.presentationMode.wrappedValue.dismiss()
                 }
             }
         } else {
+            print("No changes detected")
             self.presentationMode.wrappedValue.dismiss()
         }
     }
+
+    
+
 }
+
+struct SingularColumnView: View {
+    let column: PodColumn
+    @Binding var columnValues: [String: ColumnValue]
+    @FocusState var focusedField: String?
+    @Binding var expandedColumn: String?
+    let onValueChanged: () -> Void
+    
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(column.name)
+                .font(.system(size: 16))
+                .fontWeight(.semibold)
+                .fontDesign(.rounded)
+                .foregroundColor(.primary)
+                .kerning(0.2)
+            
+            ColumnValueInputView(
+                column: column,
+                columnValues: $columnValues,
+                focusedField: _focusedField,
+                expandedColumn: $expandedColumn,
+                onValueChanged: onValueChanged
+            )
+            .padding(.vertical, 8)
+            .background(Color("iosnp"))
+            .cornerRadius(8)
+        }
+    }
+}
+
+struct GroupedColumnHeaderView: View {
+    let columnGroup: [PodColumn]
+    
+    var body: some View {
+        HStack(spacing: 15) {
+            ForEach(columnGroup, id: \.name) { column in
+                Text(column.name)
+                    .font(.system(size: 16))
+                    .fontWeight(.semibold)
+                    .fontDesign(.rounded)
+                    .foregroundColor(.primary)
+                    .kerning(0.2)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
+// 3. Create a view for grouped column rows
+struct GroupedColumnRowView: View {
+    let columnGroup: [PodColumn]
+    let rowIndex: Int
+    @Binding var columnValues: [String: ColumnValue]
+    @FocusState var focusedField: String?
+    @Binding var expandedColumn: String?
+    let onDelete: () -> Void
+    let onValueChanged: () -> Void
+    
+    
+    var body: some View {
+        List {
+            HStack(spacing: 15) {
+                ForEach(columnGroup, id: \.name) { column in
+                    GroupedColumnInputView(
+                                           column: column,
+                                           rowIndex: rowIndex,
+                                           columnValues: $columnValues,
+                                           focusedField: _focusedField,
+                                           expandedColumn: $expandedColumn,
+                                           onValueChanged: onValueChanged
+                                       )
+                                       .frame(maxWidth: .infinity)
+                }
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        .listStyle(PlainListStyle())
+        .frame(height: 44)
+    }
+}
+
+// 4. Create a view for the grouped columns section
+struct GroupedColumnView: View {
+    let columnGroup: [PodColumn]
+    let groupedRowsCount: Int
+    let onAddRow: () -> Void
+    let onDeleteRow: (Int) -> Void
+    @Binding var columnValues: [String: ColumnValue]    // Add this
+    @FocusState var focusedField: String?              // Add this
+    @Binding var expandedColumn: String?               // Add this
+    let onValueChanged: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            GroupedColumnHeaderView(columnGroup: columnGroup)
+            
+            ForEach(0..<groupedRowsCount, id: \.self) { rowIndex in
+                GroupedColumnRowView(
+                    columnGroup: columnGroup,
+                    rowIndex: rowIndex,
+                    columnValues: $columnValues,        // Pass binding
+                    focusedField: _focusedField,        // Pass FocusState
+                    expandedColumn: $expandedColumn,    // Pass binding
+                    onDelete: { onDeleteRow(rowIndex) },
+                    onValueChanged: onValueChanged
+                )
+            }
+            
+            Button(action: onAddRow) {
+                Text("Add Entry")
+                    .foregroundColor(.accentColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
+        }
+        .padding(.top, 5)
+    }
+}
+
+struct ColumnValueInputView: View {
+    let column: PodColumn
+    @Binding var columnValues: [String: ColumnValue]
+    @FocusState var focusedField: String?
+    @Binding var expandedColumn: String?
+    let onValueChanged: () -> Void
+    
+    var body: some View {
+        Group {
+            if column.type == "text" {
+                let textBinding = Binding<String>(
+                    get: { columnValues[column.name]?.description ?? "" },
+                    set: {
+                        columnValues[column.name] = .string($0)
+                        onValueChanged()
+                    }
+                )
+                
+                TextField("", text: textBinding)
+                    .focused($focusedField, equals: column.name)
+                    .foregroundColor(.primary)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 12)
+                    .padding(.horizontal)
+                    .cornerRadius(12)
+                    .background(Color("iosnp"))
+            }
+            else if column.type == "number" {
+                let numberBinding = Binding<String>(
+                    get: { columnValues[column.name]?.description ?? "" },
+                    set: { newValue in
+                        if let num = Double(newValue) {
+                            columnValues[column.name] = .number(num)
+                        } else {
+                            columnValues[column.name] = .null
+                        }
+                        onValueChanged()
+                    }
+                )
+                
+                TextField("", text: numberBinding)
+                    .focused($focusedField, equals: column.name)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 12)
+                    .padding(.horizontal)
+                    .cornerRadius(12)
+                    .background(Color("iosnp"))
+            }
+            else if column.type == "time" {
+                Button(action: {
+                    withAnimation {
+                        expandedColumn = (expandedColumn == column.name) ? nil : column.name
+                    }
+                }) {
+                    Text(columnValues[column.name]?.description ?? "")
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(Color("iosnp"))
+                        .cornerRadius(12)
+                }
+                
+                if expandedColumn == column.name {
+                    InlineTimePicker(timeValue: Binding(
+                        get: {
+                            if case .time(let timeValue) = columnValues[column.name] {
+                                return timeValue
+                            }
+                            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+                        },
+                        set: {
+                            columnValues[column.name] = .time($0)
+                            onValueChanged()
+                        }
+                    ))
+                    .frame(height: 150)
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+}
+
+struct GroupedColumnInputView: View {
+    let column: PodColumn
+    let rowIndex: Int
+    @Binding var columnValues: [String: ColumnValue]
+    @FocusState var focusedField: String?
+    @Binding var expandedColumn: String?
+    let onValueChanged: () -> Void
+    
+    var body: some View {
+        let currentValue = columnValues[column.name] ?? .array([])
+        let values: [ColumnValue] = {
+            if case .array(let arr) = currentValue {
+                return arr
+            }
+            return [currentValue]
+        }()
+        
+        let value = rowIndex < values.count ? values[rowIndex] : .null
+        
+        Group {
+            if column.type == "text" {
+                let textBinding = Binding<String>(
+                    get: { value.description },
+                    set: { newValue in
+                        var updatedValues = values
+                        while updatedValues.count <= rowIndex {
+                            updatedValues.append(.null)
+                        }
+                        updatedValues[rowIndex] = .string(newValue)
+                        columnValues[column.name] = .array(updatedValues)
+                        onValueChanged()
+                    }
+                )
+                
+                TextField("", text: textBinding)
+                    .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 12)
+                    .padding(.horizontal)
+                    .background(Color("iosnp"))
+                    .cornerRadius(12)
+            }
+            else if column.type == "number" {
+                let numberBinding = Binding<String>(
+                    get: { value.description },
+                    set: { newValue in
+                        var updatedValues = values
+                        while updatedValues.count <= rowIndex {
+                            updatedValues.append(.null)
+                        }
+                        if let num = Double(newValue) {
+                            updatedValues[rowIndex] = .number(num)
+                        } else {
+                            updatedValues[rowIndex] = .null
+                        }
+                        columnValues[column.name] = .array(updatedValues)
+                        onValueChanged()
+                    }
+                )
+                
+                TextField("", text: numberBinding)
+                    .focused($focusedField, equals: "\(column.name)_\(rowIndex)")
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 12)
+                    .padding(.horizontal)
+                    .background(Color("iosnp"))
+                    .cornerRadius(12)
+            }
+            else if column.type == "time" {
+                Button(action: {
+                    withAnimation {
+                        expandedColumn = (expandedColumn == "\(column.name)_\(rowIndex)") ? nil : "\(column.name)_\(rowIndex)"
+                    }
+                }) {
+                    Text(value.description)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(Color("iosnp"))
+                        .cornerRadius(12)
+                }
+                
+                if expandedColumn == "\(column.name)_\(rowIndex)" {
+                    InlineTimePicker(timeValue: Binding(
+                        get: {
+                            if case .time(let timeValue) = value {
+                                return timeValue
+                            }
+                            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+                        },
+                        set: { newValue in
+                            var updatedValues = values
+                            while updatedValues.count <= rowIndex {
+                                updatedValues.append(.null)
+                            }
+                            updatedValues[rowIndex] = .time(newValue)
+                            columnValues[column.name] = .array(updatedValues)
+                            onValueChanged()
+                        }
+                    ))
+                    .frame(height: 150)
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+}
+
 
 struct AddColumnView: View {
     @Binding var isPresented: Bool
@@ -2449,6 +2607,19 @@ struct LogActivityView: View {
 
 
     
+//    private func timeValue(for columnName: String) -> TimeValue {
+//        let values = columnValues[columnName]?.first ?? .null
+//        switch values {
+//        case .time(let value):
+//            return value
+//        case .number(let seconds):
+//            return TimeValue.fromSeconds(Int(seconds))
+//        case .string(let value):
+//            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+//        case .null:
+//            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+//        }
+//    }
     private func timeValue(for columnName: String) -> TimeValue {
         let values = columnValues[columnName]?.first ?? .null
         switch values {
@@ -2458,10 +2629,18 @@ struct LogActivityView: View {
             return TimeValue.fromSeconds(Int(seconds))
         case .string(let value):
             return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+        case .array(let array):
+            // Use the first element of the array, or fallback to a default value
+            if let firstString = array.first?.description,
+               let timeValue = TimeValue.fromString(firstString) {
+                return timeValue
+            }
+            return TimeValue(hours: 0, minutes: 0, seconds: 0)
         case .null:
             return TimeValue(hours: 0, minutes: 0, seconds: 0)
         }
     }
+
 
     private func stringValue(for columnName: String) -> String {
         return String(describing: columnValues[columnName]?.first ?? .null)
@@ -2622,10 +2801,26 @@ struct ColumnInputField: View {
         return rowIndex < values.count ? String(describing: values[rowIndex]) : ""
     }
     
+//    private func timeValue(for columnName: String, rowIndex: Int) -> TimeValue {
+//        let values = columnValues[columnName] ?? []
+//        guard rowIndex < values.count else { return TimeValue(hours: 0, minutes: 0, seconds: 0) }
+//        
+//        switch values[rowIndex] {
+//        case .time(let value):
+//            return value
+//        case .number(let seconds):
+//            return TimeValue.fromSeconds(Int(seconds))
+//        case .string(let value):
+//            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+//        case .null:
+//            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+//        }
+//    }
+    
     private func timeValue(for columnName: String, rowIndex: Int) -> TimeValue {
         let values = columnValues[columnName] ?? []
         guard rowIndex < values.count else { return TimeValue(hours: 0, minutes: 0, seconds: 0) }
-        
+
         switch values[rowIndex] {
         case .time(let value):
             return value
@@ -2633,10 +2828,17 @@ struct ColumnInputField: View {
             return TimeValue.fromSeconds(Int(seconds))
         case .string(let value):
             return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+        case .array(let array):
+            // Handle the case where a row index corresponds to an array of values
+            if let firstValue = array.first, case .time(let timeValue) = firstValue {
+                return timeValue
+            }
+            return TimeValue(hours: 0, minutes: 0, seconds: 0)
         case .null:
             return TimeValue(hours: 0, minutes: 0, seconds: 0)
         }
     }
+
     
     private func updateValue(_ value: ColumnValue, for columnName: String, rowIndex: Int) {
         var values = columnValues[columnName] ?? []

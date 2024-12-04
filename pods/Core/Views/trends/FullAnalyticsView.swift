@@ -196,15 +196,48 @@ struct FullAnalyticsView: View {
         .sorted { $0.date < $1.date }
     }
 
+//    private func numericValue(for log: PodItemActivityLog) -> Double? {
+//        guard let columnValue = log.columnValues[column.name] else { return nil }
+//        switch columnValue {
+//        case .number(let value): return Double(value)
+//        case .string(let value): return Double(value)
+//        case .time(let timeValue): return Double(timeValue.totalSeconds)
+//        case .null: return nil
+//        }
+//    }
     private func numericValue(for log: PodItemActivityLog) -> Double? {
         guard let columnValue = log.columnValues[column.name] else { return nil }
+
         switch columnValue {
-        case .number(let value): return Double(value)
-        case .string(let value): return Double(value)
-        case .time(let timeValue): return Double(timeValue.totalSeconds)
-        case .null: return nil
+        case .number(let value):
+            return value
+        case .string(let value):
+            return Double(value)
+        case .time(let timeValue):
+            return Double(timeValue.totalSeconds)
+        case .array(let array):
+            // Aggregate numeric values from the array
+            let numericValues = array.compactMap { element -> Double? in
+                switch element {
+                case .number(let value):
+                    return value
+                case .string(let value):
+                    return Double(value)
+                case .time(let timeValue):
+                    return Double(timeValue.totalSeconds)
+                case .array:
+                    return nil // Nested arrays are ignored to keep it simple
+                case .null:
+                    return nil
+                }
+            }
+            return numericValues.reduce(0, +) // Sum of all numeric values in the array
+        case .null:
+            return nil
         }
     }
+
+
 
     private func calculateStreaks() {
         let sortedData = processedData.sorted { $0.date < $1.date }

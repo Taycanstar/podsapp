@@ -208,6 +208,62 @@ struct PodItem: Identifiable {
     
 }
 
+//struct PodItemActivityLog: Identifiable, Comparable {
+//    let id: Int
+//    let itemId: Int
+//    let itemLabel: String
+//    let userEmail: String
+//    let loggedAt: Date
+//    let columnValues: [String: ColumnValue]
+//    let notes: String
+//    let userName: String
+//
+//    init(from json: PodItemActivityLogJSON) throws {
+//        self.id = json.id
+//        self.itemId = json.itemId
+//        self.itemLabel = json.itemLabel
+//        self.userEmail = json.userEmail
+//        self.userName = json.userName
+//        self.columnValues = json.columnValues
+//        self.notes = json.notes
+//
+//        let dateFormatters = [
+//            ISO8601DateFormatter(),
+//            { () -> ISO8601DateFormatter in
+//                let formatter = ISO8601DateFormatter()
+//                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+//                return formatter
+//            }()
+//        ]
+//
+//        if let date = dateFormatters.lazy.compactMap({ $0.date(from: json.loggedAt) }).first {
+//            self.loggedAt = date
+//        } else {
+//            throw NSError(domain: "PodItemActivityLog", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.loggedAt)"])
+//        }
+//    }
+//
+//    static func < (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
+//        return lhs.loggedAt > rhs.loggedAt
+//    }
+//
+//    static func == (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
+//        return lhs.id == rhs.id
+//    }
+//}
+
+//struct PodItemActivityLogJSON: Codable {
+//    let id: Int
+//    let itemId: Int
+//    let itemLabel: String
+//    let userEmail: String
+//    let loggedAt: String
+//    let columnValues: [String: ColumnValue]
+//    let notes: String
+//    let userName: String  // Add this line
+//  
+//}
+
 struct PodItemActivityLog: Identifiable, Comparable {
     let id: Int
     let itemId: Int
@@ -224,8 +280,8 @@ struct PodItemActivityLog: Identifiable, Comparable {
         self.itemLabel = json.itemLabel
         self.userEmail = json.userEmail
         self.userName = json.userName
-        self.columnValues = json.columnValues
         self.notes = json.notes
+        self.columnValues = json.columnValues
 
         let dateFormatters = [
             ISO8601DateFormatter(),
@@ -239,7 +295,11 @@ struct PodItemActivityLog: Identifiable, Comparable {
         if let date = dateFormatters.lazy.compactMap({ $0.date(from: json.loggedAt) }).first {
             self.loggedAt = date
         } else {
-            throw NSError(domain: "PodItemActivityLog", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.loggedAt)"])
+            throw NSError(
+                domain: "PodItemActivityLog",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.loggedAt)"]
+            )
         }
     }
 
@@ -260,9 +320,9 @@ struct PodItemActivityLogJSON: Codable {
     let loggedAt: String
     let columnValues: [String: ColumnValue]
     let notes: String
-    let userName: String  // Add this line
-  
+    let userName: String
 }
+
 
 struct ActivityLogResponse: Codable {
     let logs: [PodItemActivityLogJSON]
@@ -331,52 +391,87 @@ struct PodItemJSON: Codable {
 }
 
 
-//enum ColumnValue: Codable, CustomStringConvertible  {
+//
+//enum ColumnValue: Codable, CustomStringConvertible {
 //    case string(String)
-//    case number(Double)  // Using Double instead of Float
+//    case number(Double)
 //    case time(TimeValue)
 //    case null
 //    
-//    
 //    var description: String {
-//          switch self {
-//          case .string(let value): return value
-//          case .number(let value):
-//              let roundedNumber = round(value * 10) / 10
-//              if roundedNumber.truncatingRemainder(dividingBy: 1) == 0 {
-//                  return String(format: "%.0f", roundedNumber)
-//              } else {
-//                  return String(format: "%.1f", roundedNumber)
-//              }
-//          case .time(let value): return value.toString
-//          case .null: return ""
-//          }
-//      }
+//        switch self {
+//        case .string(let value): return value
+//        case .number(let value):
+//            let roundedNumber = round(value * 10) / 10
+//            if roundedNumber.truncatingRemainder(dividingBy: 1) == 0 {
+//                return String(format: "%.0f", roundedNumber)
+//            } else {
+//                return String(format: "%.1f", roundedNumber)
+//            }
+//        case .time(let value): return value.toString
+//        case .null: return ""
+//        }
+//    }
 //    
 //    init(from decoder: Decoder) throws {
 //        let container = try decoder.singleValueContainer()
+//        
 //        if container.decodeNil() {
 //            self = .null
-//        } else if let stringValue = try? container.decode(String.self) {
-//            // If the string matches our time format (HH:MM:SS), decode as time
+//            return
+//        }
+//        
+//        // Try decoding as array of numbers first
+//        if let arrayValue = try? container.decode([Double].self) {
+//            if let firstValue = arrayValue.first {
+//                self = .number(firstValue)
+//            } else {
+//                self = .null
+//            }
+//            return
+//        }
+//        
+//        // Then try as array of strings
+//        if let arrayValue = try? container.decode([String].self) {
+//            if let firstValue = arrayValue.first {
+//                if let timeValue = TimeValue.fromString(firstValue) {
+//                    self = .time(timeValue)
+//                } else {
+//                    self = .string(firstValue)
+//                }
+//            } else {
+//                self = .null
+//            }
+//            return
+//        }
+//        
+//        // Then try single values
+//        if let stringValue = try? container.decode(String.self) {
 //            if let timeValue = TimeValue.fromString(stringValue) {
 //                self = .time(timeValue)
 //            } else {
 //                self = .string(stringValue)
 //            }
-//        } else if let doubleValue = try? container.decode(Double.self) {  // Changed to Double
-//            self = .number(doubleValue)
-//        } else if let intValue = try? container.decode(Int.self) {
-//            self = .number(Double(intValue))  // Convert Int to Double
-//        } else {
-//            throw DecodingError.typeMismatch(
-//                ColumnValue.self,
-//                DecodingError.Context(
-//                    codingPath: decoder.codingPath,
-//                    debugDescription: "Expected String, Double, Int, or null"
-//                )
-//            )
+//            return
 //        }
+//        
+//        if let doubleValue = try? container.decode(Double.self) {
+//            self = .number(doubleValue)
+//            return
+//        }
+//        
+//        if let intValue = try? container.decode(Int.self) {
+//            self = .number(Double(intValue))
+//            return
+//        }
+//        
+//        throw DecodingError.typeMismatch(
+//            ColumnValue.self,
+//            DecodingError.Context(
+//                codingPath: decoder.codingPath,
+//                debugDescription: "Expected String, Double, Int, Array, or null"
+//            )
+//        )
 //    }
 //    
 //    func encode(to encoder: Encoder) throws {
@@ -395,101 +490,75 @@ struct PodItemJSON: Codable {
 //}
 
 enum ColumnValue: Codable, CustomStringConvertible {
-    case string(String)
     case number(Double)
+    case string(String)
     case time(TimeValue)
+    case array([ColumnValue])
     case null
-    
+
+    // Provide string representation for all cases, including nested arrays
     var description: String {
         switch self {
-        case .string(let value): return value
         case .number(let value):
             let roundedNumber = round(value * 10) / 10
-            if roundedNumber.truncatingRemainder(dividingBy: 1) == 0 {
-                return String(format: "%.0f", roundedNumber)
-            } else {
-                return String(format: "%.1f", roundedNumber)
-            }
-        case .time(let value): return value.toString
-        case .null: return ""
+            return roundedNumber.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", roundedNumber)
+                : String(format: "%.1f", roundedNumber)
+        case .string(let value):
+            return value
+        case .time(let value):
+            return value.toString
+        case .array(let values):
+            return values.map { $0.description }.joined(separator: ", ")
+        case .null:
+            return ""
         }
     }
-    
+
+    // Decoding logic supports all cases, including nested arrays
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        
+
         if container.decodeNil() {
             self = .null
-            return
-        }
-        
-        // Try decoding as array of numbers first
-        if let arrayValue = try? container.decode([Double].self) {
-            if let firstValue = arrayValue.first {
-                self = .number(firstValue)
-            } else {
-                self = .null
-            }
-            return
-        }
-        
-        // Then try as array of strings
-        if let arrayValue = try? container.decode([String].self) {
-            if let firstValue = arrayValue.first {
-                if let timeValue = TimeValue.fromString(firstValue) {
-                    self = .time(timeValue)
-                } else {
-                    self = .string(firstValue)
-                }
-            } else {
-                self = .null
-            }
-            return
-        }
-        
-        // Then try single values
-        if let stringValue = try? container.decode(String.self) {
-            if let timeValue = TimeValue.fromString(stringValue) {
-                self = .time(timeValue)
-            } else {
-                self = .string(stringValue)
-            }
-            return
-        }
-        
-        if let doubleValue = try? container.decode(Double.self) {
-            self = .number(doubleValue)
-            return
-        }
-        
-        if let intValue = try? container.decode(Int.self) {
-            self = .number(Double(intValue))
-            return
-        }
-        
-        throw DecodingError.typeMismatch(
-            ColumnValue.self,
-            DecodingError.Context(
-                codingPath: decoder.codingPath,
-                debugDescription: "Expected String, Double, Int, Array, or null"
+        } else if let number = try? container.decode(Double.self) {
+            self = .number(number)
+        } else if let string = try? container.decode(String.self) {
+            self = .string(string)
+        } else if let time = try? container.decode(TimeValue.self) {
+            self = .time(time)
+        } else if let array = try? container.decode([ColumnValue].self) {
+            self = .array(array)
+        } else {
+            throw DecodingError.typeMismatch(
+                ColumnValue.self,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unsupported type"
+                )
             )
-        )
+        }
     }
-    
+
+    // Encoding logic for all cases
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case .string(let value):
-            try container.encode(value)
         case .number(let value):
             try container.encode(value)
-        case .time(let timeValue):
-            try container.encode(timeValue.toString)
+        case .string(let value):
+            try container.encode(value)
+        case .time(let value):
+            try container.encode(value)
+        case .array(let values):
+            try container.encode(values)
         case .null:
             try container.encodeNil()
         }
     }
 }
+
+
 
 // Add this struct to handle time values
 struct TimeValue: Codable, Equatable {
@@ -597,6 +666,22 @@ extension PodItem {
         
     }
 
+}
+
+extension PodItemJSON {
+    func toPodItem() -> PodItem {
+        return PodItem(
+            id: id,
+            videoURL: videoURL.flatMap { URL(string: $0) },
+            metadata: label,
+            thumbnailURL: thumbnail.flatMap { URL(string: $0) },
+            imageURL: imageURL.flatMap { URL(string: $0) },
+            itemType: itemType,
+            notes: notes ?? "",
+            defaultColumnValues: defaultColumnValues,
+            userColumnValues: userColumnValues
+        )
+    }
 }
 
 enum CameraMode: String, CaseIterable {

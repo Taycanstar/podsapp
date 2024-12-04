@@ -112,22 +112,43 @@ struct ActivityLogItemView: View {
               }
     }
     
+//    private func columnValuesString(_ values: [String: ColumnValue]) -> String {
+//        let result = values.compactMap { key, value in
+//            switch value {
+//            case .string(let str):
+//                return str.isEmpty ? nil : "\(str) \(key)"
+//            case .number(let num):
+//                return "\(num) \(key)"
+//            case .time(let timeValue):
+//                        return "\(timeValue.toString) \(key)"
+//            case .null:
+//                return nil
+//            }
+//        }.joined(separator: ", ")
+//        
+//        return result.isEmpty ? "No data" : result
+//    }
     private func columnValuesString(_ values: [String: ColumnValue]) -> String {
-        let result = values.compactMap { key, value in
+        let result = values.compactMap { key, value -> String? in
             switch value {
             case .string(let str):
-                return str.isEmpty ? nil : "\(str) \(key)"
+                return str.isEmpty ? nil : "\(str) (\(key))"
             case .number(let num):
-                return "\(num) \(key)"
+                return "\(num) (\(key))"
             case .time(let timeValue):
-                        return "\(timeValue.toString) \(key)"
+                return "\(timeValue.toString) (\(key))"
+            case .array(let array):
+                let arrayString = array.map { $0.description }.joined(separator: ", ")
+                return arrayString.isEmpty ? nil : "\(arrayString) (\(key))"
             case .null:
                 return nil
             }
         }.joined(separator: ", ")
-        
+
         return result.isEmpty ? "No data" : result
     }
+
+
     
     private func formattedDate(_ date: Date) -> String {
         let calendar = Calendar.current
