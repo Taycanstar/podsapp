@@ -837,7 +837,10 @@ class NetworkManager {
                  completion(.failure(NetworkError.noData))
                  return
              }
-             
+             if let jsonString = String(data: data, encoding: .utf8) {
+                   print("Received JSON:", jsonString)
+               }
+               
              do {
                  let decoder = JSONDecoder()
                  
@@ -869,6 +872,7 @@ class NetworkManager {
                  
                  let podJSON = try decoder.decode(PodJSON.self, from: data)
                  let pod = Pod(from: podJSON)
+    
                  completion(.success(pod))
              } catch {
                  print("Decoding error: \(error)")

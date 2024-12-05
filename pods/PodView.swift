@@ -146,7 +146,8 @@ struct PodView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
         ZStack {
-            (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+//            (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+            (Color("iosbg"))
                 .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
 
@@ -186,55 +187,31 @@ struct PodView: View {
                                                newItemInputView
                                                
                                                    .padding(.bottom, 45)
-                                           } else {
-                                               
-                                               
-                                               addItemButton
-                                                   .padding(.bottom, 45)
-                                               
-                                               
-                                               
                                            }
+
                                        }
                                        
                                    }
                                    .refreshable {
                                        fetchFullPodDetails(showLoadingIndicator: false)
                                    }
+                         
+                                       .safeAreaInset(edge: .bottom) {
+                                         
+                                           if !isCreatingNewItem{
+                                               footerView
+                                           } else {
+                                               EmptyView()
+                                           }
+                                   }
+                                 
 
                                    
                                    .padding(.bottom, keyboardOffset)
                                }
                
-         
+//                footerView
                 
-            }
-            
-            
-            
-            // Floating button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        isCreatingNewItem = true
-                        isNewItemFocused = true
-                    }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add Item")
-                                .fontWeight(.medium)
-                        }
-                        .padding()
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 5)
-                    }
-                    .padding(.bottom, 40)
-                    .padding(.trailing, 15)
-                }
             }
         }
         .navigationDestination(for: NavigationDestination.self) { destination in
@@ -444,6 +421,37 @@ struct PodView: View {
          }
      }
     
+    private var footerView: some View {
+        VStack {
+            Button(action: {
+                isCreatingNewItem = true
+                isNewItemFocused = true
+                HapticFeedback.generate()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                    Text("New Item")
+                        .font(.system(size: 18))
+                        .fontWeight(.medium)
+                        .fontDesign(.rounded)
+//                        .lineLimit(1)
+                }
+                .foregroundColor(.accentColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+            }
+        }
+        .padding(.horizontal, 26)
+        .padding(.bottom, 36)
+        .background(.ultraThinMaterial)
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundColor(Color.gray.opacity(0.2)),
+            alignment: .top
+        )
+    }
     
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
         if showLoadingIndicator {
@@ -462,7 +470,6 @@ struct PodView: View {
                     self.currentDescription = fullPod.description ?? ""
                     self.currentInstructions = fullPod.instructions ?? ""
                     self.currentType = fullPod.type ?? ""
-                    print("Pod details :", fullPod.items[7])
                     
                     // Wait for at least the first video to be preloaded
 //                    self.waitForInitialPreload()
@@ -620,12 +627,14 @@ struct PodView: View {
                                                   .foregroundColor(.green)
                                                   .transition(.opacity)
                                           } else {
-                                              Image(systemName: "plus.bubble")
+                                              Image(systemName: "plus.circle.fill")
                                                   .font(.system(size: 20))
-                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+                                                  .foregroundColor(.accentColor)
+//                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
                                                   .onTapGesture {
                                                       selectedItemIndex = index
                                                       showLogActivitySheet = true
+                                                      HapticFeedback.generate()
                                                   }
                                           }
                     }
@@ -633,17 +642,12 @@ struct PodView: View {
                 }
 
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+            .background(Color("iosnp"))
             .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
-            )
             .onTapGesture {
                 selectedItemIndex = index
                 showCardSheet = true
             }
-            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
         }
         .padding(.horizontal, 15)
     }
@@ -673,14 +677,20 @@ struct PodView: View {
 
     private func columnView(name: String, item: PodItem) -> some View {
         let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
+        let displayValue: ColumnValue = {
+            if case .array(let values) = value, !values.isEmpty {
+                return values[0]  // Take only the first value
+            }
+            return value
+        }()
         return VStack {
-            Text("\(value) \(name)")  // String interpolation will automatically use description
+            Text("\(displayValue) \(name)")  // String interpolation will automatically use description
                 .font(.system(size: 14))
         }
         .padding(.horizontal,6)
         .padding(.vertical,4)
         .cornerRadius(4)
-        .background(colorScheme == .dark ? Color(rgb:44,44,44) : Color(rgb:244, 246, 247))
+        .background(Color("iosbtn"))
         .cornerRadius(4)
     }
     
@@ -695,12 +705,14 @@ struct PodView: View {
     
     private var newItemInputView: some View {
         HStack {
-            TextField("Add item", text: $newItemText)
+            TextField("Add Item", text: $newItemText)
                 .id("NewItemTextField")
                 .font(.system(size: 14))
                 .padding(.vertical, 8)
                 .padding(.horizontal, 5)
-                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+//                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
+                .background(Color("iosnp"))
+            
                 .focused($isNewItemFocused)
                 .onSubmit {
                     if !newItemText.isEmpty {
@@ -734,14 +746,8 @@ struct PodView: View {
 
         .padding(.vertical, 10)
         .padding(.horizontal, 5)
-        
-        .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
-//        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 1)
-        )
-      
+        .background(Color("iosnp"))
+        .cornerRadius(12)
         .padding(.horizontal, 15)
         .padding(.bottom, 20)
         .padding(.top, 10)
@@ -991,7 +997,8 @@ struct PodViewHeaderSection: View {
                 
 
             }
-            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+//            .background(colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
+            .background(Color("iosbg"))
         }
     
     private var viewSection: some View {
@@ -1526,7 +1533,7 @@ struct CardDetailView: View {
         if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
             groupedRowsCount[groupType] = currentCount - 1
         }
-        checkForChanges() 
+        checkForChanges()
     }
   
     private func addRow(for columnGroup: [PodColumn]) {

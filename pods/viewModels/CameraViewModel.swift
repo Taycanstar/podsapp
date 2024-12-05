@@ -390,105 +390,6 @@ struct PodItemJSON: Codable {
 
 }
 
-
-//
-//enum ColumnValue: Codable, CustomStringConvertible {
-//    case string(String)
-//    case number(Double)
-//    case time(TimeValue)
-//    case null
-//    
-//    var description: String {
-//        switch self {
-//        case .string(let value): return value
-//        case .number(let value):
-//            let roundedNumber = round(value * 10) / 10
-//            if roundedNumber.truncatingRemainder(dividingBy: 1) == 0 {
-//                return String(format: "%.0f", roundedNumber)
-//            } else {
-//                return String(format: "%.1f", roundedNumber)
-//            }
-//        case .time(let value): return value.toString
-//        case .null: return ""
-//        }
-//    }
-//    
-//    init(from decoder: Decoder) throws {
-//        let container = try decoder.singleValueContainer()
-//        
-//        if container.decodeNil() {
-//            self = .null
-//            return
-//        }
-//        
-//        // Try decoding as array of numbers first
-//        if let arrayValue = try? container.decode([Double].self) {
-//            if let firstValue = arrayValue.first {
-//                self = .number(firstValue)
-//            } else {
-//                self = .null
-//            }
-//            return
-//        }
-//        
-//        // Then try as array of strings
-//        if let arrayValue = try? container.decode([String].self) {
-//            if let firstValue = arrayValue.first {
-//                if let timeValue = TimeValue.fromString(firstValue) {
-//                    self = .time(timeValue)
-//                } else {
-//                    self = .string(firstValue)
-//                }
-//            } else {
-//                self = .null
-//            }
-//            return
-//        }
-//        
-//        // Then try single values
-//        if let stringValue = try? container.decode(String.self) {
-//            if let timeValue = TimeValue.fromString(stringValue) {
-//                self = .time(timeValue)
-//            } else {
-//                self = .string(stringValue)
-//            }
-//            return
-//        }
-//        
-//        if let doubleValue = try? container.decode(Double.self) {
-//            self = .number(doubleValue)
-//            return
-//        }
-//        
-//        if let intValue = try? container.decode(Int.self) {
-//            self = .number(Double(intValue))
-//            return
-//        }
-//        
-//        throw DecodingError.typeMismatch(
-//            ColumnValue.self,
-//            DecodingError.Context(
-//                codingPath: decoder.codingPath,
-//                debugDescription: "Expected String, Double, Int, Array, or null"
-//            )
-//        )
-//    }
-//    
-//    func encode(to encoder: Encoder) throws {
-//        var container = encoder.singleValueContainer()
-//        switch self {
-//        case .string(let value):
-//            try container.encode(value)
-//        case .number(let value):
-//            try container.encode(value)
-//        case .time(let timeValue):
-//            try container.encode(timeValue.toString)
-//        case .null:
-//            try container.encodeNil()
-//        }
-//    }
-//}
-
 enum ColumnValue: Codable, CustomStringConvertible {
     case number(Double)
     case string(String)
@@ -496,7 +397,6 @@ enum ColumnValue: Codable, CustomStringConvertible {
     case array([ColumnValue])
     case null
 
-    // Provide string representation for all cases, including nested arrays
     var description: String {
         switch self {
         case .number(let value):
@@ -515,32 +415,80 @@ enum ColumnValue: Codable, CustomStringConvertible {
         }
     }
 
-    // Decoding logic supports all cases, including nested arrays
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-
+        print("ColumnValue decoder - starting with path:", decoder.codingPath)
+        
         if container.decodeNil() {
+            print("ColumnValue decoder - got nil")
             self = .null
-        } else if let number = try? container.decode(Double.self) {
-            self = .number(number)
-        } else if let string = try? container.decode(String.self) {
-            self = .string(string)
-        } else if let time = try? container.decode(TimeValue.self) {
-            self = .time(time)
-        } else if let array = try? container.decode([ColumnValue].self) {
-            self = .array(array)
-        } else {
-            throw DecodingError.typeMismatch(
-                ColumnValue.self,
-                DecodingError.Context(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "Unsupported type"
-                )
-            )
+            return
         }
+        
+        // Try arrays
+        if let arrayValue = try? container.decode([ColumnValue].self) {
+            print("ColumnValue decoder - got ColumnValue array:", arrayValue)
+            self = .array(arrayValue)
+            return
+        }
+        
+        if let arrayValue = try? container.decode([Double].self) {
+            print("ColumnValue decoder - got number array:", arrayValue)
+            self = .array(arrayValue.map { .number($0) })
+            return
+        }
+        
+        if let arrayValue = try? container.decode([String].self) {
+            print("ColumnValue decoder - got string array:", arrayValue)
+            self = .array(arrayValue.map { .string($0) })
+            return
+        }
+        
+        // Try string first (for time values)
+        if let stringValue = try? container.decode(String.self) {
+            print("ColumnValue decoder - got string:", stringValue)
+            
+            // Attempt to parse the string as JSON array
+            if let jsonData = stringValue.data(using: .utf8),
+               let jsonArray = try? JSONDecoder().decode([ColumnValue].self, from: jsonData) {
+                print("ColumnValue decoder - string is JSON array:", jsonArray)
+                self = .array(jsonArray)
+                return
+            }
+            
+            if let timeValue = TimeValue.fromString(stringValue) {
+                print("ColumnValue decoder - converted to time:", timeValue)
+                self = .time(timeValue)
+                return
+            }
+            print("ColumnValue decoder - treating as regular string")
+            self = .string(stringValue)
+            return
+        }
+        
+        // Try single numeric values
+        if let doubleValue = try? container.decode(Double.self) {
+            print("ColumnValue decoder - got double:", doubleValue)
+            self = .number(doubleValue)
+            return
+        }
+        
+        if let intValue = try? container.decode(Int.self) {
+            print("ColumnValue decoder - got int:", intValue)
+            self = .number(Double(intValue))
+            return
+        }
+
+        print("ColumnValue decoder - failed to decode value")
+        throw DecodingError.typeMismatch(
+            ColumnValue.self,
+            DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "Expected String, Double, Int, Array, or null"
+            )
+        )
     }
 
-    // Encoding logic for all cases
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -549,8 +497,9 @@ enum ColumnValue: Codable, CustomStringConvertible {
         case .string(let value):
             try container.encode(value)
         case .time(let value):
-            try container.encode(value)
+            try container.encode(value.toString)
         case .array(let values):
+            // Encode the array of ColumnValues
             try container.encode(values)
         case .null:
             try container.encodeNil()
@@ -558,9 +507,33 @@ enum ColumnValue: Codable, CustomStringConvertible {
     }
 }
 
+private struct AnyDecodable: Decodable {
+    let value: Any
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self.value = value
+        } else if let value = try? container.decode(Double.self) {
+            self.value = value
+        } else if let value = try? container.decode(Bool.self) {
+            self.value = value
+        } else if let value = try? container.decode([String].self) {
+            self.value = value
+        } else if let value = try? container.decode([Double].self) {
+            self.value = value
+        } else if container.decodeNil() {
+            self.value = NSNull()
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "AnyDecodable value cannot be decoded"
+            )
+        }
+    }
+}
 
-// Add this struct to handle time values
+//// Add this struct to handle time values
 struct TimeValue: Codable, Equatable {
     var hours: Int
     var minutes: Int
@@ -598,91 +571,194 @@ struct TimeValue: Codable, Equatable {
 }
 
 
+
 struct PodResponse: Codable {
     let pods: [PodJSON]
 //    let totalPods: Int
 }
-
+//
+//extension Pod {
+//    init(from podJSON: PodJSON) {
+//        self.id = podJSON.id
+//        self.title = podJSON.title
+//        self.items = podJSON.items?.map { PodItem(from: $0) } ?? []
+//        self.templateId = podJSON.templateId
+//        self.workspace = podJSON.workspace ?? "Main workspace"
+//        self.isFavorite = podJSON.isFavorite
+//        self.lastVisited = podJSON.lastVisited
+//        self.columns = podJSON.columns
+//        self.visibleColumns = podJSON.visibleColumns
+//        self.role = podJSON.role
+//        self.description = podJSON.description
+//        self.instructions = podJSON.instructions
+//        self.type = podJSON.type
+//        self.teamId = podJSON.teamId
+//        if let recentActivityLogs = podJSON.recentActivityLogs {
+//                  self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
+//                      do {
+//                          return try PodItemActivityLog(from: logJSON)
+//                      } catch {
+//                          print("Error parsing activity log: \(error)")
+//                          return nil
+//                      }
+//                  }
+//              } else {
+//                  self.recentActivityLogs = nil
+//              }
+//        
+//    }
+//}
 extension Pod {
     init(from podJSON: PodJSON) {
+        print("Starting Pod initialization")
+        
         self.id = podJSON.id
+        print("Set id: \(podJSON.id)")
+        
         self.title = podJSON.title
-        self.items = podJSON.items?.map { PodItem(from: $0) } ?? []
+        print("Set title: \(podJSON.title)")
+        
+        print("About to map items")
+        self.items = podJSON.items?.map { item in
+            print("Mapping item: \(item.id)")
+            print("Item column values: \(String(describing: item.userColumnValues))")
+            let mappedItem = PodItem(from: item)
+            print("Mapped item column values: \(String(describing: mappedItem.userColumnValues))")
+            return mappedItem
+        } ?? []
+        
         self.templateId = podJSON.templateId
         self.workspace = podJSON.workspace ?? "Main workspace"
         self.isFavorite = podJSON.isFavorite
         self.lastVisited = podJSON.lastVisited
+        
+        print("Setting columns")
         self.columns = podJSON.columns
+        print("Set columns: \(podJSON.columns)")
+        
         self.visibleColumns = podJSON.visibleColumns
         self.role = podJSON.role
         self.description = podJSON.description
         self.instructions = podJSON.instructions
         self.type = podJSON.type
         self.teamId = podJSON.teamId
-        if let recentActivityLogs = podJSON.recentActivityLogs {
-                  self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
-                      do {
-                          return try PodItemActivityLog(from: logJSON)
-                      } catch {
-                          print("Error parsing activity log: \(error)")
-                          return nil
-                      }
-                  }
-              } else {
-                  self.recentActivityLogs = nil
-              }
         
+        print("About to set activity logs")
+        if let recentActivityLogs = podJSON.recentActivityLogs {
+            self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
+                do {
+                    return try PodItemActivityLog(from: logJSON)
+                } catch {
+                    print("Error parsing activity log: \(error)")
+                    return nil
+                }
+            }
+        } else {
+            self.recentActivityLogs = nil
+        }
+        
+        print("Finished Pod initialization")
     }
 }
-
+//extension PodItem {
+//    init(from itemJSON: PodItemJSON) {
+//        self.id = itemJSON.id
+//        self.itemType = itemJSON.itemType
+//        if let videoURLString = itemJSON.videoURL {
+//                    self.videoURL = URL(string: videoURLString)
+//                } else {
+//                    self.videoURL = nil // Assign nil if the string is nil
+//                } // Consider safer unwrapping
+//        self.metadata = itemJSON.label
+//        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "") // Consider safer unwrapping
+//        if let imageString = itemJSON.imageURL {
+//                   self.imageURL = URL(string: imageString)
+//               } else {
+//                   self.imageURL = nil // Assign nil if the string is nil
+//               }
+//        // Immediately initialize player if URL is available
+//               if let url = self.videoURL {
+//                   player = AVPlayer(url: url)
+//              
+//               } else {
+//                   player = nil
+//                  
+//               }
+//        self.notes = itemJSON.notes ?? ""
+//        
+//        print("Converting PodItemJSON to PodItem:")
+//                print("Default Column Values:", itemJSON.defaultColumnValues)
+//                print("User Column Values:", itemJSON.userColumnValues ?? [:])
+////        self.defaultColumnValues = itemJSON.defaultColumnValues
+////        self.userColumnValues = itemJSON.userColumnValues
+//        // Process column values based on column type
+//              self.defaultColumnValues = itemJSON.defaultColumnValues
+//              
+//              // Convert single values to arrays if needed
+//              var processedUserValues = itemJSON.userColumnValues
+//              if let userValues = processedUserValues {
+//                  for (key, value) in userValues {
+//                      if case .time = value {
+//                          // Wrap time values in an array
+//                          processedUserValues?[key] = .array([value])
+//                      }
+//                  }
+//              }
+//        self.userColumnValues = processedUserValues
+//    }
+//}
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
         self.id = itemJSON.id
         self.itemType = itemJSON.itemType
         if let videoURLString = itemJSON.videoURL {
-                    self.videoURL = URL(string: videoURLString)
-                } else {
-                    self.videoURL = nil // Assign nil if the string is nil
-                } // Consider safer unwrapping
+            self.videoURL = URL(string: videoURLString)
+        } else {
+            self.videoURL = nil
+        }
         self.metadata = itemJSON.label
-        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "") // Consider safer unwrapping
+        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "")
         if let imageString = itemJSON.imageURL {
-                   self.imageURL = URL(string: imageString)
-               } else {
-                   self.imageURL = nil // Assign nil if the string is nil
-               }
-        // Immediately initialize player if URL is available
-               if let url = self.videoURL {
-                   player = AVPlayer(url: url)
-              
-               } else {
-                   player = nil
-                  
-               }
+            self.imageURL = URL(string: imageString)
+        } else {
+            self.imageURL = nil
+        }
+        if let url = self.videoURL {
+            player = AVPlayer(url: url)
+        } else {
+            player = nil
+        }
         self.notes = itemJSON.notes ?? ""
-        self.defaultColumnValues = itemJSON.defaultColumnValues
-        self.userColumnValues = itemJSON.userColumnValues
-//        self.columnValues = itemJSON.columnValues ?? [:]
         
-    }
-
-}
-
-extension PodItemJSON {
-    func toPodItem() -> PodItem {
-        return PodItem(
-            id: id,
-            videoURL: videoURL.flatMap { URL(string: $0) },
-            metadata: label,
-            thumbnailURL: thumbnail.flatMap { URL(string: $0) },
-            imageURL: imageURL.flatMap { URL(string: $0) },
-            itemType: itemType,
-            notes: notes ?? "",
-            defaultColumnValues: defaultColumnValues,
-            userColumnValues: userColumnValues
-        )
+        // Handle column values directly without modification
+        self.defaultColumnValues = [:]  // Initialize as empty
+        self.userColumnValues = [:]     // Initialize as empty
+        
+        // Then safely assign values if they exist
+        if !itemJSON.defaultColumnValues.isEmpty {
+            self.defaultColumnValues = itemJSON.defaultColumnValues
+        }
+        if let userValues = itemJSON.userColumnValues {
+            self.userColumnValues = userValues
+        }
     }
 }
+//extension PodItemJSON {
+//    func toPodItem() -> PodItem {
+//        return PodItem(
+//            id: id,
+//            videoURL: videoURL.flatMap { URL(string: $0) },
+//            metadata: label,
+//            thumbnailURL: thumbnail.flatMap { URL(string: $0) },
+//            imageURL: imageURL.flatMap { URL(string: $0) },
+//            itemType: itemType,
+//            notes: notes ?? "",
+//            defaultColumnValues: defaultColumnValues,
+//            userColumnValues: userColumnValues
+//        )
+//    }
+//}
+
 
 enum CameraMode: String, CaseIterable {
     case fifteen = "15s"
