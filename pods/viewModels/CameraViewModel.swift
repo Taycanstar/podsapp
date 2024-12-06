@@ -208,62 +208,6 @@ struct PodItem: Identifiable {
     
 }
 
-//struct PodItemActivityLog: Identifiable, Comparable {
-//    let id: Int
-//    let itemId: Int
-//    let itemLabel: String
-//    let userEmail: String
-//    let loggedAt: Date
-//    let columnValues: [String: ColumnValue]
-//    let notes: String
-//    let userName: String
-//
-//    init(from json: PodItemActivityLogJSON) throws {
-//        self.id = json.id
-//        self.itemId = json.itemId
-//        self.itemLabel = json.itemLabel
-//        self.userEmail = json.userEmail
-//        self.userName = json.userName
-//        self.columnValues = json.columnValues
-//        self.notes = json.notes
-//
-//        let dateFormatters = [
-//            ISO8601DateFormatter(),
-//            { () -> ISO8601DateFormatter in
-//                let formatter = ISO8601DateFormatter()
-//                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-//                return formatter
-//            }()
-//        ]
-//
-//        if let date = dateFormatters.lazy.compactMap({ $0.date(from: json.loggedAt) }).first {
-//            self.loggedAt = date
-//        } else {
-//            throw NSError(domain: "PodItemActivityLog", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.loggedAt)"])
-//        }
-//    }
-//
-//    static func < (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
-//        return lhs.loggedAt > rhs.loggedAt
-//    }
-//
-//    static func == (lhs: PodItemActivityLog, rhs: PodItemActivityLog) -> Bool {
-//        return lhs.id == rhs.id
-//    }
-//}
-
-//struct PodItemActivityLogJSON: Codable {
-//    let id: Int
-//    let itemId: Int
-//    let itemLabel: String
-//    let userEmail: String
-//    let loggedAt: String
-//    let columnValues: [String: ColumnValue]
-//    let notes: String
-//    let userName: String  // Add this line
-//  
-//}
-
 struct PodItemActivityLog: Identifiable, Comparable {
     let id: Int
     let itemId: Int
@@ -574,56 +518,22 @@ struct TimeValue: Codable, Equatable {
 
 struct PodResponse: Codable {
     let pods: [PodJSON]
-//    let totalPods: Int
+
 }
-//
-//extension Pod {
-//    init(from podJSON: PodJSON) {
-//        self.id = podJSON.id
-//        self.title = podJSON.title
-//        self.items = podJSON.items?.map { PodItem(from: $0) } ?? []
-//        self.templateId = podJSON.templateId
-//        self.workspace = podJSON.workspace ?? "Main workspace"
-//        self.isFavorite = podJSON.isFavorite
-//        self.lastVisited = podJSON.lastVisited
-//        self.columns = podJSON.columns
-//        self.visibleColumns = podJSON.visibleColumns
-//        self.role = podJSON.role
-//        self.description = podJSON.description
-//        self.instructions = podJSON.instructions
-//        self.type = podJSON.type
-//        self.teamId = podJSON.teamId
-//        if let recentActivityLogs = podJSON.recentActivityLogs {
-//                  self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
-//                      do {
-//                          return try PodItemActivityLog(from: logJSON)
-//                      } catch {
-//                          print("Error parsing activity log: \(error)")
-//                          return nil
-//                      }
-//                  }
-//              } else {
-//                  self.recentActivityLogs = nil
-//              }
-//        
-//    }
-//}
+
 extension Pod {
     init(from podJSON: PodJSON) {
-        print("Starting Pod initialization")
+
         
         self.id = podJSON.id
-        print("Set id: \(podJSON.id)")
+
         
         self.title = podJSON.title
-        print("Set title: \(podJSON.title)")
-        
-        print("About to map items")
+
         self.items = podJSON.items?.map { item in
-            print("Mapping item: \(item.id)")
-            print("Item column values: \(String(describing: item.userColumnValues))")
+
             let mappedItem = PodItem(from: item)
-            print("Mapped item column values: \(String(describing: mappedItem.userColumnValues))")
+
             return mappedItem
         } ?? []
         
@@ -632,18 +542,16 @@ extension Pod {
         self.isFavorite = podJSON.isFavorite
         self.lastVisited = podJSON.lastVisited
         
-        print("Setting columns")
+    
         self.columns = podJSON.columns
-        print("Set columns: \(podJSON.columns)")
-        
+
         self.visibleColumns = podJSON.visibleColumns
         self.role = podJSON.role
         self.description = podJSON.description
         self.instructions = podJSON.instructions
         self.type = podJSON.type
         self.teamId = podJSON.teamId
-        
-        print("About to set activity logs")
+
         if let recentActivityLogs = podJSON.recentActivityLogs {
             self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
                 do {
@@ -656,57 +564,9 @@ extension Pod {
         } else {
             self.recentActivityLogs = nil
         }
-        
-        print("Finished Pod initialization")
     }
 }
-//extension PodItem {
-//    init(from itemJSON: PodItemJSON) {
-//        self.id = itemJSON.id
-//        self.itemType = itemJSON.itemType
-//        if let videoURLString = itemJSON.videoURL {
-//                    self.videoURL = URL(string: videoURLString)
-//                } else {
-//                    self.videoURL = nil // Assign nil if the string is nil
-//                } // Consider safer unwrapping
-//        self.metadata = itemJSON.label
-//        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "") // Consider safer unwrapping
-//        if let imageString = itemJSON.imageURL {
-//                   self.imageURL = URL(string: imageString)
-//               } else {
-//                   self.imageURL = nil // Assign nil if the string is nil
-//               }
-//        // Immediately initialize player if URL is available
-//               if let url = self.videoURL {
-//                   player = AVPlayer(url: url)
-//              
-//               } else {
-//                   player = nil
-//                  
-//               }
-//        self.notes = itemJSON.notes ?? ""
-//        
-//        print("Converting PodItemJSON to PodItem:")
-//                print("Default Column Values:", itemJSON.defaultColumnValues)
-//                print("User Column Values:", itemJSON.userColumnValues ?? [:])
-////        self.defaultColumnValues = itemJSON.defaultColumnValues
-////        self.userColumnValues = itemJSON.userColumnValues
-//        // Process column values based on column type
-//              self.defaultColumnValues = itemJSON.defaultColumnValues
-//              
-//              // Convert single values to arrays if needed
-//              var processedUserValues = itemJSON.userColumnValues
-//              if let userValues = processedUserValues {
-//                  for (key, value) in userValues {
-//                      if case .time = value {
-//                          // Wrap time values in an array
-//                          processedUserValues?[key] = .array([value])
-//                      }
-//                  }
-//              }
-//        self.userColumnValues = processedUserValues
-//    }
-//}
+
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
         self.id = itemJSON.id
@@ -743,21 +603,7 @@ extension PodItem {
         }
     }
 }
-//extension PodItemJSON {
-//    func toPodItem() -> PodItem {
-//        return PodItem(
-//            id: id,
-//            videoURL: videoURL.flatMap { URL(string: $0) },
-//            metadata: label,
-//            thumbnailURL: thumbnail.flatMap { URL(string: $0) },
-//            imageURL: imageURL.flatMap { URL(string: $0) },
-//            itemType: itemType,
-//            notes: notes ?? "",
-//            defaultColumnValues: defaultColumnValues,
-//            userColumnValues: userColumnValues
-//        )
-//    }
-//}
+
 
 
 enum CameraMode: String, CaseIterable {

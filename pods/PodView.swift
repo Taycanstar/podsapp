@@ -281,6 +281,7 @@ struct PodView: View {
             self.activityLogs = pod.recentActivityLogs ?? []
             print(activityLogs, "logs")
             fetchFullPodDetails()
+            fetchFullPodDetails(showLoadingIndicator: false)
         }
         .onDisappear {
             //            isTabBarVisible.wrappedValue = true
@@ -596,11 +597,11 @@ struct PodView: View {
                            ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
 
                                columnView(name: column.name, item: reorderedItems[index])
-                                   .onTapGesture {
-                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
-                                       selectedItemIndex = index
-                                       showColumnEditSheet = true
-                                   }
+//                                   .onTapGesture {
+//                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
+//                                       selectedItemIndex = index
+//                                       showColumnEditSheet = true
+//                                   }
                            }
                        }
                    }
@@ -2311,7 +2312,8 @@ struct LogActivityView: View {
     let podId: Int
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
-    @State private var columnValues: [String: [ColumnValue]]
+//    @State private var columnValues: [String: [ColumnValue]]
+    @State private var columnValues: [String: ColumnValue]
     @State private var activityNote: String = ""
     @State private var expandedColumn: String?
     @State private var isSubmitting = false
@@ -2325,21 +2327,55 @@ struct LogActivityView: View {
     @FocusState private var focusedField: String?
     @State private var groupedRowsCount: [String: Int] = [:]
 
+//    init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
+//        self.item = item
+//        self.podColumns = podColumns
+//        self.podId = podId
+//        self.onActivityLogged = onActivityLogged
+//        
+//        // Convert single values to arrays
+//        var arrayColumnValues: [String: [ColumnValue]] = [:]
+//        if let initialValues = item.columnValues {
+//            for (key, value) in initialValues {
+//                arrayColumnValues[key] = [value]
+//            }
+//        }
+//        _columnValues = State(initialValue: arrayColumnValues)
+//    }
     init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
-        self.item = item
-        self.podColumns = podColumns
-        self.podId = podId
-        self.onActivityLogged = onActivityLogged
-        
-        // Convert single values to arrays
-        var arrayColumnValues: [String: [ColumnValue]] = [:]
-        if let initialValues = item.columnValues {
-            for (key, value) in initialValues {
-                arrayColumnValues[key] = [value]
+            self.item = item
+            self.podColumns = podColumns
+            self.podId = podId
+            self.onActivityLogged = onActivityLogged
+            
+            // Initialize column values with proper structure
+            var initialColumnValues: [String: ColumnValue] = [:]
+            var initialGroupedRowsCount: [String: Int] = [:]
+            
+            for column in podColumns {
+                if let value = item.columnValues?[column.name] {
+                    if column.groupingType == "grouped" {
+                        if case .array(let columnValues) = value {
+                            initialColumnValues[column.name] = .array(columnValues)
+                            initialGroupedRowsCount[column.groupingType ?? ""] = columnValues.count
+                        } else {
+                            initialColumnValues[column.name] = .array([value])
+                            initialGroupedRowsCount[column.groupingType ?? ""] = 1
+                        }
+                    } else {
+                        initialColumnValues[column.name] = value
+                    }
+                } else {
+                    initialColumnValues[column.name] = .null
+                    if column.groupingType == "grouped" {
+                        initialGroupedRowsCount[column.groupingType ?? ""] = 0
+                    }
+                }
             }
+            
+            _columnValues = State(initialValue: initialColumnValues)
+            _groupedRowsCount = State(initialValue: initialGroupedRowsCount)
         }
-        _columnValues = State(initialValue: arrayColumnValues)
-    }
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
@@ -2363,129 +2399,49 @@ struct LogActivityView: View {
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
+                        
                         let columnGroups = groupColumns(podColumns)
-                        ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
-                            let columnGroup = columnGroups[groupIndex]
-                            if columnGroup.first?.groupingType == "singular" {
-                                // Singular columns - vertical layout
-                                ForEach(columnGroup, id: \.name) { column in
-                                    if !skippedColumns.contains(column.name) {
-                                        ColumnInputView(
-                                            column: column,
-                                            columnValues: $columnValues,
-                                            expandedColumn: $expandedColumn,
-                                            focusedField: _focusedField.projectedValue
-                                        )
-                                    }
-                                }
-                            } else {
-                                // Grouped columns - horizontal layout
-                                VStack(alignment: .leading, spacing: 10) {
-                                    // Column names row
-                                    HStack(spacing: 15) {
-                                        ForEach(columnGroup, id: \.name) { column in
-                                            if !skippedColumns.contains(column.name) {
-                                                Text(column.name)
-                                                    .font(.system(size: 16))
-                                                    .fontWeight(.semibold)
-                                                    .fontDesign(.rounded)
-                                                    .foregroundColor(.primary)
-                                                    .kerning(0.2)
-                                                    .frame(maxWidth: .infinity)
-                                            }
-                                        }
-                                    }
-                                    
-                                    // Multiple rows of input fields
-                                    ForEach(0..<(groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1), id: \.self) { rowIndex in
-                                        List {
-                                            HStack(spacing: 15) {
-                                                ForEach(Array(columnGroup.enumerated()), id: \.element.name) { columnIndex, column in
-                                                    if !skippedColumns.contains(column.name) {
-                                                        ColumnInputField(
-                                                            column: column,
-                                                            rowIndex: rowIndex,
-                                                            columnGroup: columnGroup,
-                                                            columnIndex: columnIndex,
-                                                            totalRows: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                                            columnValues: $columnValues,
-                                                            expandedColumn: $expandedColumn,
-                                                            focusedField: _focusedField.projectedValue
-                                                        )
-                                                        .frame(maxWidth: .infinity)
-                                                    }
-                                                }
-                                            }
-                                        
-                                            .listRowBackground(Color.clear)
-                                            .listRowInsets(EdgeInsets())
-                                                   .listRowSeparator(.hidden) // Hides bottom divider
-                                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                                Button(role: .destructive) {
-                                                    withAnimation {
-                                                        // Remove this row's values from all columns
-                                                        for column in columnGroup {
-                                                            if var values = columnValues[column.name] {
-                                                                values.remove(at: rowIndex)
-                                                                columnValues[column.name] = values
-                                                            }
-                                                        }
-                                                        
-                                                        // Update the row count
-                                                        let groupType = columnGroup.first?.groupingType ?? ""
-                                                        if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
-                                                            groupedRowsCount[groupType] = currentCount - 1
-                                                        }
-                                                    }
-                                                } label: {
-                                                    Label("Delete", systemImage: "trash")
-                                                }
-                                                
-                                            }
-                                        }
-                                        .listStyle(PlainListStyle())
-                                        .frame(height: 44) // Adjust this height as needed
-                                    }
-                                    // Add entry button
-                                       Button(action: {
-                                           // Add your logic here to create a new row of inputs
-                                           withAnimation {
-                                                   let groupType = columnGroup.first?.groupingType ?? ""
-                                                   let currentRowIndex = groupedRowsCount[groupType] ?? 1
-                                                   
-                                                   // For each column in the group, set the new row's value
-                                                   for column in columnGroup {
-                                                       if !skippedColumns.contains(column.name) {
-                                                           var values = columnValues[column.name] ?? []
-                                                           
-                                                           // For number type, check if the first value was 1
-                                                           if column.type == "number",
-                                                              case .number(let firstNum) = values.first,
-                                                              firstNum == 1 {
-                                                               // Add next number in sequence
-                                                               values.append(.number(Double(values.count + 1)))
-                                                           } else {
-                                                               // Copy the last value instead of adding .null
-                                                               let lastValue = values.last ?? .null
-                                                               values.append(lastValue)
-                                                           }
-                                                           
-                                                           columnValues[column.name] = values
+                                   ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+                                       let columnGroup = columnGroups[groupIndex]
+                                       
+                                       if columnGroup.first?.groupingType == "singular" {
+                                           ForEach(columnGroup, id: \.name) { column in
+                                               if !skippedColumns.contains(column.name) {
+                                                   SingularColumnView(
+                                                       column: column,
+                                                       columnValues: $columnValues,
+                                                       focusedField: _focusedField,
+                                                       expandedColumn: $expandedColumn,
+                                                       onValueChanged: {
+                                                           // Optional: Add any value change handling here
                                                        }
-                                                   }
-                                                   
-                                                   groupedRowsCount[groupType] = currentRowIndex + 1
+                                                   )
                                                }
-                                       }) {
-                                           Text("Add Entry")
-                                               .foregroundColor(.accentColor)
+                                           }
+                                       } else {
+                                           GroupedColumnView(
+                                               columnGroup: columnGroup,
+                                               groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                               onAddRow: {
+                                                   withAnimation {
+                                                       addRow(for: columnGroup)
+                                                   }
+                                               },
+                                               onDeleteRow: { rowIndex in
+                                                   withAnimation {
+                                                       deleteRow(at: rowIndex, in: columnGroup)
+                                                   }
+                                               },
+                                               columnValues: $columnValues,
+                                               focusedField: _focusedField,
+                                               expandedColumn: $expandedColumn,
+                                               onValueChanged: {
+                                                   // Optional: Add any value change handling here
+                                               }
+                                           )
                                        }
-                                       .frame(maxWidth: .infinity)
-                                       .padding(.top, 8)
-                                }
-                                .padding(.top, 5)
-                            }
-                        }
+                                   }
+
                         
                         VStack(alignment: .leading, spacing: 5) {
                             Button(action: {
@@ -2555,6 +2511,7 @@ struct LogActivityView: View {
                 }
                 .padding()
             }
+
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Button("Clear") {
@@ -2562,10 +2519,18 @@ struct LogActivityView: View {
                             let components = focusedField.split(separator: "_").map(String.init)
                             if components.count == 2,
                                let rowIndexInt = Int(components[1]) {
+                                // Handle grouped columns
                                 let columnName = String(components[0])
-                                columnValues[columnName] = columnValues[columnName]?.enumerated().map { index, value in
-                                    index == rowIndexInt ? .string("") : value  // Change this line
+                                if let currentValue = columnValues[columnName],
+                                   case .array(var values) = currentValue {
+                                    if rowIndexInt < values.count {
+                                        values[rowIndexInt] = .null
+                                        columnValues[columnName] = .array(values)
+                                    }
                                 }
+                            } else {
+                                // Handle singular columns
+                                columnValues[focusedField] = .null
                             }
                         }
                     }
@@ -2582,12 +2547,13 @@ struct LogActivityView: View {
             }
   
             .background(Color("iosbg").edgesIgnoringSafeArea(.all)) // Apply background color
-            .navigationTitle("Log Activity")
+            .navigationTitle("Add Activity")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
                 leading: Button(action: {
                     presentationMode.wrappedValue.dismiss()
                 }) {
+                    Image(systemName: "xmark")
                     Image(systemName: "xmark")
                         .foregroundColor(.primary)
                 },
@@ -2601,6 +2567,96 @@ struct LogActivityView: View {
         }
     }
     
+    
+    private func addRow(for columnGroup: [PodColumn]) {
+        let groupType = columnGroup.first?.groupingType ?? ""
+        let currentRowIndex = groupedRowsCount[groupType] ?? 1
+        
+        for column in columnGroup {
+            guard !skippedColumns.contains(column.name) else { continue }
+            
+            if case .array(let existingValues) = columnValues[column.name] {
+                var values = existingValues
+                
+                // Determine the new value based on column type
+                let newValue: ColumnValue
+                if column.type == "number" {
+                    if case .number(1.0) = values.first {
+                        newValue = .number(Double(values.count + 1))
+                    } else {
+                        newValue = values.last ?? .null
+                    }
+                } else {
+                    newValue = values.last ?? .null
+                }
+                
+                values.append(newValue)
+                columnValues[column.name] = .array(values)
+            } else {
+                columnValues[column.name] = .array([.null])
+            }
+        }
+        
+        groupedRowsCount[groupType] = currentRowIndex + 1
+    }
+    
+    private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
+           for column in columnGroup {
+               if case .array(var values) = columnValues[column.name] {
+                   if index < values.count {
+                       values.remove(at: index)
+                       columnValues[column.name] = .array(values)
+                   }
+               }
+           }
+           
+           let groupType = columnGroup.first?.groupingType ?? ""
+           if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+               groupedRowsCount[groupType] = currentCount - 1
+           }
+       }
+
+       private func submitActivity() {
+           isSubmitting = true
+           
+           // Prepare the column values for submission
+           var submissionValues: [String: ColumnValue] = [:]
+           
+           for (columnName, value) in columnValues {
+               guard !skippedColumns.contains(columnName),
+                     let column = podColumns.first(where: { $0.name == columnName }) else { continue }
+               
+               if column.groupingType == "grouped" {
+                   if case .array(let values) = value {
+                       submissionValues[columnName] = .array(values)
+                   }
+               } else {
+                   submissionValues[columnName] = value
+               }
+           }
+           
+           NetworkManager().createActivityLog(
+               itemId: item.id,
+               podId: podId,
+               userEmail: viewModel.email,
+               columnValues: submissionValues,
+               podColumns: podColumns,
+               notes: activityNote,
+               loggedAt: selectedDate
+           ) { result in
+               DispatchQueue.main.async {
+                   isSubmitting = false
+                   switch result {
+                   case .success(let newLog):
+                       onActivityLogged(newLog)
+                       presentationMode.wrappedValue.dismiss()
+                   case .failure(let error):
+                       errorMessage = error.localizedDescription
+                   }
+               }
+           }
+       }
+    
     private func formatDate(_ date: Date) -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
@@ -2612,35 +2668,32 @@ struct LogActivityView: View {
         }
     }
 
-
     
-//    private func timeValue(for columnName: String) -> TimeValue {
-//        let values = columnValues[columnName]?.first ?? .null
-//        switch values {
-//        case .time(let value):
-//            return value
-//        case .number(let seconds):
-//            return TimeValue.fromSeconds(Int(seconds))
-//        case .string(let value):
-//            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
-//        case .null:
-//            return TimeValue(hours: 0, minutes: 0, seconds: 0)
-//        }
-//    }
     private func timeValue(for columnName: String) -> TimeValue {
-        let values = columnValues[columnName]?.first ?? .null
-        switch values {
-        case .time(let value):
-            return value
+        guard let value = columnValues[columnName] else {
+            return TimeValue(hours: 0, minutes: 0, seconds: 0)
+        }
+        
+        switch value {
+        case .time(let timeValue):
+            return timeValue
         case .number(let seconds):
             return TimeValue.fromSeconds(Int(seconds))
-        case .string(let value):
-            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
-        case .array(let array):
-            // Use the first element of the array, or fallback to a default value
-            if let firstString = array.first?.description,
-               let timeValue = TimeValue.fromString(firstString) {
-                return timeValue
+        case .string(let strValue):
+            return TimeValue.fromString(strValue) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+        case .array(let values):
+            // If it's an array, try to get time value from the first element
+            if let firstValue = values.first {
+                switch firstValue {
+                case .time(let timeValue):
+                    return timeValue
+                case .string(let strValue):
+                    return TimeValue.fromString(strValue) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
+                case .number(let seconds):
+                    return TimeValue.fromSeconds(Int(seconds))
+                default:
+                    return TimeValue(hours: 0, minutes: 0, seconds: 0)
+                }
             }
             return TimeValue(hours: 0, minutes: 0, seconds: 0)
         case .null:
@@ -2648,67 +2701,33 @@ struct LogActivityView: View {
         }
     }
 
-
     private func stringValue(for columnName: String) -> String {
-        return String(describing: columnValues[columnName]?.first ?? .null)
+        guard let value = columnValues[columnName] else {
+            return ""
+        }
+        return value.description
     }
 
     private func numberValue(for columnName: String) -> Double {
-        if case .number(let value) = columnValues[columnName]?.first ?? .null {
-            return value
+        guard let value = columnValues[columnName] else {
+            return 0
         }
-        return 0
+        
+        switch value {
+        case .number(let num):
+            return num
+        case .array(let values):
+            // If it's an array, try to get number from the first element
+            if let firstValue = values.first, case .number(let num) = firstValue {
+                return num
+            }
+            return 0
+        default:
+            return 0
+        }
     }
 
 
-    private func submitActivity() {
-        isSubmitting = true
-        
-        var apiColumnValues: [String: ColumnValue] = [:]
-        
-        for column in podColumns {
-            guard !skippedColumns.contains(column.name) else { continue }
-            
-            if column.groupingType == "grouped" {
-                if let values = columnValues[column.name] {
-                    // For grouped columns, store as JSON string
-                    let jsonArray = values.map { $0.description }
-                    if let jsonData = try? JSONSerialization.data(withJSONObject: jsonArray),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
-                        apiColumnValues[column.name] = .string(jsonString)
-                    }
-                }
-            } else {
-                // For singular columns, take first value as before
-                if let firstValue = columnValues[column.name]?.first {
-                    apiColumnValues[column.name] = firstValue
-                }
-            }
-        }
-        
-        NetworkManager().createActivityLog(
-            itemId: item.id,
-            podId: podId,
-            userEmail: viewModel.email,
-            columnValues: apiColumnValues,
-            podColumns: podColumns,
-            notes: activityNote,
-            loggedAt: selectedDate
-        ) { result in
-            DispatchQueue.main.async {
-                isSubmitting = false
-                switch result {
-                    case .success(let newLog):
-                        print("Activity logged successfully")
-                        onActivityLogged(newLog)
-                        presentationMode.wrappedValue.dismiss()
-                    case .failure(let error):
-                        print("Failed to log activity: \(error)")
-                        errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
 }
 
 struct ColumnInputView: View {
@@ -2807,22 +2826,7 @@ struct ColumnInputField: View {
         let values = columnValues[columnName] ?? []
         return rowIndex < values.count ? String(describing: values[rowIndex]) : ""
     }
-    
-//    private func timeValue(for columnName: String, rowIndex: Int) -> TimeValue {
-//        let values = columnValues[columnName] ?? []
-//        guard rowIndex < values.count else { return TimeValue(hours: 0, minutes: 0, seconds: 0) }
-//        
-//        switch values[rowIndex] {
-//        case .time(let value):
-//            return value
-//        case .number(let seconds):
-//            return TimeValue.fromSeconds(Int(seconds))
-//        case .string(let value):
-//            return TimeValue.fromString(value) ?? TimeValue(hours: 0, minutes: 0, seconds: 0)
-//        case .null:
-//            return TimeValue(hours: 0, minutes: 0, seconds: 0)
-//        }
-//    }
+
     
     private func timeValue(for columnName: String, rowIndex: Int) -> TimeValue {
         let values = columnValues[columnName] ?? []

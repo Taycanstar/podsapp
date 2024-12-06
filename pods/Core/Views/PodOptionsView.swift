@@ -89,7 +89,7 @@ struct PodOptionsView: View {
                         HapticFeedback.generate()
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "bolt.horizontal.circle", text: "Activity Log", action: {
+                    MenuItemView(iconName: "bolt.horizontal.circle", text: "Activities", action: {
                         dismiss()
 //                        onActivityLogSelected()
                      
