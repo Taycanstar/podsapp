@@ -616,76 +616,6 @@ struct PodView: View {
             needsRefresh = true
         }
 
-//    private var listView: some View {
-//
-//        ForEach(reorderedItems.indices, id: \.self) { index in
-//               HStack(alignment: .top, spacing: 10) {
-//                   VStack(alignment: .leading, spacing: 8) {
-//                       Text(reorderedItems[index].metadata)
-//                           .font(.system(size: 14))
-//                           .fontWeight(.regular)
-//                           .padding(.bottom, 4)
-//                       
-//                       HStack {
-//                           ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
-//
-//                               columnView(name: column.name, item: reorderedItems[index])
-////                                   .onTapGesture {
-////                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
-////                                       selectedItemIndex = index
-////                                       showColumnEditSheet = true
-////                                   }
-//                           }
-//                       }
-//                   }
-//                    .padding()
-//                    .onTapGesture {
-//                        selectedItemIndex = index
-//                        showCardSheet = true
-//                    }
-//                    
-//                    Spacer()
-//                    
-//                    VStack {
-//                        iconView(for: reorderedItems[index] , index: index)
-//                            .onTapGesture {
-//                                if reorderedItems[index].videoURL != nil || reorderedItems[index].imageURL != nil {
-//                                    self.selection = (0, index)
-//                                }
-//                            }
-//                        Spacer()
-//
-//                        if itemsWithRecentActivity.contains(reorderedItems[index].id) {
-//                                              Image(systemName: "checkmark.circle.fill")
-//                                                    .font(.system(size: 20))
-//                                                  .foregroundColor(.green)
-//                                                  .transition(.opacity)
-//                                          } else {
-//                                              Image(systemName: "plus.circle.fill")
-//                                                  .font(.system(size: 20))
-//                                                  .foregroundColor(.accentColor)
-////                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-//                                                  .onTapGesture {
-//                                                      selectedItemIndex = index
-//                                                      showLogActivitySheet = true
-//                                                      HapticFeedback.generate()
-//                                                  }
-//                                          }
-//                    }
-//                    .padding(10)
-//                }
-//
-//            .frame(maxWidth: .infinity, alignment: .leading)
-//            .background(Color("iosnp"))
-//            .cornerRadius(10)
-//            .contentShape(Rectangle()) // Add this to make the whole area tappable
-//            .onTapGesture {
-//                selectedItemIndex = index
-//                showCardSheet = true
-//            }
-//        }
-//        .padding(.horizontal, 15)
-//    }
     private var listView: some View {
         List {
             ForEach(reorderedItems.indices, id: \.self) { index in
@@ -854,36 +784,7 @@ struct PodView: View {
 
     }
     
-//    private func createNewPodItem() {
-//        isAddInputLoading = true
-//        let newItemColumnValues: [String: ColumnValue] = pod.columns.reduce(into: [:]) { result, column in
-//            result[column.name] = .null  // Initialize all columns with null values
-//        }
-//        
-//        networkManager.createPodItem(
-//            podId: pod.id,
-//            label: newItemText,
-//            itemType: nil,  // We're not setting an item type for now
-//            notes: "",
-//            defaultColumnValues: newItemColumnValues
-//        ) { result in
-//            DispatchQueue.main.async {
-//                switch result {
-//                case .success(let newItem):
-//                    self.reorderedItems.append(newItem)
-//                    self.pod.items.append(newItem)
-//                    self.newItemText = ""
-//                    self.isCreatingNewItem = false
-//                    self.needsRefresh = true
-//                    self.isAddInputLoading = false
-//                case .failure(let error):
-//                    print("Failed to create new pod item: \(error)")
-//                    // You might want to show an alert to the user here
-//                    self.isAddInputLoading = false
-//                }
-//            }
-//        }
-//    }
+
     private func createNewPodItem() {
         isAddInputLoading = true
         
