@@ -172,7 +172,7 @@ struct PodView: View {
                                    }
                                } else {
                                    
-                                   ScrollView {
+//                                   ScrollView {
                                        VStack(spacing: 12) {
                                            switch selectedView {
                                            case .list:
@@ -191,10 +191,10 @@ struct PodView: View {
 
                                        }
                                        
-                                   }
-                                   .refreshable {
-                                       fetchFullPodDetails(showLoadingIndicator: false)
-                                   }
+//                                   }
+//                                   .refreshable {
+//                                       fetchFullPodDetails(showLoadingIndicator: false)
+//                                   }
                          
                                        .safeAreaInset(edge: .bottom) {
                                          
@@ -498,25 +498,58 @@ struct PodView: View {
         }
     }
     
+//    func onActivityLogged(newLog: PodItemActivityLog) {
+//        showTemporaryCheckmark(for: newLog.itemId)
+//        DispatchQueue.main.async {
+//            // Insert the new log at the correct position
+//            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
+//            self.activityLogs.insert(newLog, at: insertionIndex)
+//            
+//            // Ensure the logs are sorted
+//            self.activityLogs.sort()
+//            
+//            // Optionally, limit the number of logs kept in memory
+//            if self.activityLogs.count > 100 {
+//                self.activityLogs = Array(self.activityLogs.prefix(100))
+//            }
+//            
+//            // Update the pod's recentActivityLogs if necessary
+//            self.pod.recentActivityLogs = self.activityLogs
+//            
+//           
+//        }
+//    }
     func onActivityLogged(newLog: PodItemActivityLog) {
         showTemporaryCheckmark(for: newLog.itemId)
         DispatchQueue.main.async {
-            // Insert the new log at the correct position
+            // Update activity logs
             let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
             self.activityLogs.insert(newLog, at: insertionIndex)
-            
-            // Ensure the logs are sorted
             self.activityLogs.sort()
-            
-            // Optionally, limit the number of logs kept in memory
             if self.activityLogs.count > 100 {
                 self.activityLogs = Array(self.activityLogs.prefix(100))
             }
             
-            // Update the pod's recentActivityLogs if necessary
+            // Update the pod's recentActivityLogs
             self.pod.recentActivityLogs = self.activityLogs
             
-           
+            // Update the item's column values
+            if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
+                // Update the item's columnValues with the values from the activity log
+                if self.reorderedItems[itemIndex].columnValues == nil {
+                    self.reorderedItems[itemIndex].columnValues = [:]
+                }
+                
+                // Update with new values from the activity log
+                for (key, value) in newLog.columnValues {
+                    self.reorderedItems[itemIndex].columnValues?[key] = value
+                }
+                
+                // Also update in the pod.items
+                if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
+                    self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
+                }
+            }
         }
     }
     
@@ -583,74 +616,139 @@ struct PodView: View {
             needsRefresh = true
         }
 
+//    private var listView: some View {
+//
+//        ForEach(reorderedItems.indices, id: \.self) { index in
+//               HStack(alignment: .top, spacing: 10) {
+//                   VStack(alignment: .leading, spacing: 8) {
+//                       Text(reorderedItems[index].metadata)
+//                           .font(.system(size: 14))
+//                           .fontWeight(.regular)
+//                           .padding(.bottom, 4)
+//                       
+//                       HStack {
+//                           ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
+//
+//                               columnView(name: column.name, item: reorderedItems[index])
+////                                   .onTapGesture {
+////                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
+////                                       selectedItemIndex = index
+////                                       showColumnEditSheet = true
+////                                   }
+//                           }
+//                       }
+//                   }
+//                    .padding()
+//                    .onTapGesture {
+//                        selectedItemIndex = index
+//                        showCardSheet = true
+//                    }
+//                    
+//                    Spacer()
+//                    
+//                    VStack {
+//                        iconView(for: reorderedItems[index] , index: index)
+//                            .onTapGesture {
+//                                if reorderedItems[index].videoURL != nil || reorderedItems[index].imageURL != nil {
+//                                    self.selection = (0, index)
+//                                }
+//                            }
+//                        Spacer()
+//
+//                        if itemsWithRecentActivity.contains(reorderedItems[index].id) {
+//                                              Image(systemName: "checkmark.circle.fill")
+//                                                    .font(.system(size: 20))
+//                                                  .foregroundColor(.green)
+//                                                  .transition(.opacity)
+//                                          } else {
+//                                              Image(systemName: "plus.circle.fill")
+//                                                  .font(.system(size: 20))
+//                                                  .foregroundColor(.accentColor)
+////                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+//                                                  .onTapGesture {
+//                                                      selectedItemIndex = index
+//                                                      showLogActivitySheet = true
+//                                                      HapticFeedback.generate()
+//                                                  }
+//                                          }
+//                    }
+//                    .padding(10)
+//                }
+//
+//            .frame(maxWidth: .infinity, alignment: .leading)
+//            .background(Color("iosnp"))
+//            .cornerRadius(10)
+//            .contentShape(Rectangle()) // Add this to make the whole area tappable
+//            .onTapGesture {
+//                selectedItemIndex = index
+//                showCardSheet = true
+//            }
+//        }
+//        .padding(.horizontal, 15)
+//    }
     private var listView: some View {
-
-        ForEach(reorderedItems.indices, id: \.self) { index in
-               HStack(alignment: .top, spacing: 10) {
-                   VStack(alignment: .leading, spacing: 8) {
-                       Text(reorderedItems[index].metadata)
-                           .font(.system(size: 14))
-                           .fontWeight(.regular)
-                           .padding(.bottom, 4)
-                       
-                       HStack {
-                           ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
-
-                               columnView(name: column.name, item: reorderedItems[index])
-//                                   .onTapGesture {
-//                                       selectedColumnForEdit = (podColumns.firstIndex(where: { $0.name == column.name }) ?? 0, column.name)
-//                                       selectedItemIndex = index
-//                                       showColumnEditSheet = true
-//                                   }
-                           }
-                       }
-                   }
-                    .padding()
-                    .onTapGesture {
-                        selectedItemIndex = index
-                        showCardSheet = true
+        List {
+            ForEach(reorderedItems.indices, id: \.self) { index in
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(reorderedItems[index].metadata)
+                            .font(.system(size: 14))
+                            .fontWeight(.regular)
+                            .padding(.bottom, 4)
+                        
+                        HStack {
+                            ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
+                                columnView(name: column.name, item: reorderedItems[index])
+                            }
+                        }
                     }
+                    .padding()
                     
                     Spacer()
                     
                     VStack {
-                        iconView(for: reorderedItems[index] , index: index)
-                            .onTapGesture {
-                                if reorderedItems[index].videoURL != nil || reorderedItems[index].imageURL != nil {
-                                    self.selection = (0, index)
-                                }
-                            }
+                        iconView(for: reorderedItems[index], index: index)
                         Spacer()
-
                         if itemsWithRecentActivity.contains(reorderedItems[index].id) {
-                                              Image(systemName: "checkmark.circle.fill")
-                                                    .font(.system(size: 20))
-                                                  .foregroundColor(.green)
-                                                  .transition(.opacity)
-                                          } else {
-                                              Image(systemName: "plus.circle.fill")
-                                                  .font(.system(size: 20))
-                                                  .foregroundColor(.accentColor)
-//                                                  .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-                                                  .onTapGesture {
-                                                      selectedItemIndex = index
-                                                      showLogActivitySheet = true
-                                                      HapticFeedback.generate()
-                                                  }
-                                          }
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.green)
+                                .transition(.opacity)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.accentColor)
+                                .onTapGesture {
+                                    selectedItemIndex = index
+                                    showLogActivitySheet = true
+                                    HapticFeedback.generate()
+                                }
+                        }
                     }
                     .padding(10)
                 }
-
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color("iosnp"))
-            .cornerRadius(10)
-            .onTapGesture {
-                selectedItemIndex = index
-                showCardSheet = true
+                .background(Color("iosnp"))
+                .cornerRadius(10)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        let indexSet = IndexSet([index])
+                        deleteItem(at: indexSet)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItemIndex = index
+                    showCardSheet = true
+                }
             }
         }
-        .padding(.horizontal, 15)
+        .listStyle(PlainListStyle())
+        .background(Color("iosbg"))
     }
     
     // Update the iconView function
@@ -756,16 +854,57 @@ struct PodView: View {
 
     }
     
+//    private func createNewPodItem() {
+//        isAddInputLoading = true
+//        let newItemColumnValues: [String: ColumnValue] = pod.columns.reduce(into: [:]) { result, column in
+//            result[column.name] = .null  // Initialize all columns with null values
+//        }
+//        
+//        networkManager.createPodItem(
+//            podId: pod.id,
+//            label: newItemText,
+//            itemType: nil,  // We're not setting an item type for now
+//            notes: "",
+//            defaultColumnValues: newItemColumnValues
+//        ) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success(let newItem):
+//                    self.reorderedItems.append(newItem)
+//                    self.pod.items.append(newItem)
+//                    self.newItemText = ""
+//                    self.isCreatingNewItem = false
+//                    self.needsRefresh = true
+//                    self.isAddInputLoading = false
+//                case .failure(let error):
+//                    print("Failed to create new pod item: \(error)")
+//                    // You might want to show an alert to the user here
+//                    self.isAddInputLoading = false
+//                }
+//            }
+//        }
+//    }
     private func createNewPodItem() {
         isAddInputLoading = true
+        
+        // Initialize column values based on column type
         let newItemColumnValues: [String: ColumnValue] = pod.columns.reduce(into: [:]) { result, column in
-            result[column.name] = .null  // Initialize all columns with null values
+            switch column.type {
+            case "number":
+                result[column.name] = .number(0) // Initialize number columns with 0
+            case "time":
+                result[column.name] = .time(TimeValue(hours: 0, minutes: 0, seconds: 0))
+            case "text":
+                result[column.name] = .string("")
+            default:
+                result[column.name] = .null
+            }
         }
         
         networkManager.createPodItem(
             podId: pod.id,
             label: newItemText,
-            itemType: nil,  // We're not setting an item type for now
+            itemType: nil,
             notes: "",
             defaultColumnValues: newItemColumnValues
         ) { result in
@@ -780,7 +919,6 @@ struct PodView: View {
                     self.isAddInputLoading = false
                 case .failure(let error):
                     print("Failed to create new pod item: \(error)")
-                    // You might want to show an alert to the user here
                     self.isAddInputLoading = false
                 }
             }
@@ -2312,7 +2450,6 @@ struct LogActivityView: View {
     let podId: Int
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
-//    @State private var columnValues: [String: [ColumnValue]]
     @State private var columnValues: [String: ColumnValue]
     @State private var activityNote: String = ""
     @State private var expandedColumn: String?
@@ -2327,21 +2464,6 @@ struct LogActivityView: View {
     @FocusState private var focusedField: String?
     @State private var groupedRowsCount: [String: Int] = [:]
 
-//    init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
-//        self.item = item
-//        self.podColumns = podColumns
-//        self.podId = podId
-//        self.onActivityLogged = onActivityLogged
-//        
-//        // Convert single values to arrays
-//        var arrayColumnValues: [String: [ColumnValue]] = [:]
-//        if let initialValues = item.columnValues {
-//            for (key, value) in initialValues {
-//                arrayColumnValues[key] = [value]
-//            }
-//        }
-//        _columnValues = State(initialValue: arrayColumnValues)
-//    }
     init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
             self.item = item
             self.podColumns = podColumns
@@ -2553,7 +2675,6 @@ struct LogActivityView: View {
                 leading: Button(action: {
                     presentationMode.wrappedValue.dismiss()
                 }) {
-                    Image(systemName: "xmark")
                     Image(systemName: "xmark")
                         .foregroundColor(.primary)
                 },
