@@ -407,19 +407,31 @@ struct PodView: View {
     }
     
     private func fetchActivityLogs() {
-       
-         networkManager.fetchPodActivityLogs(podId: pod.id) { result in
-             DispatchQueue.main.async {
-                 
-                 switch result {
-                 case .success(let logs):
-                     self.activityLogs = logs
-                 case .failure(let error):
-                     print("Failed to fetch activity logs: \(error)")
-                     // Handle error (e.g., show an alert to the user)
-                 }
-             }
-         }
+//       
+//         networkManager.fetchPodActivityLogs(podId: pod.id) { result in
+//             DispatchQueue.main.async {
+//                 
+//                 switch result {
+//                 case .success(let logs):
+//                     self.activityLogs = logs
+//                 case .failure(let error):
+//                     print("Failed to fetch activity logs: \(error)")
+//                     // Handle error (e.g., show an alert to the user)
+//                 }
+//             }
+//         }
+        
+        networkManager.fetchUserActivityLogs(podId: pod.id, userEmail: viewModel.email) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let logs):
+                    self.activityLogs = logs
+                    
+                case .failure(let error):
+                    print("Failed to fetch activity logs: \(error)")
+                }
+            }
+        }
      }
     
     private var footerView: some View {
@@ -471,10 +483,7 @@ struct PodView: View {
                     self.currentDescription = fullPod.description ?? ""
                     self.currentInstructions = fullPod.instructions ?? ""
                     self.currentType = fullPod.type ?? ""
-                    
-                    // Wait for at least the first video to be preloaded
-//                    self.waitForInitialPreload()
-                
+
                 case .failure(let error):
                     print("Failed to load pod details: \(error.localizedDescription)")
                 }
@@ -498,27 +507,6 @@ struct PodView: View {
         }
     }
     
-//    func onActivityLogged(newLog: PodItemActivityLog) {
-//        showTemporaryCheckmark(for: newLog.itemId)
-//        DispatchQueue.main.async {
-//            // Insert the new log at the correct position
-//            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
-//            self.activityLogs.insert(newLog, at: insertionIndex)
-//            
-//            // Ensure the logs are sorted
-//            self.activityLogs.sort()
-//            
-//            // Optionally, limit the number of logs kept in memory
-//            if self.activityLogs.count > 100 {
-//                self.activityLogs = Array(self.activityLogs.prefix(100))
-//            }
-//            
-//            // Update the pod's recentActivityLogs if necessary
-//            self.pod.recentActivityLogs = self.activityLogs
-//            
-//           
-//        }
-//    }
     func onActivityLogged(newLog: PodItemActivityLog) {
         showTemporaryCheckmark(for: newLog.itemId)
         DispatchQueue.main.async {
@@ -714,7 +702,7 @@ struct PodView: View {
         }()
         return VStack {
             Text("\(displayValue) \(name)")  // String interpolation will automatically use description
-                .font(.system(size: 14))
+                .font(.system(size: 13))
         }
         .padding(.horizontal,6)
         .padding(.vertical,4)
@@ -739,7 +727,6 @@ struct PodView: View {
                 .font(.system(size: 14))
                 .padding(.vertical, 8)
                 .padding(.horizontal, 5)
-//                .background(colorScheme == .dark ? Color(rgb: 14, 14, 14) : .white)
                 .background(Color("iosnp"))
             
                 .focused($isNewItemFocused)

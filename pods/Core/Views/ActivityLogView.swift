@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ActivityLogView: View {
     @State private var activityLogs: [PodItemActivityLog]
+    @State private var searchText: String = ""
     @Environment(\.dismiss) private var dismiss
     let podId: Int
     @State private var isLoading = false
@@ -12,31 +13,29 @@ struct ActivityLogView: View {
         self.podId = podId
         _activityLogs = State(initialValue: initialLogs)
     }
-    
     var body: some View {
-        ZStack {
-            Color("mxdBg").edgesIgnoringSafeArea(.all)
-            
-            if isLoading {
-                ProgressView()
-            } else if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
-                        ForEach(activityLogs) { log in
+            List {
+                Section {
+                    if isLoading {
+                        ProgressView()
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                    } else {
+                        ForEach(filteredLogs) { log in
                             ActivityLogItemView(log: log, onDelete: { deletedLog in
                                 removeLog(deletedLog)
                             })
                         }
                     }
-                    .padding()
                 }
             }
-        }
-        .navigationTitle("Activity Log")
-        .navigationBarTitleDisplayMode(.inline)
+            .listStyle(PlainListStyle())
+            .navigationTitle("Activities")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
+//            .padding(.top)
         .onAppear {
             if activityLogs.isEmpty {
                 loadLogs()
@@ -44,6 +43,19 @@ struct ActivityLogView: View {
         }
     }
     
+    // Add this computed property
+    private var filteredLogs: [PodItemActivityLog] {
+        if searchText.isEmpty {
+            return activityLogs
+        }
+        
+        return activityLogs.filter { log in
+            // Customize the search criteria here
+            log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
+            log.userName.localizedCaseInsensitiveContains(searchText) ||
+            (log.notes.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
+    }
     private func loadLogs() {
         isLoading = true
         errorMessage = nil
@@ -95,16 +107,9 @@ struct ActivityLogItemView: View {
                                       }
             }
         }
-        .padding()
-        .background(Color("mdBg"))
-        .cornerRadius(10)
-        .onAppear {
-                   print("Log ID: \(log.id)")
-                   print("Raw loggedAt: \(log.loggedAt)")
-                   print("Formatted loggedAt: \(formattedDate(log.loggedAt))")
-               }
+        .background(Color("bg"))
         .sheet(isPresented: $showFullLog) {
-//                  FullActivityLogView(log: log)
+
             FullActivityLogView(log: log, onDelete: {
                            onDelete(log)
                            showFullLog = false
@@ -112,22 +117,7 @@ struct ActivityLogItemView: View {
               }
     }
     
-//    private func columnValuesString(_ values: [String: ColumnValue]) -> String {
-//        let result = values.compactMap { key, value in
-//            switch value {
-//            case .string(let str):
-//                return str.isEmpty ? nil : "\(str) \(key)"
-//            case .number(let num):
-//                return "\(num) \(key)"
-//            case .time(let timeValue):
-//                        return "\(timeValue.toString) \(key)"
-//            case .null:
-//                return nil
-//            }
-//        }.joined(separator: ", ")
-//        
-//        return result.isEmpty ? "No data" : result
-//    }
+
     private func columnValuesString(_ values: [String: ColumnValue]) -> String {
         let result = values.compactMap { key, value -> String? in
             switch value {
