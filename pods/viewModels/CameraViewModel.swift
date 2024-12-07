@@ -170,43 +170,66 @@ struct PodColumn: Codable, Identifiable {
 }
 
 
+//struct PodItem: Identifiable {
+//    var id: Int // Correctly declare the type of `id`
+//    var videoURL: URL? {
+//        didSet {
+//            print("videoURL didSet called with URL: \(String(describing: videoURL))")
+//            if let url = videoURL {
+//                player = AVPlayer(url: url)
+//      
+//            } else {
+//                player = nil
+//              
+//            }
+//        }
+//    }
+//
+//    var image: UIImage?
+//    var metadata: String
+//    var thumbnail: UIImage? // For local UI usage
+//    var thumbnailURL: URL?  // For networking and referencing the image's location
+//    var imageURL: URL?
+//    var itemType: String?
+//    var uuid: String?
+//    var player: AVPlayer?
+//    var notes: String
+//    var defaultColumnValues: [String: ColumnValue]?
+//    var userColumnValues: [String: ColumnValue]?
+//    var columnValues: [String: ColumnValue]? {
+//            get {
+//                return userColumnValues ?? defaultColumnValues ?? [:]
+//            }
+//            set {
+//                userColumnValues = newValue
+//            }
+//        }
+// 
+//    
+//}
 struct PodItem: Identifiable {
-    var id: Int // Correctly declare the type of `id`
+    var id: Int
     var videoURL: URL? {
         didSet {
-            print("videoURL didSet called with URL: \(String(describing: videoURL))")
             if let url = videoURL {
                 player = AVPlayer(url: url)
-      
             } else {
                 player = nil
-              
             }
         }
     }
-
     var image: UIImage?
     var metadata: String
-    var thumbnail: UIImage? // For local UI usage
-    var thumbnailURL: URL?  // For networking and referencing the image's location
+    var thumbnail: UIImage?
+    var thumbnailURL: URL?
     var imageURL: URL?
     var itemType: String?
     var uuid: String?
     var player: AVPlayer?
     var notes: String
-    var defaultColumnValues: [String: ColumnValue]?
-    var userColumnValues: [String: ColumnValue]?
-    var columnValues: [String: ColumnValue]? {
-            get {
-                return userColumnValues ?? defaultColumnValues ?? [:]
-            }
-            set {
-                userColumnValues = newValue
-            }
-        }
- 
-    
+    var columnValues: [String: ColumnValue]? // Single source of truth for user values
 }
+
 
 struct PodItemActivityLog: Identifiable, Comparable {
     let id: Int
@@ -320,6 +343,20 @@ struct PodJSON: Codable {
 
 
 
+//struct PodItemJSON: Codable {
+//    let id: Int
+//    let videoURL: String?
+//    let imageURL: String?
+//    let label: String
+//    let thumbnail: String?
+//    let itemType: String?
+//    let notes: String?
+////    let columnValues: [String: ColumnValue]?
+//    let defaultColumnValues: [String: ColumnValue]
+//    let userColumnValues: [String: ColumnValue]?
+//
+//}
+
 struct PodItemJSON: Codable {
     let id: Int
     let videoURL: String?
@@ -328,11 +365,9 @@ struct PodItemJSON: Codable {
     let thumbnail: String?
     let itemType: String?
     let notes: String?
-//    let columnValues: [String: ColumnValue]?
-    let defaultColumnValues: [String: ColumnValue]
-    let userColumnValues: [String: ColumnValue]?
-
+    let columnValues: [String: ColumnValue]
 }
+
 
 enum ColumnValue: Codable, CustomStringConvertible {
     case number(Double)
@@ -360,70 +395,63 @@ enum ColumnValue: Codable, CustomStringConvertible {
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        print("ColumnValue decoder - starting with path:", decoder.codingPath)
-        
+        let container = try decoder.singleValueContainer() 
         if container.decodeNil() {
-            print("ColumnValue decoder - got nil")
             self = .null
             return
         }
         
         // Try arrays
         if let arrayValue = try? container.decode([ColumnValue].self) {
-            print("ColumnValue decoder - got ColumnValue array:", arrayValue)
             self = .array(arrayValue)
             return
         }
         
         if let arrayValue = try? container.decode([Double].self) {
-            print("ColumnValue decoder - got number array:", arrayValue)
             self = .array(arrayValue.map { .number($0) })
             return
         }
         
         if let arrayValue = try? container.decode([String].self) {
-            print("ColumnValue decoder - got string array:", arrayValue)
             self = .array(arrayValue.map { .string($0) })
             return
         }
         
         // Try string first (for time values)
         if let stringValue = try? container.decode(String.self) {
-            print("ColumnValue decoder - got string:", stringValue)
             
             // Attempt to parse the string as JSON array
             if let jsonData = stringValue.data(using: .utf8),
                let jsonArray = try? JSONDecoder().decode([ColumnValue].self, from: jsonData) {
-                print("ColumnValue decoder - string is JSON array:", jsonArray)
+          
                 self = .array(jsonArray)
                 return
             }
             
             if let timeValue = TimeValue.fromString(stringValue) {
-                print("ColumnValue decoder - converted to time:", timeValue)
+                
                 self = .time(timeValue)
                 return
             }
-            print("ColumnValue decoder - treating as regular string")
+       
             self = .string(stringValue)
             return
         }
         
         // Try single numeric values
         if let doubleValue = try? container.decode(Double.self) {
-            print("ColumnValue decoder - got double:", doubleValue)
+            
             self = .number(doubleValue)
             return
         }
         
         if let intValue = try? container.decode(Int.self) {
-            print("ColumnValue decoder - got int:", intValue)
+        
             self = .number(Double(intValue))
             return
         }
 
-        print("ColumnValue decoder - failed to decode value")
+    
         throw DecodingError.typeMismatch(
             ColumnValue.self,
             DecodingError.Context(
@@ -567,40 +595,70 @@ extension Pod {
     }
 }
 
+//extension PodItem {
+//    init(from itemJSON: PodItemJSON) {
+//        self.id = itemJSON.id
+//        self.itemType = itemJSON.itemType
+//        if let videoURLString = itemJSON.videoURL {
+//            self.videoURL = URL(string: videoURLString)
+//        } else {
+//            self.videoURL = nil
+//        }
+//        self.metadata = itemJSON.label
+//        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "")
+//        if let imageString = itemJSON.imageURL {
+//            self.imageURL = URL(string: imageString)
+//        } else {
+//            self.imageURL = nil
+//        }
+//        if let url = self.videoURL {
+//            player = AVPlayer(url: url)
+//        } else {
+//            player = nil
+//        }
+//        self.notes = itemJSON.notes ?? ""
+//        
+//        // Handle column values directly without modification
+//        self.defaultColumnValues = [:]  // Initialize as empty
+//        self.userColumnValues = [:]     // Initialize as empty
+//        
+//        // Then safely assign values if they exist
+//        if !itemJSON.defaultColumnValues.isEmpty {
+//            self.defaultColumnValues = itemJSON.defaultColumnValues
+//        }
+//        if let userValues = itemJSON.userColumnValues {
+//            self.userColumnValues = userValues
+//        }
+//    }
+//}
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
         self.id = itemJSON.id
         self.itemType = itemJSON.itemType
+        
         if let videoURLString = itemJSON.videoURL {
             self.videoURL = URL(string: videoURLString)
         } else {
             self.videoURL = nil
         }
+        
         self.metadata = itemJSON.label
         self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "")
+        
         if let imageString = itemJSON.imageURL {
             self.imageURL = URL(string: imageString)
         } else {
             self.imageURL = nil
         }
+        
         if let url = self.videoURL {
             player = AVPlayer(url: url)
         } else {
             player = nil
         }
+        
         self.notes = itemJSON.notes ?? ""
-        
-        // Handle column values directly without modification
-        self.defaultColumnValues = [:]  // Initialize as empty
-        self.userColumnValues = [:]     // Initialize as empty
-        
-        // Then safely assign values if they exist
-        if !itemJSON.defaultColumnValues.isEmpty {
-            self.defaultColumnValues = itemJSON.defaultColumnValues
-        }
-        if let userValues = itemJSON.userColumnValues {
-            self.userColumnValues = userValues
-        }
+        self.columnValues = itemJSON.columnValues
     }
 }
 
@@ -1660,29 +1718,7 @@ var hasCheckedPermission = false
         }
     }
     
-//complete vid start
-//    private func completeVideoConfirmation(with videoURL: URL, metadata: String) {
-//        guard let recordingUUID = currentRecordingUUID else {
-//              print("No video to confirm or UUID is missing.")
-//              return
-//          }
-//        // Check if the last item in the Pod is the same as the current preview URL
-//        if currentPod.items.last?.videoURL != videoURL {
-//            let thumbnail = generateThumbnail(for: videoURL, usingFrontCamera: isFrontCameraUsed)
-//            let newItem = PodItem(id: currentPod.items.count + 1, videoURL: videoURL, metadata: metadata, thumbnail: thumbnail, itemType: "video", uuid: recordingUUID)
-//            print(newItem, "new item")
-//            DispatchQueue.main.async {
-//                self.currentPod.items.append(newItem)
-//                print("Item confirmed and added to Pod. Current Pod count: \(self.currentPod.items.count), Item Type: \(self.currentPod.items.last?.itemType ?? "nil")")
-//                // Store the confirmed URL
-//                self.lastConfirmedURL = videoURL
-//            }
-//        } else {
-//            print("The item is already in the Pod.")
-//        }
-//
-//    }
-// complete vid end
+
     
     private func completeVideoConfirmation(with videoURL: URL, metadata: String, notes: String) {
         guard let recordingUUID = currentRecordingUUID else {
@@ -1736,38 +1772,7 @@ var hasCheckedPermission = false
 
 
     
-    //old start
-//    func confirmPhoto() {
-//        guard let selectedImage = selectedImage else {
-//            print("No photo to confirm.")
-//            return
-//        }
-//        let nextId = currentPod.items.count + 1
-//
-//        // Check for duplicate image
-//        if let lastItem = currentPod.items.last,
-//           let lastImage = lastItem.image,
-//           lastImage === selectedImage {
-//            print("Duplicate image detected. Skipping addition.")
-//            DispatchQueue.main.async {
-//               
-//                self.showPreview = false // Adjust as needed for consistent UI flow
-//            }
-//        } else {
-//            // No duplicate detected, proceed to append the new item
-//            let newItem = PodItem(id: nextId, videoURL: nil, image: selectedImage, metadata: "", thumbnail: selectedImage, thumbnailURL: nil, itemType: "image")
-//
-//            DispatchQueue.main.async {
-//                self.currentPod.items.append(newItem)
-//                // Consider when and how `selectedImage` should be reset
-//                // self.selectedImage might be reset here or elsewhere depending on your app's flow
-//                self.showPreview = false // Adjust as needed for consistent UI flow
-//                self.itemConfirmed = true
-//            }
-//        }
-//
-//    }
-    //old end
+
     
     func confirmPhoto() {
         guard let selectedImage = selectedImage else {

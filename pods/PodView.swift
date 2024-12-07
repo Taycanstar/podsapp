@@ -279,7 +279,6 @@ struct PodView: View {
             }
             
             self.activityLogs = pod.recentActivityLogs ?? []
-            print(activityLogs, "logs")
             fetchFullPodDetails()
             fetchFullPodDetails(showLoadingIndicator: false)
         }
@@ -352,9 +351,7 @@ struct PodView: View {
                 .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
             }
         }
-        .onAppear {
-                   fetchActivityLogs()
-               }
+      
         .onChange(of: showColumnEditSheet) { newValue in
                      if !newValue, let pendingNav = pendingNavigation {
                          navigationPath.append(pendingNav)
@@ -407,20 +404,6 @@ struct PodView: View {
     }
     
     private func fetchActivityLogs() {
-//       
-//         networkManager.fetchPodActivityLogs(podId: pod.id) { result in
-//             DispatchQueue.main.async {
-//                 
-//                 switch result {
-//                 case .success(let logs):
-//                     self.activityLogs = logs
-//                 case .failure(let error):
-//                     print("Failed to fetch activity logs: \(error)")
-//                     // Handle error (e.g., show an alert to the user)
-//                 }
-//             }
-//         }
-        
         networkManager.fetchUserActivityLogs(podId: pod.id, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -693,7 +676,8 @@ struct PodView: View {
 
 
     private func columnView(name: String, item: PodItem) -> some View {
-        let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
+//        let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
+        let value = item.columnValues?[name] ?? .null
         let displayValue: ColumnValue = {
             if case .array(let values) = value, !values.isEmpty {
                 return values[0]  // Take only the first value
@@ -794,7 +778,7 @@ struct PodView: View {
             label: newItemText,
             itemType: nil,
             notes: "",
-            defaultColumnValues: newItemColumnValues
+            columnValues: newItemColumnValues
         ) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -1683,7 +1667,7 @@ struct CardDetailView: View {
             notes: item.notes
         )
         
-        networkManager.createPodItem(podId: podId, label: newItem.metadata, itemType: newItem.itemType, notes: newItem.notes, defaultColumnValues: newItem.columnValues ?? [:]) { result in
+        networkManager.createPodItem(podId: podId, label: newItem.metadata, itemType: newItem.itemType, notes: newItem.notes, columnValues: newItem.columnValues ?? [:]) { result in
             switch result {
             case .success(let createdItem):
                 DispatchQueue.main.async {

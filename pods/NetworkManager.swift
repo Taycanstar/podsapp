@@ -17,9 +17,9 @@ class NetworkManager {
 //  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
-    let baseUrl = "http://192.168.1.79:8000"
+//    let baseUrl = "http://192.168.1.79:8000"
 //
-//    let baseUrl = "http://172.20.10.3:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -2410,13 +2410,115 @@ class NetworkManager {
 //            }
 //        }.resume()
 //    }
+   //og
+//    func createPodItem(
+//        podId: Int,
+//        label: String,
+//        itemType: String?,
+//        notes: String,
+//        defaultColumnValues: [String: ColumnValue],
+//        completion: @escaping (Result<PodItem, Error>) -> Void
+//    ) {
+//        guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        // Map ColumnValue to a JSON-compatible structure
+//        let body: [String: Any] = [
+//            "label": label,
+//            "notes": notes,
+//            "itemType": itemType ?? "",
+//            "defaultColumnValues": defaultColumnValues.mapValues { mapColumnValueToJSON($0) }
+//        ]
+//
+//        print("Request body: \(body)")
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                print("Network error: \(error)")
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let data = data else {
+//                print("No data received")
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//
+//            if let responseString = String(data: data, encoding: .utf8) {
+//                print("Raw response: \(responseString)")
+//            }
+//
+//            do {
+//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+//                    print("Parsed JSON: \(json)")
+//                    
+//                    if let error = json["error"] as? String {
+//                        print("Server error: \(error)")
+//                        completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: error])))
+//                        return
+//                    }
+//                    
+//                    if let itemData = json["item"] as? [String: Any] {
+//                        let id = itemData["id"] as? Int ?? 0
+//                        let label = itemData["label"] as? String ?? ""
+//                        let itemType = itemData["itemType"] as? String
+//                        let notes = itemData["notes"] as? String ?? ""
+//                        let defaultColumnValues = (itemData["defaultColumnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
+//                            if let stringValue = value as? String {
+//                                if let timeValue = TimeValue.fromString(stringValue) {
+//                                    return .time(timeValue)
+//                                }
+//                                return .string(stringValue)
+//                            } else if let doubleValue = value as? Double {
+//                                return .number(doubleValue)
+//                            } else if let intValue = value as? Int {
+//                                return .number(Double(intValue))  // Convert Int to Double
+//                            } else if let arrayValue = value as? [Any] {
+//                                return .array(arrayValue.compactMap { self.mapJSONToColumnValue($0) })
+//                            } else if value is NSNull {
+//                                return .null
+//                            }
+//                            return nil
+//                        } ?? [:]
+//                        
+//                        let newItem = PodItem(
+//                            id: id,
+//                            metadata: label,
+//                            itemType: itemType,
+//                            notes: notes,
+//                            defaultColumnValues: defaultColumnValues,
+//                            userColumnValues: nil
+//                        )
+//                        completion(.success(newItem))
+//                    } else {
+//                        print("Failed to parse item data")
+//                        completion(.failure(NetworkError.decodingError))
+//                    }
+//                } else {
+//                    print("Failed to parse JSON")
+//                    completion(.failure(NetworkError.decodingError))
+//                }
+//            } catch {
+//                print("JSON parsing error: \(error)")
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
     
     func createPodItem(
         podId: Int,
         label: String,
         itemType: String?,
         notes: String,
-        defaultColumnValues: [String: ColumnValue],
+        columnValues: [String: ColumnValue],
         completion: @escaping (Result<PodItem, Error>) -> Void
     ) {
         guard let url = URL(string: "\(baseUrl)/create-pod-item/\(podId)/") else {
@@ -2429,7 +2531,7 @@ class NetworkManager {
             "label": label,
             "notes": notes,
             "itemType": itemType ?? "",
-            "defaultColumnValues": defaultColumnValues.mapValues { mapColumnValueToJSON($0) }
+            "columnValues": columnValues.mapValues { mapColumnValueToJSON($0) }
         ]
 
         print("Request body: \(body)")
@@ -2471,7 +2573,7 @@ class NetworkManager {
                         let label = itemData["label"] as? String ?? ""
                         let itemType = itemData["itemType"] as? String
                         let notes = itemData["notes"] as? String ?? ""
-                        let defaultColumnValues = (itemData["defaultColumnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
+                        let columnValues = (itemData["columnValues"] as? [String: Any])?.compactMapValues { value -> ColumnValue? in
                             if let stringValue = value as? String {
                                 if let timeValue = TimeValue.fromString(stringValue) {
                                     return .time(timeValue)
@@ -2480,7 +2582,7 @@ class NetworkManager {
                             } else if let doubleValue = value as? Double {
                                 return .number(doubleValue)
                             } else if let intValue = value as? Int {
-                                return .number(Double(intValue))  // Convert Int to Double
+                                return .number(Double(intValue))
                             } else if let arrayValue = value as? [Any] {
                                 return .array(arrayValue.compactMap { self.mapJSONToColumnValue($0) })
                             } else if value is NSNull {
@@ -2494,8 +2596,7 @@ class NetworkManager {
                             metadata: label,
                             itemType: itemType,
                             notes: notes,
-                            defaultColumnValues: defaultColumnValues,
-                            userColumnValues: nil
+                            columnValues: columnValues
                         )
                         completion(.success(newItem))
                     } else {

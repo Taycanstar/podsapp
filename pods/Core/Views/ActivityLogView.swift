@@ -8,6 +8,7 @@ struct ActivityLogView: View {
     let podId: Int
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     init(podId: Int, initialLogs: [PodItemActivityLog] = []) {
         self.podId = podId
@@ -59,14 +60,15 @@ struct ActivityLogView: View {
     private func loadLogs() {
         isLoading = true
         errorMessage = nil
-        NetworkManager().fetchPodActivityLogs(podId: podId) { result in
+        NetworkManager().fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
                 case .success(let logs):
                     self.activityLogs = logs
+                    
                 case .failure(let error):
-                    self.errorMessage = "Failed to load activity logs: \(error.localizedDescription)"
+                    print("Failed to fetch activity logs: \(error)")
                 }
             }
         }
