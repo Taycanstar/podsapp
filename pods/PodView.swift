@@ -1297,6 +1297,48 @@ struct CardDetailView: View {
             return [groupedColumns, singularColumns].filter { !$0.isEmpty }
         }
     
+//    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
+//        self._item = item
+//        self._itemName = State(initialValue: item.wrappedValue.metadata)
+//        self._podColumns = podColumns
+//        self.networkManager = networkManager
+//        self._allItems = allItems
+//        self.podId = podId
+//        self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
+//        self._visibleColumns = visibleColumns
+//
+//        var initialColumnValues: [String: ColumnValue] = [:]
+//        var initialGroupedRowsCount: [String: Int] = [:]
+//
+//        for column in podColumns.wrappedValue {
+//            if let value = item.wrappedValue.columnValues?[column.name] {
+//                if column.groupingType == "grouped" {
+//                    if case .array(let columnValues) = value {
+//                        initialColumnValues[column.name] = .array(columnValues)
+//                        initialGroupedRowsCount[column.groupingType ?? ""] = columnValues.count
+//                    } else {
+//                        // If value is not an array, wrap it in an array
+//                        initialColumnValues[column.name] = .array([value])
+//                        initialGroupedRowsCount[column.groupingType ?? ""] = 1
+//                    }
+//                } else {
+//                    initialColumnValues[column.name] = value
+//                }
+//            } else {
+//                initialColumnValues[column.name] = .null
+//                if column.groupingType == "grouped" {
+//                    initialGroupedRowsCount[column.groupingType ?? ""] = 0
+//                }
+//            }
+//        }
+//        
+//
+//
+//        self._columnValues = State(initialValue: initialColumnValues)
+//        self._groupedRowsCount = State(initialValue: initialGroupedRowsCount)
+//        
+//        
+//    }
     init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
         self._itemName = State(initialValue: item.wrappedValue.metadata)
@@ -1307,6 +1349,7 @@ struct CardDetailView: View {
         self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
         self._visibleColumns = visibleColumns
 
+        // Initialize columnValues based on item's columnValues or with empty values
         var initialColumnValues: [String: ColumnValue] = [:]
         var initialGroupedRowsCount: [String: Int] = [:]
 
@@ -1317,7 +1360,6 @@ struct CardDetailView: View {
                         initialColumnValues[column.name] = .array(columnValues)
                         initialGroupedRowsCount[column.groupingType ?? ""] = columnValues.count
                     } else {
-                        // If value is not an array, wrap it in an array
                         initialColumnValues[column.name] = .array([value])
                         initialGroupedRowsCount[column.groupingType ?? ""] = 1
                     }
@@ -1325,21 +1367,19 @@ struct CardDetailView: View {
                     initialColumnValues[column.name] = value
                 }
             } else {
-                initialColumnValues[column.name] = .null
+                // Initialize with empty values for new items
                 if column.groupingType == "grouped" {
+                    initialColumnValues[column.name] = .array([])
                     initialGroupedRowsCount[column.groupingType ?? ""] = 0
+                } else {
+                    initialColumnValues[column.name] = .null
                 }
             }
         }
-        
-
 
         self._columnValues = State(initialValue: initialColumnValues)
         self._groupedRowsCount = State(initialValue: initialGroupedRowsCount)
-        
-        
     }
-
     
     var body: some View {
         ZStack {
@@ -1576,6 +1616,71 @@ struct CardDetailView: View {
         checkForChanges()
     }
 
+//    private func checkForChanges() {
+//        hasUnsavedChanges = false
+//        
+//        // Check item name
+//        if itemName != item.metadata {
+//            hasUnsavedChanges = true
+//            return
+//        }
+//        
+//        // Check notes
+//        if itemNotes != (item.notes ?? "") {
+//            hasUnsavedChanges = true
+//            return
+//        }
+//        
+//        // Check column values including grouped columns
+//        for (key, value) in columnValues {
+//            let column = podColumns.first(where: { $0.name == key })
+//            let isGrouped = column?.groupingType == "grouped"
+//            
+//            if let originalValue = item.columnValues?[key] {
+//                if isGrouped {
+//                    // For grouped columns, compare arrays
+//                    if case .array(let newArray) = value,
+//                       case .array(let originalArray) = originalValue {
+//                        let newDescriptions = newArray.map { $0.description }
+//                        let originalDescriptions = originalArray.map { $0.description }
+//                        if newDescriptions != originalDescriptions {
+//                            hasUnsavedChanges = true
+//                            return
+//                        }
+//                    }
+//                } else {
+//                    // For singular columns
+//                    if value.description != originalValue.description {
+//                        hasUnsavedChanges = true
+//                        return
+//                    }
+//                }
+//            } else {
+//                // If there's a new value where there wasn't one before
+//                if case .null = value {
+//                    // Skip null values
+//                    continue
+//                }
+//                if !value.description.isEmpty {
+//                    hasUnsavedChanges = true
+//                    return
+//                }
+//            }
+//        }
+//        
+//        // Check for deleted columns
+//        if let originalColumns = item.columnValues?.keys {
+//            for key in originalColumns {
+//                if columnValues[key] == nil {
+//                    hasUnsavedChanges = true
+//                    return
+//                }
+//            }
+//        }
+//    
+//    }
+    
+    
     private func checkForChanges() {
         hasUnsavedChanges = false
         
@@ -1593,51 +1698,39 @@ struct CardDetailView: View {
         
         // Check column values including grouped columns
         for (key, value) in columnValues {
+            let originalValue = item.columnValues?[key] ?? .null // Use .null as default for comparison
+            
             let column = podColumns.first(where: { $0.name == key })
             let isGrouped = column?.groupingType == "grouped"
             
-            if let originalValue = item.columnValues?[key] {
-                if isGrouped {
-                    // For grouped columns, compare arrays
-                    if case .array(let newArray) = value,
-                       case .array(let originalArray) = originalValue {
-                        let newDescriptions = newArray.map { $0.description }
-                        let originalDescriptions = originalArray.map { $0.description }
-                        if newDescriptions != originalDescriptions {
-                            hasUnsavedChanges = true
-                            return
-                        }
-                    }
-                } else {
-                    // For singular columns
-                    if value.description != originalValue.description {
+            if isGrouped {
+                // For grouped columns, compare arrays
+                if case .array(let newArray) = value,
+                   case .array(let originalArray) = originalValue {
+                    let newDescriptions = newArray.map { $0.description }
+                    let originalDescriptions = originalArray.map { $0.description }
+                    if newDescriptions != originalDescriptions {
                         hasUnsavedChanges = true
                         return
                     }
+                } else if case .array(let newArray) = value, newArray.isEmpty, case .null = originalValue {
+                    // Don't mark as changed if comparing empty array with null
+                    continue
+                } else {
+                    hasUnsavedChanges = true
+                    return
                 }
             } else {
-                // If there's a new value where there wasn't one before
-                if case .null = value {
-                    // Skip null values
+                // For singular columns, handle null values properly
+                if case .null = value, case .null = originalValue {
                     continue
                 }
-                if !value.description.isEmpty {
+                if value.description != originalValue.description {
                     hasUnsavedChanges = true
                     return
                 }
             }
         }
-        
-        // Check for deleted columns
-        if let originalColumns = item.columnValues?.keys {
-            for key in originalColumns {
-                if columnValues[key] == nil {
-                    hasUnsavedChanges = true
-                    return
-                }
-            }
-        }
-    
     }
 
     private func moveItemToPod(_ toPodId: Int) {
