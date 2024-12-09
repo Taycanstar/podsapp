@@ -3918,40 +3918,6 @@ class NetworkManager {
        }
 
 
-//    func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
-//            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-//                completion(false, NSError(domain: "ConfigurationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No container name found."]))
-//                return
-//            }
-//
-//            let blobName = UUID().uuidString + (mediaType == "video" ? ".mp4" : ".jpg")
-//            let contentType = mediaType == "video" ? "video/mp4" : "image/jpeg"
-//
-//            var fileData: Data?
-//            if let mediaURL = mediaURL, mediaType == "video" {
-//                do {
-//                    fileData = try Data(contentsOf: mediaURL)
-//                } catch {
-//                    completion(false, error)
-//                    return
-//                }
-//            } else if let image = image, mediaType == "image" {
-//                fileData = image.jpegData(compressionQuality: 0.8)
-//            }
-//
-//            guard let data = fileData else {
-//                completion(false, NSError(domain: "DataError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare file data."]))
-//                return
-//            }
-//
-//            uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: data, contentType: contentType) { success, blobUrl in
-//                if success, let url = blobUrl {
-//                    self.updateItemWithMediaUrl(podId: podId, itemId: itemId, mediaType: mediaType, mediaUrl: url, completion: completion)
-//                } else {
-//                    completion(false, NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to upload media to Azure Blob."]))
-//                }
-//            }
-//        }
     
     func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
         guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {

@@ -124,22 +124,23 @@ struct ActivityLogItemView: View {
                 Text(formattedDate(log.loggedAt))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-//                Image(systemName: "chevron.forward")
-//                    .font(.system(size: 14))
-//                    .foregroundColor(Color("nptext"))
-//                    .onTapGesture {
-//                                          showFullLog = true
-//                                      }
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color("nptext"))
+           
             }
         }
+        .onTapGesture {
+                              showFullLog = true
+                          }
         .background(Color("bg"))
-//        .sheet(isPresented: $showFullLog) {
-//
-//            FullActivityLogView(log: log, onDelete: {
-//                           onDelete(log)
-//                           showFullLog = false
-//                       })
-//              }
+        .sheet(isPresented: $showFullLog) {
+
+            FullActivityLogView(log: log, onDelete: {_ in 
+                           onDelete(log)
+                           showFullLog = false
+                       })
+              }
     }
     
 

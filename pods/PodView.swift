@@ -2677,46 +2677,85 @@ struct LogActivityView: View {
            }
        }
 
-       private func submitActivity() {
-           isSubmitting = true
-           
-           // Prepare the column values for submission
-           var submissionValues: [String: ColumnValue] = [:]
-           
-           for (columnName, value) in columnValues {
-               guard !skippedColumns.contains(columnName),
-                     let column = podColumns.first(where: { $0.name == columnName }) else { continue }
-               
-               if column.groupingType == "grouped" {
-                   if case .array(let values) = value {
-                       submissionValues[columnName] = .array(values)
-                   }
-               } else {
-                   submissionValues[columnName] = value
-               }
-           }
-           
-           NetworkManager().createActivityLog(
-               itemId: item.id,
-               podId: podId,
-               userEmail: viewModel.email,
-               columnValues: submissionValues,
-               podColumns: podColumns,
-               notes: activityNote,
-               loggedAt: selectedDate
-           ) { result in
-               DispatchQueue.main.async {
-                   isSubmitting = false
-                   switch result {
-                   case .success(let newLog):
-                       onActivityLogged(newLog)
-                       presentationMode.wrappedValue.dismiss()
-                   case .failure(let error):
-                       errorMessage = error.localizedDescription
-                   }
-               }
-           }
-       }
+//       private func submitActivity() {
+//           isSubmitting = true
+//           
+//           // Prepare the column values for submission
+//           var submissionValues: [String: ColumnValue] = [:]
+//           
+//           for (columnName, value) in columnValues {
+//               guard !skippedColumns.contains(columnName),
+//                     let column = podColumns.first(where: { $0.name == columnName }) else { continue }
+//               
+//               if column.groupingType == "grouped" {
+//                   if case .array(let values) = value {
+//                       submissionValues[columnName] = .array(values)
+//                   }
+//               } else {
+//                   submissionValues[columnName] = value
+//               }
+//           }
+//           
+//           NetworkManager().createActivityLog(
+//               itemId: item.id,
+//               podId: podId,
+//               userEmail: viewModel.email,
+//               columnValues: submissionValues,
+//               podColumns: podColumns,
+//               notes: activityNote,
+//               loggedAt: selectedDate
+//           ) { result in
+//               DispatchQueue.main.async {
+//                   isSubmitting = false
+//                   switch result {
+//                   case .success(let newLog):
+//                       onActivityLogged(newLog)
+//                       presentationMode.wrappedValue.dismiss()
+//                   case .failure(let error):
+//                       errorMessage = error.localizedDescription
+//                   }
+//               }
+//           }
+//       }
+    private func submitActivity() {
+        isSubmitting = true
+        
+        var submissionValues: [String: ColumnValue] = [:]
+        
+        // Prepare values for submission
+        for (columnId, value) in columnValues {
+            guard !skippedColumns.contains(columnId) else { continue }
+            submissionValues[columnId] = value
+        }
+        
+        NetworkManager().createActivityLog(
+            itemId: item.id,
+            podId: podId,
+            userEmail: viewModel.email,
+            columnValues: submissionValues,
+            podColumns: podColumns,
+            notes: activityNote,
+            loggedAt: selectedDate
+        ) { result in
+            DispatchQueue.main.async {
+                isSubmitting = false
+                switch result {
+                case .success(let newLog):
+                    // This will update both the activity log and the item's column values
+                    // since they're one and the same
+                    var updatedItem = self.item
+                    updatedItem.columnValues = submissionValues
+                    
+                    // Pass both the log and the updated item values up to parent
+                    self.onActivityLogged(newLog)
+                    
+                    self.presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
     
     private func formatDate(_ date: Date) -> String {
         let calendar = Calendar.current
