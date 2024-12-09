@@ -786,6 +786,7 @@ class NetworkManager {
             }
             
             do {
+             
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .custom { decoder in
                     let container = try decoder.singleValueContainer()
@@ -811,6 +812,16 @@ class NetworkManager {
                 completion(.success(pods))
             } catch {
                 print("Decoding error: \(error)")
+                if let decodingError = error as? DecodingError {
+                      switch decodingError {
+                      case .keyNotFound(let key, _):
+                          print("Key not found:", key)
+                      case .typeMismatch(let type, let context):
+                          print("Type mismatch:", type, context)
+                      default:
+                          print("Other decoding error:", decodingError)
+                      }
+                  }
                 completion(.failure(error))
             }
         }.resume()
@@ -837,9 +848,7 @@ class NetworkManager {
                  completion(.failure(NetworkError.noData))
                  return
              }
-             if let jsonString = String(data: data, encoding: .utf8) {
-                   print("Received JSON:", jsonString)
-               }
+         
                
              do {
                  let decoder = JSONDecoder()
@@ -2772,8 +2781,54 @@ class NetworkManager {
         }.resume()
     }
 
-
-    func addColumnToPod(podId: Int, columnName: String, columnType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//
+//    func addColumnToPod(podId: Int, columnName: String, columnType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/add-column-to-pod/\(podId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//
+//        let body: [String: Any] = [
+//            "name": columnName,
+//            "type": columnType
+//        ]
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(NetworkError.encodingError))
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                completion(.failure(NetworkError.invalidResponse))
+//                return
+//            }
+//
+//            switch httpResponse.statusCode {
+//            case 200:
+//                completion(.success(()))
+//            default:
+//                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
+//                    completion(.failure(NetworkError.serverError(errorMessage)))
+//                } else {
+//                    completion(.failure(NetworkError.unknownError))
+//                }
+//            }
+//        }.resume()
+//    }
+    
+    func addColumnToPod(podId: Int, columnName: String, columnType: String, completion: @escaping (Result<PodColumn, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/add-column-to-pod/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -2801,20 +2856,22 @@ class NetworkManager {
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(NetworkError.invalidResponse))
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
                 return
             }
 
-            switch httpResponse.statusCode {
-            case 200:
-                completion(.success(()))
-            default:
-                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let columnData = json["column"] as? [String: Any] {
+                    let columnJson = try JSONSerialization.data(withJSONObject: columnData)
+                    let column = try JSONDecoder().decode(PodColumn.self, from: columnJson)
+                    completion(.success(column))
                 } else {
-                    completion(.failure(NetworkError.unknownError))
+                    completion(.failure(NetworkError.decodingError))
                 }
+            } catch {
+                completion(.failure(NetworkError.decodingError))
             }
         }.resume()
     }
@@ -4769,6 +4826,7 @@ class NetworkManager {
         // Complete payload including names, order, and visibility
         let body: [String: Any] = [
             "columns": columns.map { [
+                "id": $0.id, 
                 "name": $0.name,
                 "type": $0.type,
                 "grouping_type": $0.groupingType ?? "singular"

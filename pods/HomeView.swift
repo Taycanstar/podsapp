@@ -68,7 +68,7 @@ struct HomeView: View {
                            )
                            .padding(.horizontal)
                            .padding(.bottom, 150)
-                           .padding(.top, 60) // Add padding for the header
+                           .padding(.top, 16)
                         
                        }
 
@@ -77,11 +77,21 @@ struct HomeView: View {
      
               
                    
-                   HomeHeaderView()
+//                   HomeHeaderView()
                }
                
         
-               .navigationBarHidden(true)
+//               .navigationBarHidden(true)
+               .navigationBarTitleDisplayMode(.inline)
+
+               .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Image(colorScheme == .dark ? "new_dark" : "new_light")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 25) // Adjust the height as needed
+                    }
+                }
                .onAppear {
                    fetchPodsAndWorkspacesIfNeeded()
                    refreshSubscriptionIfNeeded()
@@ -156,30 +166,6 @@ struct HomeView: View {
         homeViewModel.pods.filter { $0.workspace == selectedHeaderOption }
     }
 
-//    private var podsToDisplay: [Pod] {
-//        switch selectedHeaderOption {
-//        case "Favorites":
-//            return favoritePods
-//        case "Recently visited":
-//            return recentlyVisitedPods
-//        default:
-//            return workspacePods
-//        }
-//    }
-//    
-//
-//    private func fetchPodsAndWorkspacesIfNeeded() {
-//        // Remove the hasInitiallyFetched check
-//        isLoading = true
-//        homeViewModel.fetchPodsForUser(email: viewModel.email) { [self] in
-//            DispatchQueue.main.async {
-//                self.isLoading = false
-//                print("Loading complete, updating UI.")
-//            }
-//        }
-//        homeViewModel.fetchWorkspacesForUser(email: viewModel.email)
-//    }
-
     private func fetchPodsAndWorkspacesIfNeeded() {
             print("Starting fetch...")
             isLoading = true
@@ -214,13 +200,7 @@ struct HomeView: View {
     }
     
     
-//    private func refreshPods() {
-//        DispatchQueue.global(qos: .background).async {
-//            homeViewModel.fetchPodsForUser(email: viewModel.email) {
-//                // Additional actions after refresh if needed
-//            }
-//        }
-//    }
+
     private func updateCachedPodsToDisplay() {
             switch selectedHeaderOption {
             case "Favorites":

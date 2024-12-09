@@ -11,7 +11,9 @@ struct FullActivityLogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     let log: PodItemActivityLog
-    let onDelete: () -> Void
+//    let onDelete: () -> Void
+    let onDelete: (PodItemActivityLog) -> Void
+
     @State private var showDeleteAlert = false
     @State private var isDeleting = false
     
@@ -108,22 +110,38 @@ struct FullActivityLogView: View {
         .disabled(isDeleting)
     }
     
+//    private func deleteLog() {
+//           isDeleting = true
+//           NetworkManager().deleteActivityLog(logId: log.id) { result in
+//               DispatchQueue.main.async {
+//                   isDeleting = false
+//                   switch result {
+//                   case .success:
+//                       onDelete()
+//                       dismiss()
+//                   case .failure(let error):
+//                       print("Failed to delete log: \(error.localizedDescription)")
+//                       // You might want to show an error alert here
+//                   }
+//               }
+//           }
+//       }
     private func deleteLog() {
-           isDeleting = true
-           NetworkManager().deleteActivityLog(logId: log.id) { result in
-               DispatchQueue.main.async {
-                   isDeleting = false
-                   switch result {
-                   case .success:
-                       onDelete()
-                       dismiss()
-                   case .failure(let error):
-                       print("Failed to delete log: \(error.localizedDescription)")
-                       // You might want to show an error alert here
-                   }
-               }
-           }
-       }
+        isDeleting = true
+        NetworkManager().deleteActivityLog(logId: log.id) { result in
+            DispatchQueue.main.async {
+                isDeleting = false
+                switch result {
+                case .success:
+                    onDelete(log) // Pass the log as we now have a closure expecting a PodItemActivityLog
+                    dismiss()
+                case .failure(let error):
+                    print("Failed to delete log: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     
     private var columnValuesGrid: some View {
         let columns = Array(log.columnValues).filter { _, value in
@@ -165,18 +183,6 @@ struct FullActivityLogView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-//    private func valueString(for value: ColumnValue) -> String {
-//        switch value {
-//        case .string(let str):
-//            return str
-//        case .number(let num):
-//            return "\(num)"
-//        case .time(let timeValue):
-//                return timeValue.toString
-//        case .null:
-//            return "" // This case should never be reached due to the filter
-//        }
-//    }
     private func valueString(for value: ColumnValue) -> String {
         switch value {
         case .string(let str):

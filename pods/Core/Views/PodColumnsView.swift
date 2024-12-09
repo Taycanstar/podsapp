@@ -204,72 +204,110 @@ struct PodColumnsView: View {
 
 
     
-//        private func saveChanges() {
-//            networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
-//                DispatchQueue.main.async {
-//                    switch result {
-//                    case .success:
-//                        saveColumnOrder()
-//                        isPresented = false
-//                    case .failure(let error):
-//                        print("Failed to update visible columns: \(error)")
-//                        // Here you might want to show an alert to the user
-//                    }
+//    private func saveChanges() {
+//        // Apply edited names before saving
+////        for (oldName, newName) in editedNames {
+////            if let index = podColumns.firstIndex(where: { $0.name == oldName }) {
+////                podColumns[index].name = newName
+////                
+////                // Update visibleColumns if needed
+////                if let visibleIndex = visibleColumns.firstIndex(of: oldName) {
+////                    visibleColumns[visibleIndex] = newName
+////                }
+////            }
+////        }
+//        for (oldName, newName) in editedNames {
+//            if let index = podColumns.firstIndex(where: { $0.name == oldName }) {
+//                let columnId = podColumns[index].id  // Keep the same ID
+//                podColumns[index].name = newName
+//                
+//                // Update visibleColumns to use IDs instead of names
+//                if let visibleIndex = visibleColumns.firstIndex(of: String(columnId)) {
+//                    visibleColumns[visibleIndex] = String(columnId)
 //                }
 //            }
 //        }
-//    private func saveChanges() {
-//        let columnOrder = podColumns.map { $0.name }
-//        networkManager.updateColumnOrder(podId: podId, columnOrder: columnOrder) { result in
+//
+//        networkManager.updatePodColumns(
+//            podId: podId,
+//            columns: podColumns,
+//            visibleColumns: visibleColumns
+//        ) { result in
 //            DispatchQueue.main.async {
 //                switch result {
 //                case .success:
-//                    networkManager.updateVisibleColumns(podId: podId, columns: visibleColumns) { result in
-//                        DispatchQueue.main.async {
-//                            switch result {
-//                            case .success:
-//                                isPresented = false
-//                            case .failure(let error):
-//                                print("Failed to update visible columns: \(error)")
-//                            }
-//                        }
-//                    }
+//                    isPresented = false
 //                case .failure(let error):
-//                    print("Failed to update column order: \(error)")
+//                    print("Failed to update columns: \(error)")
+//                }
+//            }
+//        }
+//    }
+//    private func saveChanges() {
+//        networkManager.updatePodColumns(
+//            podId: podId,
+//            columns: podColumns.map { column in
+//                var updatedColumn = column
+//                if let newName = editedNames[column.name] {
+//                    updatedColumn.name = newName
+//                }
+//                return updatedColumn
+//            },
+//            visibleColumns: visibleColumns
+//        ) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success(_):
+//                    self.isPresented = false
+//                case .failure(let error):
+//                    print("Error saving columns: \(error)")
+//                    // Handle error appropriately
 //                }
 //            }
 //        }
 //    }
     
     private func saveChanges() {
-        // Apply edited names before saving
-        for (oldName, newName) in editedNames {
-            if let index = podColumns.firstIndex(where: { $0.name == oldName }) {
-                podColumns[index].name = newName
-                
-                // Update visibleColumns if needed
-                if let visibleIndex = visibleColumns.firstIndex(of: oldName) {
-                    visibleColumns[visibleIndex] = newName
-                }
+        // Create a mapping of old names to new names
+        let nameChanges = editedNames.filter { oldName, newName in
+            oldName != newName
+        }
+        
+        // Update visibleColumns before updating the columns
+        for (oldName, newName) in nameChanges {
+            if let index = visibleColumns.firstIndex(of: oldName) {
+                visibleColumns[index] = newName
             }
         }
-
+        
         networkManager.updatePodColumns(
             podId: podId,
-            columns: podColumns,
+            columns: podColumns.map { column in
+                var updatedColumn = column
+                if let newName = editedNames[column.name] {
+                    updatedColumn.name = newName
+                }
+                return updatedColumn
+            },
             visibleColumns: visibleColumns
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success:
-                    isPresented = false
+                case .success(_):
+                    // Update the column names in podColumns
+                    for (oldName, newName) in nameChanges {
+                        if let index = podColumns.firstIndex(where: { $0.name == oldName }) {
+                            podColumns[index].name = newName
+                        }
+                    }
+                    self.hasUnsavedChanges = false
+                    self.isPresented = false
                 case .failure(let error):
-                    print("Failed to update columns: \(error)")
+                    print("Error saving columns: \(error)")
                 }
             }
         }
     }
-    
     
     private var addColumnButton: some View {
         Button(action: {
@@ -311,19 +349,23 @@ struct PodColumnsView: View {
         }
     }
 
+
     private func addNewColumn(title: String, type: String) {
         networkManager.addColumnToPod(podId: podId, columnName: title, columnType: type) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success:
-                    let newColumn = PodColumn(name: title, type: type)
+                case .success(let column):
+                    let newColumn = PodColumn(
+                        id: column.id,
+                        name: title,
+                        type: type
+                    )
                     podColumns.append(newColumn)
-                    
-                    showAddColumn = false
+               
                     hasUnsavedChanges = true
+                    showAddColumn = false
                 case .failure(let error):
                     print("Failed to add new column: \(error)")
-                    // Here you might want to show an alert to the user
                 }
             }
         }

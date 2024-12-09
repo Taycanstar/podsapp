@@ -9,39 +9,62 @@ struct ActivityLogView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
+    let onDelete: (PodItemActivityLog) -> Void
     
-    init(podId: Int, initialLogs: [PodItemActivityLog] = []) {
+//    init(podId: Int, initialLogs: [PodItemActivityLog] = []) {
+//        self.podId = podId
+//        _activityLogs = State(initialValue: initialLogs)
+//    }
+    init(podId: Int,
+         initialLogs: [PodItemActivityLog] = [],
+         onDelete: @escaping (PodItemActivityLog) -> Void = { _ in }) {
         self.podId = podId
+        self.onDelete = onDelete
         _activityLogs = State(initialValue: initialLogs)
     }
+
+
+
     var body: some View {
-            List {
-                Section {
-                    if isLoading {
-                        ProgressView()
-                    } else if let error = errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                    } else {
-                        ForEach(filteredLogs) { log in
-                            ActivityLogItemView(log: log, onDelete: { deletedLog in
-                                removeLog(deletedLog)
-                            })
-                        }
+        ZStack {
+        
+            if isLoading {
+                ProgressView()
+            } else if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+            } else {
+                List {
+                    Section {
+                       
+                            ForEach(filteredLogs) { log in
+                                ActivityLogItemView(log: log, onDelete: { deletedLog in
+                                    removeLog(deletedLog)
+                                })
+                            }
+   
+
+
+                        
                     }
+                    .listRowBackground(Color("bg"))
+                }
+                .listStyle(GroupedListStyle())
+        
+              
+
+            .onAppear {
+                if activityLogs.isEmpty {
+                    loadLogs()
                 }
             }
-            .listStyle(PlainListStyle())
-            .navigationTitle("Activities")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
-//            .padding(.top)
-        .onAppear {
-            if activityLogs.isEmpty {
-                loadLogs()
             }
         }
+        .navigationTitle("Activities")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
+    
     }
     
     // Add this computed property
@@ -87,12 +110,12 @@ struct ActivityLogItemView: View {
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(log.userName)
-                    .font(.system(size: 15))
-                    .fontWeight(.medium)
+//                Text(log.userName)
+//                    .font(.system(size: 15))
+//                    .fontWeight(.medium)
                 Text(log.itemLabel)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
             }
             
             Spacer()
@@ -101,22 +124,22 @@ struct ActivityLogItemView: View {
                 Text(formattedDate(log.loggedAt))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                Image(systemName: "info.circle")
-                    .font(.system(size: 20))
-                    .foregroundColor(.accentColor)
-                    .onTapGesture {
-                                          showFullLog = true
-                                      }
+//                Image(systemName: "chevron.forward")
+//                    .font(.system(size: 14))
+//                    .foregroundColor(Color("nptext"))
+//                    .onTapGesture {
+//                                          showFullLog = true
+//                                      }
             }
         }
         .background(Color("bg"))
-        .sheet(isPresented: $showFullLog) {
-
-            FullActivityLogView(log: log, onDelete: {
-                           onDelete(log)
-                           showFullLog = false
-                       })
-              }
+//        .sheet(isPresented: $showFullLog) {
+//
+//            FullActivityLogView(log: log, onDelete: {
+//                           onDelete(log)
+//                           showFullLog = false
+//                       })
+//              }
     }
     
 

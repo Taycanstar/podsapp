@@ -12,15 +12,17 @@ struct ItemTrendsView: View {
     let podId: Int
     let podItems: [PodItem]
     let podColumns: [PodColumn]
-    @StateObject private var viewModel = ItemTrendsViewModel()
+//    @StateObject private var viewModel = ItemTrendsViewModel()
+    @State private var activityLogs: [Int: [PodItemActivityLog]] = [:]
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     var body: some View {
         List {
             ForEach(podItems, id: \.id) { item in
                 VStack(spacing: 0) {
                     HStack {
-                        NavigationLink(destination: TrendsView(activityLogs: viewModel.activityLogs[item.id] ?? [], podColumns: podColumns)
+                        NavigationLink(destination: TrendsView(activityLogs: activityLogs[item.id] ?? [], podColumns: podColumns)
                             .onAppear{
                                 Mixpanel.mainInstance().track(event: "Tapped Item Trends", properties: ["item_id": item.id])
                             }){
@@ -49,17 +51,13 @@ struct ItemTrendsView: View {
         .background(Color("dkBg"))
         .scrollContentBackground(.hidden)
         .onAppear {
-            viewModel.fetchActivityLogs(for: podId)
+            fetchActivityLogs(for: podId)
         }
     }
-}
-
-class ItemTrendsViewModel: ObservableObject {
-    @Published var activityLogs: [Int: [PodItemActivityLog]] = [:]
-    private let networkManager = NetworkManager()
-
-    func fetchActivityLogs(for podId: Int) {
-        networkManager.fetchPodActivityLogs(podId: podId) { result in
+    
+    private func fetchActivityLogs(for podId: Int) {
+        let networkManager = NetworkManager()
+        networkManager.fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let logs):
@@ -71,4 +69,6 @@ class ItemTrendsViewModel: ObservableObject {
         }
     }
 }
+
+
 

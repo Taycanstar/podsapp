@@ -156,57 +156,33 @@ struct Workspace: Identifiable, Codable {
     }
 }
 
+//struct PodColumn: Codable, Identifiable {
+//    var id: String { name }
+//    var name: String
+//    var type: String
+//    var groupingType: String?
+//    
+//    private enum CodingKeys: String, CodingKey {
+//          case name
+//          case type
+//          case groupingType = "grouping_type"
+//      }
+//}
+
 struct PodColumn: Codable, Identifiable {
-    var id: String { name }
+    var id: Int            // Real database ID
     var name: String
     var type: String
     var groupingType: String?
     
     private enum CodingKeys: String, CodingKey {
-          case name
-          case type
-          case groupingType = "grouping_type"
-      }
+        case id
+        case name
+        case type
+        case groupingType = "grouping_type"
+    }
 }
 
-
-//struct PodItem: Identifiable {
-//    var id: Int // Correctly declare the type of `id`
-//    var videoURL: URL? {
-//        didSet {
-//            print("videoURL didSet called with URL: \(String(describing: videoURL))")
-//            if let url = videoURL {
-//                player = AVPlayer(url: url)
-//      
-//            } else {
-//                player = nil
-//              
-//            }
-//        }
-//    }
-//
-//    var image: UIImage?
-//    var metadata: String
-//    var thumbnail: UIImage? // For local UI usage
-//    var thumbnailURL: URL?  // For networking and referencing the image's location
-//    var imageURL: URL?
-//    var itemType: String?
-//    var uuid: String?
-//    var player: AVPlayer?
-//    var notes: String
-//    var defaultColumnValues: [String: ColumnValue]?
-//    var userColumnValues: [String: ColumnValue]?
-//    var columnValues: [String: ColumnValue]? {
-//            get {
-//                return userColumnValues ?? defaultColumnValues ?? [:]
-//            }
-//            set {
-//                userColumnValues = newValue
-//            }
-//        }
-// 
-//    
-//}
 struct PodItem: Identifiable {
     var id: Int
     var videoURL: URL? {
