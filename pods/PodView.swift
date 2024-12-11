@@ -10,6 +10,7 @@ enum NavigationDestination: Hashable {
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
+    case fullActivityLog(log: PodItemActivityLog)
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -31,8 +32,13 @@ enum NavigationDestination: Hashable {
         case .gracie(let podId):
             hasher.combine("gracie")
             hasher.combine(podId)
+            
+        case .fullActivityLog(let log):    // Add this case
+                   hasher.combine("fullActivityLog")
+                   hasher.combine(log.id)
+               }
         }
-    }
+    
 
     static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
         switch (lhs, rhs) {
@@ -46,6 +52,8 @@ enum NavigationDestination: Hashable {
             return id1 == id2
         case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
                     return column1.name == column2.name
+        case (.fullActivityLog(let log1), .fullActivityLog(let log2)):  // Add this case
+                    return log1.id == log2.id
         default:
             return false
         }
@@ -244,6 +252,12 @@ struct PodView: View {
                             FullAnalyticsView(column: column, activityLogs: logs)
             case .gracie(let podId):
                 GracieView(podId: podId)
+            case .fullActivityLog(let log):
+                    FullActivityLogView(log: log, onDelete: { deletedLog in
+                        // Handle deletion if needed
+                        // You might want to refresh the activity log list here
+                    })
+                
                         
                             
             }

@@ -105,43 +105,32 @@ struct ActivityLogView: View {
 struct ActivityLogItemView: View {
     let log: PodItemActivityLog
     let onDelete: (PodItemActivityLog) -> Void
-    @State private var showFullLog = false
+
     
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 5) {
-//                Text(log.userName)
-//                    .font(.system(size: 15))
-//                    .fontWeight(.medium)
-                Text(log.itemLabel)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
+        NavigationLink(value: NavigationDestination.fullActivityLog(log: log)) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(log.itemLabel)
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 5) {
+                    Text(formattedDate(log.loggedAt))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.forward")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color("nptext"))
+                }
             }
-            
-            Spacer()
-            
-            HStack(spacing: 5) {
-                Text(formattedDate(log.loggedAt))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color("nptext"))
-           
-            }
+            .background(Color("bg"))
         }
-        .onTapGesture {
-                              showFullLog = true
-                          }
-        .background(Color("bg"))
-        .sheet(isPresented: $showFullLog) {
-
-            FullActivityLogView(log: log, onDelete: {_ in 
-                           onDelete(log)
-                           showFullLog = false
-                       })
-              }
     }
+    
     
 
     private func columnValuesString(_ values: [String: ColumnValue]) -> String {
