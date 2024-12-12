@@ -35,6 +35,9 @@ struct FullActivityLogView: View {
                         
                         columnValuesGrid
                         
+                        Divider() // Add a divider here
+                               .padding(.vertical, 10)
+                        
                         if !log.notes.isEmpty {
                             
                             Text("Notes")
@@ -46,14 +49,17 @@ struct FullActivityLogView: View {
                             Text(log.notes)
                                 .font(.body)
 //                                .padding(.horizontal)
+                            
+                            Divider() // Add a divider here
+                                   .padding(.bottom, 10)
                         }
                         Spacer(minLength: 10) // Add space before the delete button
                                                 
-                                                deleteLogButton
+                                             
                             
                             
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                 }
             }
@@ -61,15 +67,46 @@ struct FullActivityLogView: View {
             .background(Color("bg"))
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle(formattedDate(log.loggedAt))
-        }
-        .alert("Delete Log", isPresented: $showDeleteAlert) {
-                  Button("Cancel", role: .cancel) { }
-                  Button("Delete", role: .destructive) {
-                      deleteLog()
+            .toolbar {
+                  ToolbarItem(placement: .navigationBarTrailing) {
+                      Menu {
+                          Button {
+                              // Edit logic here if needed
+                              // For now, just print
+                              print("Edit tapped")
+                          } label: {
+                              Label("Edit", systemImage: "pencil")
+                          }
+
+                          Button(role: .destructive) {
+                              showDeleteAlert = true
+                          } label: {
+                              Label("Delete Activity", systemImage: "trash")
+                                  .foregroundColor(.red)
+                          }
+
+                      } label: {
+                          ZStack {
+                                       Circle()
+                                           .fill(Color("schbg"))
+                                           .frame(width: 25, height: 25) // Adjust size for breathing room
+                                       Image(systemName: "ellipsis")
+                                  .font(.system(size: 14))
+                                           .foregroundColor(.accentColor)
+                                   }
+                      }
                   }
-              } message: {
-                  Text("Are you sure you want to delete this log?")
               }
+          
+          .alert("Delete Activity", isPresented: $showDeleteAlert) {
+              Button("Cancel", role: .cancel) { }
+              Button("Delete", role: .destructive) {
+                  deleteLog()
+              }
+          } message: {
+              Text("Are you sure you want to delete this activity?")
+          }
+        }
     }
     
     // Format just the time for the detail view
@@ -143,32 +180,7 @@ struct FullActivityLogView: View {
         }
     }
 
-    
-//    private var columnValuesGrid: some View {
-//        let columns = Array(log.columnValues).filter { _, value in
-//            if case .null = value {
-//                return false
-//            }
-//            return true
-//        }
-//        return VStack(spacing: 15) {
-//            ForEach(0..<(columns.count + 1) / 2, id: \.self) { rowIndex in
-//                HStack(spacing: 20) {
-//                    ForEach(0..<2) { columnIndex in
-//                        let index = rowIndex * 2 + columnIndex
-//                        if index < columns.count {
-//                            let (key, value) = columns[index]
-//                            columnView(key: key, value: value)
-//                        } else {
-//                            Spacer()
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        .padding()
-//        .padding(.top, 20)
-//    }
+
     private var columnValuesGrid: some View {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
@@ -176,7 +188,7 @@ struct FullActivityLogView: View {
         return VStack(alignment: .leading, spacing: 24) {
             // Grouped columns section
             if !groupedColumns.isEmpty {
-                VStack(spacing: 4) {
+                VStack(spacing: 0) {
                     // Headers
                     HStack {
                         ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { index, column in

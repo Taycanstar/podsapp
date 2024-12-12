@@ -709,25 +709,6 @@ struct PodView: View {
     }
 
 
-//    private func columnView(name: String, item: PodItem) -> some View {
-////        let value = item.userColumnValues?[name] ?? item.defaultColumnValues?[name] ?? .null
-//        let value = item.columnValues?[name] ?? .null
-//        let displayValue: ColumnValue = {
-//            if case .array(let values) = value, !values.isEmpty {
-//                return values[0]  // Take only the first value
-//            }
-//            return value
-//        }()
-//        return VStack {
-//            Text("\(displayValue) \(name)")  // String interpolation will automatically use description
-//                .font(.system(size: 13))
-//        }
-//        .padding(.horizontal,6)
-//        .padding(.vertical,4)
-//        .cornerRadius(4)
-//        .background(Color("iosbtn"))
-//        .cornerRadius(4)
-//    }
 
     private func columnView(name: String, item: PodItem) -> some View {
         let column = podColumns.first { $0.name == name }
