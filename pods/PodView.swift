@@ -479,7 +479,7 @@ struct PodView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let fullPod):
-                    print("Fetched Pod Columns: \(fullPod.columns)")
+                   
                     self.pod = fullPod
                     self.reorderedItems = fullPod.items
                     self.podColumns = fullPod.columns

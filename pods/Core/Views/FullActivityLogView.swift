@@ -31,20 +31,21 @@ struct FullActivityLogView: View {
                             .font(.system(size: 32))
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
+                            .padding(.bottom, 10)
                         
                         columnValuesGrid
                         
                         if !log.notes.isEmpty {
                             
                             Text("Notes")
-                                .font(.headline)
+                                .font(.system(size: 24))
+                                .fontWeight(.bold)
                                 .padding(.top)
-                                .padding(.horizontal)
-                             
-                            
+//                                .padding(.horizontal)
+
                             Text(log.notes)
                                 .font(.body)
-                                .padding(.horizontal)
+//                                .padding(.horizontal)
                         }
                         Spacer(minLength: 10) // Add space before the delete button
                                                 
@@ -175,7 +176,7 @@ struct FullActivityLogView: View {
         return VStack(alignment: .leading, spacing: 24) {
             // Grouped columns section
             if !groupedColumns.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: 4) {
                     // Headers
                     HStack {
                         ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { index, column in
@@ -224,7 +225,7 @@ struct FullActivityLogView: View {
                         if index < singleColumns.count {
                             let column = singleColumns[index]
                             if let value = log.columnValues[column.name] {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 4) {
                                     Text(column.name)
                                         .font(.system(size: 18))
                                         .foregroundColor(.primary)
@@ -239,7 +240,7 @@ struct FullActivityLogView: View {
                 }
             }
         }
-        .padding(.horizontal)
+//        .padding(.horizontal)
     }
 
     private func columnView(key: String, value: ColumnValue) -> some View {

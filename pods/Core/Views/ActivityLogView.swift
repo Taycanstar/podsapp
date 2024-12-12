@@ -41,6 +41,27 @@ struct ActivityLogView: View {
                                     removeLog(deletedLog)
                                 })
                             }
+                            .onDelete { indexSet in
+                                  // Get the logs to delete from the filtered logs
+                                  let logsToDelete = indexSet.map { filteredLogs[$0] }
+                                  
+                                  // Delete each log
+                                  for log in logsToDelete {
+                                      // Call the network delete first
+                                      NetworkManager().deleteActivityLog(logId: log.id) { result in
+                                          DispatchQueue.main.async {
+                                              switch result {
+                                              case .success:
+                                                  // Remove from the local array after successful network deletion
+                                                  removeLog(log)
+                                              case .failure(let error):
+                                                  print("Failed to delete log: \(error.localizedDescription)")
+                                                  // You might want to show an error message to the user here
+                                              }
+                                          }
+                                      }
+                                  }
+                              }
    
 
 
