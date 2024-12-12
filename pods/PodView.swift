@@ -10,7 +10,7 @@ enum NavigationDestination: Hashable {
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
-    case fullActivityLog(log: PodItemActivityLog)
+    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn])
 
     func hash(into hasher: inout Hasher) {
         switch self {
@@ -33,9 +33,9 @@ enum NavigationDestination: Hashable {
             hasher.combine("gracie")
             hasher.combine(podId)
             
-        case .fullActivityLog(let log):    // Add this case
-                   hasher.combine("fullActivityLog")
-                   hasher.combine(log.id)
+        case .fullActivityLog(let log, _):
+            hasher.combine("fullActivityLog")
+            hasher.combine(log.id)
                }
         }
     
@@ -52,8 +52,8 @@ enum NavigationDestination: Hashable {
             return id1 == id2
         case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
                     return column1.name == column2.name
-        case (.fullActivityLog(let log1), .fullActivityLog(let log2)):  // Add this case
-                    return log1.id == log2.id
+        case (.fullActivityLog(let log1, _), .fullActivityLog(let log2, _)):
+            return log1.id == log2.id
         default:
             return false
         }
@@ -244,7 +244,7 @@ struct PodView: View {
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
-                ActivityLogView(podId: pod.id)
+                ActivityLogView(podId: pod.id, columns: podColumns)
             case .trends(let podId):
 
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
@@ -252,8 +252,8 @@ struct PodView: View {
                             FullAnalyticsView(column: column, activityLogs: logs)
             case .gracie(let podId):
                 GracieView(podId: podId)
-            case .fullActivityLog(let log):
-                    FullActivityLogView(log: log, onDelete: { deletedLog in
+            case .fullActivityLog(let log, let columns):
+                    FullActivityLogView(log: log, columns: columns, onDelete: { deletedLog in
                         // Handle deletion if needed
                         // You might want to refresh the activity log list here
                     })

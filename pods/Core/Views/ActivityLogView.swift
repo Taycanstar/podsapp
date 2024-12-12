@@ -6,19 +6,18 @@ struct ActivityLogView: View {
     @State private var searchText: String = ""
     @Environment(\.dismiss) private var dismiss
     let podId: Int
+    let columns: [PodColumn]
     @State private var isLoading = false
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     let onDelete: (PodItemActivityLog) -> Void
     
-//    init(podId: Int, initialLogs: [PodItemActivityLog] = []) {
-//        self.podId = podId
-//        _activityLogs = State(initialValue: initialLogs)
-//    }
-    init(podId: Int,
+
+    init(podId: Int, columns: [PodColumn],
          initialLogs: [PodItemActivityLog] = [],
          onDelete: @escaping (PodItemActivityLog) -> Void = { _ in }) {
         self.podId = podId
+        self.columns = columns
         self.onDelete = onDelete
         _activityLogs = State(initialValue: initialLogs)
     }
@@ -38,7 +37,7 @@ struct ActivityLogView: View {
                     Section {
                        
                             ForEach(filteredLogs) { log in
-                                ActivityLogItemView(log: log, onDelete: { deletedLog in
+                                ActivityLogItemView(log: log,  columns: columns, onDelete: { deletedLog in
                                     removeLog(deletedLog)
                                 })
                             }
@@ -104,11 +103,13 @@ struct ActivityLogView: View {
 
 struct ActivityLogItemView: View {
     let log: PodItemActivityLog
+    let columns: [PodColumn]
     let onDelete: (PodItemActivityLog) -> Void
+
 
     
     var body: some View {
-        NavigationLink(value: NavigationDestination.fullActivityLog(log: log)) {
+        NavigationLink(value: NavigationDestination.fullActivityLog(log: log , columns: columns)) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(log.itemLabel)
@@ -122,9 +123,6 @@ struct ActivityLogItemView: View {
                     Text(formattedDate(log.loggedAt))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Image(systemName: "chevron.forward")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color("nptext"))
                 }
             }
             .background(Color("bg"))

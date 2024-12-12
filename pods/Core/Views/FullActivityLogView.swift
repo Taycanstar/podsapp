@@ -11,7 +11,7 @@ struct FullActivityLogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     let log: PodItemActivityLog
-//    let onDelete: () -> Void
+    let columns: [PodColumn]
     let onDelete: (PodItemActivityLog) -> Void
 
     @State private var showDeleteAlert = false
@@ -20,42 +20,17 @@ struct FullActivityLogView: View {
     
     var body: some View {
         ZStack {
-            (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
+            (Color("bg"))
                 .edgesIgnoringSafeArea(.all)
             
             ScrollView {
                 VStack(spacing: 0) {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.6))
-                        .frame(width: 35, height: 4)
-                        .padding(.top, 10)
-                    
-                    HStack {
-                        Spacer()
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 18))
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .foregroundColor(.primary)
-                        }
-                    }
                     
                     VStack(alignment: .leading, spacing: 10) {
                         Text(log.itemLabel)
-                            .font(.system(size: 24))
-                            .fontWeight(.regular)
-                            .padding(.horizontal)
-                        
-                        Text(log.userName)
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .padding(.horizontal)
-                        
-                        Text(formattedDate(log.loggedAt))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
+                            .font(.system(size: 32))
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
                         
                         columnValuesGrid
                         
@@ -78,12 +53,13 @@ struct FullActivityLogView: View {
                             
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 10)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
-            .cornerRadius(20)
+            .background(Color("bg"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(formattedDate(log.loggedAt))
         }
         .alert("Delete Log", isPresented: $showDeleteAlert) {
                   Button("Cancel", role: .cancel) { }
@@ -93,6 +69,46 @@ struct FullActivityLogView: View {
               } message: {
                   Text("Are you sure you want to delete this log?")
               }
+    }
+    
+    // Format just the time for the detail view
+    private func formattedTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
+    // Format the date for the navigation title
+    private func formattedDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today, \(formatMonthDay(date)), \(formatYear(date))"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday, \(formatMonthDay(date)), \(formatYear(date))"
+        } else if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+            // Within the same week
+            let weekdayFormatter = DateFormatter()
+            weekdayFormatter.dateFormat = "EEEE"
+            return "\(weekdayFormatter.string(from: date)), \(formatMonthDay(date)), \(formatYear(date))"
+        } else {
+            let weekdayFormatter = DateFormatter()
+            weekdayFormatter.dateFormat = "EEEE"
+            return "\(weekdayFormatter.string(from: date)), \(formatMonthDay(date)), \(formatYear(date))"
+        }
+    }
+    
+    private func formatMonthDay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
+    }
+    
+    private func formatYear(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: date)
     }
     
     private var deleteLogButton: some View {
@@ -109,23 +125,7 @@ struct FullActivityLogView: View {
         .padding(.top, 20)
         .disabled(isDeleting)
     }
-    
-//    private func deleteLog() {
-//           isDeleting = true
-//           NetworkManager().deleteActivityLog(logId: log.id) { result in
-//               DispatchQueue.main.async {
-//                   isDeleting = false
-//                   switch result {
-//                   case .success:
-//                       onDelete()
-//                       dismiss()
-//                   case .failure(let error):
-//                       print("Failed to delete log: \(error.localizedDescription)")
-//                       // You might want to show an error alert here
-//                   }
-//               }
-//           }
-//       }
+
     private func deleteLog() {
         isDeleting = true
         NetworkManager().deleteActivityLog(logId: log.id) { result in
@@ -143,30 +143,103 @@ struct FullActivityLogView: View {
     }
 
     
+//    private var columnValuesGrid: some View {
+//        let columns = Array(log.columnValues).filter { _, value in
+//            if case .null = value {
+//                return false
+//            }
+//            return true
+//        }
+//        return VStack(spacing: 15) {
+//            ForEach(0..<(columns.count + 1) / 2, id: \.self) { rowIndex in
+//                HStack(spacing: 20) {
+//                    ForEach(0..<2) { columnIndex in
+//                        let index = rowIndex * 2 + columnIndex
+//                        if index < columns.count {
+//                            let (key, value) = columns[index]
+//                            columnView(key: key, value: value)
+//                        } else {
+//                            Spacer()
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        .padding()
+//        .padding(.top, 20)
+//    }
     private var columnValuesGrid: some View {
-        let columns = Array(log.columnValues).filter { _, value in
-            if case .null = value {
-                return false
+        let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+        let singleColumns = columns.filter { $0.groupingType == "singular" }
+        
+        return VStack(alignment: .leading, spacing: 24) {
+            // Grouped columns section
+            if !groupedColumns.isEmpty {
+                VStack(spacing: 12) {
+                    // Headers
+                    HStack {
+                        ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { index, column in
+                            Text(column.name)
+                                .font(.system(size: 18))
+                                .foregroundColor(.primary)
+                            
+                            if index < groupedColumns.count - 1 {
+                                Spacer()
+                            }
+                        }
+                    }
+                    
+                    // Find minimum length of all value arrays
+                    let minLength: Int = groupedColumns.compactMap { column in
+                        guard case .array(let values) = log.columnValues[column.name] ?? .null else {
+                            return nil
+                        }
+                        return values.count
+                    }.min() ?? 0
+                    
+                    // Values - only show up to minLength rows
+                    ForEach(0..<minLength, id: \.self) { index in
+                        HStack {
+                            ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { colIndex, column in
+                                if case .array(let values) = log.columnValues[column.name] ?? .null {
+                                    Text("\(values[index])")
+                                        .font(.system(size: 28, weight: .medium, design: .rounded))
+                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                    
+                                    if colIndex < groupedColumns.count - 1 {
+                                        Spacer()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            return true
-        }
-        return VStack(spacing: 15) {
-            ForEach(0..<(columns.count + 1) / 2, id: \.self) { rowIndex in
+            
+            // Single columns section remains the same...
+            ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
                 HStack(spacing: 20) {
                     ForEach(0..<2) { columnIndex in
                         let index = rowIndex * 2 + columnIndex
-                        if index < columns.count {
-                            let (key, value) = columns[index]
-                            columnView(key: key, value: value)
-                        } else {
-                            Spacer()
+                        if index < singleColumns.count {
+                            let column = singleColumns[index]
+                            if let value = log.columnValues[column.name] {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(column.name)
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.primary)
+                                    Text(valueString(for: value))
+                                        .font(.system(size: 28, weight: .medium, design: .rounded))
+                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
                 }
             }
         }
-        .padding()
-        .padding(.top, 20)
+        .padding(.horizontal)
     }
 
     private func columnView(key: String, value: ColumnValue) -> some View {
@@ -183,16 +256,44 @@ struct FullActivityLogView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+//    private func valueString(for value: ColumnValue) -> String {
+//        switch value {
+//        case .string(let str):
+//            return str
+//        case .number(let num):
+//            return "\(num)"
+//        case .time(let timeValue):
+//            return timeValue.toString
+//        case .array(let array):
+//            return array.map { $0.description }.joined(separator: ", ")
+//        case .null:
+//            return ""
+//        }
+//    }
+    
     private func valueString(for value: ColumnValue) -> String {
         switch value {
         case .string(let str):
             return str
         case .number(let num):
-            return "\(num)"
+            // Check if the number is effectively a whole number
+            if floor(num) == num {
+                return String(format: "%.0f", num)  // Format as integer
+            } else {
+                return "\(num)"  // Keep decimals for actual floating point numbers
+            }
         case .time(let timeValue):
             return timeValue.toString
         case .array(let array):
-            return array.map { $0.description }.joined(separator: ", ")
+            return array.map { value in
+                if let num = value as? Double {
+                    // Apply the same formatting to array numbers
+                    if floor(num) == num {
+                        return String(format: "%.0f", num)
+                    }
+                }
+                return "\(value)"
+            }.joined(separator: ", ")
         case .null:
             return ""
         }
@@ -200,10 +301,5 @@ struct FullActivityLogView: View {
 
 
     
-    private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
+
 }
