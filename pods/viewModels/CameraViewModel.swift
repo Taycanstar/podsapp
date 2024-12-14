@@ -213,8 +213,8 @@ struct PodItemActivityLog: Identifiable, Comparable {
     let itemLabel: String
     let userEmail: String
     let loggedAt: Date
-    let columnValues: [String: ColumnValue]
-    let notes: String
+    var columnValues: [String: ColumnValue]
+    var notes: String
     let userName: String
 
     init(from json: PodItemActivityLogJSON) throws {

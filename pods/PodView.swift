@@ -10,8 +10,10 @@ enum NavigationDestination: Hashable {
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
-    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn])
-
+//    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn])
+    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
+    
+    
     func hash(into hasher: inout Hasher) {
         switch self {
         case .player(let item):
@@ -33,7 +35,7 @@ enum NavigationDestination: Hashable {
             hasher.combine("gracie")
             hasher.combine(podId)
             
-        case .fullActivityLog(let log, _):
+        case .fullActivityLog(let log, _, _):
             hasher.combine("fullActivityLog")
             hasher.combine(log.id)
                }
@@ -52,7 +54,7 @@ enum NavigationDestination: Hashable {
             return id1 == id2
         case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
                     return column1.name == column2.name
-        case (.fullActivityLog(let log1, _), .fullActivityLog(let log2, _)):
+        case (.fullActivityLog(let log1, _, _), .fullActivityLog(let log2, _, _)):
             return log1.id == log2.id
         default:
             return false
@@ -252,11 +254,16 @@ struct PodView: View {
                             FullAnalyticsView(column: column, activityLogs: logs)
             case .gracie(let podId):
                 GracieView(podId: podId)
-            case .fullActivityLog(let log, let columns):
-                    FullActivityLogView(log: log, columns: columns, onDelete: { deletedLog in
-                        // Handle deletion if needed
-                        // You might want to refresh the activity log list here
-                    })
+//            case .fullActivityLog(let log, let columns):
+//                    FullActivityLogView(log: log, columns: columns, onDelete: { deletedLog in
+//                        // Handle deletion if needed
+//                        // You might want to refresh the activity log list here
+//                    })
+            case .fullActivityLog(let log, let columns, let onLogUpdated):
+                FullActivityLogView(log: log,
+                                   columns: columns,
+                                   onDelete: { _ in },
+                                   onUpdate: onLogUpdated)
                 
                         
                             
@@ -2672,46 +2679,6 @@ struct LogActivityView: View {
            }
        }
 
-//       private func submitActivity() {
-//           isSubmitting = true
-//           
-//           // Prepare the column values for submission
-//           var submissionValues: [String: ColumnValue] = [:]
-//           
-//           for (columnName, value) in columnValues {
-//               guard !skippedColumns.contains(columnName),
-//                     let column = podColumns.first(where: { $0.name == columnName }) else { continue }
-//               
-//               if column.groupingType == "grouped" {
-//                   if case .array(let values) = value {
-//                       submissionValues[columnName] = .array(values)
-//                   }
-//               } else {
-//                   submissionValues[columnName] = value
-//               }
-//           }
-//           
-//           NetworkManager().createActivityLog(
-//               itemId: item.id,
-//               podId: podId,
-//               userEmail: viewModel.email,
-//               columnValues: submissionValues,
-//               podColumns: podColumns,
-//               notes: activityNote,
-//               loggedAt: selectedDate
-//           ) { result in
-//               DispatchQueue.main.async {
-//                   isSubmitting = false
-//                   switch result {
-//                   case .success(let newLog):
-//                       onActivityLogged(newLog)
-//                       presentationMode.wrappedValue.dismiss()
-//                   case .failure(let error):
-//                       errorMessage = error.localizedDescription
-//                   }
-//               }
-//           }
-//       }
     private func submitActivity() {
         isSubmitting = true
         

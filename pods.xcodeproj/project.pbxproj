@@ -18,6 +18,9 @@
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
 		362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
+		362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */; };
+		362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B12D0D3E4700DF0B26 /* EditActivityView.swift */; };
+		362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */; };
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
@@ -36,8 +39,6 @@
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
 		367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458BD2B7421110060355F /* Assets.xcassets */; };
-		3680C26B2C7E127D00D66167 /* ActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3680C26A2C7E127D00D66167 /* ActivityLogView.swift */; };
-		3680C26D2C802D9900D66167 /* FullActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3680C26C2C802D9900D66167 /* FullActivityLogView.swift */; };
 		3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8662BBAE45200B350E2 /* PodItemView.swift */; };
 		3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C8682BBAE68C00B350E2 /* PodItemCell.swift */; };
 		3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */; };
@@ -140,6 +141,9 @@
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
 		362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemOptionsView.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
+		362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
+		362969B12D0D3E4700DF0B26 /* EditActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditActivityView.swift; sourceTree = "<group>"; };
+		362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivityLogView.swift; sourceTree = "<group>"; };
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
@@ -157,8 +161,6 @@
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
-		3680C26A2C7E127D00D66167 /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
-		3680C26C2C802D9900D66167 /* FullActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivityLogView.swift; sourceTree = "<group>"; };
 		3682C8662BBAE45200B350E2 /* PodItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemView.swift; sourceTree = "<group>"; };
 		3682C8682BBAE68C00B350E2 /* PodItemCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodItemCell.swift; sourceTree = "<group>"; };
 		3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomVideoPlayer.swift; sourceTree = "<group>"; };
@@ -269,6 +271,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		362969B32D0D3E4700DF0B26 /* activities */ = {
+			isa = PBXGroup;
+			children = (
+				362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */,
+				362969B12D0D3E4700DF0B26 /* EditActivityView.swift */,
+				362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */,
+			);
+			path = activities;
+			sourceTree = "<group>";
+		};
 		3642C2252B9D3BF100D059B9 /* viewModels */ = {
 			isa = PBXGroup;
 			children = (
@@ -328,6 +340,8 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				362969B32D0D3E4700DF0B26 /* activities */,
+				369474502CB9B6DE00CD197F /* trends */,
 				3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */,
 				36D647D02C092A1C002F1047 /* SplashScreenView.swift */,
 				3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */,
@@ -347,8 +361,6 @@
 				3638CCA92C954BA900CCA675 /* TeamInvitationView.swift */,
 				3641F5112C73A13500256E85 /* PodInfoView.swift */,
 				367540F02C76E99900B066A9 /* PodMembersView.swift */,
-				3680C26A2C7E127D00D66167 /* ActivityLogView.swift */,
-				3680C26C2C802D9900D66167 /* FullActivityLogView.swift */,
 				36B3CF862C84014000265F91 /* MediaPreview.swift */,
 				36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */,
 				36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */,
@@ -356,7 +368,6 @@
 				3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */,
 				363201322C96257100BC1815 /* TeamInfoView.swift */,
 				363201362C97812B00BC1815 /* MyTeamMembersView.swift */,
-				369474502CB9B6DE00CD197F /* trends */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -785,7 +796,6 @@
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
-				3680C26D2C802D9900D66167 /* FullActivityLogView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
@@ -829,13 +839,15 @@
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
 				369474632CD0031000CD197F /* DropdownButton.swift in Sources */,
 				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
-				3680C26B2C7E127D00D66167 /* ActivityLogView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 				36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
+				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
+				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
+				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
