@@ -25,23 +25,24 @@ struct EditActivityView: View {
     @FocusState private var focusedField: String?
     @State private var groupedRowsCount: [String: Int] = [:]
     @EnvironmentObject var viewModel: OnboardingViewModel
-    
+
     init(log: PodItemActivityLog, columns: [PodColumn], onSave: @escaping (PodItemActivityLog) -> Void) {
+        print("EditActivityView init - received log values:", log.columnValues)
         self.log = log
         self.columns = columns
         self.onSave = onSave
         
-        // Convert column name-based values to column ID-based values
         var initialColumnValues: [String: ColumnValue] = [:]
         var initialGroupedRowsCount: [String: Int] = [:]
         
+        // It's already ID-based, so just copy directly
+        initialColumnValues = log.columnValues
+        
+        // Set up grouped counts
         for column in columns {
-            if let value = log.columnValues[column.name] {
-                initialColumnValues[String(column.id)] = value
-                
-                if column.groupingType == "grouped", case .array(let values) = value {
-                    initialGroupedRowsCount[column.groupingType ?? ""] = values.count
-                }
+            if column.groupingType == "grouped",
+               case .array(let values) = log.columnValues[String(column.id)] ?? .null {
+                initialGroupedRowsCount[column.groupingType ?? ""] = values.count
             }
         }
         
@@ -49,6 +50,7 @@ struct EditActivityView: View {
         _activityNote = State(initialValue: log.notes)
         _showNotesInput = State(initialValue: !log.notes.isEmpty)
         _groupedRowsCount = State(initialValue: initialGroupedRowsCount)
+        print("EditActivityView init - set initial values:", initialColumnValues)
     }
     
     var body: some View {
@@ -218,15 +220,9 @@ struct EditActivityView: View {
 
     private func updateActivity() {
         isSubmitting = true
-        
+        print("About to send to API - columnValues:", columnValues)
         // Convert back to name-based values for the API
-        var nameBasedColumnValues: [String: ColumnValue] = [:]
-        for column in columns {
-            if let value = columnValues[String(column.id)] {
-                nameBasedColumnValues[column.name] = value
-            }
-        }
-        
+   
         NetworkManager().updateActivityLog(
             logId: log.id,
             columnValues: columnValues,
@@ -236,18 +232,9 @@ struct EditActivityView: View {
                 isSubmitting = false
                 switch result {
                 case .success(let updatedLog):
-                    // Create new log with our name-based values
-                    var newLog = updatedLog
-//                    newLog.columnValues = nameBasedColumnValues
-                    newLog.columnValues = Dictionary(uniqueKeysWithValues:
-                                    columns.compactMap { column in
-                                        if let value = updatedLog.columnValues[String(column.id)] {
-                                            return (column.name, value)
-                                        }
-                                        return nil
-                                    }
-                                )
-                    onSave(newLog)
+                    print("Received from API - updatedLog.columnValues:", updatedLog.columnValues)
+                                  onSave(updatedLog)
+                                  print("After onSave called - was this the last thing that happened?")
                     dismiss()
                 case .failure(let error):
                     errorMessage = error.localizedDescription

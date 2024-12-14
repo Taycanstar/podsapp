@@ -11,24 +11,7 @@ struct ActivityLogView: View {
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     let onDelete: (PodItemActivityLog) -> Void
-//    let onLogUpdated: ((PodItemActivityLog) -> Void)?
-    
-//
-//    init(podId: Int, columns: [PodColumn],
-//         initialLogs: [PodItemActivityLog] = [],
-//         onDelete: @escaping (PodItemActivityLog) -> Void = { _ in },
-//         onLogUpdated: ((PodItemActivityLog) -> Void)? = nil) {
-//        self.podId = podId
-//        self.columns = columns
-//        self.onDelete = onDelete
-////        self.onLogUpdated = onLogUpdated
-//        let onLogUpdated: ((PodItemActivityLog) -> Void)? = { updatedLog in
-//            if let index = activityLogs.firstIndex(where: { $0.id == updatedLog.id }) {
-//                activityLogs[index] = updatedLog
-//            }
-//        }
-//        _activityLogs = State(initialValue: initialLogs)
-//    }
+
 
     init(podId: Int, columns: [PodColumn],
              initialLogs: [PodItemActivityLog] = [],
