@@ -106,6 +106,23 @@ struct ActivityLogView: View {
             (log.notes.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }
+//    private func loadLogs() {
+//        isLoading = true
+//        errorMessage = nil
+//        NetworkManager().fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
+//            DispatchQueue.main.async {
+//                isLoading = false
+//                switch result {
+//                case .success(let logs):
+//                    self.activityLogs = logs
+//                    
+//                case .failure(let error):
+//                    print("Failed to fetch activity logs: \(error)")
+//                }
+//            }
+//        }
+//    }
+//
     private func loadLogs() {
         isLoading = true
         errorMessage = nil
@@ -114,10 +131,28 @@ struct ActivityLogView: View {
                 isLoading = false
                 switch result {
                 case .success(let logs):
-                    self.activityLogs = logs
-                    
+                    // Convert columnValues to ID-based keys
+                    let convertedLogs = logs.map { log -> PodItemActivityLog in
+                        var mutableLog = log
+                        var idBasedValues: [String: ColumnValue] = [:]
+
+                        // Use the columns array to map column names to IDs
+                        for column in columns {
+//                            if let value = mutableLog.columnValues[column.name] {
+                            if let value = mutableLog.columnValues[String(column.id)] {
+                                idBasedValues[String(column.id)] = value
+                            }
+                        }
+
+                        mutableLog.columnValues = idBasedValues
+                        return mutableLog
+                    }
+
+                    self.activityLogs = convertedLogs
+
                 case .failure(let error):
                     print("Failed to fetch activity logs: \(error)")
+                    // Handle error appropriately, e.g. set self.errorMessage
                 }
             }
         }

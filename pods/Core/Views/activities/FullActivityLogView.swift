@@ -15,23 +15,12 @@ struct FullActivityLogView: View {
     
 
     init(log: PodItemActivityLog, columns: [PodColumn], onDelete: @escaping (PodItemActivityLog) -> Void, onUpdate: @escaping (PodItemActivityLog) -> Void) {
-        // Convert name-based values to ID-based values
-        var idBasedLog = log
-        var idBasedValues: [String: ColumnValue] = [:]
-        
-        for column in columns {
-            if let value = log.columnValues[column.name] {
-                idBasedValues[String(column.id)] = value
-            }
-        }
-        
-        idBasedLog.columnValues = idBasedValues
-        _log = State(initialValue: idBasedLog)
-        
+        _log = State(initialValue: log) // Use the log directly
         self.columns = columns
         self.onDelete = onDelete
         self.onUpdate = onUpdate
     }
+
     
     
     var body: some View {
