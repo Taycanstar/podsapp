@@ -50,7 +50,6 @@ struct EditActivityView: View {
         _activityNote = State(initialValue: log.notes)
         _showNotesInput = State(initialValue: !log.notes.isEmpty)
         _groupedRowsCount = State(initialValue: initialGroupedRowsCount)
-        print("EditActivityView init - set initial values:", initialColumnValues)
     }
     
     var body: some View {

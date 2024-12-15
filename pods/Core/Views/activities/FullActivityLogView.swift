@@ -106,12 +106,10 @@ struct FullActivityLogView: View {
                     log: log,
                     columns: columns,
                     onSave: { updatedLog in
-                        print("FullActivityLogView before update:", log.columnValues)
-                        var newLog = updatedLog
-                        newLog.columnValues = updatedLog.columnValues
-                        log = newLog
-                        print("FullActivityLogView after update:", log.columnValues)
-                        onUpdate(updatedLog)
+                        // Update local state first
+                                           log = updatedLog
+                                           // Then notify parent
+                                           onUpdate(updatedLog)
        
                     }
                 )
