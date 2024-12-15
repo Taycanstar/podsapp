@@ -47,6 +47,7 @@ struct ActivityLogView: View {
                                 logRowContent(for: log)
                             }
                         }
+    
                         .onDelete { indexSet in
                             let logsToDelete = indexSet.map { filteredLogs[$0] }
                             for log in logsToDelete {
