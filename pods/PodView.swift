@@ -2095,6 +2095,11 @@ struct GroupedColumnView: View {
             .padding(.top, 8)
         }
         .padding(.top, 5)
+        .onAppear {
+                   if groupedRowsCount == 0 {
+                       onAddRow()
+                   }
+               }
     }
 }
 
@@ -2503,6 +2508,7 @@ struct LogActivityView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
+          
                     // Handle case when there are no columns
                     if podColumns.isEmpty {
                         Text("No columns available to log.")
@@ -2625,6 +2631,15 @@ struct LogActivityView: View {
             }
 
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                        VStack(spacing: 2) {
+                            Text("Add Activity") // Main title
+                                .font(.headline)
+                            Text(item.metadata) // Subtitle (e.g., "Lat Pulldowns")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 ToolbarItemGroup(placement: .keyboard) {
                     Button("Clear") {
                         if let focusedField = focusedField {
@@ -2659,7 +2674,7 @@ struct LogActivityView: View {
             }
   
             .background(Color("iosbg").edgesIgnoringSafeArea(.all)) // Apply background color
-            .navigationTitle("Add Activity")
+//            .navigationTitle("Add Activity")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
                 leading: Button(action: {
