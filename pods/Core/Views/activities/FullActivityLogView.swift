@@ -5,7 +5,8 @@ import SwiftUI
 struct FullActivityLogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
-    @State private var log: PodItemActivityLog
+//    @State private var log: PodItemActivityLog
+    @Binding var log: PodItemActivityLog
     let columns: [PodColumn]
     let onDelete: (PodItemActivityLog) -> Void
     @State private var showDeleteAlert = false
@@ -13,14 +14,6 @@ struct FullActivityLogView: View {
     @State private var showEditSheet = false
     let onUpdate: (PodItemActivityLog) -> Void
     
-
-    init(log: PodItemActivityLog, columns: [PodColumn], onDelete: @escaping (PodItemActivityLog) -> Void, onUpdate: @escaping (PodItemActivityLog) -> Void) {
-        _log = State(initialValue: log) // Use the log directly
-        self.columns = columns
-        self.onDelete = onDelete
-        self.onUpdate = onUpdate
-    }
-
     
     
     var body: some View {
@@ -106,10 +99,10 @@ struct FullActivityLogView: View {
                     log: log,
                     columns: columns,
                     onSave: { updatedLog in
-                        // Update local state first
-                                           log = updatedLog
-                                           // Then notify parent
-                                           onUpdate(updatedLog)
+//                                           onUpdate(updatedLog)
+                        log = updatedLog // ✅ Update binding
+                                               onUpdate(updatedLog) // Notify parent
+                                               dismiss() // Dismiss EditActivityView
        
                     }
                 )

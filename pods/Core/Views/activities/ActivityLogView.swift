@@ -3,6 +3,7 @@ import SwiftUI
 struct ActivityLogView: View {
     @State private var activityLogs: [PodItemActivityLog]
     @State private var searchText: String = ""
+    @State private var filteredLogs: [PodItemActivityLog] = []
     @Environment(\.dismiss) private var dismiss
     let podId: Int
     let columns: [PodColumn]
@@ -18,15 +19,11 @@ struct ActivityLogView: View {
         self.columns = columns
         self.onDelete = onDelete
         _activityLogs = State(initialValue: initialLogs)
+        _filteredLogs = State(initialValue: initialLogs)
     }
 
-    private func updateLog(_ updatedLog: PodItemActivityLog) {
-        if let index = activityLogs.firstIndex(where: { $0.id == updatedLog.id }) {
-            var newLogs = activityLogs
-            newLogs[index] = updatedLog
-            activityLogs = newLogs
-        }
-    }
+
+
 
     var body: some View {
         ZStack {
@@ -38,15 +35,25 @@ struct ActivityLogView: View {
             } else {
                 List {
                     Section {
-                        ForEach(filteredLogs) { log in
-                            NavigationLink(value: NavigationDestination.fullActivityLog(
-                                log: log,
-                                columns: columns,
-                                onLogUpdated: updateLog
-                            )) {
-                                logRowContent(for: log)
-                            }
-                        }
+//                        ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, _ in
+                        ForEach(filteredLogs, id: \.id) { log in
+                                                   if let activityIndex = activityLogs.firstIndex(where: { $0.id == log.id }) {
+                                                       NavigationLink(value: NavigationDestination.fullActivityLog(
+                                                           log: $activityLogs[activityIndex], // ✅ Correct Binding
+                                                           columns: columns,
+                                                           onLogUpdated: { updatedLog in
+                                                               activityLogs[activityIndex] = updatedLog // ✅ Correct Update
+                                                               loadLogs()
+                                                           }
+                                                       )) {
+                                                           logRowContent(for: log)
+                                                       }
+                                                   } else {
+                                                       // Optionally handle logs not found in activityLogs
+                                                       logRowContent(for: log)
+                                                   }
+                                               }
+
     
                         .onDelete { indexSet in
                             let logsToDelete = indexSet.map { filteredLogs[$0] }
@@ -67,11 +74,21 @@ struct ActivityLogView: View {
                     .listRowBackground(Color("bg"))
                 }
                 .listStyle(GroupedListStyle())
+                .refreshable { // ✅ Add pull-to-refresh
+                    loadLogs()
+                                }
                 .onAppear {
                     if activityLogs.isEmpty {
                         loadLogs()
+                    } else {
+                        updateFilteredLogs() // ✅ Ensure filteredLogs is updated
                     }
                 }
+                .onChange(of: searchText) { _ in
+                    updateFilteredLogs() // ✅ Update filteredLogs when searchText changes
+                }
+
+             
             }
         }
         .navigationTitle("Activities")
@@ -99,51 +116,80 @@ struct ActivityLogView: View {
         .background(Color("bg"))
     }
     
-    private var filteredLogs: [PodItemActivityLog] {
-        if searchText.isEmpty {
-            return activityLogs
-        }
-        
-        return activityLogs.filter { log in
-            log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
-            log.userName.localizedCaseInsensitiveContains(searchText) ||
-            (log.notes.localizedCaseInsensitiveContains(searchText) ?? false)
-        }
-    }
+//    private var filteredLogs: [PodItemActivityLog] {
+//        if searchText.isEmpty {
+//            return activityLogs
+//        }
+//        
+//        return activityLogs.filter { log in
+//            log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
+//            log.userName.localizedCaseInsensitiveContains(searchText) ||
+//            (log.notes.localizedCaseInsensitiveContains(searchText))
+//        }
+//    }
 
+//    private func loadLogs() {
+//        isLoading = true
+//        errorMessage = nil
+//        NetworkManager().fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
+//            DispatchQueue.main.async {
+//                isLoading = false
+//                switch result {
+//                case .success(let logs):
+//
+//                    self.activityLogs = logs
+//                    self.filteredLogs = searchText.isEmpty ? logs : logs.filter { log in
+//                                       log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
+//                                       log.userName.localizedCaseInsensitiveContains(searchText) ||
+//                                       (log.notes.localizedCaseInsensitiveContains(searchText) ?? false)
+//                                   }
+//                case .failure(let error):
+//                    print("Failed to fetch activity logs: \(error)")
+//                }
+//            }
+//        }
+//    }
     private func loadLogs() {
         isLoading = true
         errorMessage = nil
+
+        // Reset state variables
+        activityLogs = []
+        filteredLogs = []
+
         NetworkManager().fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
                 case .success(let logs):
-                    let convertedLogs = logs.map { log -> PodItemActivityLog in
-                        var mutableLog = log
-                        var idBasedValues: [String: ColumnValue] = [:]
-
-                        for column in columns {
-                            if let value = mutableLog.columnValues[String(column.id)] {
-                                idBasedValues[String(column.id)] = value
-                            }
-                        }
-
-                        mutableLog.columnValues = idBasedValues
-                        return mutableLog
-                    }
-
-                    self.activityLogs = convertedLogs
-
+                    print("Fetched logs: \(logs)")
+                    activityLogs = logs // ✅ Replace with new logs
+                    updateFilteredLogs() // Sync filteredLogs
                 case .failure(let error):
                     print("Failed to fetch activity logs: \(error)")
+                    errorMessage = error.localizedDescription
                 }
             }
         }
     }
+
+    
+    private func updateFilteredLogs() {
+         if searchText.isEmpty {
+             filteredLogs = activityLogs
+         } else {
+             filteredLogs = activityLogs.filter { log in
+                 log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
+                 log.userName.localizedCaseInsensitiveContains(searchText) ||
+                 (log.notes.localizedCaseInsensitiveContains(searchText) ?? false)
+             }
+         }
+     }
+   
     
     private func removeLog(_ log: PodItemActivityLog) {
         activityLogs.removeAll { $0.id == log.id }
+        updateFilteredLogs()
     }
     
     private func formattedDate(_ date: Date) -> String {
@@ -165,3 +211,4 @@ struct ActivityLogView: View {
         }
     }
 }
+  

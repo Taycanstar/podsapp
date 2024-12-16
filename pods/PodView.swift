@@ -11,7 +11,7 @@ enum NavigationDestination: Hashable {
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
 //    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn])
-    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
+    case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
     
     
     func hash(into hasher: inout Hasher) {
