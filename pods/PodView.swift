@@ -2177,6 +2177,7 @@ struct GroupedColumnInputView: View {
                 
                 TextField("", text: textBinding)
                     .focused($focusedField, equals: "\(columnId)_\(rowIndex)")
+                    .multilineTextAlignment(.center)
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(.vertical, 12)
                     .padding(.horizontal)
@@ -2203,6 +2204,7 @@ struct GroupedColumnInputView: View {
                 
                 TextField("", text: numberBinding)
                     .focused($focusedField, equals: "\(columnId)_\(rowIndex)")
+                    .multilineTextAlignment(.center)
                     .keyboardType(.decimalPad)
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(.vertical, 12)
@@ -2218,6 +2220,7 @@ struct GroupedColumnInputView: View {
                 }) {
                     Text(value.description)
                         .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                         .padding(.horizontal)

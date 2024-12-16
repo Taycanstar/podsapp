@@ -41,15 +41,12 @@ struct FullActivityLogView: View {
                             Text("Notes")
                                 .font(.system(size: 24))
                                 .fontWeight(.bold)
-                                .padding(.top)
-//                                .padding(.horizontal)
 
                             Text(log.notes)
                                 .font(.body)
-//                                .padding(.horizontal)
                             
                             Divider() // Add a divider here
-                                   .padding(.bottom, 10)
+//                                   .padding(.bottom, 10)
                         }
                         Spacer(minLength: 10) // Add space before the delete button
                                                 
@@ -189,6 +186,78 @@ struct FullActivityLogView: View {
             }
         }
     }
+//    private var columnValuesGrid: some View {
+//        let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+//        let singleColumns = columns.filter { $0.groupingType == "singular" }
+//        
+//        return VStack(alignment: .leading, spacing: 24) {
+//            // Grouped columns section
+//            if !groupedColumns.isEmpty {
+//                VStack(spacing: 0) {
+//                    // Headers
+//                    HStack {
+//                        ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { index, column in
+//                            Text(column.name)  // Still show name in UI
+//                                .font(.system(size: 18))
+//                                .foregroundColor(.primary)
+//                            
+//                            if index < groupedColumns.count - 1 {
+//                                Spacer()
+//                            }
+//                        }
+//                    }
+//                    
+//                    // Find minimum length of all value arrays
+//                    let minLength: Int = groupedColumns.compactMap { column in
+//                        guard case .array(let values) = log.columnValues[String(column.id)] ?? .null else {  // Use column.id
+//                            return nil
+//                        }
+//                        return values.count
+//                    }.min() ?? 0
+//                    
+//                    ForEach(0..<minLength, id: \.self) { index in
+//                        HStack {
+//                            ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { colIndex, column in
+//                                if case .array(let values) = log.columnValues[String(column.id)] ?? .null {  // Use column.id
+//                                    Text("\(values[index])")
+//                                        .font(.system(size: 28, weight: .medium, design: .rounded))
+//                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+//                                    
+//                                    if colIndex < groupedColumns.count - 1 {
+//                                        Spacer()
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            
+//            // Single columns section
+//            ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
+//                HStack(spacing: 20) {
+//                    ForEach(0..<2) { columnIndex in
+//                        let index = rowIndex * 2 + columnIndex
+//                        if index < singleColumns.count {
+//                            let column = singleColumns[index]
+//                            if let value = log.columnValues[String(column.id)] {  // Use column.id
+//                                VStack(alignment: .leading, spacing: 4) {
+//                                    Text(column.name)
+//                                        .font(.system(size: 18))
+//                                        .foregroundColor(.primary)
+//                                    Text(valueString(for: value))
+//                                        .font(.system(size: 28, weight: .medium, design: .rounded))
+//                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+//                                }
+//                                .frame(maxWidth: .infinity, alignment: .leading)
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+
     private var columnValuesGrid: some View {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
@@ -197,38 +266,39 @@ struct FullActivityLogView: View {
             // Grouped columns section
             if !groupedColumns.isEmpty {
                 VStack(spacing: 0) {
-                    // Headers
-                    HStack {
-                        ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { index, column in
-                            Text(column.name)  // Still show name in UI
+                    // Headers with fixed width alignment
+                    HStack(spacing: 65) {
+                        ForEach(groupedColumns, id: \.id) { column in
+                            Text(column.name)
                                 .font(.system(size: 18))
                                 .foregroundColor(.primary)
-                            
-                            if index < groupedColumns.count - 1 {
-                                Spacer()
-                            }
+                                .frame(maxWidth: .infinity, alignment: .center) // Ensures even spacing
                         }
                     }
                     
                     // Find minimum length of all value arrays
                     let minLength: Int = groupedColumns.compactMap { column in
-                        guard case .array(let values) = log.columnValues[String(column.id)] ?? .null else {  // Use column.id
+                        guard case .array(let values) = log.columnValues[String(column.id)] ?? .null else {
                             return nil
                         }
                         return values.count
                     }.min() ?? 0
                     
+                    // Grouped values
                     ForEach(0..<minLength, id: \.self) { index in
-                        HStack {
-                            ForEach(Array(groupedColumns.enumerated()), id: \.element.id) { colIndex, column in
-                                if case .array(let values) = log.columnValues[String(column.id)] ?? .null {  // Use column.id
+                        HStack(spacing: 65) {
+                            ForEach(groupedColumns, id: \.id) { column in
+                                if case .array(let values) = log.columnValues[String(column.id)] ?? .null {
                                     Text("\(values[index])")
                                         .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
-                                    
-                                    if colIndex < groupedColumns.count - 1 {
-                                        Spacer()
-                                    }
+                                     
+                                .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                        .frame(maxWidth: .infinity) // Forces alignment in a grid
+                                        .multilineTextAlignment(.center) // Ensures proper centering
+                                } else {
+                                    Text("-") // Placeholder for missing values
+                                        .font(.system(size: 28, weight: .medium, design: .rounded))
+                                        .frame(maxWidth: .infinity)
                                 }
                             }
                         }
@@ -238,28 +308,30 @@ struct FullActivityLogView: View {
             
             // Single columns section
             ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
-                HStack(spacing: 20) {
-                    ForEach(0..<2) { columnIndex in
-                        let index = rowIndex * 2 + columnIndex
-                        if index < singleColumns.count {
-                            let column = singleColumns[index]
-                            if let value = log.columnValues[String(column.id)] {  // Use column.id
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(column.name)
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.primary)
-                                    Text(valueString(for: value))
-                                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                    HStack(spacing: 20) {
+                        ForEach(0..<2) { columnIndex in
+                            let index = rowIndex * 2 + columnIndex
+                            if index < singleColumns.count {
+                                let column = singleColumns[index]
+                                if let value = log.columnValues[String(column.id)] {  // Use column.id
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(column.name)
+                                            .font(.system(size: 18))
+                                            .foregroundColor(.primary)
+                                        Text(valueString(for: value))
+                                            .font(.system(size: 28, weight: .medium, design: .rounded))
+                                            .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
                     }
                 }
-            }
+    
         }
     }
+
 
 
     private func columnView(key: String, value: ColumnValue) -> some View {
