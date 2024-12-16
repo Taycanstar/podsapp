@@ -158,8 +158,7 @@ struct PodView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
         ZStack {
-//            (colorScheme == .dark ? Color(rgb: 14,14,14) : .white)
-            (Color("iosbg"))
+            (Color("bg"))
                 .edgesIgnoringSafeArea(.all)
             VStack(spacing: 0) {
 
@@ -194,12 +193,6 @@ struct PodView: View {
                                            case .calendar:
                                                Text("Calendar View")
                                            }
-//                                           
-//                                           if isCreatingNewItem {
-//                                               newItemInputView
-//                                               
-//                                                   .padding(.bottom, 45)
-//                                           }
 
                                        }
                                        
@@ -254,11 +247,7 @@ struct PodView: View {
                             FullAnalyticsView(column: column, activityLogs: logs)
             case .gracie(let podId):
                 GracieView(podId: podId)
-//            case .fullActivityLog(let log, let columns):
-//                    FullActivityLogView(log: log, columns: columns, onDelete: { deletedLog in
-//                        // Handle deletion if needed
-//                        // You might want to refresh the activity log list here
-//                    })
+
             case .fullActivityLog(let log, let columns, let onLogUpdated):
                 FullActivityLogView(log: log,
                                    columns: columns,
@@ -423,7 +412,7 @@ struct PodView: View {
                                    self.onActivityLogged(newLog: newLog)
                                }
                 )
-                .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
+//                .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
             }
         }
         
@@ -619,12 +608,12 @@ struct PodView: View {
     private var listView: some View {
         List {
             ForEach(reorderedItems.indices, id: \.self) { index in
-                HStack(alignment: .top, spacing: 10) {
+                HStack(alignment: .top, spacing: 0) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(reorderedItems[index].metadata)
                             .font(.system(size: 14))
                             .fontWeight(.regular)
-                            .padding(.bottom, 4)
+//                            .padding(.bottom, 4)
                         
                         HStack {
                             ForEach(podColumns.filter { visibleColumns.contains($0.name) }, id: \.name) { column in
@@ -632,33 +621,37 @@ struct PodView: View {
                             }
                         }
                     }
-                    .padding()
+                    .padding(.vertical, 6)
+                    .padding(.leading, 10)
+//                    .padding(.top, 5)
+                    
+//                    .padding(.bottom, 5)
+//                    .padding(.horizontal, 10)
                     
                     Spacer()
                     
                     VStack {
-                        iconView(for: reorderedItems[index], index: index)
-                        Spacer()
+                        Spacer ()
+                    
+                     
                         if itemsWithRecentActivity.contains(reorderedItems[index].id) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 20))
                                 .foregroundColor(.green)
                                 .transition(.opacity)
                         } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.accentColor)
-                                .onTapGesture {
-                                    selectedItemIndex = index
-                                    showLogActivitySheet = true
-                                    HapticFeedback.generate()
-                                }
+                            iconView(for: reorderedItems[index], index: index)
                         }
+                        
+                        Spacer()
                     }
-                    .padding(10)
+//                    .padding(5)
+                    
+                   
                 }
                 .background(Color("iosnp"))
                 .cornerRadius(10)
+           
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         let indexSet = IndexSet([index])
@@ -667,20 +660,21 @@ struct PodView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 }
-                .listRowSeparator(.hidden)
+//                .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    selectedItemIndex = index
-                    showCardSheet = true
-                }
+                                                   selectedItemIndex = index
+                                                   showLogActivitySheet = true
+                                                   HapticFeedback.generate()
+                                               }
             }
             if isCreatingNewItem {
                 newItemInputView
 //                    .listRowInsets(EdgeInsets(top: 10, leading: 15, bottom: 10, trailing: 15))
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .listRowBackground(Color("iosbg"))
+                    .listRowBackground(Color("bg"))
             }
             
             // Insert the new item input row here
@@ -690,28 +684,79 @@ struct PodView: View {
         .refreshable {
             fetchFullPodDetails(showLoadingIndicator: false)
         }
-        .background(Color("iosbg"))
+        .background(Color("bg"))
     }
     
     // Update the iconView function
+//    private func iconView(for item: PodItem, index: Int) -> some View {
+//        Group {
+//            if item.videoURL != nil || item.imageURL != nil {
+//                
+//                ZStack {
+//                             Circle()
+//                                 .fill(Color("iosbtn"))
+//                                 .frame(width: 25, height: 25) // Adjust size for breathing room
+//                             Image(systemName: "play.fill")
+//                        .font(.system(size: 14))
+//                        .foregroundColor(colorScheme == .dark ? .white : .black)
+//                      
+//                         }
+//                .onTapGesture {
+//                    navigationPath.append(NavigationDestination.player(item: item))
+//                }
+//                
+//            } else {
+//                Image(systemName: "camera")
+//                    .font(.system(size: 20))
+//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
+//                    .onTapGesture {
+//                        selectedItemForMedia = item
+//                        showCameraView = true
+//                    }
+//            }
+//        }
+//    }
     private func iconView(for item: PodItem, index: Int) -> some View {
-        Group {
-            if item.videoURL != nil || item.imageURL != nil {
-                Image(systemName: "play")
-                    .font(.system(size: 20))
-                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-                    .onTapGesture {
-                        navigationPath.append(NavigationDestination.player(item: item))
-                    }
-            } else {
-                Image(systemName: "camera")
-                    .font(.system(size: 20))
-                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-                    .onTapGesture {
-                        selectedItemForMedia = item
-                        showCameraView = true
-                    }
+        Menu {
+            Button(action: {
+                selectedItemIndex = index
+                showCardSheet = true
+            }) {
+                Label("Edit Item", systemImage: "square.and.pencil")
             }
+            
+            if item.videoURL != nil || item.imageURL != nil {
+                Button(action: {
+                    navigationPath.append(NavigationDestination.player(item: item))
+                }) {
+                    Label("Play Video", systemImage: "play.circle")
+                }
+                
+                Button(action: {
+                    selectedItemForMedia = item
+                    showCameraView = true
+                }) {
+                    Label("Change Video", systemImage: "video.badge.plus")
+                }
+            } else {
+                Button(action: {
+                    selectedItemForMedia = item
+                    showCameraView = true
+                }) {
+                    Label("Add Video", systemImage: "video.badge.plus")
+                }
+            }
+        } label: {
+  
+            
+            ZStack {
+                         Circle()
+                    .fill(Color.clear)
+                             .frame(width: 30, height: 30) // Adjust size for breathing room
+                         Image(systemName: "ellipsis")
+                    .font(.system(size: 15))
+                             .foregroundColor(.accentColor)
+                     }
         }
     }
 
@@ -727,12 +772,12 @@ struct PodView: View {
             return value
         }()
         
-        return VStack {
+        return VStack(spacing: 0) {
             Text("\(displayValue) \(column?.name ?? name)")
                 .font(.system(size: 13))
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
         .cornerRadius(4)
         .background(Color("iosbtn"))
         .cornerRadius(4)
@@ -1453,7 +1498,7 @@ struct CardDetailView: View {
                                 }
                             }
                             VStack(alignment: .leading) {
-                                Text("Notes")
+                                Text("Description")
                                     .font(.system(size: 15))
                                     .foregroundColor(.primary)
                                     .padding(.horizontal, 5)
