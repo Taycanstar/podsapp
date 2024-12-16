@@ -196,17 +196,9 @@ struct FullAnalyticsView: View {
         .sorted { $0.date < $1.date }
     }
 
-//    private func numericValue(for log: PodItemActivityLog) -> Double? {
-//        guard let columnValue = log.columnValues[column.name] else { return nil }
-//        switch columnValue {
-//        case .number(let value): return Double(value)
-//        case .string(let value): return Double(value)
-//        case .time(let timeValue): return Double(timeValue.totalSeconds)
-//        case .null: return nil
-//        }
-//    }
+
     private func numericValue(for log: PodItemActivityLog) -> Double? {
-        guard let columnValue = log.columnValues[column.name] else { return nil }
+        guard let columnValue = log.columnValues[String(column.id)] else { return nil }
 
         switch columnValue {
         case .number(let value):
