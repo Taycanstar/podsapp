@@ -156,18 +156,7 @@ struct Workspace: Identifiable, Codable {
     }
 }
 
-//struct PodColumn: Codable, Identifiable {
-//    var id: String { name }
-//    var name: String
-//    var type: String
-//    var groupingType: String?
-//    
-//    private enum CodingKeys: String, CodingKey {
-//          case name
-//          case type
-//          case groupingType = "grouping_type"
-//      }
-//}
+
 
 struct PodColumn: Codable, Identifiable {
     var id: Int            // Real database ID

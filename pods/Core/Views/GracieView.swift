@@ -207,7 +207,7 @@ struct GracieView: View {
      }
     
     private func fetchActivityLogs() {
-        networkManager.fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
+        networkManager.fetchUserActivityLogs2(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let logs):

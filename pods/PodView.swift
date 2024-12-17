@@ -119,8 +119,6 @@ struct PodView: View {
     
     @State private var navigateToActivityLog = false
     
-    @State private var activityLogs: [PodItemActivityLog] = []
-    
     @State private var navigationPath = NavigationPath()
     
     @Environment(\.dismiss) private var dismiss
@@ -133,7 +131,8 @@ struct PodView: View {
     
     @State private var pendingNavigation: NavigationDestination?
     @State private var isLoading = true
-    
+
+    @StateObject private var logManager = ActivityLogManager()
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
         self._pod = pod
@@ -145,8 +144,14 @@ struct PodView: View {
         self._currentInstructions = State(initialValue: pod.wrappedValue.instructions ?? "")
         self._currentType = State(initialValue: pod.wrappedValue.type ?? "")
         
-        
+      
     }
+    
+//    @StateObject private var logManager = ActivityLogManager(
+//        podId: 0,  // Temporary value
+//        networkManager: NetworkManager(),
+//        userEmail: ""  // Temporary value
+//    )
 
     
     enum ViewType: String, CaseIterable {
@@ -238,8 +243,10 @@ struct PodView: View {
                 )
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
+//            case .activityLog:
+//                ActivityLogView(podId: pod.id, columns: podColumns)
             case .activityLog:
-                ActivityLogView(podId: pod.id, columns: podColumns)
+                ActivityLogView(manager: logManager, columns: podColumns)
             case .trends(let podId):
 
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
@@ -287,14 +294,16 @@ struct PodView: View {
                 }
             }
             
-            self.activityLogs = pod.recentActivityLogs ?? []
-            // Fetch details initially
+
+        
              fetchFullPodDetails(showLoadingIndicator: true)
-             
+            logManager.initialize(podId: pod.id, userEmail: viewModel.email)
              // Listen for app becoming active
              NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                  fetchFullPodDetails(showLoadingIndicator: false)
              }
+            
+            
         }
         .onDisappear {
 
@@ -361,8 +370,8 @@ struct PodView: View {
                     onSave: { _ in },
                     networkManager: networkManager,
                     onViewTrendsTapped: {
-                                                let relevantLogs = activityLogs.filter { $0.itemId == item.id && $0.columnValues[column.name] != nil }
-                                                pendingNavigation = .fullAnalytics(column: column, logs: relevantLogs)
+//                                                let relevantLogs = activityLogs.filter { $0.itemId == item.id && $0.columnValues[column.name] != nil }
+//                                                pendingNavigation = .fullAnalytics(column: column, logs: relevantLogs)
                                             }
                    
                 )
@@ -407,7 +416,7 @@ struct PodView: View {
                     item: reorderedItems[index],
                     podColumns: podColumns,
                     podId: pod.id,
-
+                    logManager: logManager,
                     onActivityLogged: { newLog in
                                    self.onActivityLogged(newLog: newLog)
                                }
@@ -421,20 +430,7 @@ struct PodView: View {
         .navigationBarHidden(true)
     }
     
-    private func fetchActivityLogs() {
-        networkManager.fetchUserActivityLogs(podId: pod.id, userEmail: viewModel.email) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let logs):
-                    self.activityLogs = logs
-                    
-                case .failure(let error):
-                    print("Failed to fetch activity logs: \(error)")
-                }
-            }
-        }
-     }
-    
+
     private var footerView: some View {
         VStack {
             Button(action: {
@@ -509,38 +505,68 @@ struct PodView: View {
     }
     
     func onActivityLogged(newLog: PodItemActivityLog) {
-        showTemporaryCheckmark(for: newLog.itemId)
-        DispatchQueue.main.async {
-            // Update activity logs
-            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
-            self.activityLogs.insert(newLog, at: insertionIndex)
-            self.activityLogs.sort()
-            if self.activityLogs.count > 100 {
-                self.activityLogs = Array(self.activityLogs.prefix(100))
-            }
-            
-            // Update the pod's recentActivityLogs
-            self.pod.recentActivityLogs = self.activityLogs
-            
-            // Update the item's column values
-            if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
-                // Update the item's columnValues with the values from the activity log
-                if self.reorderedItems[itemIndex].columnValues == nil {
-                    self.reorderedItems[itemIndex].columnValues = [:]
-                }
-                
-                // Update with new values from the activity log
-                for (key, value) in newLog.columnValues {
-                    self.reorderedItems[itemIndex].columnValues?[key] = value
-                }
-                
-                // Also update in the pod.items
-                if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
-                    self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
-                }
-            }
-        }
-    }
+          showTemporaryCheckmark(for: newLog.itemId)
+          
+          // Update the reorderedItems and pod.items
+          if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
+              if self.reorderedItems[itemIndex].columnValues == nil {
+                  self.reorderedItems[itemIndex].columnValues = [:]
+              }
+              
+              for (key, value) in newLog.columnValues {
+                  self.reorderedItems[itemIndex].columnValues?[key] = value
+              }
+              
+              if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
+                  self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
+              }
+          }
+          
+          // **Synchronize with ActivityLogManager**
+          if !logManager.logs.contains(where: { $0.id == newLog.id }) {
+              logManager.logs.append(newLog)
+              print("PodView: Appended new log with id \(newLog.id) to logManager.logs.")
+          } else if let index = logManager.logs.firstIndex(where: { $0.id == newLog.id }) {
+              logManager.logs[index] = newLog
+              print("PodView: Updated existing log with id \(newLog.id) in logManager.logs.")
+          }
+          logManager.cacheLogs()
+      }
+
+    
+//    func onActivityLogged(newLog: PodItemActivityLog) {
+//        showTemporaryCheckmark(for: newLog.itemId)
+//        DispatchQueue.main.async {
+//            // Update activity logs
+//            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
+//            self.activityLogs.insert(newLog, at: insertionIndex)
+//            self.activityLogs.sort()
+//            if self.activityLogs.count > 100 {
+//                self.activityLogs = Array(self.activityLogs.prefix(100))
+//            }
+//            
+//            // Update the pod's recentActivityLogs
+//            self.pod.recentActivityLogs = self.activityLogs
+//            
+//            // Update the item's column values
+//            if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
+//                // Update the item's columnValues with the values from the activity log
+//                if self.reorderedItems[itemIndex].columnValues == nil {
+//                    self.reorderedItems[itemIndex].columnValues = [:]
+//                }
+//                
+//                // Update with new values from the activity log
+//                for (key, value) in newLog.columnValues {
+//                    self.reorderedItems[itemIndex].columnValues?[key] = value
+//                }
+//                
+//                // Also update in the pod.items
+//                if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
+//                    self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
+//                }
+//            }
+//        }
+//    }
     
     private func refreshItem(with id: Int) {
         networkManager.fetchPodItem(podId: pod.id, itemId: id, userEmail: viewModel.email) { result in
@@ -686,36 +712,7 @@ struct PodView: View {
         }
         .background(Color("bg"))
     }
-    
-    // Update the iconView function
-//    private func iconView(for item: PodItem, index: Int) -> some View {
-//        Group {
-//            if item.videoURL != nil || item.imageURL != nil {
-//                
-//                ZStack {
-//                             Circle()
-//                                 .fill(Color("iosbtn"))
-//                                 .frame(width: 25, height: 25) // Adjust size for breathing room
-//                             Image(systemName: "play.fill")
-//                        .font(.system(size: 14))
-//                        .foregroundColor(colorScheme == .dark ? .white : .black)
-//                      
-//                         }
-//                .onTapGesture {
-//                    navigationPath.append(NavigationDestination.player(item: item))
-//                }
-//                
-//            } else {
-//                Image(systemName: "camera")
-//                    .font(.system(size: 20))
-//                    .foregroundColor(colorScheme == .dark ? Color(rgb: 107,107,107) : Color(rgb:196, 198, 207))
-//                    .onTapGesture {
-//                        selectedItemForMedia = item
-//                        showCameraView = true
-//                    }
-//            }
-//        }
-//    }
+
     private func iconView(for item: PodItem, index: Int) -> some View {
         Menu {
             Button(action: {
@@ -2452,6 +2449,7 @@ struct LogActivityView: View {
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var showNotesInput = false
+    @ObservedObject var logManager: ActivityLogManager
     var onActivityLogged: (PodItemActivityLog) -> Void
     @State private var skippedColumns: Set<String> = []
     @State private var selectedDate: Date = Date()
@@ -2459,10 +2457,11 @@ struct LogActivityView: View {
     @FocusState private var focusedField: String?
     @State private var groupedRowsCount: [String: Int] = [:]
 
-    init(item: PodItem, podColumns: [PodColumn], podId: Int, onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
+    init(item: PodItem, podColumns: [PodColumn], podId: Int,logManager: ActivityLogManager,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
             self.item = item
             self.podColumns = podColumns
             self.podId = podId
+        self.logManager = logManager
             self.onActivityLogged = onActivityLogged
             
             // Initialize column values with proper structure
@@ -2764,8 +2763,11 @@ struct LogActivityView: View {
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
+                //changed to the top of the file for improved speed.
+                self.presentationMode.wrappedValue.dismiss()
                 switch result {
                 case .success(let newLog):
+                    
                     // This will update both the activity log and the item's column values
                     // since they're one and the same
                     var updatedItem = self.item
@@ -2773,8 +2775,9 @@ struct LogActivityView: View {
                     
                     // Pass both the log and the updated item values up to parent
                     self.onActivityLogged(newLog)
+                    logManager.logs.insert(newLog, at: 0) // Add at beginning since it's newest
+                       logManager.cacheLogs() // Make sure it's cached
                     
-                    self.presentationMode.wrappedValue.dismiss()
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }

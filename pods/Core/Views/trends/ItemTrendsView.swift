@@ -57,7 +57,7 @@ struct ItemTrendsView: View {
     
     private func fetchActivityLogs(for podId: Int) {
         let networkManager = NetworkManager()
-        networkManager.fetchUserActivityLogs(podId: podId, userEmail: viewModel.email) { result in
+        networkManager.fetchUserActivityLogs2(podId: podId, userEmail: viewModel.email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let logs):

@@ -91,16 +91,27 @@ struct FullActivityLogView: View {
                       }
                   }
               }
+//            .sheet(isPresented: $showEditSheet) {
+//                EditActivityView(
+//                    log: log,
+//                    columns: columns,
+//                    onSave: { updatedLog in
+//
+//                        log = updatedLog
+//                                               onUpdate(updatedLog)
+//                                               dismiss()
+//       
+//                    }
+//                )
+//            }
             .sheet(isPresented: $showEditSheet) {
                 EditActivityView(
                     log: log,
                     columns: columns,
                     onSave: { updatedLog in
-//                                           onUpdate(updatedLog)
-                        log = updatedLog // ✅ Update binding
-                                               onUpdate(updatedLog) // Notify parent
-                                               dismiss() // Dismiss EditActivityView
-       
+                        log = updatedLog // Update binding
+                        onUpdate(updatedLog) // This updates the manager through the closure we passed
+                     
                     }
                 )
             }
