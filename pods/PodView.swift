@@ -649,7 +649,7 @@ struct PodView: View {
                     
                    
                 }
-                .background(Color("iosnp"))
+                .background(Color("bg"))
                 .cornerRadius(10)
            
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
