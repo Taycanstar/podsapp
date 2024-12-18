@@ -2683,6 +2683,7 @@ struct LogActivityView: View {
                         .foregroundColor(.primary)
                 },
                 trailing: Button("Done") {
+                    presentationMode.wrappedValue.dismiss()
                     submitActivity()
                     HapticFeedback.generateLigth()
                 }
@@ -2763,8 +2764,7 @@ struct LogActivityView: View {
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
-                //changed to the top of the file for improved speed.
-                self.presentationMode.wrappedValue.dismiss()
+            
                 switch result {
                 case .success(let newLog):
                     
