@@ -522,15 +522,15 @@ struct PodView: View {
               }
           }
           
-          // **Synchronize with ActivityLogManager**
-          if !logManager.logs.contains(where: { $0.id == newLog.id }) {
-              logManager.logs.append(newLog)
-              print("PodView: Appended new log with id \(newLog.id) to logManager.logs.")
-          } else if let index = logManager.logs.firstIndex(where: { $0.id == newLog.id }) {
-              logManager.logs[index] = newLog
-              print("PodView: Updated existing log with id \(newLog.id) in logManager.logs.")
-          }
-          logManager.cacheLogs()
+//          // **Synchronize with ActivityLogManager**
+//          if !logManager.logs.contains(where: { $0.id == newLog.id }) {
+//              logManager.logs.append(newLog)
+//              print("PodView: Appended new log with id \(newLog.id) to logManager.logs.")
+//          } else if let index = logManager.logs.firstIndex(where: { $0.id == newLog.id }) {
+//              logManager.logs[index] = newLog
+//              print("PodView: Updated existing log with id \(newLog.id) in logManager.logs.")
+//          }
+//          logManager.cacheLogs()
       }
 
     
