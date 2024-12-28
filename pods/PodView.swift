@@ -70,6 +70,7 @@ struct PodView: View {
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
     @State private var isEditing = false
+    @State private var isActivityOpen = false
     @State private var reorderedItems: [PodItem] = []
     @State private var deletedItemIDs: [Int] = []
     @State private var showMenu = false
@@ -146,13 +147,6 @@ struct PodView: View {
         
       
     }
-    
-//    @StateObject private var logManager = ActivityLogManager(
-//        podId: 0,  // Temporary value
-//        networkManager: NetworkManager(),
-//        userEmail: ""  // Temporary value
-//    )
-
     
     enum ViewType: String, CaseIterable {
         case list = "List"
@@ -243,8 +237,6 @@ struct PodView: View {
                 )
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
-//            case .activityLog:
-//                ActivityLogView(podId: pod.id, columns: podColumns)
             case .activityLog:
                 ActivityLogView(manager: logManager, columns: podColumns)
             case .trends(let podId):
@@ -302,8 +294,6 @@ struct PodView: View {
              NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                  fetchFullPodDetails(showLoadingIndicator: false)
              }
-            
-            
         }
         .onDisappear {
 
@@ -319,6 +309,9 @@ struct PodView: View {
                 }
             })
             
+        }
+        .sheet(isPresented: $isActivityOpen) {
+            ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems)
         }
         .sheet(isPresented: $showPodColumnsView) {
             PodColumnsView(
@@ -432,7 +425,7 @@ struct PodView: View {
     
 
     private var footerView: some View {
-        VStack {
+        HStack {
             Button(action: {
                 isCreatingNewItem = true
                 isNewItemFocused = true
@@ -445,10 +438,31 @@ struct PodView: View {
                         .font(.system(size: 18))
                         .fontWeight(.medium)
                         .fontDesign(.rounded)
-//                        .lineLimit(1)
+
                 }
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+            }
+            Spacer()
+            
+            Button(action: {
+                isActivityOpen = true
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "record.circle")
+                        .font(.system(size: 24))
+                        .fontWeight(.medium)
+                        .foregroundColor(Color("iosred"))
+                    Text("Record Activity")
+                        .font(.system(size: 18))
+                        .fontWeight(.medium)
+                        .fontDesign(.rounded)
+                        .foregroundColor(Color("iosred"))
+
+                }
+                .foregroundColor(.accentColor)
+//                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
             }
         }
@@ -521,53 +535,8 @@ struct PodView: View {
                   self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
               }
           }
-          
-//          // **Synchronize with ActivityLogManager**
-//          if !logManager.logs.contains(where: { $0.id == newLog.id }) {
-//              logManager.logs.append(newLog)
-//              print("PodView: Appended new log with id \(newLog.id) to logManager.logs.")
-//          } else if let index = logManager.logs.firstIndex(where: { $0.id == newLog.id }) {
-//              logManager.logs[index] = newLog
-//              print("PodView: Updated existing log with id \(newLog.id) in logManager.logs.")
-//          }
-//          logManager.cacheLogs()
       }
 
-    
-//    func onActivityLogged(newLog: PodItemActivityLog) {
-//        showTemporaryCheckmark(for: newLog.itemId)
-//        DispatchQueue.main.async {
-//            // Update activity logs
-//            let insertionIndex = self.activityLogs.firstIndex(where: { $0.loggedAt < newLog.loggedAt }) ?? self.activityLogs.endIndex
-//            self.activityLogs.insert(newLog, at: insertionIndex)
-//            self.activityLogs.sort()
-//            if self.activityLogs.count > 100 {
-//                self.activityLogs = Array(self.activityLogs.prefix(100))
-//            }
-//            
-//            // Update the pod's recentActivityLogs
-//            self.pod.recentActivityLogs = self.activityLogs
-//            
-//            // Update the item's column values
-//            if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
-//                // Update the item's columnValues with the values from the activity log
-//                if self.reorderedItems[itemIndex].columnValues == nil {
-//                    self.reorderedItems[itemIndex].columnValues = [:]
-//                }
-//                
-//                // Update with new values from the activity log
-//                for (key, value) in newLog.columnValues {
-//                    self.reorderedItems[itemIndex].columnValues?[key] = value
-//                }
-//                
-//                // Also update in the pod.items
-//                if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
-//                    self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
-//                }
-//            }
-//        }
-//    }
-    
     private func refreshItem(with id: Int) {
         networkManager.fetchPodItem(podId: pod.id, itemId: id, userEmail: viewModel.email) { result in
                DispatchQueue.main.async {
@@ -2085,7 +2054,7 @@ struct GroupedColumnView: View {
             }
             
             Button(action: onAddRow) {
-                Text("Add Entry")
+                Text("Add Row")
                     .foregroundColor(.accentColor)
             }
             .frame(maxWidth: .infinity)
@@ -2123,7 +2092,7 @@ struct ColumnValueInputView: View {
                     .focused($focusedField, equals: columnId)
                     .foregroundColor(.primary)
                     .textFieldStyle(PlainTextFieldStyle())
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 8)
                     .padding(.horizontal)
                     .cornerRadius(12)
                     .background(Color("iosnp"))
@@ -2145,7 +2114,7 @@ struct ColumnValueInputView: View {
                     .focused($focusedField, equals: columnId)
                     .keyboardType(.decimalPad)
                     .textFieldStyle(PlainTextFieldStyle())
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 8)
                     .padding(.horizontal)
                     .cornerRadius(12)
                     .background(Color("iosnp"))
@@ -2159,7 +2128,7 @@ struct ColumnValueInputView: View {
                     Text(columnValues[columnId]?.description ?? "")
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 8)
                         .padding(.horizontal)
                         .background(Color("iosnp"))
                         .cornerRadius(12)
@@ -2226,7 +2195,7 @@ struct GroupedColumnInputView: View {
                     .focused($focusedField, equals: "\(columnId)_\(rowIndex)")
                     .multilineTextAlignment(.center)
                     .textFieldStyle(PlainTextFieldStyle())
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 8)
                     .padding(.horizontal)
                     .background(Color("iosnp"))
                     .cornerRadius(12)
@@ -2254,7 +2223,7 @@ struct GroupedColumnInputView: View {
                     .multilineTextAlignment(.center)
                     .keyboardType(.decimalPad)
                     .textFieldStyle(PlainTextFieldStyle())
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 8)
                     .padding(.horizontal)
                     .background(Color("iosnp"))
                     .cornerRadius(12)
@@ -2269,7 +2238,7 @@ struct GroupedColumnInputView: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 8)
                         .padding(.horizontal)
                         .background(Color("iosnp"))
                         .cornerRadius(12)

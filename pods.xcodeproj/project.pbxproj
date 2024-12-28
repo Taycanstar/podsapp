@@ -31,6 +31,7 @@
 		3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */; };
 		3638CCAA2C954BA900CCA675 /* TeamInvitationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638CCA92C954BA900CCA675 /* TeamInvitationView.swift */; };
 		363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */; };
+		363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9F82D1E57F500C91A14 /* ActivityView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -155,6 +156,7 @@
 		3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamOptionsView.swift; sourceTree = "<group>"; };
 		3638CCA92C954BA900CCA675 /* TeamInvitationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInvitationView.swift; sourceTree = "<group>"; };
 		363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogManager.swift; sourceTree = "<group>"; };
+		363AF9F82D1E57F500C91A14 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 				362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */,
 				362969B12D0D3E4700DF0B26 /* EditActivityView.swift */,
 				362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */,
+				363AF9F82D1E57F500C91A14 /* ActivityView.swift */,
 			);
 			path = activities;
 			sourceTree = "<group>";
@@ -809,6 +812,7 @@
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
+				363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
@@ -1066,7 +1070,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.8;
+				MARKETING_VERSION = 1.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1133,7 +1137,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.8;
+				MARKETING_VERSION = 1.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
