@@ -29,7 +29,7 @@ struct ActivityView: View {
         NavigationView {
             ZStack {
                 Color("iosbg")
-                    .edgesIgnoringSafeArea(.all)
+                    .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Header with timer
@@ -56,6 +56,7 @@ struct ActivityView: View {
                     }
                     .padding()
                     
+                    ScrollView {
                     // Pod Title
                     Text(pod.title)
                         .font(.largeTitle)
@@ -63,7 +64,7 @@ struct ActivityView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     
-                    ScrollView {
+                  
                         VStack(spacing: 20) {
                             ForEach(items) { item in
                                 VStack(alignment: .leading, spacing: 15) {
@@ -94,7 +95,6 @@ struct ActivityView: View {
                                                         expandedColumn: $expandedColumn,
                                                         onValueChanged: { }
                                                     )
-                                                    .padding(.vertical, 8)
                                                 }
                                             }
                                         } else {
@@ -110,7 +110,7 @@ struct ActivityView: View {
                                                 expandedColumn: $expandedColumn,
                                                 onValueChanged: { }
                                             )
-//                                            .padding(.vertical, 8)
+
                                         }
                                     }
                                 }
@@ -118,16 +118,40 @@ struct ActivityView: View {
 //                                .padding(.horizontal)
                             }
                         }
-                        .padding(.vertical)
+//                        .padding(.vertical)
+                        
+                    
+                        Button(action: onCancelActivity) {
+                            Text("Cancel Activity")
+                                .font(.system(size: 16))
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color("iosred"))
+                                        .frame(maxWidth: .infinity)  // Move frame here
+                                        .padding(.vertical, 10)
+                                        .background(Color("iosred").opacity(0.1))  // Move background here
+                                        .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 40)
+                    
                     }
+                    .edgesIgnoringSafeArea(.bottom)
+                    
                 }
             }
         }
+        .navigationBarHidden(true)
+   
         .onAppear {
             initializeColumnValues()
         }
     }
-    // Rest of the code remains the same...
+    
+    private func onCancelActivity() {
+        
+        print("Cancelling Activity")
+    }
+ 
     private func bindingForItem(_ itemId: Int) -> Binding<[String: ColumnValue]> {
         Binding(
             get: { columnValues[itemId] ?? [:] },
