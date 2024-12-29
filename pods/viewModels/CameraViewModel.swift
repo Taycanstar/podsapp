@@ -560,42 +560,7 @@ extension Pod {
     }
 }
 
-//extension PodItem {
-//    init(from itemJSON: PodItemJSON) {
-//        self.id = itemJSON.id
-//        self.itemType = itemJSON.itemType
-//        if let videoURLString = itemJSON.videoURL {
-//            self.videoURL = URL(string: videoURLString)
-//        } else {
-//            self.videoURL = nil
-//        }
-//        self.metadata = itemJSON.label
-//        self.thumbnailURL = URL(string: itemJSON.thumbnail ?? "")
-//        if let imageString = itemJSON.imageURL {
-//            self.imageURL = URL(string: imageString)
-//        } else {
-//            self.imageURL = nil
-//        }
-//        if let url = self.videoURL {
-//            player = AVPlayer(url: url)
-//        } else {
-//            player = nil
-//        }
-//        self.notes = itemJSON.notes ?? ""
-//        
-//        // Handle column values directly without modification
-//        self.defaultColumnValues = [:]  // Initialize as empty
-//        self.userColumnValues = [:]     // Initialize as empty
-//        
-//        // Then safely assign values if they exist
-//        if !itemJSON.defaultColumnValues.isEmpty {
-//            self.defaultColumnValues = itemJSON.defaultColumnValues
-//        }
-//        if let userValues = itemJSON.userColumnValues {
-//            self.userColumnValues = userValues
-//        }
-//    }
-//}
+
 extension PodItem {
     init(from itemJSON: PodItemJSON) {
         self.id = itemJSON.id

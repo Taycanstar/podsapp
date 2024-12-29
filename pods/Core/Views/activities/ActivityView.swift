@@ -81,46 +81,46 @@ struct ActivityView: View {
                                         if columnGroup.first?.groupingType == "singular" {
                                             ForEach(columnGroup, id: \.id) { column in
                                                 VStack(alignment: .leading, spacing: 5) {
-                                                    Text(column.name)
-                                                        .font(.system(size: 16))
-                                                        .fontWeight(.semibold)
-                                                        .fontDesign(.rounded)
-                                                        .foregroundColor(.primary)
-                                                        .kerning(0.2)
-                                                    
-                                                    SingularColumnView(
-                                                        column: column,
-                                                        columnValues: bindingForItem(item.id),
-                                                        focusedField: _focusedField,
-                                                        expandedColumn: $expandedColumn,
-                                                        onValueChanged: { }
-                                                    )
+//                                                    Text(column.name)
+//                                                        .font(.system(size: 16))
+//                                                        .fontWeight(.semibold)
+//                                                        .fontDesign(.rounded)
+//                                                        .foregroundColor(.primary)
+//                                                        .kerning(0.2)
+//                                                    
+                                                
+                                                    SingularColumnActivityView(
+                                                        itemId: item.id, 
+                                                                                                          column: column,
+                                                                                                          columnValues: bindingForItem(item.id),
+                                                                                                          focusedField: $focusedField,
+                                                                                                          expandedColumn: $expandedColumn,
+                                                                                                          onValueChanged: { }
+                                                                                                      )
                                                 }
                                             }
                                         } else {
-                                            GroupedColumnView(
-                                                columnGroup: columnGroup,
-                                                groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                                onAddRow: { addRow(for: columnGroup, itemId: item.id) },
-                                                onDeleteRow: { index in
-                                                    deleteRow(at: index, in: columnGroup, itemId: item.id)
-                                                },
-                                                columnValues: bindingForItem(item.id),
-                                                focusedField: _focusedField,
-                                                expandedColumn: $expandedColumn,
-                                                onValueChanged: { }
-                                            )
+
+                                            GroupedColumnActivityView(
+                                                itemId: item.id,
+                                                                                          columnGroup: columnGroup,
+                                                                                          groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                                                                          onAddRow: { addRow(for: columnGroup, itemId: item.id) },
+                                                                                          onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
+                                                                                          columnValues: bindingForItem(item.id),
+                                                                                          focusedField: $focusedField,
+                                                                                          expandedColumn: $expandedColumn,
+                                                                                          onValueChanged: { }
+                                                                                      )
 
                                         }
                                     }
                                 }
                                 .padding()
-//                                .padding(.horizontal)
+
                             }
                         }
-//                        .padding(.vertical)
-                        
-                    
+
                         Button(action: onCancelActivity) {
                             Text("Cancel Activity")
                                 .font(.system(size: 16))
@@ -136,15 +136,57 @@ struct ActivityView: View {
                     
                     }
                     .edgesIgnoringSafeArea(.bottom)
+              
+                }
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Button("Clear") {
+                        clearFocusedField()
+                    }
+                    .foregroundColor(.accentColor)
                     
+                    Spacer()
+                    
+                    Button("Done") {
+                        hideKeyboard()
+                    }
+                    .foregroundColor(.accentColor)
+                    .fontWeight(.medium)
                 }
             }
         }
         .navigationBarHidden(true)
-   
+
         .onAppear {
             initializeColumnValues()
         }
+    }
+    
+    private func clearFocusedField() {
+        guard let fieldID = focusedField else { return }
+        let parts = fieldID.split(separator: "_").map(String.init)
+        guard parts.count >= 2 else { return }
+        
+        let itemId = Int(parts[0]) ?? 0
+        let columnId = parts[1]
+        
+        if parts.count == 3, let rowIndex = Int(parts[2]) {
+            // grouped
+            if var val = columnValues[itemId]?[columnId],
+               case .array(var arr) = val, rowIndex < arr.count {
+                arr[rowIndex] = .null
+                columnValues[itemId]?[columnId] = .array(arr)
+            }
+        } else {
+            // singular
+            columnValues[itemId]?[columnId] = .null
+        }
+    }
+
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private func onCancelActivity() {
