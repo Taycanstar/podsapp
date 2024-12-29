@@ -1961,7 +1961,7 @@ struct SingularColumnView: View {
                 expandedColumn: $expandedColumn,
                 onValueChanged: onValueChanged
             )
-            .padding(.vertical, 8)
+//            .padding(.vertical, 8)
             .background(Color("iosnp"))
             .cornerRadius(8)
         }

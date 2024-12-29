@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ActivityView: View {
     @Environment(\.dismiss) private var dismiss
@@ -18,11 +19,22 @@ struct ActivityView: View {
     @State private var groupedRowsCounts: [Int: [String: Int]] = [:]
     @State private var expandedColumn: String?
     @FocusState private var focusedField: String?
+    @State private var keyboardOffset: CGFloat = 0
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singularColumns = columns.filter { $0.groupingType == "singular" }
         return [groupedColumns, singularColumns].filter { !$0.isEmpty }
+    }
+    
+    private var keyboardPublisher: AnyPublisher<CGFloat, Never> {
+        Publishers.Merge(
+            NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
+                .map { $0.keyboardHeight },
+            NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
+                .map { _ in CGFloat(0) }
+        )
+        .eraseToAnyPublisher()
     }
     
     var body: some View {
@@ -55,16 +67,16 @@ struct ActivityView: View {
                         }
                     }
                     .padding()
-                    
+                    ScrollViewReader { proxy in
                     ScrollView {
-                    // Pod Title
-                    Text(pod.title)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                  
+                        // Pod Title
+                        Text(pod.title)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                        
+                        
                         VStack(spacing: 20) {
                             ForEach(items) { item in
                                 VStack(alignment: .leading, spacing: 15) {
@@ -81,62 +93,57 @@ struct ActivityView: View {
                                         if columnGroup.first?.groupingType == "singular" {
                                             ForEach(columnGroup, id: \.id) { column in
                                                 VStack(alignment: .leading, spacing: 5) {
-//                                                    Text(column.name)
-//                                                        .font(.system(size: 16))
-//                                                        .fontWeight(.semibold)
-//                                                        .fontDesign(.rounded)
-//                                                        .foregroundColor(.primary)
-//                                                        .kerning(0.2)
-//                                                    
-                                                
                                                     SingularColumnActivityView(
-                                                        itemId: item.id, 
-                                                                                                          column: column,
-                                                                                                          columnValues: bindingForItem(item.id),
-                                                                                                          focusedField: $focusedField,
-                                                                                                          expandedColumn: $expandedColumn,
-                                                                                                          onValueChanged: { }
-                                                                                                      )
+                                                        itemId: item.id,
+                                                        column: column,
+                                                        columnValues: bindingForItem(item.id),
+                                                        focusedField: $focusedField,
+                                                        expandedColumn: $expandedColumn,
+                                                        onValueChanged: { }
+                                                    )
                                                 }
                                             }
                                         } else {
-
+                                            
                                             GroupedColumnActivityView(
                                                 itemId: item.id,
-                                                                                          columnGroup: columnGroup,
-                                                                                          groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                                                                          onAddRow: { addRow(for: columnGroup, itemId: item.id) },
-                                                                                          onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
-                                                                                          columnValues: bindingForItem(item.id),
-                                                                                          focusedField: $focusedField,
-                                                                                          expandedColumn: $expandedColumn,
-                                                                                          onValueChanged: { }
-                                                                                      )
-
+                                                columnGroup: columnGroup,
+                                                groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                                onAddRow: { addRow(for: columnGroup, itemId: item.id) },
+                                                onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
+                                                columnValues: bindingForItem(item.id),
+                                                focusedField: $focusedField,
+                                                expandedColumn: $expandedColumn,
+                                                onValueChanged: { }
+                                            )
+                                            
                                         }
                                     }
                                 }
                                 .padding()
-
+                                
                             }
                         }
-
+                        
                         Button(action: onCancelActivity) {
                             Text("Cancel Activity")
                                 .font(.system(size: 16))
-                                        .fontWeight(.medium)
-                                        .foregroundColor(Color("iosred"))
-                                        .frame(maxWidth: .infinity)  // Move frame here
-                                        .padding(.vertical, 10)
-                                        .background(Color("iosred").opacity(0.1))  // Move background here
-                                        .cornerRadius(8)
+                                .fontWeight(.medium)
+                                .foregroundColor(Color("iosred"))
+                                .frame(maxWidth: .infinity)  // Move frame here
+                                .padding(.vertical, 10)
+                                .background(Color("iosred").opacity(0.1))  // Move background here
+                                .cornerRadius(8)
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 40)
-                    
+                        
+                        Spacer()
+                                                            .frame(height: keyboardOffset)
+                        
                     }
-                    .edgesIgnoringSafeArea(.bottom)
-              
+                }
+                   
                 }
             }
             .toolbar {
@@ -293,5 +300,12 @@ class Stopwatch: ObservableObject {
     
     deinit {
         stop()
+    }
+}
+
+
+extension Notification {
+    var keyboardHeight: CGFloat {
+        (userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect)?.height ?? 0
     }
 }
