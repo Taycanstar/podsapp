@@ -470,7 +470,7 @@ struct PodView: View {
             Spacer()
             
             Button(action: {
-                activityState.sheetHeight = .large 
+                activityState.sheetHeight = .large
                 isActivityOpen = true
                 
             }) {
@@ -1937,11 +1937,7 @@ struct CardDetailView: View {
                            for (key, value) in updatedColumnValues {
                                newColumnValues[key] = value
                            }
-//                           
-//                   
-//                        self.item.metadata = self.itemName
-//                        self.item.notes = self.itemNotes
-//                        self.item.columnValues = updatedColumnValues
+
                         // Update everything at once
                            self.item.metadata = self.itemName
                            self.item.notes = self.itemNotes

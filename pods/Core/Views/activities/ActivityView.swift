@@ -234,14 +234,9 @@ private func onCancelActivity() {
         // Prepare items data
         let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
             let values = columnValues[item.id] ?? [:]
-            
-            // Convert ColumnValue to Any
             let convertedValues = values.mapValues { value in
                 convertColumnValueToAny(value)
             }
-            
-            print("Processing item \(item.id) with \(convertedValues.count) column values")
-            
             return (
                 id: item.id,
                 notes: nil,
@@ -256,14 +251,61 @@ private func onCancelActivity() {
             items: itemsData
         )
         
-        // We'll dismiss after a short delay to ensure the request starts
+        // Update each item's columnValues
+        for (index, item) in items.enumerated() {
+            if let values = columnValues[item.id] {
+                items[index].columnValues = values
+            }
+        }
+        
+        activityState.finishActivity()
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            activityState.finishActivity()
+            
             print("Activity creation initiated, dismissing view...")
             self.isCreatingActivity = false
             self.dismiss()
         }
     }
+//    private func handleFinish() {
+//        guard !isCreatingActivity else { return }
+//        isCreatingActivity = true
+//        
+//        print("Preparing to create activity...")
+//        
+//        // Prepare items data
+//        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+//            let values = columnValues[item.id] ?? [:]
+//            
+//            // Convert ColumnValue to Any
+//            let convertedValues = values.mapValues { value in
+//                convertColumnValueToAny(value)
+//            }
+//            
+//            print("Processing item \(item.id) with \(convertedValues.count) column values")
+//            
+//            return (
+//                id: item.id,
+//                notes: nil,
+//                columnValues: convertedValues
+//            )
+//        }
+//        
+//        // Create activity
+//        activityManager.createActivity(
+//            duration: Int(stopwatch.elapsedTime),
+//            notes: nil,
+//            items: itemsData
+//        )
+//        
+//        // We'll dismiss after a short delay to ensure the request starts
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//            activityState.finishActivity()
+//            print("Activity creation initiated, dismissing view...")
+//            self.isCreatingActivity = false
+//            self.dismiss()
+//        }
+//    }
     
     private func clearFocusedField() {
         guard let fieldID = focusedField else { return }
@@ -467,8 +509,9 @@ class ActivityState: ObservableObject {
     
     func finishActivity() {
         isActivityInProgress = false
-        sheetHeight = .large  // Reset to full screen
+        sheetHeight = .large
         stopwatch.stop()
+        stopwatch.reset()
     }
     
     func minimize() {
