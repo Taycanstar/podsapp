@@ -3441,6 +3441,69 @@ class NetworkManager {
                }
            }.resume()
        }
+    
+    func createActivity(podId: Int,
+                        userEmail: String,
+                        duration: Int,
+                        notes: String?,
+                        items: [(id: Int, notes: String?, columnValues: [String: Any])],
+                        completion: @escaping (Result<Activity, Error>) -> Void) {
+         
+         let urlString = "\(baseUrl)/create-activity/"
+         guard let url = URL(string: urlString) else {
+             completion(.failure(NetworkError.invalidURL))
+             return
+         }
+         
+         let itemsData = items.map { item in
+             [
+                 "itemId": item.id,
+                 "notes": item.notes ?? "",
+                 "columnValues": item.columnValues
+             ]
+         }
+         
+         let parameters: [String: Any] = [
+             "podId": podId,
+             "userEmail": userEmail,
+             "duration": duration,
+             "notes": notes ?? "",
+             "loggedAt": ISO8601DateFormatter().string(from: Date()),
+             "items": itemsData
+         ]
+         
+         var request = URLRequest(url: url)
+         request.httpMethod = "POST"
+         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+         
+         do {
+             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+         } catch {
+             completion(.failure(error))
+             return
+         }
+         
+         URLSession.shared.dataTask(with: request) { data, response, error in
+             if let error = error {
+                 completion(.failure(error))
+                 return
+             }
+             
+             guard let data = data else {
+                 completion(.failure(NetworkError.noData))
+                 return
+             }
+             
+             do {
+                 let decoder = JSONDecoder()
+                 let activity = try decoder.decode(Activity.self, from: data)
+                 completion(.success(activity))
+             } catch {
+                 completion(.failure(error))
+             }
+         }.resume()
+     }
+
 
 
     

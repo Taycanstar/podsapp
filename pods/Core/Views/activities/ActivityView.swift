@@ -8,10 +8,12 @@
 import SwiftUI
 import Combine
 
+
 struct ActivityView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var stopwatch = Stopwatch()
+    @StateObject private var activityManager = ActivityManager()
     @Binding var pod: Pod
     @Binding var podColumns: [PodColumn]
     @Binding var items: [PodItem]
@@ -20,6 +22,11 @@ struct ActivityView: View {
     @State private var expandedColumn: String?
     @FocusState private var focusedField: String?
     @State private var keyboardOffset: CGFloat = 0
+    @State private var isCreatingActivity = false
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @ObservedObject private var activityState = ActivityState.shared
+    @State private var showCancelAlert = false
+
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
@@ -45,105 +52,113 @@ struct ActivityView: View {
                 
                 VStack(spacing: 0) {
                     // Header with timer
-                    HStack {
-                        Image(systemName: "timer")
-                            .font(.system(size: 18))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(stopwatch.formattedTime)
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                            .onAppear { stopwatch.start() }
-                            .onDisappear { stopwatch.stop() }
-                        
-                        Spacer()
-                        
-                        Button(action: { dismiss() }) {
-                            Text("Finish")
+                    
+                    if activityState.sheetHeight == .height(50) {
+                        MinimizedActivityView(podTitle: pod.title)
+                         
+                    } else {
+                        HStack {
+                            Image(systemName: "timer")
                                 .font(.system(size: 18))
-                                .foregroundColor(Color("iosred"))
-                        }
-                    }
-                    .padding()
-                    ScrollViewReader { proxy in
-                    ScrollView {
-                        // Pod Title
-                        Text(pod.title)
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                        
-                        
-                        VStack(spacing: 20) {
-                            ForEach(items) { item in
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text(item.metadata)
-                                        .font(.system(size: 18))
-                                        .fontDesign(.rounded)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.accentColor)
-                                    
-                                    let columnGroups = groupColumns(podColumns)
-                                    ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
-                                        let columnGroup = columnGroups[groupIndex]
-                                        
-                                        if columnGroup.first?.groupingType == "singular" {
-                                            ForEach(columnGroup, id: \.id) { column in
-                                                VStack(alignment: .leading, spacing: 5) {
-                                                    SingularColumnActivityView(
-                                                        itemId: item.id,
-                                                        column: column,
-                                                        columnValues: bindingForItem(item.id),
-                                                        focusedField: $focusedField,
-                                                        expandedColumn: $expandedColumn,
-                                                        onValueChanged: { }
-                                                    )
-                                                }
-                                            }
-                                        } else {
-                                            
-                                            GroupedColumnActivityView(
-                                                itemId: item.id,
-                                                columnGroup: columnGroup,
-                                                groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                                onAddRow: { addRow(for: columnGroup, itemId: item.id) },
-                                                onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
-                                                columnValues: bindingForItem(item.id),
-                                                focusedField: $focusedField,
-                                                expandedColumn: $expandedColumn,
-                                                onValueChanged: { }
-                                            )
-                                            
-                                        }
-                                    }
-                                }
-                                .padding()
-                                
+                                .foregroundColor(.primary)
+                                .frame(width: 60)
+                            
+                            Spacer()
+                            
+                            Text(activityState.stopwatch.formattedTime)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Button(action: handleFinish) {
+                                Text("Finish")
+                                    .fontWeight(.medium)
+                                    .font(.system(size: 18))
+                                    .foregroundColor(Color("iosred"))
+                                    .frame(width: 60)
                             }
                         }
-                        
-                        Button(action: onCancelActivity) {
-                            Text("Cancel Activity")
-                                .font(.system(size: 16))
-                                .fontWeight(.medium)
-                                .foregroundColor(Color("iosred"))
-                                .frame(maxWidth: .infinity)  // Move frame here
-                                .padding(.vertical, 10)
-                                .background(Color("iosred").opacity(0.1))  // Move background here
-                                .cornerRadius(8)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 40)
-                        
-                        Spacer()
-                                                            .frame(height: keyboardOffset)
-                        
+                        .padding()
                     }
-                }
-                   
+              
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            // Pod Title
+                            Text(pod.title)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal)
+                            
+                            
+                            VStack(spacing: 20) {
+                                ForEach(items) { item in
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        Text(item.metadata)
+                                            .font(.system(size: 18))
+                                            .fontDesign(.rounded)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.accentColor)
+                                        
+                                        let columnGroups = groupColumns(podColumns)
+                                        ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+                                            let columnGroup = columnGroups[groupIndex]
+                                            
+                                            if columnGroup.first?.groupingType == "singular" {
+                                                ForEach(columnGroup, id: \.id) { column in
+                                                    VStack(alignment: .leading, spacing: 5) {
+                                                        SingularColumnActivityView(
+                                                            itemId: item.id,
+                                                            column: column,
+                                                            columnValues: bindingForItem(item.id),
+                                                            focusedField: $focusedField,
+                                                            expandedColumn: $expandedColumn,
+                                                            onValueChanged: { }
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                
+                                                GroupedColumnActivityView(
+                                                    itemId: item.id,
+                                                    columnGroup: columnGroup,
+                                                    groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                                    onAddRow: { addRow(for: columnGroup, itemId: item.id) },
+                                                    onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
+                                                    columnValues: bindingForItem(item.id),
+                                                    focusedField: $focusedField,
+                                                    expandedColumn: $expandedColumn,
+                                                    onValueChanged: { }
+                                                )
+                                                
+                                            }
+                                        }
+                                    }
+                                    .padding()
+                                    
+                                }
+                            }
+                            
+                            Button(action: onCancelActivity) {
+                                Text("Cancel Activity")
+                                    .font(.system(size: 16))
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color("iosred"))
+                                    .frame(maxWidth: .infinity)  // Move frame here
+                                    .padding(.vertical, 10)
+                                    .background(Color("iosred").opacity(0.1))  // Move background here
+                                    .cornerRadius(8)
+                            }
+                            .padding(.horizontal)
+                            .padding(.bottom, 40)
+                            
+                            Spacer()
+                                .frame(height: keyboardOffset)
+                            
+                        }
+                    }
+                    
                 }
             }
             .toolbar {
@@ -164,9 +179,88 @@ struct ActivityView: View {
             }
         }
         .navigationBarHidden(true)
-
+        
         .onAppear {
             initializeColumnValues()
+            print("Initializing ActivityManager with podId: \(pod.id), email: \(viewModel.email)")
+            activityManager.initialize(podId: pod.id, userEmail: viewModel.email)
+            
+            if activityState.stopwatch.elapsedTime == 0 {
+                activityState.stopwatch.start()
+            }
+            activityState.isActivityInProgress = true
+        }
+        .alert("Cancel Activity?", isPresented: $showCancelAlert) {
+            Button("Cancel Activity", role: .destructive) {
+                stopwatch.reset()
+                dismiss()
+            }
+            Button("Keep Activity", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to cancel this activity? All progress will be lost.")
+        }
+    
+        
+        
+    }
+
+private func onCancelActivity() {
+    showCancelAlert = true
+}
+
+    
+    private func convertColumnValueToAny(_ value: ColumnValue) -> Any {
+            switch value {
+            case .number(let num):
+                return num
+            case .string(let str):
+                return str
+            case .time(let timeValue):
+                return timeValue.toString
+            case .array(let values):
+                return values.map { convertColumnValueToAny($0) }
+            case .null:
+                return NSNull()
+            }
+        }
+    
+    private func handleFinish() {
+        guard !isCreatingActivity else { return }
+        isCreatingActivity = true
+        
+        print("Preparing to create activity...")
+        
+        // Prepare items data
+        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+            let values = columnValues[item.id] ?? [:]
+            
+            // Convert ColumnValue to Any
+            let convertedValues = values.mapValues { value in
+                convertColumnValueToAny(value)
+            }
+            
+            print("Processing item \(item.id) with \(convertedValues.count) column values")
+            
+            return (
+                id: item.id,
+                notes: nil,
+                columnValues: convertedValues
+            )
+        }
+        
+        // Create activity
+        activityManager.createActivity(
+            duration: Int(stopwatch.elapsedTime),
+            notes: nil,
+            items: itemsData
+        )
+        
+        // We'll dismiss after a short delay to ensure the request starts
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            activityState.finishActivity()
+            print("Activity creation initiated, dismissing view...")
+            self.isCreatingActivity = false
+            self.dismiss()
         }
     }
     
@@ -196,10 +290,8 @@ struct ActivityView: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
-    private func onCancelActivity() {
-        
-        print("Cancelling Activity")
-    }
+ 
+
  
     private func bindingForItem(_ itemId: Int) -> Binding<[String: ColumnValue]> {
         Binding(
@@ -273,6 +365,7 @@ struct ActivityView: View {
 
 class Stopwatch: ObservableObject {
     @Published var elapsedTime: TimeInterval = 0
+    private var startDate: Date?
     private var timer: Timer?
     
     var formattedTime: String {
@@ -282,15 +375,54 @@ class Stopwatch: ObservableObject {
         return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
     
+    init() {
+        // Add observers for app lifecycle
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
     func start() {
+        startDate = Date().addingTimeInterval(-elapsedTime)
+        scheduleTimer()
+    }
+    
+    private func scheduleTimer() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.elapsedTime += 1
+            guard let self = self, let startDate = self.startDate else { return }
+            self.elapsedTime = Date().timeIntervalSince(startDate)
+        }
+    }
+    
+    @objc private func appDidEnterBackground() {
+        timer?.invalidate()
+        // Store current timestamp
+        if let startDate = startDate {
+            UserDefaults.standard.set(startDate.timeIntervalSince1970, forKey: "stopwatch_start_time")
+        }
+    }
+    
+    @objc private func appWillEnterForeground() {
+        if let storedStartTime = UserDefaults.standard.object(forKey: "stopwatch_start_time") as? TimeInterval {
+            startDate = Date(timeIntervalSince1970: storedStartTime)
+            scheduleTimer()
         }
     }
     
     func stop() {
         timer?.invalidate()
         timer = nil
+        startDate = nil
+        UserDefaults.standard.removeObject(forKey: "stopwatch_start_time")
     }
     
     func reset() {
@@ -300,6 +432,49 @@ class Stopwatch: ObservableObject {
     
     deinit {
         stop()
+        NotificationCenter.default.removeObserver(self)
+    }
+}
+
+class ActivityState: ObservableObject {
+    @Published var stopwatch: Stopwatch
+    @Published var isActivityInProgress = false
+    @Published var sheetHeight: PresentationDetent = .large  // Start with large
+
+    static let shared = ActivityState()
+    
+    private init() {
+        self.stopwatch = Stopwatch()
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }
+    }
+    
+    func startActivity() {
+        isActivityInProgress = true
+        sheetHeight = .large  // Ensure full screen when starting
+        stopwatch.start()
+    }
+    
+    func cancelActivity() {
+        isActivityInProgress = false
+        sheetHeight = .large  // Reset to full screen
+        stopwatch.stop()
+        stopwatch.reset()
+    }
+    
+    func finishActivity() {
+        isActivityInProgress = false
+        sheetHeight = .large  // Reset to full screen
+        stopwatch.stop()
+    }
+    
+    func minimize() {
+        if isActivityInProgress {
+            sheetHeight = .height(60)
+        }
     }
 }
 

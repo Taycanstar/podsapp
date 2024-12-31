@@ -134,6 +134,7 @@ struct PodView: View {
     @State private var isLoading = true
 
     @StateObject private var logManager = ActivityLogManager()
+    @ObservedObject private var activityState = ActivityState.shared
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
         self._pod = pod
@@ -199,10 +200,8 @@ struct PodView: View {
                          
                                        .safeAreaInset(edge: .bottom) {
                                          
-                                           if !isCreatingNewItem{
+                                           if !isCreatingNewItem && !activityState.isActivityInProgress{
                                                footerView
-                                           } else {
-                                               EmptyView()
                                            }
                                    }
                                  
@@ -304,14 +303,28 @@ struct PodView: View {
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,    navigationAction: { destination in
                 showPodOptionsSheet = false
+                let wasActivityOpen = isActivityOpen
+                       isActivityOpen = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     navigationPath.append(destination)
+                    if wasActivityOpen {
+                                   isActivityOpen = true
+                               }
                 }
             })
             
         }
+
         .sheet(isPresented: $isActivityOpen) {
             ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems)
+                .presentationDetents([.height(50), .large], selection: $activityState.sheetHeight)
+                .interactiveDismissDisabled(activityState.isActivityInProgress)
+                .presentationBackgroundInteraction(.enabled)  // This enables interaction with background
+                .onChange(of: activityState.sheetHeight) { newHeight in
+                    if !activityState.isActivityInProgress {
+                        activityState.sheetHeight = .large
+                    }
+                }
         }
         .sheet(isPresented: $showPodColumnsView) {
             PodColumnsView(
@@ -363,8 +376,6 @@ struct PodView: View {
                     onSave: { _ in },
                     networkManager: networkManager,
                     onViewTrendsTapped: {
-//                                                let relevantLogs = activityLogs.filter { $0.itemId == item.id && $0.columnValues[column.name] != nil }
-//                                                pendingNavigation = .fullAnalytics(column: column, logs: relevantLogs)
                                             }
                    
                 )
@@ -397,7 +408,12 @@ struct PodView: View {
                     ),
                     visibleColumns: $visibleColumns
                 )
-                .id(reorderedItems[index].notes)  // Add this line to force view recreation
+                .id(reorderedItems[index].notes)
+                .onDisappear {
+                    if activityState.isActivityInProgress {
+                        isActivityOpen = true
+                    }
+                }
             }
         }
        
@@ -412,8 +428,15 @@ struct PodView: View {
                     logManager: logManager,
                     onActivityLogged: { newLog in
                                    self.onActivityLogged(newLog: newLog)
+                        
                                }
                 )
+                
+                    .onDisappear {
+                        if activityState.isActivityInProgress {
+                            isActivityOpen = true
+                        }
+                    }
 //                .presentationDetents([.height(UIScreen.main.bounds.height / 2)])
             }
         }
@@ -662,6 +685,8 @@ struct PodView: View {
                 .onTapGesture {
                                                    selectedItemIndex = index
                                                    showLogActivitySheet = true
+                                        let wasActivityOpen = isActivityOpen
+                                        isActivityOpen = false
                                                    HapticFeedback.generate()
                                                }
             }
@@ -687,6 +712,8 @@ struct PodView: View {
             Button(action: {
                 selectedItemIndex = index
                 showCardSheet = true
+                let wasActivityOpen = isActivityOpen
+                       isActivityOpen = false
             }) {
                 Label("Edit Item", systemImage: "square.and.pencil")
             }

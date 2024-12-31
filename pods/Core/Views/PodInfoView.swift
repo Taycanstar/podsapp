@@ -70,18 +70,7 @@ struct PodInfoView: View {
                     
                     Divider()
                         .background(borderColor)
-                    
-//                    VStack(alignment: .leading, spacing: 20) {
-//                        // Pod Name Section
-//                        Section(header: Text("Custom Pod instructions").font(.system(size: 14))) {
-//                            TextField("Enter Pod instructions", text: $currentInstructions)
-//                                .font(.system(size: 16))
-//                                .fontWeight(.semibold)
-//                                .background(Color("mxdBg"))
-//                                .disabled(!canEditPod)
-//                            
-//                        }
-//                    }
+
                     VStack(alignment: .leading, spacing: 20) {
                         // Pod Instructions Section
                         Section(header: Text("Custom Pod instructions").font(.system(size: 14))) {

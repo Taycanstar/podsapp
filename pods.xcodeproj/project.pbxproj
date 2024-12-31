@@ -34,6 +34,8 @@
 		363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9F82D1E57F500C91A14 /* ActivityView.swift */; };
 		363AF9FB2D2095AA00C91A14 /* SingularColumnActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FA2D2095AA00C91A14 /* SingularColumnActivityView.swift */; };
 		363AF9FD2D2095D600C91A14 /* GroupedColumnActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */; };
+		363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */; };
+		363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -161,6 +163,8 @@
 		363AF9F82D1E57F500C91A14 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		363AF9FA2D2095AA00C91A14 /* SingularColumnActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingularColumnActivityView.swift; sourceTree = "<group>"; };
 		363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupedColumnActivityView.swift; sourceTree = "<group>"; };
+		363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
+		363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimizedActivityView.swift; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -294,6 +298,7 @@
 			isa = PBXGroup;
 			children = (
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
+				363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -353,6 +358,7 @@
 				369474622CD0031000CD197F /* DropdownButton.swift */,
 				363AF9FA2D2095AA00C91A14 /* SingularColumnActivityView.swift */,
 				363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */,
+				363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -839,9 +845,11 @@
 				363AF9FB2D2095AA00C91A14 /* SingularColumnActivityView.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,
+				363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */,
 				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
+				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */,
 				3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */,

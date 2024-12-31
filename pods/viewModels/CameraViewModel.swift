@@ -470,7 +470,36 @@ private struct AnyDecodable: Decodable {
     }
 }
 
-//// Add this struct to handle time values
+struct Activity: Identifiable, Codable {
+    let id: Int
+    let podId: Int
+    let userEmail: String
+    let duration: Int
+    let loggedAt: Date
+    let notes: String?
+    let userName: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, podId, userEmail, duration, loggedAt, notes, userName
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        podId = try container.decode(Int.self, forKey: .podId)
+        userEmail = try container.decode(String.self, forKey: .userEmail)
+        duration = try container.decode(Int.self, forKey: .duration)
+        
+        let dateString = try container.decode(String.self, forKey: .loggedAt)
+        let formatter = ISO8601DateFormatter()
+        loggedAt = formatter.date(from: dateString) ?? Date()
+        
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        userName = try container.decode(String.self, forKey: .userName)
+    }
+}
+
+
 struct TimeValue: Codable, Equatable {
     var hours: Int
     var minutes: Int
