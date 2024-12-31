@@ -470,7 +470,9 @@ struct PodView: View {
             Spacer()
             
             Button(action: {
+                activityState.sheetHeight = .large 
                 isActivityOpen = true
+                
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "record.circle")
@@ -485,7 +487,6 @@ struct PodView: View {
 
                 }
                 .foregroundColor(.accentColor)
-//                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
             }
         }
