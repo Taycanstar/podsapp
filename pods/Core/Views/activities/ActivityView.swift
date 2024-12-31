@@ -54,7 +54,7 @@ struct ActivityView: View {
                     // Header with timer
                     
                     if activityState.sheetHeight == .height(50) {
-                        MinimizedActivityView(podTitle: pod.title)
+                        MinimizedActivityView(podTitle: pod.title, onDismiss: { self.dismiss() })
                          
                     } else {
                         HStack {
@@ -192,10 +192,11 @@ struct ActivityView: View {
         }
         .alert("Cancel Activity?", isPresented: $showCancelAlert) {
             Button("Cancel Activity", role: .destructive) {
-                stopwatch.reset()
+                activityState.cancelActivity()
+                
                 dismiss()
             }
-            Button("Keep Activity", role: .cancel) { }
+            Button("Continue Activity", role: .cancel) { }
         } message: {
             Text("Are you sure you want to cancel this activity? All progress will be lost.")
         }
@@ -460,7 +461,6 @@ class ActivityState: ObservableObject {
     
     func cancelActivity() {
         isActivityInProgress = false
-        sheetHeight = .large  // Reset to full screen
         stopwatch.stop()
         stopwatch.reset()
     }

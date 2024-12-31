@@ -11,7 +11,7 @@ struct MinimizedActivityView: View {
     @ObservedObject private var activityState = ActivityState.shared
     let podTitle: String
     @State private var showCancelAlert = false
-    @Environment(\.dismiss) private var dismiss
+    let onDismiss: () -> Void
 
     var body: some View {
         VStack {
@@ -23,7 +23,7 @@ struct MinimizedActivityView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 16))
                         .foregroundColor(.primary)
-                        .frame(width: 60)
+                        .frame(width: 30)
 
                 }
                 
@@ -41,7 +41,7 @@ struct MinimizedActivityView: View {
                 
                 Spacer()
                 
-                Color.clear.frame(width: 60, height: 45)
+                Color.clear.frame(width: 30, height: 45)
             }
          
             .padding()
@@ -59,9 +59,9 @@ struct MinimizedActivityView: View {
         .alert("Cancel Activity?", isPresented: $showCancelAlert) {
             Button("Cancel Activity", role: .destructive) {
                 activityState.cancelActivity()
-                dismiss()
+                onDismiss()
             }
-            Button("Keep Activity", role: .cancel) { }
+            Button("Continue Activity", role: .cancel) { }
         } message: {
             Text("Are you sure you want to cancel this activity? All progress will be lost.")
         }
