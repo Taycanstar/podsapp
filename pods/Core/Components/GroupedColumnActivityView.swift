@@ -14,37 +14,62 @@ struct GroupedColumnActivityView: View {
     @Binding var expandedColumn: String?
     
     let onValueChanged: () -> Void
+    @State private var rows: [Int] = []
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // The header row (column names)
             GroupedColumnHeaderView(columnGroup: columnGroup)
-            
-            // The data rows
-            ForEach(0..<groupedRowsCount, id: \.self) { rowIdx in
-                GroupedColumnRowActivityView(
-                    itemId: itemId,
-                    columnGroup: columnGroup,
-                    rowIndex: rowIdx,
-                    columnValues: $columnValues,
-                    focusedField: focusedField,
-                    expandedColumn: $expandedColumn,
-                    onDelete: { onDeleteRow(rowIdx) },
-                    onValueChanged: onValueChanged
-                )
+            List {
+                ForEach(0..<groupedRowsCount, id: \.self) { rowIdx in
+                    GroupedColumnRowActivityView(
+                        itemId: itemId,
+                        columnGroup: columnGroup,
+                        rowIndex: rowIdx,
+                        columnValues: $columnValues,
+                        focusedField: focusedField,
+                        expandedColumn: $expandedColumn,
+//                        onDelete: { onDeleteRow(rowIdx) },
+                        onDelete: {
+                                                   withAnimation {
+                                                       rows.removeAll(where: { $0 == rowIdx })
+                                                       onDeleteRow(rowIdx)
+                                                   }
+                                               },
+                        onValueChanged: onValueChanged
+                    )
+                    .listRowInsets(EdgeInsets())
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                }
             }
+                        .listStyle(PlainListStyle())
+                        .frame(minHeight: CGFloat(rows.count * 50)) 
+                   
+          
             
-            // "Add Row" button at bottom
-            Button(action: onAddRow) {
-                Text("Add Row")
-                    .foregroundColor(.accentColor)
-            }
+//            // "Add Row" button at bottom
+//            Button(action: onAddRow) {
+//                Text("Add Row")
+//                    .foregroundColor(.accentColor)
+//            }
+            Button(action: {
+                          withAnimation {
+                              rows.append(groupedRowsCount)
+                              onAddRow()
+                          }
+                      }) {
+                          Text("Add Row")
+                              .foregroundColor(.accentColor)
+                      }
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
         }
         .padding(.top, 5)
         .onAppear {
             // If no rows exist, we can auto-add one if desired
+            rows = Array(0..<groupedRowsCount)
+            
             if groupedRowsCount == 0 {
                 onAddRow()
             }
