@@ -135,6 +135,7 @@ struct PodView: View {
 
     @StateObject private var logManager = ActivityLogManager()
     @ObservedObject private var activityState = ActivityState.shared
+    @State private var showCountdown = false
     
     init(pod: Binding<Pod>, needsRefresh: Binding<Bool>) {
         self._pod = pod
@@ -169,7 +170,13 @@ struct PodView: View {
                                            showPodOptionsSheet = true
                                            Mixpanel.mainInstance().track(event: "Tapped Pod Options")
                                        },
-                                       onDismiss: { dismiss() }  // Add this line
+                                       onDismiss: {
+                                           if activityState.isActivityInProgress {
+                                                      activityState.cancelActivity()
+                                                      isActivityOpen = false
+                                                  }
+                                           
+                                           dismiss() }  // Add this line
                                    )
                 
                 
@@ -195,6 +202,7 @@ struct PodView: View {
                                            }
 
                                        }
+                                   
                                        
 
                          
@@ -218,6 +226,11 @@ struct PodView: View {
             switch destination {
             case .player(let item):
                     SingleVideoPlayerView(item: item)
+                    .onDisappear {
+                        if activityState.isActivityInProgress {
+                            isActivityOpen = true
+                        }
+                    }
             case .podInfo:
                 PodInfoView(pod: $pod,
                             currentTitle: $currentTitle,
@@ -293,6 +306,7 @@ struct PodView: View {
              NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                  fetchFullPodDetails(showLoadingIndicator: false)
              }
+         
         }
         .onDisappear {
 
@@ -351,6 +365,14 @@ struct PodView: View {
                        }
                    }
                }
+            
+        .fullScreenCover(isPresented: $showCountdown) {
+            ActivityCountdownView(isPresented: $showCountdown) {
+                // This closure is called when countdown finishes
+                activityState.sheetHeight = .large
+                isActivityOpen = true
+            }
+        }
         
         
         .sheet(isPresented: $showColumnEditSheet) {
@@ -470,8 +492,9 @@ struct PodView: View {
             Spacer()
             
             Button(action: {
-                activityState.sheetHeight = .large
-                isActivityOpen = true
+//                activityState.sheetHeight = .large
+//                isActivityOpen = true
+                showCountdown = true
                 
             }) {
                 HStack(spacing: 8) {
@@ -722,6 +745,8 @@ struct PodView: View {
             if item.videoURL != nil || item.imageURL != nil {
                 Button(action: {
                     navigationPath.append(NavigationDestination.player(item: item))
+                    let wasActivityOpen = isActivityOpen
+                    isActivityOpen = false
                 }) {
                     Label("Play Video", systemImage: "play.circle")
                 }

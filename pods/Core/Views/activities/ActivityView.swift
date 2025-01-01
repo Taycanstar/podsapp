@@ -191,23 +191,16 @@ struct ActivityView: View {
             }
             activityState.isActivityInProgress = true
         }
-        .alert("Cancel Activity?", isPresented: $showCancelAlert) {
-            Button("Cancel Activity", role: .destructive) {
-                activityState.cancelActivity()
-                
-                dismiss()
-            }
-            Button("Continue Activity", role: .cancel) { }
-        } message: {
-            Text("Are you sure you want to cancel this activity? All progress will be lost.")
-        }
+      
     
         
         
     }
 
 private func onCancelActivity() {
-    showCancelAlert = true
+    activityState.cancelActivity()
+    
+    dismiss()
 }
 
     

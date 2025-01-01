@@ -36,6 +36,7 @@
 		363AF9FD2D2095D600C91A14 /* GroupedColumnActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */; };
 		363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */; };
 		363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */; };
+		363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -165,6 +166,7 @@
 		363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupedColumnActivityView.swift; sourceTree = "<group>"; };
 		363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
 		363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimizedActivityView.swift; sourceTree = "<group>"; };
+		363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCountdownView.swift; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -359,6 +361,7 @@
 				363AF9FA2D2095AA00C91A14 /* SingularColumnActivityView.swift */,
 				363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */,
 				363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */,
+				363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -849,6 +852,7 @@
 				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
+				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */,
