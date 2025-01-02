@@ -12,7 +12,6 @@ import Combine
 struct ActivityView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var stopwatch = Stopwatch()
     @StateObject private var activityManager = ActivityManager()
     @Binding var pod: Pod
     @Binding var podColumns: [PodColumn]
@@ -26,6 +25,7 @@ struct ActivityView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @ObservedObject private var activityState = ActivityState.shared
     @State private var showCancelAlert = false
+    let onActivityFinished: (Int, Date, Date) -> Void
 
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
@@ -223,6 +223,10 @@ private func onCancelActivity() {
         guard !isCreatingActivity else { return }
         isCreatingActivity = true
         
+        let endTime = Date()
+        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
+        let duration = Int(activityState.stopwatch.elapsedTime)
+        
         print("Preparing to create activity...")
         
         // Prepare items data
@@ -240,7 +244,7 @@ private func onCancelActivity() {
         
         // Create activity
         activityManager.createActivity(
-            duration: Int(stopwatch.elapsedTime),
+            duration: Int(activityState.stopwatch.elapsedTime),
             notes: nil,
             items: itemsData
         )
@@ -252,7 +256,10 @@ private func onCancelActivity() {
             }
         }
         
+        
+        onActivityFinished(duration, startTime, endTime)
         activityState.finishActivity()
+       
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             
@@ -371,7 +378,7 @@ class Stopwatch: ObservableObject {
         let hours = Int(elapsedTime) / 3600
         let minutes = Int(elapsedTime) / 60 % 60
         let seconds = Int(elapsedTime) % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        return String(format: "%d:%02d:%02d", hours, minutes, seconds)
     }
     
     init() {

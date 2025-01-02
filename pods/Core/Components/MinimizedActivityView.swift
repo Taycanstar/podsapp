@@ -18,9 +18,8 @@ struct MinimizedActivityView: View {
             
             HStack {
                 Button(action: {
+                    showCancelAlert = true
                     
-                    activityState.cancelActivity()
-                    onDismiss()
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16))
@@ -58,6 +57,15 @@ struct MinimizedActivityView: View {
                 activityState.sheetHeight = .large
             }
         }
-  
+        .alert("Are you sure?", isPresented: $showCancelAlert) {
+            Button("Cancel Activity", role: .destructive) {
+                activityState.cancelActivity()
+                onDismiss()
+            }
+            Button("Continue Activity", role: .cancel) { }
+        }
+//        message: {
+//            Text("Are you sure you want to cancel this activity? All progress will be lost.")
+//        }
     }
 }

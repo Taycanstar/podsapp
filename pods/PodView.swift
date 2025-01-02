@@ -10,8 +10,8 @@ enum NavigationDestination: Hashable {
     case trends(podId: Int)
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
-//    case fullActivityLog(log: PodItemActivityLog, columns: [PodColumn])
     case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
+    case activitySummary(pod: Pod, duration: Int, startTime: Date, endTime: Date)
     
     
     func hash(into hasher: inout Hasher) {
@@ -38,6 +38,14 @@ enum NavigationDestination: Hashable {
         case .fullActivityLog(let log, _, _):
             hasher.combine("fullActivityLog")
             hasher.combine(log.id)
+            
+        case .activitySummary(let pod, let duration, let startTime, let endTime):
+                    hasher.combine("activitySummary")
+                    hasher.combine(pod.id)
+                    hasher.combine(duration)
+                    hasher.combine(startTime)
+                    hasher.combine(endTime)
+            
                }
         }
     
@@ -56,6 +64,9 @@ enum NavigationDestination: Hashable {
                     return column1.name == column2.name
         case (.fullActivityLog(let log1, _, _), .fullActivityLog(let log2, _, _)):
             return log1.id == log2.id
+        case (.activitySummary(let pod1, let duration1, let startTime1, let endTime1),
+                      .activitySummary(let pod2, let duration2, let startTime2, let endTime2)):
+                    return pod1.id == pod2.id && duration1 == duration2 && startTime1 == startTime2 && endTime1 == endTime2
         default:
             return false
         }
@@ -265,7 +276,14 @@ struct PodView: View {
                                    onDelete: { _ in },
                                    onUpdate: onLogUpdated)
                 
-                        
+            case .activitySummary(let pod, let duration, let startTime, let endTime):
+                    ActivitySummaryView(
+                        pod: pod,
+                        duration: duration,
+                        items: reorderedItems,
+                        startTime: startTime,
+                        endTime: endTime
+                    )
                             
             }
         }
@@ -330,7 +348,14 @@ struct PodView: View {
         }
 
         .sheet(isPresented: $isActivityOpen) {
-            ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems)
+            ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems,    onActivityFinished: { duration, startTime, endTime in
+                navigationPath.append(NavigationDestination.activitySummary(  // Use full type here
+                    pod: pod,
+                    duration: duration,
+                    startTime: startTime,
+                    endTime: endTime
+                ))
+            })
                 .presentationDetents([.height(50), .large], selection: $activityState.sheetHeight)
                 .interactiveDismissDisabled(activityState.isActivityInProgress)
                 .presentationBackgroundInteraction(.enabled)  // This enables interaction with background

@@ -37,6 +37,7 @@
 		363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */; };
 		363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */; };
 		363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */; };
+		363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -167,6 +168,7 @@
 		363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
 		363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimizedActivityView.swift; sourceTree = "<group>"; };
 		363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCountdownView.swift; sourceTree = "<group>"; };
+		363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySummaryView.swift; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -292,6 +294,7 @@
 				362969B12D0D3E4700DF0B26 /* EditActivityView.swift */,
 				362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */,
 				363AF9F82D1E57F500C91A14 /* ActivityView.swift */,
+				363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */,
 			);
 			path = activities;
 			sourceTree = "<group>";
@@ -814,6 +817,7 @@
 				36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
+				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
