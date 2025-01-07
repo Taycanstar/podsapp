@@ -14,6 +14,8 @@ struct ActivitySummaryView: View {
     let items: [PodItem]
     let startTime: Date
     let endTime: Date
+    let podColumns: [PodColumn]
+    let navigationAction: (NavigationDestination) -> Void
     
     @State private var cityName: String = "Loading..."
     @Environment(\.dismiss) private var dismiss
@@ -141,6 +143,16 @@ struct ActivitySummaryView: View {
                             HStack {
                                 Text("Summary")
                                     .font(.system(size: 24, weight: .bold))
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    navigationAction(.fullSummary(items: items, columns: podColumns))
+                                }) {
+                                    Text("Show More")
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.accentColor)
+                                }
                             }
                             
                             LazyVGrid(columns: [

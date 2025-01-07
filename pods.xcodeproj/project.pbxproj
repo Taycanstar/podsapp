@@ -38,6 +38,7 @@
 		363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */; };
 		363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */; };
 		363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */; };
+		363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -169,6 +170,7 @@
 		363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimizedActivityView.swift; sourceTree = "<group>"; };
 		363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCountdownView.swift; sourceTree = "<group>"; };
 		363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySummaryView.swift; sourceTree = "<group>"; };
+		363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullSummaryView.swift; sourceTree = "<group>"; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -295,6 +297,7 @@
 				362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */,
 				363AF9F82D1E57F500C91A14 /* ActivityView.swift */,
 				363AFA042D26487C00C91A14 /* ActivitySummaryView.swift */,
+				363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */,
 			);
 			path = activities;
 			sourceTree = "<group>";
@@ -858,6 +861,7 @@
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
+				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */,
 				3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */,
