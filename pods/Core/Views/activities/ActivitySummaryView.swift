@@ -28,7 +28,24 @@ struct ActivitySummaryView: View {
     private func getLoggedItemsCount() -> Int {
         return items.filter { item in
             guard let columnValues = item.columnValues else { return false }
-            return !columnValues.isEmpty
+            // Check if any column value is non-null and non-empty
+            return columnValues.values.contains { value in
+                switch value {
+                case .null:
+                    return false
+                case .string(let str):
+                    return !str.isEmpty
+                case .number:
+                    return true
+                case .time(let timeValue):
+                    return timeValue != TimeValue(hours: 0, minutes: 0, seconds: 0)
+                case .array(let values):
+                    return values.contains { val in
+                        if case .null = val { return false }
+                        return true
+                    }
+                }
+            }
         }.count
     }
     
