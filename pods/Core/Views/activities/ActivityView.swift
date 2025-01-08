@@ -25,7 +25,9 @@ struct ActivityView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @ObservedObject private var activityState = ActivityState.shared
     @State private var showCancelAlert = false
-    let onActivityFinished: (Int, Date, Date) -> Void
+    let onActivityFinished: (Int, Date, Date, String?) -> Void
+    @State private var showNotesInput = false
+    @State private var activityNotes: String = ""
 
     
     private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
@@ -141,6 +143,44 @@ struct ActivityView: View {
                                 }
                             }
                             
+                            if !showNotesInput {
+                                Button(action: {
+                                    showNotesInput = true
+                                }) {
+                                    Text("Add Notes")
+                                        .font(.system(size: 16))
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.accentColor)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color.accentColor.opacity(0.1))
+                                        .cornerRadius(8)
+                                }
+                                .padding(.horizontal)
+                                .opacity(showNotesInput ? 0 : 1)
+                                .animation(.easeInOut, value: showNotesInput)
+
+                            }
+                
+                            if showNotesInput {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Notes")
+                                        .font(.system(size: 18))
+                                        .fontDesign(.rounded)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.accentColor)
+                                    
+                                    TextField("", text: $activityNotes, axis: .vertical)
+                                        .textFieldStyle(.plain)
+                                        .padding()
+                                        .background(Color("iosnp"))
+                                        .cornerRadius(12)
+                                }
+                                .padding(.horizontal)
+                                .padding(.bottom)
+                                .transition(.opacity)
+                            }
+                            
                             Button(action: onCancelActivity) {
                                 Text("Cancel Activity")
                                     .font(.system(size: 16))
@@ -219,6 +259,55 @@ private func onCancelActivity() {
             }
         }
     
+//    private func handleFinish() {
+//        guard !isCreatingActivity else { return }
+//        isCreatingActivity = true
+//        
+//        let endTime = Date()
+//        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
+//        let duration = Int(activityState.stopwatch.elapsedTime)
+//        
+//        print("Preparing to create activity...")
+//        
+//        // Prepare items data
+//        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+//            let values = columnValues[item.id] ?? [:]
+//            let convertedValues = values.mapValues { value in
+//                convertColumnValueToAny(value)
+//            }
+//            return (
+//                id: item.id,
+//                notes: nil,
+//                columnValues: convertedValues
+//            )
+//        }
+//        
+//        // Create activity
+//        activityManager.createActivity(
+//            duration: Int(activityState.stopwatch.elapsedTime),
+//            notes: activityNotes.isEmpty ? nil : activityNotes,
+//            items: itemsData
+//        )
+//        
+//        // Update each item's columnValues
+//        for (index, item) in items.enumerated() {
+//            if let values = columnValues[item.id] {
+//                items[index].columnValues = values
+//            }
+//        }
+//        
+//        
+//        onActivityFinished(duration, startTime, endTime)
+//        activityState.finishActivity()
+//       
+//        
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//            
+//            print("Activity creation initiated, dismissing view...")
+//            self.isCreatingActivity = false
+//            self.dismiss()
+//        }
+//    }
     private func handleFinish() {
         guard !isCreatingActivity else { return }
         isCreatingActivity = true
@@ -245,7 +334,7 @@ private func onCancelActivity() {
         // Create activity
         activityManager.createActivity(
             duration: Int(activityState.stopwatch.elapsedTime),
-            notes: nil,
+            notes: activityNotes.isEmpty ? nil : activityNotes,
             items: itemsData
         )
         
@@ -256,13 +345,11 @@ private func onCancelActivity() {
             }
         }
         
-        
-        onActivityFinished(duration, startTime, endTime)
+        // Pass activityNotes to callback
+        onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
         activityState.finishActivity()
-       
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            
             print("Activity creation initiated, dismissing view...")
             self.isCreatingActivity = false
             self.dismiss()

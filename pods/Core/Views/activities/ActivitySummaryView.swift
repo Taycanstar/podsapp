@@ -16,6 +16,7 @@ struct ActivitySummaryView: View {
     let endTime: Date
     let podColumns: [PodColumn]
     let navigationAction: (NavigationDestination) -> Void
+    let notes: String? 
     
     @State private var cityName: String = "Loading..."
     @Environment(\.dismiss) private var dismiss
@@ -182,6 +183,20 @@ struct ActivitySummaryView: View {
                             .cornerRadius(12)
                             .frame(maxWidth: .infinity)
                         }
+                        
+                        if let notes = notes, !notes.isEmpty {
+                                VStack(alignment: .leading, spacing: 20) {
+                                    Text("Notes")
+                                        .font(.system(size: 24, weight: .bold))
+                                    
+                                    Text(notes)
+                                        .font(.system(size: 16))
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color("iosnp"))
+                                        .cornerRadius(12)
+                                }
+                            }
 
                     }
                     .padding(.horizontal)

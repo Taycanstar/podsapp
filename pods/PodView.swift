@@ -11,7 +11,7 @@ enum NavigationDestination: Hashable {
     case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case gracie(podId: Int)
     case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
-    case activitySummary(pod: Pod, duration: Int, startTime: Date, endTime: Date, podColumns: [PodColumn])
+    case activitySummary(pod: Pod, duration: Int, startTime: Date, endTime: Date, podColumns: [PodColumn], notes: String?)
     case fullSummary(items: [PodItem], columns: [PodColumn])
     
     
@@ -40,13 +40,14 @@ enum NavigationDestination: Hashable {
             hasher.combine("fullActivityLog")
             hasher.combine(log.id)
             
-        case .activitySummary(let pod, let duration, let startTime, let endTime, let podColumns):
+        case .activitySummary(let pod, let duration, let startTime, let endTime, let podColumns, let notes):
                     hasher.combine("activitySummary")
                     hasher.combine(pod.id)
                     hasher.combine(duration)
                     hasher.combine(startTime)
                     hasher.combine(endTime)
                     hasher.combine(podColumns.map { $0.id })
+                    hasher.combine(notes)
         case .fullSummary(let items, let columns):
                   hasher.combine("fullSummary")
                   hasher.combine(items.map { $0.id })
@@ -70,13 +71,14 @@ enum NavigationDestination: Hashable {
                     return column1.name == column2.name
         case (.fullActivityLog(let log1, _, _), .fullActivityLog(let log2, _, _)):
             return log1.id == log2.id
-        case (.activitySummary(let pod1, let duration1, let startTime1, let endTime1, let columns1),
-                      .activitySummary(let pod2, let duration2, let startTime2, let endTime2, let columns2)):
-                    return pod1.id == pod2.id &&
-                           duration1 == duration2 &&
-                           startTime1 == startTime2 &&
-                           endTime1 == endTime2 &&
-                           columns1.map { $0.id } == columns2.map { $0.id }
+        case (.activitySummary(let pod1, let duration1, let startTime1, let endTime1, let columns1, let notes1),
+              .activitySummary(let pod2, let duration2, let startTime2, let endTime2, let columns2, let notes2)):
+            return pod1.id == pod2.id &&
+                   duration1 == duration2 &&
+                   startTime1 == startTime2 &&
+                   endTime1 == endTime2 &&
+                   columns1.map { $0.id } == columns2.map { $0.id } &&
+                   notes1 == notes2
                     
                 case (.fullSummary(let items1, let columns1), .fullSummary(let items2, let columns2)):
                     return items1.map { $0.id } == items2.map { $0.id } &&
@@ -290,7 +292,7 @@ struct PodView: View {
                                    onDelete: { _ in },
                                    onUpdate: onLogUpdated)
                 
-            case .activitySummary(let pod, let duration, let startTime, let endTime,  let podColumns):
+            case .activitySummary(let pod, let duration, let startTime, let endTime,  let podColumns, let notes):
                     ActivitySummaryView(
                         pod: pod,
                         duration: duration,
@@ -300,7 +302,8 @@ struct PodView: View {
                         podColumns: podColumns,
                         navigationAction: { destination in
                                     navigationPath.append(destination)
-                                }
+                                },
+                        notes: notes
                     )
             case .fullSummary(let items, let columns):
                 FullSummaryView(items: items, columns: podColumns)
@@ -368,13 +371,14 @@ struct PodView: View {
         }
 
         .sheet(isPresented: $isActivityOpen) {
-            ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems,    onActivityFinished: { duration, startTime, endTime in
+            ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems,    onActivityFinished: { duration, startTime, endTime, notes in
                 navigationPath.append(NavigationDestination.activitySummary(  // Use full type here
                     pod: pod,
                     duration: duration,
                     startTime: startTime,
                     endTime: endTime,
-                    podColumns: podColumns
+                    podColumns: podColumns,
+                    notes: notes
                 ))
             })
                 .presentationDetents([.height(50), .large], selection: $activityState.sheetHeight)
