@@ -10,6 +10,9 @@ struct FullActivitySummaryView: View {
     let columns: [PodColumn]
     
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteAlert = false
+        @State private var isDeleting = false
+        @State private var showEditSheet = false
     
     var body: some View {
         ZStack {
@@ -66,8 +69,64 @@ struct FullActivitySummaryView: View {
             }
             .navigationTitle(formattedDate(activity.loggedAt))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                         // MARK: - Ellipsis Menu
+                         ToolbarItem(placement: .navigationBarTrailing) {
+                             Menu {
+                                 Button {
+                                     showEditSheet = true
+                                 } label: {
+                                     Label("Edit", systemImage: "pencil")
+                                 }
+
+                                 Button(role: .destructive) {
+                                     showDeleteAlert = true
+                                 } label: {
+                                     Label("Delete Activity", systemImage: "trash")
+                                         .foregroundColor(.red)
+                                 }
+                             } label: {
+                                 ZStack {
+                                     Circle()
+                                         .fill(Color("schbg"))
+                                         .frame(width: 28, height: 28)
+                                     Image(systemName: "ellipsis")
+                                         .font(.system(size: 14))
+                                         .foregroundColor(.accentColor)
+                                 }
+                             }
+                         }
+                     }
+            .sheet(isPresented: $showEditSheet) {
+                FullEditActivityView(
+                    activity: activity,
+                    columns: columns,
+                    onSave: { updatedActivity in
+                        // Update the activity in the parent view
+                        // Replace `activity` with the updated one
+                        handleUpdate(updatedActivity)
+                        // Optionally dismiss the sheet here
+                    }
+                )
+            }
+
         }
     }
+    private func handleUpdate(_ updatedActivity: Activity) {
+           // Logic to handle updating the activity
+           print("Updated activity:", updatedActivity)
+           dismiss()
+       }
+
+       // MARK: - Delete Activity
+       private func deleteActivity() {
+           isDeleting = true
+           DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+               isDeleting = false
+               print("Deleted activity:", activity)
+               dismiss()
+           }
+       }
 }
 
 // MARK: - Column Values Grid

@@ -259,55 +259,7 @@ private func onCancelActivity() {
             }
         }
     
-//    private func handleFinish() {
-//        guard !isCreatingActivity else { return }
-//        isCreatingActivity = true
-//        
-//        let endTime = Date()
-//        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
-//        let duration = Int(activityState.stopwatch.elapsedTime)
-//        
-//        print("Preparing to create activity...")
-//        
-//        // Prepare items data
-//        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
-//            let values = columnValues[item.id] ?? [:]
-//            let convertedValues = values.mapValues { value in
-//                convertColumnValueToAny(value)
-//            }
-//            return (
-//                id: item.id,
-//                notes: nil,
-//                columnValues: convertedValues
-//            )
-//        }
-//        
-//        // Create activity
-//        activityManager.createActivity(
-//            duration: Int(activityState.stopwatch.elapsedTime),
-//            notes: activityNotes.isEmpty ? nil : activityNotes,
-//            items: itemsData
-//        )
-//        
-//        // Update each item's columnValues
-//        for (index, item) in items.enumerated() {
-//            if let values = columnValues[item.id] {
-//                items[index].columnValues = values
-//            }
-//        }
-//        
-//        
-//        onActivityFinished(duration, startTime, endTime)
-//        activityState.finishActivity()
-//       
-//        
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//            
-//            print("Activity creation initiated, dismissing view...")
-//            self.isCreatingActivity = false
-//            self.dismiss()
-//        }
-//    }
+
     private func handleFinish() {
         guard !isCreatingActivity else { return }
         isCreatingActivity = true
