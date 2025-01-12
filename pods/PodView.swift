@@ -161,6 +161,8 @@ struct PodView: View {
     @State private var isLoading = true
 
     @StateObject private var logManager = ActivityLogManager()
+    @StateObject private var activityManager = ActivityManager()
+    @StateObject private var singleItemManager = SingleItemActivityManager()
     @ObservedObject private var activityState = ActivityState.shared
     @State private var showCountdown = false
     
@@ -278,7 +280,14 @@ struct PodView: View {
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
 //                ActivityLogView(manager: logManager, columns: podColumns)
-                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
+//                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
+                ActivityLogView(
+                        activityManager: activityManager,
+                        singleItemManager: singleItemManager,
+                        columns: podColumns,
+                        podId: pod.id,
+                        userEmail: viewModel.email
+                    )
             case .trends(let podId):
 
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
@@ -343,7 +352,8 @@ struct PodView: View {
 
         
              fetchFullPodDetails(showLoadingIndicator: true)
-            logManager.initialize(podId: pod.id, userEmail: viewModel.email)
+//            logManager.initialize(podId: pod.id, userEmail: viewModel.email)
+            initializeManagers()
              // Listen for app becoming active
              NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                  fetchFullPodDetails(showLoadingIndicator: false)
@@ -573,6 +583,12 @@ struct PodView: View {
                 .foregroundColor(Color.gray.opacity(0.2)),
             alignment: .top
         )
+    }
+    
+    
+    private func initializeManagers() {
+        activityManager.initialize(podId: pod.id, userEmail: viewModel.email)
+        singleItemManager.initialize(podId: pod.id, userEmail: viewModel.email)
     }
     
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
