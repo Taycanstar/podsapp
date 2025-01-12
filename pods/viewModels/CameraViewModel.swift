@@ -305,23 +305,6 @@ struct PodJSON: Codable {
  
 }
 
-
-
-
-//struct PodItemJSON: Codable {
-//    let id: Int
-//    let videoURL: String?
-//    let imageURL: String?
-//    let label: String
-//    let thumbnail: String?
-//    let itemType: String?
-//    let notes: String?
-////    let columnValues: [String: ColumnValue]?
-//    let defaultColumnValues: [String: ColumnValue]
-//    let userColumnValues: [String: ColumnValue]?
-//
-//}
-
 struct PodItemJSON: Codable {
     let id: Int
     let videoURL: String?
@@ -470,17 +453,56 @@ private struct AnyDecodable: Decodable {
     }
 }
 
+//struct Activity: Identifiable, Codable {
+//    let id: Int
+//    let podId: Int
+//    let userEmail: String
+//    let duration: Int
+//    let loggedAt: Date
+//    let notes: String?
+//    let userName: String
+//    
+//    enum CodingKeys: String, CodingKey {
+//        case id, podId, userEmail, duration, loggedAt, notes, userName
+//    }
+//    
+//    init(from decoder: Decoder) throws {
+//        let container = try decoder.container(keyedBy: CodingKeys.self)
+//        id = try container.decode(Int.self, forKey: .id)
+//        podId = try container.decode(Int.self, forKey: .podId)
+//        userEmail = try container.decode(String.self, forKey: .userEmail)
+//        duration = try container.decode(Int.self, forKey: .duration)
+//        
+//        let dateString = try container.decode(String.self, forKey: .loggedAt)
+//        let formatter = ISO8601DateFormatter()
+//        loggedAt = formatter.date(from: dateString) ?? Date()
+//        
+//        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+//        userName = try container.decode(String.self, forKey: .userName)
+//    }
+//}
+// Models.swift
 struct Activity: Identifiable, Codable {
     let id: Int
     let podId: Int
     let userEmail: String
+    let userName: String
     let duration: Int
     let loggedAt: Date
     let notes: String?
-    let userName: String
+    let isSingleItem: Bool
+    let items: [ActivityItem]
     
-    enum CodingKeys: String, CodingKey {
-        case id, podId, userEmail, duration, loggedAt, notes, userName
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case podId
+        case userEmail
+        case userName
+        case duration
+        case loggedAt
+        case notes
+        case isSingleItem = "is_single_item"
+        case items
     }
     
     init(from decoder: Decoder) throws {
@@ -488,17 +510,103 @@ struct Activity: Identifiable, Codable {
         id = try container.decode(Int.self, forKey: .id)
         podId = try container.decode(Int.self, forKey: .podId)
         userEmail = try container.decode(String.self, forKey: .userEmail)
+        userName = try container.decode(String.self, forKey: .userName)
         duration = try container.decode(Int.self, forKey: .duration)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        isSingleItem = try container.decode(Bool.self, forKey: .isSingleItem)
+        items = try container.decode([ActivityItem].self, forKey: .items)
         
         let dateString = try container.decode(String.self, forKey: .loggedAt)
-        let formatter = ISO8601DateFormatter()
-        loggedAt = formatter.date(from: dateString) ?? Date()
-        
-        notes = try container.decodeIfPresent(String.self, forKey: .notes)
-        userName = try container.decode(String.self, forKey: .userName)
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            loggedAt = date
+        } else {
+            throw DecodingError.dataCorruptedError(forKey: .loggedAt, in: container, debugDescription: "Date format is invalid")
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(podId, forKey: .podId)
+        try container.encode(userEmail, forKey: .userEmail)
+        try container.encode(userName, forKey: .userName)
+        try container.encode(duration, forKey: .duration)
+        try container.encode(ISO8601DateFormatter().string(from: loggedAt), forKey: .loggedAt)
+        try container.encodeIfPresent(notes, forKey: .notes)
+        try container.encode(isSingleItem, forKey: .isSingleItem)
+        try container.encode(items, forKey: .items)
     }
 }
 
+struct ActivityItem: Identifiable, Codable {
+    let id: Int
+    let activityId: Int
+    let itemId: Int
+    let itemLabel: String
+    let loggedAt: Date
+    let notes: String?
+    let columnValues: [String: ColumnValue]
+    
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case activityId = "activity_id"
+        case itemId = "item_id"
+        case itemLabel = "item_label"
+        case loggedAt = "logged_at"
+        case notes
+        case columnValues = "column_values"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        activityId = try container.decode(Int.self, forKey: .activityId)
+        itemId = try container.decode(Int.self, forKey: .itemId)
+        itemLabel = try container.decode(String.self, forKey: .itemLabel)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        columnValues = try container.decode([String: ColumnValue].self, forKey: .columnValues)
+        
+        let dateString = try container.decode(String.self, forKey: .loggedAt)
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            loggedAt = date
+        } else {
+            throw DecodingError.dataCorruptedError(forKey: .loggedAt, in: container, debugDescription: "Date format is invalid")
+        }
+    }
+}
+
+struct ActivityItemsResponse: Codable {
+    let items: [ActivityItem]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+}
+
+struct ActivityResponse: Codable {
+    let activities: [Activity]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+}
+
+extension PodItem {
+    init(from activityItem: ActivityItem) {
+        self.id = activityItem.itemId
+        self.metadata = activityItem.itemLabel
+        self.notes = activityItem.notes ?? ""
+        self.columnValues = activityItem.columnValues
+        
+        // Set default values for other properties
+        self.videoURL = nil
+        self.image = nil
+        self.thumbnail = nil
+        self.thumbnailURL = nil
+        self.imageURL = nil
+        self.itemType = nil
+        self.uuid = nil
+        self.player = nil
+    }
+}
 
 struct TimeValue: Codable, Equatable {
     var hours: Int

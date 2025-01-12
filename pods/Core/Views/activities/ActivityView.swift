@@ -331,28 +331,36 @@ private func onCancelActivity() {
             )
         }
         
-        // Create activity
+        // Use activityManager.createActivity with the correct parameters
         activityManager.createActivity(
-            duration: Int(activityState.stopwatch.elapsedTime),
+            duration: duration,
             notes: activityNotes.isEmpty ? nil : activityNotes,
             items: itemsData
-        )
-        
-        // Update each item's columnValues
-        for (index, item) in items.enumerated() {
-            if let values = columnValues[item.id] {
-                items[index].columnValues = values
+        ) { result in     // Remove the [weak self] and guard since we're in a struct
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Update each item's columnValues
+                    for (index, item) in items.enumerated() {
+                        if let values = columnValues[item.id] {
+                            items[index].columnValues = values
+                        }
+                    }
+                    
+                    onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+                    activityState.finishActivity()
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        print("Activity creation completed, dismissing view...")
+                        isCreatingActivity = false
+                        dismiss()
+                    }
+                    
+                case .failure(let error):
+                    print("Failed to create activity:", error)
+                    isCreatingActivity = false
+                }
             }
-        }
-        
-        // Pass activityNotes to callback
-        onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
-        activityState.finishActivity()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            print("Activity creation initiated, dismissing view...")
-            self.isCreatingActivity = false
-            self.dismiss()
         }
     }
 

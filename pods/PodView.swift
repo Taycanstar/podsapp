@@ -277,7 +277,8 @@ struct PodView: View {
             case .podMembers:
                 PodMembersView(podId: pod.id, teamId: pod.teamId)
             case .activityLog:
-                ActivityLogView(manager: logManager, columns: podColumns)
+//                ActivityLogView(manager: logManager, columns: podColumns)
+                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
             case .trends(let podId):
 
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)

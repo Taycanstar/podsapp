@@ -22,7 +22,8 @@ struct PodOptionsView: View {
     @Environment(\.colorScheme) var colorScheme
     var navigationAction: (NavigationDestination) -> Void
     
-    @State private var shareItem: ActivityItem?
+//    @State private var shareItem: ActivityItem?
+    @State private var shareItem: ShareSheetItem?  // Changed from ActivityItem
     var body: some View {
         ZStack {
             (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
@@ -89,7 +90,7 @@ struct PodOptionsView: View {
                         HapticFeedback.generate()
                     }, color: .primary)
                     
-                    MenuItemView(iconName: "bolt.horizontal.circle", text: "Activities", action: {
+                    MenuItemView(iconName: "list.clipboard", text: "Logs", action: {
                         dismiss()
 //                        onActivityLogSelected()
                      
@@ -158,7 +159,12 @@ struct PodOptionsView: View {
     }
 }
 
-struct ActivityItem: Identifiable {
+//struct ActivityItem: Identifiable {
+//    let id = UUID()
+//    let items: [Any]
+//    let activities: [UIActivity]? = nil
+//}
+struct ShareSheetItem: Identifiable {
     let id = UUID()
     let items: [Any]
     let activities: [UIActivity]? = nil

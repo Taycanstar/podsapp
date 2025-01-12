@@ -3503,8 +3503,152 @@ class NetworkManager {
              }
          }.resume()
      }
-
-
+    
+    //new
+    func fetchUserActivities(podId: Int, userEmail: String, page: Int = 1, completion: @escaping (Result<(activities: [Activity], hasMore: Bool), Error>) -> Void) {
+            let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let urlString = "\(baseUrl)/get-user-activities/\(podId)/\(encodedEmail)/?page=\(page)"
+            
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    let decoder = JSONDecoder()
+                    let response = try decoder.decode(ActivityResponse.self, from: data)
+                    completion(.success((activities: response.activities, hasMore: response.hasMore)))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+            task.resume()
+        }
+        
+        func fetchUserActivityItems(podId: Int, userEmail: String, page: Int = 1, completion: @escaping (Result<(items: [ActivityItem], hasMore: Bool), Error>) -> Void) {
+            let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let urlString = "\(baseUrl)/get-user-activity-items/\(podId)/\(encodedEmail)/?page=\(page)"
+            
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    let decoder = JSONDecoder()
+                    let response = try decoder.decode(ActivityItemsResponse.self, from: data)
+                    completion(.success((items: response.items, hasMore: response.hasMore)))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+            task.resume()
+        }
+        
+        func deleteActivity(activityId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+            let urlString = "\(baseUrl)/delete-activity/\(activityId)/"
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                if (200...299).contains(httpResponse.statusCode) {
+                    completion(.success(()))
+                } else {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+            task.resume()
+        }
+        
+        func createSingleItemActivity(podId: Int,
+                                    userEmail: String,
+                                    itemId: Int,
+                                    notes: String?,
+                                    columnValues: [String: ColumnValue],
+                                    completion: @escaping (Result<Activity, Error>) -> Void) {
+            let urlString = "\(baseUrl)/create-single-item-activity/"
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            let parameters: [String: Any] = [
+                "podId": podId,
+                "userEmail": userEmail,
+                "itemId": itemId,
+                "notes": notes ?? "",
+                "columnValues": columnValues
+            ]
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+            } catch {
+                completion(.failure(error))
+                return
+            }
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    let decoder = JSONDecoder()
+                    let activity = try decoder.decode(Activity.self, from: data)
+                    completion(.success(activity))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+            task.resume()
+        }
 
     
     func addMediaToItem(podId: Int, itemId: Int, mediaType: String, mediaURL: URL? = nil, image: UIImage? = nil, completion: @escaping (Bool, Error?) -> Void) {
