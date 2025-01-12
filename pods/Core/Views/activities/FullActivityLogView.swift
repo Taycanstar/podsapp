@@ -45,8 +45,7 @@ struct FullActivityLogView: View {
                             Text(log.notes)
                                 .font(.body)
                             
-                            Divider() // Add a divider here
-//                                   .padding(.bottom, 10)
+                            Divider()
                         }
                         Spacer(minLength: 10) // Add space before the delete button
                                                 
@@ -91,19 +90,7 @@ struct FullActivityLogView: View {
                       }
                   }
               }
-//            .sheet(isPresented: $showEditSheet) {
-//                EditActivityView(
-//                    log: log,
-//                    columns: columns,
-//                    onSave: { updatedLog in
-//
-//                        log = updatedLog
-//                                               onUpdate(updatedLog)
-//                                               dismiss()
-//       
-//                    }
-//                )
-//            }
+
             .sheet(isPresented: $showEditSheet) {
                 EditActivityView(
                     log: log,

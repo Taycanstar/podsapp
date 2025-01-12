@@ -13,6 +13,7 @@ enum NavigationDestination: Hashable {
     case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
     case activitySummary(pod: Pod, duration: Int, startTime: Date, endTime: Date, podColumns: [PodColumn], notes: String?)
     case fullSummary(items: [PodItem], columns: [PodColumn])
+    case fullActivitySummary(activity: Activity, columns: [PodColumn])
     
     
     func hash(into hasher: inout Hasher) {
@@ -52,6 +53,10 @@ enum NavigationDestination: Hashable {
                   hasher.combine("fullSummary")
                   hasher.combine(items.map { $0.id })
             hasher.combine(columns.map { $0.id })
+        case .fullActivitySummary(let activity, let columns):
+            hasher.combine("fullActivitySummary")
+            hasher.combine(activity.id)               // Unique identifier for the activity
+            hasher.combine(columns.map { $0.id })
             
                }
         }
@@ -83,6 +88,10 @@ enum NavigationDestination: Hashable {
                 case (.fullSummary(let items1, let columns1), .fullSummary(let items2, let columns2)):
                     return items1.map { $0.id } == items2.map { $0.id } &&
                            columns1.map { $0.id } == columns2.map { $0.id }
+        case (.fullActivitySummary(let activity1, let columns1),
+              .fullActivitySummary(let activity2, let columns2)):
+            return activity1.id == activity2.id &&
+                   columns1.map { $0.id } == columns2.map { $0.id }
         default:
             return false
         }
@@ -317,6 +326,10 @@ struct PodView: View {
                     )
             case .fullSummary(let items, let columns):
                 FullSummaryView(items: items, columns: podColumns)
+            case .fullActivitySummary(let activity, let columns):
+                FullActivitySummaryView(activity: activity, columns: columns)
+
+
                             
             }
         }
