@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FullEditActivityView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var activityManager: ActivityManager
     let activity: Activity
     let columns: [PodColumn]
     let onSave: (Activity) -> Void
@@ -24,7 +25,8 @@ struct FullEditActivityView: View {
     // If you want the same “showNotesInput” toggle as ActivityView
     @State private var showNotesInput = false  // optionally track if we show notes area
 
-    init(activity: Activity, columns: [PodColumn], onSave: @escaping (Activity) -> Void) {
+    init(activityManager: ActivityManager, activity: Activity, columns: [PodColumn], onSave: @escaping (Activity) -> Void) {
+        self._activityManager = ObservedObject(wrappedValue: activityManager)
         self.activity = activity
         self.columns = columns
         self.onSave = onSave
@@ -157,6 +159,9 @@ struct FullEditActivityView: View {
                     }
                     .padding(.top, 10) // some top padding if you like
                 }
+//                .onAppear {
+//                            initializeActivityManager()
+//                        }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Cancel") {
@@ -255,31 +260,74 @@ struct FullEditActivityView: View {
             groupedRowsCounts[itemId]?[groupType] = currentCount - 1
         }
     }
+    
+    private func convertColumnValueToAny(_ value: ColumnValue) -> Any {
+        switch value {
+        case .number(let num):
+            return num
+        case .string(let str):
+            return str
+        case .time(let timeValue):
+            return timeValue.toString
+        case .array(let array):
+            // Recursively convert each element
+            return array.map { convertColumnValueToAny($0) }
+        case .null:
+            return NSNull()
+        }
+    }
+    
+//    private func initializeActivityManager() {
+//            // Ensure `activityManager` is initialized with correct data
+//            activityManager.initialize(podId: activity.podId, userEmail: activity.userEmail)
+//        }
 
     // MARK: - Save
     private func saveActivity() {
-//        isSubmitting = true
-//        // Rebuild items with updated columnValues
-//        let updatedItems: [ActivityItem] = items.map { originalItem in
-//            var newItem = originalItem
-//            newItem.columnValues = columnValues[originalItem.id] ?? [:]
-//            return newItem
-//        }
-//        let updatedActivity = Activity(
-//            id: activity.id,
-//            podId: activity.podId,
-//            userEmail: activity.userEmail,
-//            userName: activity.userName,
-//            duration: activity.duration,
-//            loggedAt: activity.loggedAt,
-//            notes: notes.isEmpty ? nil : notes,
-//            isSingleItem: activity.isSingleItem,
-//            items: updatedItems
-//        )
-//        
-//        onSave(updatedActivity)
-//        dismiss()
+        isSubmitting = true
+        
+        // 1) Rebuild items array
+        let updatedItems: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+            let convertedValues = (columnValues[item.id] ?? [:]).mapValues { val in
+                convertColumnValueToAny(val)
+            }
+            return (
+                id: item.itemId,     // must match the PodItem ID for the backend
+                notes: item.notes,
+                columnValues: convertedValues
+            )
+        }
+
+        // 2) Call the new manager function
+        activityManager.updateActivity(
+            activityId: activity.id,
+            notes: notes.isEmpty ? nil : notes,
+            items: updatedItems
+        ) { result in
+            DispatchQueue.main.async {
+                self.isSubmitting = false
+                switch result {
+                case .success:
+                    // 3) Retrieve the now-updated version from the manager (if needed)
+                    // or just pass back the updated version from the manager
+                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.activity.id }) {
+                        let updated = self.activityManager.activities[idx]
+                        self.onSave(updated)
+                    } else {
+                        // fallback, pass the old activity or handle error
+                        self.onSave(self.activity)
+                    }
+                    self.dismiss()
+
+                case .failure(let error):
+                    print("Failed to update activity:", error)
+                    // Show an alert or handle UI error state
+                }
+            }
+        }
     }
+
+
 
     // MARK: - Clear Field & Hide Keyboard
     private func clearFocusedField() {

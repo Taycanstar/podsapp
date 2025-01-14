@@ -3504,6 +3504,73 @@ class NetworkManager {
          }.resume()
      }
     
+    func updateActivity(
+        activityId: Int,
+        userEmail: String,
+        notes: String?,
+        items: [(id: Int, notes: String?, columnValues: [String: Any])],
+        completion: @escaping (Result<Activity, Error>) -> Void
+    ) {
+        // 1) Construct the URL for your “update-activity/<id>/” endpoint
+        let urlString = "\(baseUrl)/update-activity/\(activityId)/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // 2) Build the items data array
+        let itemsData = items.map { item in
+            [
+                "itemId": item.id,
+                "notes": item.notes ?? "",
+                "columnValues": item.columnValues
+            ]
+        }
+        
+        // 3) Create the request body
+        let parameters: [String: Any] = [
+            "userEmail": userEmail,
+            "notes": notes ?? "",
+            "items": itemsData
+        ]
+        
+        // 4) Set up the URLRequest
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"  // or PATCH, depending on your backend
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        // 5) Make the network call
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            // Handle client-side errors
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            // 6) Decode the updated Activity
+            do {
+                let decoder = JSONDecoder()
+                let updatedActivity = try decoder.decode(Activity.self, from: data)
+                completion(.success(updatedActivity))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    
     //new
     func fetchUserActivities(podId: Int, userEmail: String, page: Int = 1, completion: @escaping (Result<(activities: [Activity], hasMore: Bool), Error>) -> Void) {
             let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

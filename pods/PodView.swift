@@ -327,7 +327,7 @@ struct PodView: View {
             case .fullSummary(let items, let columns):
                 FullSummaryView(items: items, columns: podColumns)
             case .fullActivitySummary(let activity, let columns):
-                FullActivitySummaryView(activity: activity, columns: columns)
+                FullActivitySummaryView(activity: activity, columns: columns, activityManager: activityManager)
 
 
                             
