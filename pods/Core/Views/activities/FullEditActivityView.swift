@@ -277,28 +277,95 @@ struct FullEditActivityView: View {
         }
     }
     
-//    private func initializeActivityManager() {
-//            // Ensure `activityManager` is initialized with correct data
-//            activityManager.initialize(podId: activity.podId, userEmail: activity.userEmail)
-//        }
 
     // MARK: - Save
+//    private func saveActivity() {
+//        isSubmitting = true
+//        
+//        // 1) Rebuild items array
+//        let updatedItems: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+//            let convertedValues = (columnValues[item.id] ?? [:]).mapValues { val in
+//                convertColumnValueToAny(val)
+//            }
+//            return (
+//                id: item.itemId,     // must match the PodItem ID for the backend
+//                notes: item.notes,
+//                columnValues: convertedValues
+//            )
+//        }
+//
+//        // 2) Call the new manager function
+//        activityManager.updateActivity(
+//            activityId: activity.id,
+//            notes: notes.isEmpty ? nil : notes,
+//            items: updatedItems
+//        ) { result in
+//            DispatchQueue.main.async {
+//                self.isSubmitting = false
+//                switch result {
+//                case .success:
+//                    // 3) Retrieve the now-updated version from the manager (if needed)
+//                    // or just pass back the updated version from the manager
+//                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.activity.id }) {
+//                        let updated = self.activityManager.activities[idx]
+//                        self.onSave(updated)
+//                    } else {
+//                        // fallback, pass the old activity or handle error
+//                        self.onSave(self.activity)
+//                    }
+//                    self.dismiss()
+//
+//                case .failure(let error):
+//                    print("Failed to update activity:", error)
+//                    // Show an alert or handle UI error state
+//                }
+//            }
+//        }
+//    }
+    
     private func saveActivity() {
-        isSubmitting = true
-        
-        // 1) Rebuild items array
+        // 1) Build the updatedItems array for the backend
         let updatedItems: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
             let convertedValues = (columnValues[item.id] ?? [:]).mapValues { val in
                 convertColumnValueToAny(val)
             }
             return (
-                id: item.itemId,     // must match the PodItem ID for the backend
+                id: item.itemId,
                 notes: item.notes,
                 columnValues: convertedValues
             )
         }
 
-        // 2) Call the new manager function
+        // 2) Construct a local updated Activity
+        var localUpdatedActivity = activity
+        localUpdatedActivity.notes = notes
+        
+        // Update each item’s columnValues
+        var newItems = [ActivityItem]()
+        for item in items {
+            var changedItem = item
+            changedItem.columnValues = columnValues[item.id] ?? [:]
+            newItems.append(changedItem)
+        }
+        localUpdatedActivity.items = newItems
+
+        // 3) **Optimistically update** the manager’s activities array
+        if let idx = activityManager.activities.firstIndex(where: { $0.id == activity.id }) {
+            activityManager.activities[idx] = localUpdatedActivity
+        } else {
+            // If this activity somehow wasn’t in the array, just add it
+            activityManager.activities.append(localUpdatedActivity)
+        }
+
+        // 4) Optionally call onSave(...) if your parent also needs a callback
+        //    (not strictly required if parent's only data source is activityManager.activities)
+        onSave(localUpdatedActivity)
+
+        // 5) Instantly dismiss the sheet => no lag for the user
+        dismiss()
+
+        // 6) Fire the actual update call in the background
+        isSubmitting = true
         activityManager.updateActivity(
             activityId: activity.id,
             notes: notes.isEmpty ? nil : notes,
@@ -308,24 +375,23 @@ struct FullEditActivityView: View {
                 self.isSubmitting = false
                 switch result {
                 case .success:
-                    // 3) Retrieve the now-updated version from the manager (if needed)
-                    // or just pass back the updated version from the manager
-                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.activity.id }) {
-                        let updated = self.activityManager.activities[idx]
-                        self.onSave(updated)
-                    } else {
-                        // fallback, pass the old activity or handle error
-                        self.onSave(self.activity)
-                    }
-                    self.dismiss()
-
+                    // If the server returns a more “definitive” updatedActivity,
+                    // you can merge it in. For example:
+                    //   if let new = updatedActivityFromServer,
+                    //      let finalIdx = activityManager.activities.firstIndex(...)
+                    //   activityManager.activities[finalIdx] = new
+                    break
                 case .failure(let error):
-                    print("Failed to update activity:", error)
-                    // Show an alert or handle UI error state
+                    // Optional: revert or show an alert.
+                    // The user already sees the updated data, so decide how you handle a failure.
+                    print("Failed to update activity in the backend:", error)
                 }
             }
         }
     }
+
+
+
 
 
 

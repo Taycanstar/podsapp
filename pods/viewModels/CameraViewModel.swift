@@ -489,9 +489,9 @@ struct Activity: Identifiable, Codable {
     let userName: String
     let duration: Int
     let loggedAt: Date
-    let notes: String?
+    var notes: String?
     let isSingleItem: Bool
-    let items: [ActivityItem]
+    var items: [ActivityItem]
     
     private enum CodingKeys: String, CodingKey {
         case id
@@ -544,8 +544,8 @@ struct ActivityItem: Identifiable, Codable {
     let itemId: Int
     let itemLabel: String
     let loggedAt: Date
-    let notes: String?
-    let columnValues: [String: ColumnValue]
+    var notes: String?
+    var columnValues: [String: ColumnValue]
     
     private enum CodingKeys: String, CodingKey {
         case id
