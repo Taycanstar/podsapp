@@ -16,6 +16,7 @@ struct podsApp: App {
     @StateObject var homeViewModel = HomeViewModel()
     @StateObject var videoPreloader = VideoPreloader()
     @StateObject private var themeManager = ThemeManager()
+    @StateObject private var activityManager = ActivityManager() // Direct instantiation
     @StateObject private var deepLinkHandler = DeepLinkHandler()
     @StateObject private var subscriptionManager = SubscriptionManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -31,7 +32,8 @@ struct podsApp: App {
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
                 .environmentObject(homeViewModel)
-                .environmentObject(themeManager) 
+                .environmentObject(themeManager)
+                .environmentObject(activityManager)
                 .environmentObject(deepLinkHandler)
                 .environmentObject(videoPreloader)
                 .environmentObject(subscriptionManager)

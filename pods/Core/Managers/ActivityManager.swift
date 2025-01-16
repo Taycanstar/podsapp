@@ -10,6 +10,7 @@
 import Foundation
 
 class ActivityManager: ObservableObject {
+    
     @Published var activities: [Activity] = []
     @Published var isLoading = false
     @Published var hasMore = true
@@ -100,17 +101,53 @@ class ActivityManager: ObservableObject {
         }
     }
     
+
+//    func createActivity(
+//            duration: Int,
+//            notes: String?,
+//            items: [(id: Int, notes: String?, columnValues: [String: Any])],
+//            completion: @escaping (Result<Activity, Error>) -> Void
+//        ) {
+//            guard let podId = podId, let userEmail = userEmail else {
+//                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
+//                return
+//            }
+//            
+//            networkManager.createActivity(
+//                podId: podId,
+//                userEmail: userEmail,
+//                duration: duration,
+//                notes: notes,
+//                items: items
+//            ) { [weak self] result in
+//                DispatchQueue.main.async {
+//                    guard let self = self else { return }
+//                    switch result {
+//                    case .success(let activity):
+//                        if !activity.isSingleItem {
+//                            self.activities.insert(activity, at: 0)
+//                        }
+//                        completion(.success(activity))
+//                        
+//                    case .failure(let error):
+//                        self.error = error
+//                        completion(.failure(error))
+//                    }
+//                }
+//            }
+//        }
     func createActivity(
         duration: Int,
         notes: String?,
         items: [(id: Int, notes: String?, columnValues: [String: Any])],
-        completion: @escaping (Result<Void, Error>) -> Void
+        tempId: Int? = nil, // Optional tempId
+        completion: @escaping (Result<Activity, Error>) -> Void
     ) {
         guard let podId = podId, let userEmail = userEmail else {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
             return
         }
-        
+
         networkManager.createActivity(
             podId: podId,
             userEmail: userEmail,
@@ -118,25 +155,22 @@ class ActivityManager: ObservableObject {
             notes: notes,
             items: items
         ) { [weak self] result in
-            guard let self = self else { return }
-            
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 switch result {
                 case .success(let activity):
-                    if !activity.isSingleItem {
+                    if let tempId = tempId,
+                       let index = self.activities.firstIndex(where: { $0.id == tempId }) {
+                        // Replace temporary activity with actual activity
+                        self.activities[index] = activity
+                    } else {
+                        // Insert actual activity normally
                         self.activities.insert(activity, at: 0)
-                        // Cache first page with new activity
-                        let firstPageActivities = Array(self.activities.prefix(self.pageSize))
-                        let response = ActivityResponse(
-                            activities: firstPageActivities,
-                            hasMore: self.activities.count > self.pageSize,
-                            totalPages: (self.activities.count + self.pageSize - 1) / self.pageSize,
-                            currentPage: 1
-                        )
-                        self.cacheActivities(response, forPage: 1)
                     }
-                    completion(.success(()))
+                    completion(.success(activity))
+
                 case .failure(let error):
+                    self.error = error
                     completion(.failure(error))
                 }
             }

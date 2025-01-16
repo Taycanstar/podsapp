@@ -12,7 +12,8 @@ import Combine
 struct ActivityView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var activityManager = ActivityManager()
+//    @ObservedObject var activityManager: ActivityManager
+    @EnvironmentObject var activityManager: ActivityManager
     @Binding var pod: Pod
     @Binding var podColumns: [PodColumn]
     @Binding var items: [PodItem]
@@ -260,6 +261,69 @@ private func onCancelActivity() {
         }
     
 
+//    private func handleFinish() {
+//        guard !isCreatingActivity else { return }
+//        isCreatingActivity = true
+//        
+//        let endTime = Date()
+//        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
+//        let duration = Int(activityState.stopwatch.elapsedTime)
+//        
+//        print("Preparing to create activity...")
+//        
+//        // Prepare items data
+//        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+//            let values = columnValues[item.id] ?? [:]
+//            let convertedValues = values.mapValues { value in
+//                convertColumnValueToAny(value)
+//            }
+//            return (
+//                id: item.id,
+//                notes: nil,
+//                columnValues: convertedValues
+//            )
+//        }
+//        
+//        // Use activityManager.createActivity with the correct parameters
+//        activityManager.createActivity(
+//            duration: duration,
+//            notes: activityNotes.isEmpty ? nil : activityNotes,
+//            items: itemsData
+//        ) { result in     // Remove the [weak self] and guard since we're in a struct
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success:
+//                    // Update each item's columnValues
+//                    for (index, item) in items.enumerated() {
+//                        if let values = columnValues[item.id] {
+//                            items[index].columnValues = values
+//                        }
+//                    }
+//                    
+//                    
+//                    
+//                    onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+//                    activityState.finishActivity()
+//                    
+//                    
+//                    
+//                    DispatchQueue.main.asyncAfter(deadline: .now() ) {
+//                        print("Activity creation completed, dismissing view...")
+//                        isCreatingActivity = false
+//                        dismiss()
+//                    }
+//                    
+//                case .failure(let error):
+//                    print("Failed to create activity:", error)
+//                    isCreatingActivity = false
+//                }
+//            }
+//        }
+//    }
+
+
+    // ActivityView.swift
+
     private func handleFinish() {
         guard !isCreatingActivity else { return }
         isCreatingActivity = true
@@ -270,7 +334,7 @@ private func onCancelActivity() {
         
         print("Preparing to create activity...")
         
-        // Prepare items data
+        // Prepare items data for the backend
         let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
             let values = columnValues[item.id] ?? [:]
             let convertedValues = values.mapValues { value in
@@ -283,38 +347,71 @@ private func onCancelActivity() {
             )
         }
         
-        // Use activityManager.createActivity with the correct parameters
+        // Step 1: Create a temporary activity with a unique negative temporary ID
+        let tempId = Int.random(in: Int.min ... -1) // Unique negative ID
+        let tempActivity = Activity(
+            id: tempId, // Temporary negative ID
+            podId: pod.id,
+            userEmail: viewModel.email,
+            userName: viewModel.username, // Ensure 'userName' is available in viewModel
+            duration: duration,
+            loggedAt: startTime,
+            notes: activityNotes.isEmpty ? nil : activityNotes,
+            isSingleItem: false,
+            items: items.map { item in
+                ActivityItem(
+                    id: Int.random(in: Int.min ... -1), // Unique negative ID for ActivityItem
+                    activityId: tempId, // Link to the temporary activity
+                    itemId: item.id, // Assuming 'item.id' corresponds to 'pod_item.id'
+                    itemLabel: item.metadata, // Use 'metadata' instead of 'label'
+                    loggedAt: startTime,
+                    notes: nil, // 'notes' is optional
+                    columnValues: columnValues[item.id] ?? [:]
+                )
+            }
+        )
+        
+        // Step 2: Insert the temporary activity into ActivityManager's activities array
+        activityManager.activities.insert(tempActivity, at: 0)
+        print("Inserted temporary activity with ID: \(tempId)")
+        
+        // Step 3: Dismiss ActivityView immediately to show the temporary activity in ActivityLogView
+        dismiss()
+        print("Dismissed ActivityView to show temporary activity.")
+        
+        // Step 4: Call onActivityFinished to navigate to ActivitySummaryView immediately
+        onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+        print("Called onActivityFinished to navigate to ActivitySummaryView.")
+        
+        // Step 5: Perform the network request to create the activity on the backend, passing tempId
         activityManager.createActivity(
             duration: duration,
             notes: activityNotes.isEmpty ? nil : activityNotes,
-            items: itemsData
-        ) { result in     // Remove the [weak self] and guard since we're in a struct
+            items: itemsData,
+            tempId: tempId // Pass tempId here
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success:
-                    // Update each item's columnValues
-                    for (index, item) in items.enumerated() {
-                        if let values = columnValues[item.id] {
-                            items[index].columnValues = values
-                        }
-                    }
-                    
-                    onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+                case .success(let actualActivity):
+                    // ActivityManager handles replacing the temp activity
                     activityState.finishActivity()
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        print("Activity creation completed, dismissing view...")
-                        isCreatingActivity = false
-                        dismiss()
-                    }
+                    print("Activity creation completed.")
+                    isCreatingActivity = false
                     
                 case .failure(let error):
-                    print("Failed to create activity:", error)
+                    // Step 5B: Remove the temporary activity and notify the user
+                    activityManager.activities.removeAll { $0.id == tempId }
+                    print("Failed to create activity on backend, removed temporary activity ID: \(tempId)")
                     isCreatingActivity = false
+                    // Optionally, handle error notification here or in ActivitySummaryView
+                    // showErrorAlert(message: "Failed to create activity. Please try again.")
                 }
             }
         }
     }
+
+
+
 
     
     private func clearFocusedField() {

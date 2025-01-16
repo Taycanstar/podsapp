@@ -1,132 +1,8 @@
-//import SwiftUI
-//
-//struct ActivityLogView: View {
-//    @ObservedObject var manager: ActivityLogManager
-//    @State private var searchText: String = ""
-//    @State private var filteredLogs: [PodItemActivityLog] = []
-//    let columns: [PodColumn]
-//    
-//    init(manager: ActivityLogManager, columns: [PodColumn]) {
-//        self.manager = manager
-//        self.columns = columns
-//    }
-//
-//    var body: some View {
-//        ZStack {
-//            if manager.isLoading && manager.logs.isEmpty {
-//                ProgressView()
-//            } else {
-//                List {
-//                    ForEach(filteredLogs, id: \.id) { log in
-//                        if let activityIndex = manager.logs.firstIndex(where: { $0.id == log.id }) {
-//                            NavigationLink(value: NavigationDestination.fullActivityLog(
-//                                log: Binding(
-//                                    get: { manager.logs[activityIndex] },
-//                                    set: { manager.updateLog(at: activityIndex, with: $0) }
-//                                ),
-//                                columns: columns,
-//                                onLogUpdated: { updatedLog in
-//                                    manager.updateLog(at: activityIndex, with: updatedLog)
-//                                }
-//                            )) {
-//                                logRowContent(for: log)
-//                            }
-//                        }
-//                    }
-//                    .onDelete { indexSet in
-//                        let logsToDelete = indexSet.map { filteredLogs[$0] }
-//                        for log in logsToDelete {
-//                            manager.deleteLog(log)
-//                        }
-//                    }
-//                    .listRowBackground(Color("bg"))
-//                    
-//                    if !manager.isLoading && manager.hasMore {
-//                        ProgressView()
-//                            .frame(maxWidth: .infinity)
-//                            .listRowBackground(Color.clear)
-//                            .onAppear {
-//                                manager.loadMoreLogs()
-//                            }
-//                    }
-//                }
-//                .listStyle(GroupedListStyle())
-//                .refreshable {
-//                    manager.loadMoreLogs(refresh: true)
-//                }
-//            }
-//        }
-//        .navigationTitle("Activities")
-//        .navigationBarTitleDisplayMode(.large)
-//        .toolbarBackground(.visible, for: .navigationBar)
-//        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
-//        .onChange(of: searchText) { _ in
-//            updateFilteredLogs()
-//        }
-//        .onChange(of: manager.logs) { _ in
-//            updateFilteredLogs()
-//        }
-//        .onAppear {
-//            if manager.logs.isEmpty {
-//                manager.loadMoreLogs(refresh: true)
-//            }
-//            updateFilteredLogs()
-//        }
-//    }
-//    
-//    private func logRowContent(for log: PodItemActivityLog) -> some View {
-//        HStack(alignment: .top) {
-//            VStack(alignment: .leading, spacing: 5) {
-//                Text(log.itemLabel)
-//                    .font(.system(size: 15))
-//                    .foregroundColor(.primary)
-//            }
-//            
-//            Spacer()
-//            
-//            HStack(spacing: 5) {
-//                Text(formattedDate(log.loggedAt))
-//                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
-//            }
-//        }
-//        .background(Color("bg"))
-//    }
-//    
-//    private func updateFilteredLogs() {
-//        if searchText.isEmpty {
-//            filteredLogs = manager.logs
-//        } else {
-//            filteredLogs = manager.logs.filter { log in
-//                log.itemLabel.localizedCaseInsensitiveContains(searchText) ||
-//                log.userName.localizedCaseInsensitiveContains(searchText) ||
-//                log.notes.localizedCaseInsensitiveContains(searchText)
-//            }
-//        }
-//    }
-//    
-//    private func formattedDate(_ date: Date) -> String {
-//        let calendar = Calendar.current
-//        if calendar.isDateInToday(date) {
-//            let formatter = DateFormatter()
-//            formatter.dateFormat = "h:mm a"
-//            return formatter.string(from: date)
-//        } else if calendar.isDateInYesterday(date) {
-//            return "Yesterday"
-//        } else if calendar.isDate(date, equalTo: Date(), toGranularity: .weekOfYear) {
-//            let formatter = DateFormatter()
-//            formatter.dateFormat = "EEEE"
-//            return formatter.string(from: date)
-//        } else {
-//            let formatter = DateFormatter()
-//            formatter.dateFormat = "MM/dd/yy"
-//            return formatter.string(from: date)
-//        }
-//    }
-//}
+
 import SwiftUI
 struct ActivityLogView: View {
-    @ObservedObject var activityManager: ActivityManager
+//    @ObservedObject var activityManager: ActivityManager
+    @EnvironmentObject var activityManager: ActivityManager
     @ObservedObject var singleItemManager: SingleItemActivityManager
 
     @State private var searchText: String = ""
@@ -245,7 +121,7 @@ struct ActivityLogView: View {
         }
         .listStyle(.plain)
         // So the title collapses on scroll
-        .navigationTitle("Activity Log")
+        .navigationTitle("Logs")
         .navigationBarTitleDisplayMode(.large)
         // Put the search field in the navigation bar
         .searchable(

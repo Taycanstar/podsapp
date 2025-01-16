@@ -8,7 +8,8 @@ import SwiftUI
 struct FullActivitySummaryView: View {
     let activity: Activity
     let columns: [PodColumn]
-    @ObservedObject var activityManager: ActivityManager
+//    @ObservedObject var activityManager: ActivityManager
+    @EnvironmentObject var activityManager: ActivityManager
     
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteAlert = false
@@ -100,7 +101,6 @@ struct FullActivitySummaryView: View {
                      }
             .sheet(isPresented: $showEditSheet) {
                 FullEditActivityView(
-                    activityManager: activityManager,
                     activity: activity,
                     columns: columns,
                     onSave: { updatedActivity in

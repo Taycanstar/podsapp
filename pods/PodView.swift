@@ -291,7 +291,6 @@ struct PodView: View {
 //                ActivityLogView(manager: logManager, columns: podColumns)
 //                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
                 ActivityLogView(
-                        activityManager: activityManager,
                         singleItemManager: singleItemManager,
                         columns: podColumns,
                         podId: pod.id,
@@ -327,7 +326,7 @@ struct PodView: View {
             case .fullSummary(let items, let columns):
                 FullSummaryView(items: items, columns: podColumns)
             case .fullActivitySummary(let activity, let columns):
-                FullActivitySummaryView(activity: activity, columns: columns, activityManager: activityManager)
+                FullActivitySummaryView(activity: activity, columns: columns)
 
 
                             
@@ -396,7 +395,8 @@ struct PodView: View {
 
         .sheet(isPresented: $isActivityOpen) {
             ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems,    onActivityFinished: { duration, startTime, endTime, notes in
-                navigationPath.append(NavigationDestination.activitySummary(  // Use full type here
+                navigationPath.append(NavigationDestination.activitySummary(
+                   
                     pod: pod,
                     duration: duration,
                     startTime: startTime,

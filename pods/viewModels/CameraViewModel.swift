@@ -589,6 +589,53 @@ struct ActivityResponse: Codable {
     let currentPage: Int
 }
 
+// Activity.swift
+
+extension Activity {
+    init(
+        id: Int,
+        podId: Int,
+        userEmail: String,
+        userName: String,
+        duration: Int,
+        loggedAt: Date,
+        notes: String?,
+        isSingleItem: Bool,
+        items: [ActivityItem]
+    ) {
+        self.id = id
+        self.podId = podId
+        self.userEmail = userEmail
+        self.userName = userName
+        self.duration = duration
+        self.loggedAt = loggedAt
+        self.notes = notes
+        self.isSingleItem = isSingleItem
+        self.items = items
+    }
+}
+
+extension ActivityItem {
+    init(
+        id: Int,
+        activityId: Int,
+        itemId: Int,
+        itemLabel: String,
+        loggedAt: Date,
+        notes: String?,
+        columnValues: [String: ColumnValue]
+    ) {
+        self.id = id
+        self.activityId = activityId
+        self.itemId = itemId
+        self.itemLabel = itemLabel
+        self.loggedAt = loggedAt
+        self.notes = notes
+        self.columnValues = columnValues
+    }
+}
+
+
 extension PodItem {
     init(from activityItem: ActivityItem) {
         self.id = activityItem.itemId
