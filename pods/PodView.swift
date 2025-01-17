@@ -745,10 +745,6 @@ struct PodView: View {
                     }
                     .padding(.vertical, 6)
                     .padding(.leading, 10)
-//                    .padding(.top, 5)
-                    
-//                    .padding(.bottom, 5)
-//                    .padding(.horizontal, 10)
                     
                     Spacer()
                     
@@ -787,10 +783,15 @@ struct PodView: View {
                 .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
                 .contentShape(Rectangle())
                 .onTapGesture {
-                                                   selectedItemIndex = index
-                                                   showLogActivitySheet = true
-                                        let wasActivityOpen = isActivityOpen
-                                        isActivityOpen = false
+//                                                   selectedItemIndex = index
+//                                                   showLogActivitySheet = true
+//                                        let wasActivityOpen = isActivityOpen
+//                                        isActivityOpen = false
+                    
+                    selectedItemIndex = index
+                    showCardSheet = true
+                    let wasActivityOpen = isActivityOpen
+                           isActivityOpen = false
                                                    HapticFeedback.generate()
                                                }
             }
@@ -813,14 +814,14 @@ struct PodView: View {
 
     private func iconView(for item: PodItem, index: Int) -> some View {
         Menu {
-            Button(action: {
-                selectedItemIndex = index
-                showCardSheet = true
-                let wasActivityOpen = isActivityOpen
-                       isActivityOpen = false
-            }) {
-                Label("Edit Item", systemImage: "square.and.pencil")
-            }
+//            Button(action: {
+//                selectedItemIndex = index
+//                showCardSheet = true
+//                let wasActivityOpen = isActivityOpen
+//                       isActivityOpen = false
+//            }) {
+//                Label("Edit Item", systemImage: "square.and.pencil")
+//            }
             
             if item.videoURL != nil || item.imageURL != nil {
                 Button(action: {
@@ -1454,6 +1455,7 @@ struct CardDetailView: View {
     let networkManager: NetworkManager
     @State private var showAddColumn = false
     @State private var showItemOptions = false
+    @State private var showNotesInput = false
     @State private var addColumnOffset: CGFloat = UIScreen.main.bounds.height + 250
     @Binding var allItems: [PodItem]
     @State private var isAddingColumn = false
@@ -1468,6 +1470,7 @@ struct CardDetailView: View {
     @State private var expandedColumn: String?
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var itemNotes: String
+    @State private var logNotes: String?
     @FocusState private var focusedField: String?
 
     @Binding var visibleColumns: [String]
@@ -1547,91 +1550,138 @@ struct CardDetailView: View {
                     (Color("iosbg"))
                         .edgesIgnoringSafeArea(.all)
                     
-                    ScrollView {
-                        
-                        VStack(alignment: .leading, spacing: 20) {
-//                            TextField("Item Name", text: $itemName)
-                            TextField("Item Name", text: Binding(
-                                get: { itemName },
-                                set: {
-                                    itemName = $0
-                                    checkForChanges()
-                                }
-                            ))
-                                .font(.system(size: 18)).bold()
-                                .background(Color.clear)
-                                .focused($isItemNameFocused)
-                            let columnGroups = groupColumns(podColumns)
-                            ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
-                                let columnGroup = columnGroups[groupIndex]
-                                
-                                if columnGroup.first?.groupingType == "singular" {
-                                    ForEach(columnGroup, id: \.name) { column in
-                                        SingularColumnView(
-                                            column: column,
-                                            columnValues: $columnValues,        // Pass the binding
-                                            focusedField: _focusedField,        // Pass the FocusState
-                                            expandedColumn: $expandedColumn,
-                                            onValueChanged: checkForChanges
-                                        )
-                                    }
-                                } else {
-                                    GroupedColumnView(
-                                        columnGroup: columnGroup,
-                                        groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                        onAddRow: {
-                                            withAnimation {
-                                                addRow(for: columnGroup)
-                                            }
-                                        },
-                                        onDeleteRow: { rowIndex in
-                                            withAnimation {
-                                                deleteRow(at: rowIndex, in: columnGroup)
-                                            }
-                                        },
-                                        columnValues: $columnValues,         // Add this
-                                                   focusedField: _focusedField,         // Add this
-                                                   expandedColumn: $expandedColumn,
-                                        onValueChanged: checkForChanges
-                                    )
-                                }
-                            }
-                            VStack(alignment: .leading) {
-                                Text("Description")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 5)
-                                    .kerning(0.2)
-                                
-//                                
-//                                CustomTextEditor(text: $itemNotes, backgroundColor: UIColor(Color("iosnp")))
-                                CustomTextEditor(text: Binding(
-                                    get: { itemNotes },
-                                    set: {
-                                        itemNotes = $0
-                                        checkForChanges()
-                                    }
-                                ), backgroundColor: UIColor(Color("iosnp")))
-                                    .frame(height: 100)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal)
-                                    .background(Color("iosnp"))
-                                    .cornerRadius(12)
-                            }
-                            addColumnButton
-                        }
-                        
-                        .padding()
-                    }
-                    
-                    .sheet(isPresented: $showAddColumn) {
-                        AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
-                            .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
-                    }
-                    
-                    
-                }
+                    VStack(spacing: 0) {  // Main container
+                                       ScrollView {
+                                           VStack(alignment: .leading, spacing: 20) {
+                                               TextField("Item Name", text: Binding(
+                                                   get: { itemName },
+                                                   set: {
+                                                       itemName = $0
+                                                       checkForChanges()
+                                                   }
+                                               ))
+                                               .font(.system(size: 18)).bold()
+                                               .background(Color.clear)
+                                               .focused($isItemNameFocused)
+                                               
+                                               let columnGroups = groupColumns(podColumns)
+                                               ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+                                                   let columnGroup = columnGroups[groupIndex]
+                                                   
+                                                   if columnGroup.first?.groupingType == "singular" {
+                                                       ForEach(columnGroup, id: \.name) { column in
+                                                           SingularColumnView(
+                                                               column: column,
+                                                               columnValues: $columnValues,
+                                                               focusedField: _focusedField,
+                                                               expandedColumn: $expandedColumn,
+                                                               onValueChanged: checkForChanges
+                                                           )
+                                                       }
+                                                   } else {
+                                                       GroupedColumnView(
+                                                           columnGroup: columnGroup,
+                                                           groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                                           onAddRow: {
+                                                               withAnimation {
+                                                                   addRow(for: columnGroup)
+                                                               }
+                                                           },
+                                                           onDeleteRow: { rowIndex in
+                                                               withAnimation {
+                                                                   deleteRow(at: rowIndex, in: columnGroup)
+                                                               }
+                                                           },
+                                                           columnValues: $columnValues,
+                                                           focusedField: _focusedField,
+                                                           expandedColumn: $expandedColumn,
+                                                           onValueChanged: checkForChanges
+                                                       )
+                                                   }
+                                               }
+                                               
+                                               VStack(alignment: .leading) {
+                                                   Text("Description")
+                                                       .font(.system(size: 15))
+                                                       .foregroundColor(.primary)
+                                                       .padding(.horizontal, 5)
+                                                       .kerning(0.2)
 
+                                                   CustomTextEditor(text: Binding(
+                                                       get: { itemNotes },
+                                                       set: {
+                                                           itemNotes = $0
+                                                           checkForChanges()
+                                                       }
+                                                   ), backgroundColor: UIColor(Color("iosnp")))
+                                                       .frame(height: 100)
+                                                       .padding(.vertical, 8)
+                                                       .padding(.horizontal)
+                                                       .background(Color("iosnp"))
+                                                       .cornerRadius(12)
+                                               }
+                                               
+                                               if showNotesInput {
+                                                   VStack(alignment: .leading) {
+                                                       Text("Notes")
+                                                           .font(.system(size: 15))
+                                                           .foregroundColor(.primary)
+                                                           .padding(.horizontal, 5)
+                                                           .kerning(0.2)
+
+                                                       CustomTextEditor(text: Binding(
+                                                           get: { logNotes ?? "" },
+                                                           set: {
+                                                               logNotes = $0
+                                                           }
+                                                       ), backgroundColor: UIColor(Color("iosnp")))
+                                                           .frame(height: 100)
+                                                           .padding(.vertical, 8)
+                                                           .padding(.horizontal)
+                                                           .background(Color("iosnp"))
+                                                           .cornerRadius(12)
+                                                   }
+                                               } else {
+                                                   Button(action: {
+                                                       withAnimation {
+                                                           showNotesInput = true
+                                                       }
+                                                   }) {
+                                                       Text("Add Notes")
+                                                           .foregroundColor(.accentColor)
+                                                   }
+                                                   .frame(maxWidth: .infinity)
+                                                   .padding(.top, 8)
+                                               }
+                                           }
+                                           .padding()
+                                       }
+                                       
+                                       // Log Single Item button fixed at bottom
+                                       VStack {
+                                           Button(action: {
+                                               print("Log Activity tapped")
+                                           }) {
+                                               Text("Log Single Item")
+                                                   .font(.system(size: 16))
+                                                   .fontWeight(.medium)
+                                                   .foregroundColor(.accentColor)
+                                                   .frame(maxWidth: .infinity)
+                                                   .padding(.vertical, 12)
+                                                   .background(Color.accentColor.opacity(0.1))
+                                                   .cornerRadius(8)
+                                           }
+                                           .padding(.horizontal)
+                                           .padding(.bottom, 16) // Add some bottom padding for better spacing
+                                       }
+                                       .background(Color("iosbg")) // Match the background color
+                                   }
+                                   
+                                   .sheet(isPresented: $showAddColumn) {
+                                       AddColumnView(isPresented: $showAddColumn, onAddColumn: addNewColumn)
+                                           .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                                   }
+                               }
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Button("Clear") {
@@ -1728,6 +1778,7 @@ struct CardDetailView: View {
                 secondaryButton: .cancel())}
         
     }
+  
 
     private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
         for column in columnGroup {
@@ -2554,6 +2605,7 @@ struct LogActivityView: View {
     @State private var showDatePicker = false
     @FocusState private var focusedField: String?
     @State private var groupedRowsCount: [String: Int] = [:]
+    
 
     init(item: PodItem, podColumns: [PodColumn], podId: Int,logManager: ActivityLogManager,  onActivityLogged: @escaping (PodItemActivityLog) -> Void) {
             self.item = item
