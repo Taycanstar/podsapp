@@ -321,7 +321,9 @@ struct ActivityLogView: View {
                 ForEach(filteredItems, id: \.id) { item in
                         NavigationLink(
                             value: NavigationDestination.itemSummary(
-                                item: item,
+//                                item: item,
+//                                columns: columns
+                                itemId: item.id,  
                                 columns: columns
                             )
                         ) {
