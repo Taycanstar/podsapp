@@ -94,6 +94,7 @@ struct EditActivityItemView: View {
                                     expandedColumn: $expandedColumn,
                                     onValueChanged: { }
                                 )
+                                .padding(.horizontal)
                             }
                         }
                         
@@ -173,24 +174,21 @@ struct EditActivityItemView: View {
     private func saveChanges() {
         isSubmitting = true
         
-        // Convert column values to the format expected by the backend
+        // Convert column values
         let convertedValues = columnValues.mapValues { value -> Any in
             convertColumnValueToAny(value)
         }
         
-        // Create an array of items to update
+        // Create items array for update
         var itemsToUpdate = [(id: Int, notes: String?, columnValues: [String: Any])]()
         
         if parentActivity.isSingleItem {
-            // For single item activities, update item and notes
             itemsToUpdate = [(
                 id: item.itemId,
                 notes: item.notes,
                 columnValues: convertedValues
             )]
         } else {
-            // For multi-item activities, update just this item's values
-            // and preserve other items' values
             itemsToUpdate = parentActivity.items.map { activityItem in
                 if activityItem.id == item.id {
                     return (
@@ -214,7 +212,7 @@ struct EditActivityItemView: View {
             updatedActivity.notes = notes
         }
         
-        // Update the specific item's column values
+        // Update specific item's values
         updatedActivity.items = updatedActivity.items.map { activityItem in
             var updatedItem = activityItem
             if activityItem.id == item.id {
@@ -223,7 +221,7 @@ struct EditActivityItemView: View {
             return updatedItem
         }
         
-        // Optimistically update the UI
+        // Optimistically update UI
         if let idx = activityManager.activities.firstIndex(where: { $0.id == parentActivity.id }) {
             activityManager.activities[idx] = updatedActivity
         }
@@ -231,7 +229,7 @@ struct EditActivityItemView: View {
         // Dismiss immediately for responsive UI
         dismiss()
         
-        // Make the network request
+        // Make network request
         activityManager.updateActivity(
             activityId: parentActivity.id,
             notes: parentActivity.isSingleItem ? (notes.isEmpty ? nil : notes) : parentActivity.notes,
@@ -239,11 +237,20 @@ struct EditActivityItemView: View {
         ) { result in
             DispatchQueue.main.async {
                 self.isSubmitting = false
+                
                 switch result {
                 case .success:
                     print("Successfully updated item")
+                    // Force a refresh of activities
+                    Task {
+                        await MainActor.run {
+                            activityManager.loadMoreActivities(refresh: true)
+                        }
+                    }
+                    
                 case .failure(let error):
                     print("Failed to update item:", error)
+                    // Optionally handle error state
                 }
             }
         }
