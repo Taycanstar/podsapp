@@ -41,6 +41,7 @@
 		363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */; };
 		363AFA0B2D345D2400C91A14 /* FullActivitySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA0A2D345D2400C91A14 /* FullActivitySummaryView.swift */; };
 		363AFA0D2D34769D00C91A14 /* FullEditActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA0C2D34769D00C91A14 /* FullEditActivityView.swift */; };
+		363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA0E2D3C1A0900C91A14 /* ItemSummaryView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -175,6 +176,7 @@
 		363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullSummaryView.swift; sourceTree = "<group>"; };
 		363AFA0A2D345D2400C91A14 /* FullActivitySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivitySummaryView.swift; sourceTree = "<group>"; };
 		363AFA0C2D34769D00C91A14 /* FullEditActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullEditActivityView.swift; sourceTree = "<group>"; };
+		363AFA0E2D3C1A0900C91A14 /* ItemSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ItemSummaryView.swift; path = Pods/Core/Views/activities/ItemSummaryView.swift; sourceTree = SOURCE_ROOT; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -304,6 +306,7 @@
 				363AFA062D2CE75D00C91A14 /* FullSummaryView.swift */,
 				363AFA0A2D345D2400C91A14 /* FullActivitySummaryView.swift */,
 				363AFA0C2D34769D00C91A14 /* FullEditActivityView.swift */,
+				363AFA0E2D3C1A0900C91A14 /* ItemSummaryView.swift */,
 			);
 			path = activities;
 			sourceTree = "<group>";
@@ -827,6 +830,7 @@
 				36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
+				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,

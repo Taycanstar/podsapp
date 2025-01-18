@@ -319,16 +319,14 @@ struct ActivityLogView: View {
             } else {
                 // Items section - showing all ActivityItems
                 ForEach(filteredItems, id: \.id) { item in
-                    NavigationLink(
-                        value: NavigationDestination.fullActivitySummary(
-                            activity: activityManager.activities.first {
-                                $0.items.contains { $0.id == item.id }
-                            }!,
-                            columns: columns
-                        )
-                    ) {
-                        ItemRow(item: item)
-                    }
+                        NavigationLink(
+                            value: NavigationDestination.itemSummary(
+                                item: item,
+                                columns: columns
+                            )
+                        ) {
+                            ItemRow(item: item)
+                        }
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                     .id(item.id)
