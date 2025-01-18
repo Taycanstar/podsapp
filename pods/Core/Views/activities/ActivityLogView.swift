@@ -403,20 +403,42 @@ struct ActivityLogView: View {
         }
     }
 
-    private var filteredItems: [ActivityItem] {
-        let allItems = activityManager.activities.flatMap { activity in
-            activity.items
-        }
-        
-        if searchText.isEmpty {
-            return allItems
-        }
-        
-        return allItems.filter { item in
-            item.itemLabel.localizedCaseInsensitiveContains(searchText) ||
-            item.notes?.localizedCaseInsensitiveContains(searchText) ?? false
-        }
-    }
+    private func shouldHideItem(_ item: ActivityItem) -> Bool {
+           guard !item.columnValues.isEmpty else { return true }
+           return !item.columnValues.values.contains { value in
+               switch value {
+               case .null:
+                   return false
+               case .string(let str):
+                   return !str.isEmpty
+               case .number:
+                   return true
+               case .time(let timeValue):
+                   return timeValue != TimeValue(hours: 0, minutes: 0, seconds: 0)
+               case .array(let values):
+                   return values.contains { val in
+                       if case .null = val { return false }
+                       return true
+                   }
+               }
+           }
+       }
+
+       // Update the existing filteredItems
+       private var filteredItems: [ActivityItem] {
+           let allItems = activityManager.activities.flatMap { activity in
+               activity.items
+           }.filter { !shouldHideItem($0) }  // Apply the filter here
+           
+           if searchText.isEmpty {
+               return allItems
+           }
+           
+           return allItems.filter { item in
+               item.itemLabel.localizedCaseInsensitiveContains(searchText) ||
+               item.notes?.localizedCaseInsensitiveContains(searchText) ?? false
+           }
+       }
 }
 
 // MARK: - Supporting Views
@@ -487,3 +509,5 @@ func formattedDate(_ date: Date) -> String {
         return formatter.string(from: date)
     }
 }
+
+
