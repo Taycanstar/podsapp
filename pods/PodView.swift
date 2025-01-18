@@ -171,7 +171,6 @@ struct PodView: View {
 
     @StateObject private var logManager = ActivityLogManager()
     @StateObject private var activityManager = ActivityManager()
-    @StateObject private var singleItemManager = SingleItemActivityManager()
     @ObservedObject private var activityState = ActivityState.shared
     @State private var showCountdown = false
     
@@ -291,7 +290,6 @@ struct PodView: View {
 //                ActivityLogView(manager: logManager, columns: podColumns)
 //                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
                 ActivityLogView(
-                        singleItemManager: singleItemManager,
                         columns: podColumns,
                         podId: pod.id,
                         userEmail: viewModel.email
@@ -601,7 +599,6 @@ struct PodView: View {
     
     private func initializeManagers() {
         activityManager.initialize(podId: pod.id, userEmail: viewModel.email)
-        singleItemManager.initialize(podId: pod.id, userEmail: viewModel.email)
     }
     
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
@@ -1475,6 +1472,7 @@ struct CardDetailView: View {
 
     @Binding var visibleColumns: [String]
     @State private var hasUnsavedChanges = false
+    @EnvironmentObject var activityManager: ActivityManager
 
 
 
@@ -1502,7 +1500,6 @@ struct CardDetailView: View {
         var initialGroupedRowsCount: [String: Int] = [:]
 
         
-        print("Raw item column values:", item.wrappedValue.columnValues)
         print("Raw columns:", podColumns.wrappedValue)
             
             for column in podColumns.wrappedValue {
@@ -1661,6 +1658,7 @@ struct CardDetailView: View {
                                        VStack {
                                            Button(action: {
                                                print("Log Activity tapped")
+                                               logSingleItem()
                                            }) {
                                                Text("Log Single Item")
                                                    .font(.system(size: 16))
@@ -1777,6 +1775,94 @@ struct CardDetailView: View {
                 },
                 secondaryButton: .cancel())}
         
+    }
+    
+    // In CardDetailView
+    private func logSingleItem() {
+        // Create a temporary ID
+        let tempId = Int.random(in: Int.min ... -1)
+        
+        // Convert column values to the format expected by the backend
+        let convertedValues = columnValues.mapValues { value -> Any in
+            convertColumnValueToAny(value)
+        }
+        
+        // Prepare the single item data with explicit type
+        let itemData: [(id: Int, notes: String?, columnValues: [String: Any])] = [(
+            id: item.id,
+            notes: nil,
+            columnValues: convertedValues
+        )]
+        
+        // Step 1: Create temporary activity with the negative ID
+        let tempActivity = Activity(
+            id: tempId,
+            podId: podId,
+            userEmail: viewModel.email,
+            userName: viewModel.username,
+            duration: 0,
+            loggedAt: Date(),
+            notes: logNotes,
+            isSingleItem: true,
+            items: [
+                ActivityItem(
+                    id: Int.random(in: Int.min ... -1),
+                    activityId: tempId,
+                    itemId: item.id,
+                    itemLabel: item.metadata,
+                    loggedAt: Date(),
+                    notes: Optional<String>.none,
+                    columnValues: columnValues  // Use the original columnValues here, not the converted ones
+                )
+            ]
+        )
+        
+        // Step 2: Insert temporary activity into ActivityManager
+        activityManager.activities.insert(tempActivity, at: 0)
+        print("Inserted temporary single item activity with ID: \(tempId)")
+        
+        // Step 3: Dismiss view immediately for optimistic update
+        presentationMode.wrappedValue.dismiss()
+        
+        // Step 4: Make the actual network request
+        activityManager.createActivity(
+            duration: 0,
+            notes: logNotes,
+            items: itemData,
+            isSingleItem: true,
+            tempId: tempId
+        ) { result in
+            DispatchQueue.main.async {
+                guard self != nil else { return }
+                
+                switch result {
+                case .success(let actualActivity):
+                    print("Single item activity creation completed.")
+                    
+                case .failure(let error):
+                    // Remove the temporary activity
+                    activityManager.activities.removeAll { $0.id == tempId }
+                    print("Failed to create single item activity, removed temporary activity ID: \(tempId)")
+//                    self.logError = error
+//                    self.showLogError = true
+                }
+            }
+        }
+    }
+
+    private func convertColumnValueToAny(_ value: ColumnValue) -> Any {
+        switch value {
+        case .string(let str):
+            return str
+        case .number(let num):
+            return num
+        case .time(let timeValue):
+            return timeValue
+        case .array(let arr):
+            return arr.map { convertColumnValueToAny($0) }
+        case .null:
+            return NSNull()
+        }
     }
   
 

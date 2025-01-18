@@ -16,7 +16,7 @@ struct podsApp: App {
     @StateObject var homeViewModel = HomeViewModel()
     @StateObject var videoPreloader = VideoPreloader()
     @StateObject private var themeManager = ThemeManager()
-    @StateObject private var activityManager = ActivityManager() // Direct instantiation
+    @StateObject private var activityManager = ActivityManager()
     @StateObject private var deepLinkHandler = DeepLinkHandler()
     @StateObject private var subscriptionManager = SubscriptionManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate

@@ -261,69 +261,6 @@ private func onCancelActivity() {
         }
     
 
-//    private func handleFinish() {
-//        guard !isCreatingActivity else { return }
-//        isCreatingActivity = true
-//        
-//        let endTime = Date()
-//        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
-//        let duration = Int(activityState.stopwatch.elapsedTime)
-//        
-//        print("Preparing to create activity...")
-//        
-//        // Prepare items data
-//        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
-//            let values = columnValues[item.id] ?? [:]
-//            let convertedValues = values.mapValues { value in
-//                convertColumnValueToAny(value)
-//            }
-//            return (
-//                id: item.id,
-//                notes: nil,
-//                columnValues: convertedValues
-//            )
-//        }
-//        
-//        // Use activityManager.createActivity with the correct parameters
-//        activityManager.createActivity(
-//            duration: duration,
-//            notes: activityNotes.isEmpty ? nil : activityNotes,
-//            items: itemsData
-//        ) { result in     // Remove the [weak self] and guard since we're in a struct
-//            DispatchQueue.main.async {
-//                switch result {
-//                case .success:
-//                    // Update each item's columnValues
-//                    for (index, item) in items.enumerated() {
-//                        if let values = columnValues[item.id] {
-//                            items[index].columnValues = values
-//                        }
-//                    }
-//                    
-//                    
-//                    
-//                    onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
-//                    activityState.finishActivity()
-//                    
-//                    
-//                    
-//                    DispatchQueue.main.asyncAfter(deadline: .now() ) {
-//                        print("Activity creation completed, dismissing view...")
-//                        isCreatingActivity = false
-//                        dismiss()
-//                    }
-//                    
-//                case .failure(let error):
-//                    print("Failed to create activity:", error)
-//                    isCreatingActivity = false
-//                }
-//            }
-//        }
-//    }
-
-
-    // ActivityView.swift
-
     private func handleFinish() {
         guard !isCreatingActivity else { return }
         isCreatingActivity = true
