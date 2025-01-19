@@ -1,19 +1,11 @@
-////
-////  FullEditActivityView.swift
-////  Pods
-////
-////  Created by Dimi Nunez on 1/12/25.
-////
 //
 //import SwiftUI
 //
 //struct FullEditActivityView: View {
 //    @Environment(\.dismiss) private var dismiss
-////    @ObservedObject var activityManager: ActivityManager
 //    @EnvironmentObject var activityManager: ActivityManager
 //    let activity: Activity
 //    let columns: [PodColumn]
-//    let onSave: (Activity) -> Void
 //
 //    @State private var items: [ActivityItem]
 //    @State private var notes: String
@@ -22,28 +14,52 @@
 //    @State private var expandedColumn: String?
 //    @FocusState private var focusedField: String?
 //    @State private var isSubmitting = false
-//    
-//    // If you want the same “showNotesInput” toggle as ActivityView
-//    @State private var showNotesInput = false  // optionally track if we show notes area
+//    @State private var showNotesInput = false
 //
-//    init(activity: Activity, columns: [PodColumn], onSave: @escaping (Activity) -> Void) {
-//     
+////    init(activity: Activity, columns: [PodColumn]) {
+////        self.activity = activity
+////        self.columns = columns
+////        _items = State(initialValue: activity.items)
+////        
+////        let initialNotes = activity.notes ?? ""
+////        _notes = State(initialValue: initialNotes)
+////        _showNotesInput = State(initialValue: !initialNotes.isEmpty)
+////
+////        // Initialize columnValues & groupedRowsCounts
+////        var initialColumnValues: [Int: [String: ColumnValue]] = [:]
+////        var initialGroupedRowsCounts: [Int: [String: Int]] = [:]
+////        for item in activity.items {
+////            initialColumnValues[item.id] = item.columnValues
+////            var rowCounts: [String: Int] = [:]
+////            for column in columns where column.groupingType == "grouped" {
+////                if let values = item.columnValues[String(column.id)],
+////                   case .array(let array) = values {
+////                    rowCounts[String(column.id)] = array.count
+////                } else {
+////                    rowCounts[String(column.id)] = 0
+////                }
+////            }
+////            initialGroupedRowsCounts[item.id] = rowCounts
+////        }
+////        _columnValues = State(initialValue: initialColumnValues)
+////        _groupedRowsCounts = State(initialValue: initialGroupedRowsCounts)
+////    }
+//    init(activity: Activity, columns: [PodColumn]) {
 //        self.activity = activity
 //        self.columns = columns
-//        self.onSave = onSave
 //        _items = State(initialValue: activity.items)
 //        
-//        // If notes were originally set, we can show them by default
 //        let initialNotes = activity.notes ?? ""
 //        _notes = State(initialValue: initialNotes)
 //        _showNotesInput = State(initialValue: !initialNotes.isEmpty)
-//
-//        // Initialize columnValues & groupedRowsCounts
+//        
 //        var initialColumnValues: [Int: [String: ColumnValue]] = [:]
 //        var initialGroupedRowsCounts: [Int: [String: Int]] = [:]
+//        
 //        for item in activity.items {
-//            initialColumnValues[item.id] = item.columnValues
+//            initialColumnValues[item.itemId] = item.columnValues  // Use itemId instead of id
 //            var rowCounts: [String: Int] = [:]
+//            
 //            for column in columns where column.groupingType == "grouped" {
 //                if let values = item.columnValues[String(column.id)],
 //                   case .array(let array) = values {
@@ -52,8 +68,10 @@
 //                    rowCounts[String(column.id)] = 0
 //                }
 //            }
-//            initialGroupedRowsCounts[item.id] = rowCounts
+//            
+//            initialGroupedRowsCounts[item.itemId] = rowCounts  // Use itemId here too
 //        }
+//        
 //        _columnValues = State(initialValue: initialColumnValues)
 //        _groupedRowsCounts = State(initialValue: initialGroupedRowsCounts)
 //    }
@@ -61,25 +79,61 @@
 //    var body: some View {
 //        NavigationView {
 //            ZStack {
-//                // Same background color as ActivityView
 //                Color("iosbg")
 //                    .ignoresSafeArea()
 //
 //                ScrollView {
 //                    VStack(spacing: 20) {
-//                        
-//                        // MARK: - ForEach of Items (like ActivityView)
+////                        ForEach(items) { item in
+////                            VStack(alignment: .leading, spacing: 15) {
+////                                Text(item.itemLabel)
+////                                    .font(.system(size: 18))
+////                                    .fontDesign(.rounded)
+////                                    .fontWeight(.semibold)
+////                                    .foregroundColor(.accentColor)
+////                                
+////                                let columnGroups = groupColumns(columns)
+////                                ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
+////                                    let columnGroup = columnGroups[groupIndex]
+////                                    
+////                                    if columnGroup.first?.groupingType == "singular" {
+////                                        ForEach(columnGroup, id: \.id) { column in
+////                                            VStack(alignment: .leading, spacing: 5) {
+////                                                SingularColumnActivityView(
+////                                                    itemId: item.id,
+////                                                    column: column,
+////                                                    columnValues: bindingForItem(item.id),
+////                                                    focusedField: $focusedField,
+////                                                    expandedColumn: $expandedColumn,
+////                                                    onValueChanged: { }
+////                                                )
+////                                            }
+////                                        }
+////                                    } else {
+////                                        GroupedColumnActivityView(
+////                                            itemId: item.id,
+////                                            columnGroup: columnGroup,
+////                                            groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
+////                                            onAddRow: { addRow(for: columnGroup, itemId: item.id) },
+////                                            onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
+////                                            columnValues: bindingForItem(item.id),
+////                                            focusedField: $focusedField,
+////                                            expandedColumn: $expandedColumn,
+////                                            onValueChanged: { }
+////                                        )
+////                                    }
+////                                }
+////                            }
+////                            .padding()
+////                        }
 //                        ForEach(items) { item in
-//                            // One item block, styled similarly to ActivityView
 //                            VStack(alignment: .leading, spacing: 15) {
-//                                // Title (metadata)
 //                                Text(item.itemLabel)
 //                                    .font(.system(size: 18))
 //                                    .fontDesign(.rounded)
 //                                    .fontWeight(.semibold)
 //                                    .foregroundColor(.accentColor)
 //                                
-//                                // Column groups
 //                                let columnGroups = groupColumns(columns)
 //                                ForEach(Array(columnGroups.indices), id: \.self) { groupIndex in
 //                                    let columnGroup = columnGroups[groupIndex]
@@ -88,9 +142,9 @@
 //                                        ForEach(columnGroup, id: \.id) { column in
 //                                            VStack(alignment: .leading, spacing: 5) {
 //                                                SingularColumnActivityView(
-//                                                    itemId: item.id,
+//                                                    itemId: item.itemId,  // Change to itemId
 //                                                    column: column,
-//                                                    columnValues: bindingForItem(item.id),
+//                                                    columnValues: bindingForItem(item.itemId),  // Change to itemId
 //                                                    focusedField: $focusedField,
 //                                                    expandedColumn: $expandedColumn,
 //                                                    onValueChanged: { }
@@ -99,12 +153,12 @@
 //                                        }
 //                                    } else {
 //                                        GroupedColumnActivityView(
-//                                            itemId: item.id,
+//                                            itemId: item.itemId,  // Change to itemId
 //                                            columnGroup: columnGroup,
-//                                            groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
-//                                            onAddRow: { addRow(for: columnGroup, itemId: item.id) },
-//                                            onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
-//                                            columnValues: bindingForItem(item.id),
+//                                            groupedRowsCount: groupedRowsCounts[item.itemId]?[columnGroup.first?.groupingType ?? ""] ?? 1,  // Change to itemId
+//                                            onAddRow: { addRow(for: columnGroup, itemId: item.itemId) },  // Change to itemId
+//                                            onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.itemId) },  // Change to itemId
+//                                            columnValues: bindingForItem(item.itemId),  // Change to itemId
 //                                            focusedField: $focusedField,
 //                                            expandedColumn: $expandedColumn,
 //                                            onValueChanged: { }
@@ -112,13 +166,10 @@
 //                                    }
 //                                }
 //                            }
-//                            .padding() // same as ActivityView does for each item
+//                            .padding()
 //                        }
 //                        
-//                        // MARK: - Notes Section
-//                        // If you want the same approach as ActivityView:
 //                        if !showNotesInput {
-//                            // “Add Notes” button if user hasn’t revealed notes
 //                            Button(action: {
 //                                withAnimation {
 //                                    showNotesInput = true
@@ -146,7 +197,6 @@
 //                                    .fontWeight(.semibold)
 //                                    .foregroundColor(.accentColor)
 //                                
-//                                // If you want a text editor like ActivityView does for the “Add Notes” area:
 //                                TextField("", text: $notes, axis: .vertical)
 //                                    .textFieldStyle(.plain)
 //                                    .padding()
@@ -158,11 +208,8 @@
 //                            .transition(.opacity)
 //                        }
 //                    }
-//                    .padding(.top, 10) // some top padding if you like
+//                    .padding(.top, 10)
 //                }
-////                .onAppear {
-////                            initializeActivityManager()
-////                        }
 //                .toolbar {
 //                    ToolbarItem(placement: .navigationBarLeading) {
 //                        Button("Cancel") {
@@ -176,7 +223,6 @@
 //                        .disabled(isSubmitting)
 //                    }
 //                    
-//                    // If you want a keyboard toolbar like ActivityView:
 //                    ToolbarItemGroup(placement: .keyboard) {
 //                        Button("Clear") {
 //                            clearFocusedField()
@@ -198,14 +244,12 @@
 //        }
 //    }
 //
-//    // MARK: - groupColumns
 //    private func groupColumns(_ columns: [PodColumn]) -> [[PodColumn]] {
 //        let groupedColumns = columns.filter { $0.groupingType == "grouped" }
 //        let singularColumns = columns.filter { $0.groupingType == "singular" }
 //        return [groupedColumns, singularColumns].filter { !$0.isEmpty }
 //    }
 //
-//    // MARK: - Binding
 //    private func bindingForItem(_ itemId: Int) -> Binding<[String: ColumnValue]> {
 //        Binding(
 //            get: { columnValues[itemId] ?? [:] },
@@ -213,7 +257,6 @@
 //        )
 //    }
 //
-//    // MARK: - addRow / deleteRow (unchanged)
 //    private func addRow(for columnGroup: [PodColumn], itemId: Int) {
 //        let groupType = columnGroup.first?.groupingType ?? ""
 //        let currentRowIndex = groupedRowsCounts[itemId]?[groupType] ?? 1
@@ -227,7 +270,6 @@
 //                values = existingValues
 //            }
 //            
-//            // If number, replicate the same logic as in ActivityView
 //            if column.type == "number" {
 //                if case .number(1.0) = values.first {
 //                    values.append(.number(Double(values.count + 1)))
@@ -271,17 +313,13 @@
 //        case .time(let timeValue):
 //            return timeValue.toString
 //        case .array(let array):
-//            // Recursively convert each element
 //            return array.map { convertColumnValueToAny($0) }
 //        case .null:
 //            return NSNull()
 //        }
 //    }
-//    
 //
-//    // MARK: - Save
 //    private func saveActivity() {
-//        // 1) Build the updatedItems array for the backend
 //        let updatedItems: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
 //            let convertedValues = (columnValues[item.id] ?? [:]).mapValues { val in
 //                convertColumnValueToAny(val)
@@ -293,11 +331,9 @@
 //            )
 //        }
 //
-//        // 2) Construct a local updated Activity
 //        var localUpdatedActivity = activity
 //        localUpdatedActivity.notes = notes
 //        
-//        // Update each item’s columnValues
 //        var newItems = [ActivityItem]()
 //        for item in items {
 //            var changedItem = item
@@ -306,22 +342,12 @@
 //        }
 //        localUpdatedActivity.items = newItems
 //
-//        // 3) **Optimistically update** the manager’s activities array
 //        if let idx = activityManager.activities.firstIndex(where: { $0.id == activity.id }) {
 //            activityManager.activities[idx] = localUpdatedActivity
-//        } else {
-//            // If this activity somehow wasn’t in the array, just add it
-//            activityManager.activities.append(localUpdatedActivity)
 //        }
 //
-//        // 4) Optionally call onSave(...) if your parent also needs a callback
-//        //    (not strictly required if parent's only data source is activityManager.activities)
-//        onSave(localUpdatedActivity)
-//
-//        // 5) Instantly dismiss the sheet => no lag for the user
 //        dismiss()
 //
-//        // 6) Fire the actual update call in the background
 //        isSubmitting = true
 //        activityManager.updateActivity(
 //            activityId: activity.id,
@@ -332,27 +358,18 @@
 //                self.isSubmitting = false
 //                switch result {
 //                case .success:
-//                    // If the server returns a more “definitive” updatedActivity,
-//                    // you can merge it in. For example:
-//                    //   if let new = updatedActivityFromServer,
-//                    //      let finalIdx = activityManager.activities.firstIndex(...)
-//                    //   activityManager.activities[finalIdx] = new
-//                    break
+//                    Task {
+//                        await MainActor.run {
+//                            activityManager.loadMoreActivities(refresh: true)
+//                        }
+//                    }
 //                case .failure(let error):
-//                    // Optional: revert or show an alert.
-//                    // The user already sees the updated data, so decide how you handle a failure.
 //                    print("Failed to update activity in the backend:", error)
 //                }
 //            }
 //        }
 //    }
 //
-//
-//
-//
-//
-//
-//    // MARK: - Clear Field & Hide Keyboard
 //    private func clearFocusedField() {
 //        guard let fieldID = focusedField else { return }
 //        let parts = fieldID.split(separator: "_").map(String.init)
@@ -361,7 +378,6 @@
 //        let itemId = Int(parts[0]) ?? 0
 //        let columnId = parts[1]
 //        
-//        // If we have rowIndex
 //        if parts.count == 3, let rowIndex = Int(parts[2]) {
 //            if var val = columnValues[itemId]?[columnId],
 //               case .array(var arr) = val, rowIndex < arr.count {
@@ -369,16 +385,16 @@
 //                columnValues[itemId]?[columnId] = .array(arr)
 //            }
 //        } else {
-//            // singular
 //            columnValues[itemId]?[columnId] = .null
 //        }
 //    }
 //
 //    private func hideKeyboard() {
 //        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-//                                        to: nil, from: nil, for: nil)
+//                                      to: nil, from: nil, for: nil)
 //    }
 //}
+
 import SwiftUI
 
 struct FullEditActivityView: View {
@@ -404,23 +420,28 @@ struct FullEditActivityView: View {
         let initialNotes = activity.notes ?? ""
         _notes = State(initialValue: initialNotes)
         _showNotesInput = State(initialValue: !initialNotes.isEmpty)
-
-        // Initialize columnValues & groupedRowsCounts
+        
         var initialColumnValues: [Int: [String: ColumnValue]] = [:]
         var initialGroupedRowsCounts: [Int: [String: Int]] = [:]
+        
+        // Initialize column values and row counts
         for item in activity.items {
-            initialColumnValues[item.id] = item.columnValues
-            var rowCounts: [String: Int] = [:]
+            // Set column values
+            initialColumnValues[item.itemId] = item.columnValues
+            
+            // Get max row count for grouped columns
+            var maxCount = 0
             for column in columns where column.groupingType == "grouped" {
                 if let values = item.columnValues[String(column.id)],
                    case .array(let array) = values {
-                    rowCounts[String(column.id)] = array.count
-                } else {
-                    rowCounts[String(column.id)] = 0
+                    maxCount = max(maxCount, array.count)
                 }
             }
-            initialGroupedRowsCounts[item.id] = rowCounts
+            
+            // Set the row count for this item's grouped columns
+            initialGroupedRowsCounts[item.itemId] = ["grouped": maxCount]
         }
+        
         _columnValues = State(initialValue: initialColumnValues)
         _groupedRowsCounts = State(initialValue: initialGroupedRowsCounts)
     }
@@ -449,9 +470,9 @@ struct FullEditActivityView: View {
                                         ForEach(columnGroup, id: \.id) { column in
                                             VStack(alignment: .leading, spacing: 5) {
                                                 SingularColumnActivityView(
-                                                    itemId: item.id,
+                                                    itemId: item.itemId,
                                                     column: column,
-                                                    columnValues: bindingForItem(item.id),
+                                                    columnValues: bindingForItem(item.itemId),
                                                     focusedField: $focusedField,
                                                     expandedColumn: $expandedColumn,
                                                     onValueChanged: { }
@@ -460,12 +481,12 @@ struct FullEditActivityView: View {
                                         }
                                     } else {
                                         GroupedColumnActivityView(
-                                            itemId: item.id,
+                                            itemId: item.itemId,
                                             columnGroup: columnGroup,
-                                            groupedRowsCount: groupedRowsCounts[item.id]?[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                            onAddRow: { addRow(for: columnGroup, itemId: item.id) },
-                                            onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.id) },
-                                            columnValues: bindingForItem(item.id),
+                                            groupedRowsCount: groupedRowsCounts[item.itemId]?["grouped"] ?? 0,
+                                            onAddRow: { addRow(for: columnGroup, itemId: item.itemId) },
+                                            onDeleteRow: { idx in deleteRow(at: idx, in: columnGroup, itemId: item.itemId) },
+                                            columnValues: bindingForItem(item.itemId),
                                             focusedField: $focusedField,
                                             expandedColumn: $expandedColumn,
                                             onValueChanged: { }
@@ -565,9 +586,7 @@ struct FullEditActivityView: View {
     }
 
     private func addRow(for columnGroup: [PodColumn], itemId: Int) {
-        let groupType = columnGroup.first?.groupingType ?? ""
-        let currentRowIndex = groupedRowsCounts[itemId]?[groupType] ?? 1
-
+        // Add a new row to all columns in the group
         for column in columnGroup {
             let key = String(column.id)
             let currentValue = columnValues[itemId]?[key] ?? .array([])
@@ -590,7 +609,12 @@ struct FullEditActivityView: View {
             columnValues[itemId]?[key] = .array(values)
         }
         
-        groupedRowsCounts[itemId]?[groupType] = currentRowIndex + 1
+        // Update the row count
+        if let currentCount = groupedRowsCounts[itemId]?["grouped"] {
+            groupedRowsCounts[itemId]?["grouped"] = currentCount + 1
+        } else {
+            groupedRowsCounts[itemId] = ["grouped": 1]
+        }
     }
 
     private func deleteRow(at index: Int, in columnGroup: [PodColumn], itemId: Int) {
@@ -604,10 +628,9 @@ struct FullEditActivityView: View {
             }
         }
         
-        let groupType = columnGroup.first?.groupingType ?? ""
-        if let currentCount = groupedRowsCounts[itemId]?[groupType],
-           currentCount > 0 {
-            groupedRowsCounts[itemId]?[groupType] = currentCount - 1
+        // Update the row count
+        if let currentCount = groupedRowsCounts[itemId]?["grouped"], currentCount > 0 {
+            groupedRowsCounts[itemId]?["grouped"] = currentCount - 1
         }
     }
     
@@ -628,7 +651,7 @@ struct FullEditActivityView: View {
 
     private func saveActivity() {
         let updatedItems: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
-            let convertedValues = (columnValues[item.id] ?? [:]).mapValues { val in
+            let convertedValues = (columnValues[item.itemId] ?? [:]).mapValues { val in
                 convertColumnValueToAny(val)
             }
             return (
@@ -644,7 +667,7 @@ struct FullEditActivityView: View {
         var newItems = [ActivityItem]()
         for item in items {
             var changedItem = item
-            changedItem.columnValues = columnValues[item.id] ?? [:]
+            changedItem.columnValues = columnValues[item.itemId] ?? [:]
             newItems.append(changedItem)
         }
         localUpdatedActivity.items = newItems
