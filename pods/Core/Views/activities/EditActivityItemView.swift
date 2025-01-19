@@ -230,6 +230,30 @@ struct EditActivityItemView: View {
         dismiss()
         
         // Make network request
+//        activityManager.updateActivity(
+//            activityId: parentActivity.id,
+//            notes: parentActivity.isSingleItem ? (notes.isEmpty ? nil : notes) : parentActivity.notes,
+//            items: itemsToUpdate
+//        ) { result in
+//            DispatchQueue.main.async {
+//                self.isSubmitting = false
+//                
+//                switch result {
+//                case .success:
+//                    print("Successfully updated item")
+//                    // Force a refresh of activities
+//                    Task {
+//                        await MainActor.run {
+//                            activityManager.loadMoreActivities(refresh: true)
+//                        }
+//                    }
+//                    
+//                case .failure(let error):
+//                    print("Failed to update item:", error)
+//                    // Optionally handle error state
+//                }
+//            }
+//        }
         activityManager.updateActivity(
             activityId: parentActivity.id,
             notes: parentActivity.isSingleItem ? (notes.isEmpty ? nil : notes) : parentActivity.notes,
@@ -239,18 +263,16 @@ struct EditActivityItemView: View {
                 self.isSubmitting = false
                 
                 switch result {
-                case .success:
+                case .success(let updatedActivity):
                     print("Successfully updated item")
-                    // Force a refresh of activities
-                    Task {
-                        await MainActor.run {
-                            activityManager.loadMoreActivities(refresh: true)
-                        }
-                    }
+                    // No need for refresh, we already have fresh data
                     
                 case .failure(let error):
                     print("Failed to update item:", error)
-                    // Optionally handle error state
+                    // Optionally revert optimistic update
+                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.parentActivity.id }) {
+                        self.activityManager.activities[idx] = self.parentActivity
+                    }
                 }
             }
         }
