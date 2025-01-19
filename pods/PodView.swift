@@ -525,6 +525,7 @@ struct PodView: View {
                         set: { self.reorderedItems[index] = $0 }
                     ),
                     podId: pod.id,
+                    podTitle: pod.title,
                     podColumns: $podColumns,
                     networkManager: networkManager,
                     allItems: Binding<[PodItem]>(
@@ -1504,6 +1505,7 @@ struct CardDetailView: View {
     @Binding var visibleColumns: [String]
     @State private var hasUnsavedChanges = false
     @EnvironmentObject var activityManager: ActivityManager
+    let podTitle: String
 
 
 
@@ -1516,8 +1518,9 @@ struct CardDetailView: View {
         }
     
 
-    init(item: Binding<PodItem>, podId: Int, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
+    init(item: Binding<PodItem>, podId: Int,podTitle: String, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
         self._item = item
+        self.podTitle = podTitle
         self._itemName = State(initialValue: item.wrappedValue.metadata)
         self._podColumns = podColumns
         self.networkManager = networkManager
@@ -1829,6 +1832,7 @@ struct CardDetailView: View {
         let tempActivity = Activity(
             id: tempId,
             podId: podId,
+            podTitle: podTitle,
             userEmail: viewModel.email,
             userName: viewModel.username,
             duration: 0,

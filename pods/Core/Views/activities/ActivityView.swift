@@ -289,6 +289,7 @@ private func onCancelActivity() {
         let tempActivity = Activity(
             id: tempId, // Temporary negative ID
             podId: pod.id,
+            podTitle: pod.title,
             userEmail: viewModel.email,
             userName: viewModel.username, // Ensure 'userName' is available in viewModel
             duration: duration,

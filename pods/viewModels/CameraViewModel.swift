@@ -453,38 +453,11 @@ private struct AnyDecodable: Decodable {
     }
 }
 
-//struct Activity: Identifiable, Codable {
-//    let id: Int
-//    let podId: Int
-//    let userEmail: String
-//    let duration: Int
-//    let loggedAt: Date
-//    let notes: String?
-//    let userName: String
-//    
-//    enum CodingKeys: String, CodingKey {
-//        case id, podId, userEmail, duration, loggedAt, notes, userName
-//    }
-//    
-//    init(from decoder: Decoder) throws {
-//        let container = try decoder.container(keyedBy: CodingKeys.self)
-//        id = try container.decode(Int.self, forKey: .id)
-//        podId = try container.decode(Int.self, forKey: .podId)
-//        userEmail = try container.decode(String.self, forKey: .userEmail)
-//        duration = try container.decode(Int.self, forKey: .duration)
-//        
-//        let dateString = try container.decode(String.self, forKey: .loggedAt)
-//        let formatter = ISO8601DateFormatter()
-//        loggedAt = formatter.date(from: dateString) ?? Date()
-//        
-//        notes = try container.decodeIfPresent(String.self, forKey: .notes)
-//        userName = try container.decode(String.self, forKey: .userName)
-//    }
-//}
 // Models.swift
 struct Activity: Identifiable, Codable {
     let id: Int
     let podId: Int
+    let podTitle: String
     let userEmail: String
     let userName: String
     let duration: Int
@@ -496,6 +469,7 @@ struct Activity: Identifiable, Codable {
     private enum CodingKeys: String, CodingKey {
         case id
         case podId
+        case podTitle
         case userEmail
         case userName
         case duration
@@ -509,6 +483,7 @@ struct Activity: Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
         podId = try container.decode(Int.self, forKey: .podId)
+        podTitle = try container.decode(String.self, forKey: .podTitle)
         userEmail = try container.decode(String.self, forKey: .userEmail)
         userName = try container.decode(String.self, forKey: .userName)
         duration = try container.decode(Int.self, forKey: .duration)
@@ -528,6 +503,7 @@ struct Activity: Identifiable, Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(podId, forKey: .podId)
+        try container.encode(podTitle, forKey: .podTitle)
         try container.encode(userEmail, forKey: .userEmail)
         try container.encode(userName, forKey: .userName)
         try container.encode(duration, forKey: .duration)
@@ -595,6 +571,7 @@ extension Activity {
     init(
         id: Int,
         podId: Int,
+        podTitle: String,
         userEmail: String,
         userName: String,
         duration: Int,
@@ -605,6 +582,7 @@ extension Activity {
     ) {
         self.id = id
         self.podId = podId
+        self.podTitle = podTitle
         self.userEmail = userEmail
         self.userName = userName
         self.duration = duration

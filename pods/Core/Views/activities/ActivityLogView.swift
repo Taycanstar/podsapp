@@ -16,43 +16,46 @@ struct ActivityLogView: View {
                 Text("Activities").tag(0)
                 Text("Items").tag(1)
             }
+      
             .padding(.bottom)
             .padding(.horizontal)
             .pickerStyle(.segmented)
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
+            .listRowBackground(Color("iosbg"))
 
             // MARK: - Main content
             if selectedTab == 0 {
-                // Multi-item Activities section
+
                 ForEach(filteredActivities) { activity in
-                    NavigationLink(
-                        value: NavigationDestination.fullActivitySummary(
-//                            activity: activity,
-//                            columns: columns
-                            activityId: activity.id,
-                                    columns: columns
-                        )
-                    ) {
-                        ActivityRow(activity: activity)
-                    }
-                    .padding()
-                    .id(activity.id)
-                    .listRowInsets(EdgeInsets())
-                    .onAppear {
-                        // Infinite scrolling
-                        if let last = filteredActivities.last,
-                           activity.id == last.id,
-                           !activityManager.isLoading,
-                           activityManager.hasMore {
-                            Task {
-                                await MainActor.run {
-                                    activityManager.loadMoreActivities()
-                                }
-                            }
-                        }
-                    }
-                }
+                     NavigationLink(
+                         value: NavigationDestination.fullActivitySummary(
+                             activityId: activity.id,
+                             columns: columns
+                         )
+                     ) {
+                         ActivityRow(activity: activity)
+                     }
+                     .buttonStyle(PlainButtonStyle())
+                     .padding(.horizontal)
+                     .padding(.vertical, 4)
+                     .listRowInsets(EdgeInsets())
+                     .listRowSeparator(.hidden)
+                     .listRowBackground(Color("iosbg"))
+                     .id(activity.id)
+                     .onAppear {
+                         if let last = filteredActivities.last,
+                            activity.id == last.id,
+                            !activityManager.isLoading,
+                            activityManager.hasMore {
+                             Task {
+                                 await MainActor.run {
+                                     activityManager.loadMoreActivities()
+                                 }
+                             }
+                         }
+                     }
+                 }
                 .onDelete { indexSet in
                     for index in indexSet {
                         activityManager.deleteActivity(filteredActivities[index])
@@ -106,6 +109,8 @@ struct ActivityLogView: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)  // Add this
+        .background(Color("iosbg"))
         .navigationTitle("Logs")
         .navigationBarTitleDisplayMode(.large)
         .searchable(
@@ -185,28 +190,100 @@ struct ActivityLogView: View {
        }
 }
 
-// MARK: - Supporting Views
+
+//struct ActivityRow: View {
+//    let activity: Activity
+//    
+//    private func formatDuration(_ seconds: Int) -> String {
+//        let hours = seconds / 3600
+//        let minutes = (seconds % 3600) / 60
+//        let remainingSeconds = seconds % 60
+//        
+//        if hours > 0 {
+//            return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+//        } else {
+//            return String(format: "%d:%02d", minutes, remainingSeconds)
+//        }
+//    }
+//
+//    var body: some View {
+//        HStack(alignment: .center, spacing: 12) {
+//            // Pod icon
+//            Image("pd") // Make sure to have this image in your assets
+//                .resizable()
+//                .frame(width: 40, height: 40)
+//                .clipShape(RoundedRectangle(cornerRadius: 8))
+//            
+//            // Center content
+//            VStack(alignment: .leading, spacing: 4) {
+//                Text(activity.podTitle)
+//                    .font(.system(size: 16, weight: .regular))
+//                    .foregroundColor(.primary)
+//                
+//                Text(formatDuration(activity.duration))
+//                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+//                    .foregroundColor(Color("neonGreen"))
+//            }
+//            
+//            Spacer()
+//            
+//            // Date
+//            Text(formattedDate(activity.loggedAt))
+//                .font(.subheadline)
+//                .foregroundColor(.secondary)
+//        }
+//        .padding(.vertical, 12)
+//        .padding(.horizontal, 16)
+//        .background(Color(.systemBackground))
+//        .clipShape(RoundedRectangle(cornerRadius: 12))
+//        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+//    }
+//}
 struct ActivityRow: View {
     let activity: Activity
+    
+    private func formatDuration(_ seconds: Int) -> String {
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let remainingSeconds = seconds % 60
+        
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+        } else {
+            return String(format: "%d:%02d", minutes, remainingSeconds)
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("\(activity.items.count) items")
-                    .font(.headline)
-                Spacer()
-                Text(formattedDate(activity.loggedAt))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+        HStack(spacing: 16) {  // Increased spacing between elements
+            // Pod icon
+            Image("pd")
+                .resizable()
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            // Center content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.podTitle)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary)
+                
+                Text(formatDuration(activity.duration))
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color("neonGreen"))
             }
-
-            if let notes = activity.notes, !notes.isEmpty {
-                Text(notes)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
+            
+            Spacer()
+            
+            // Date
+            Text(formattedDate(activity.loggedAt))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color("iosnp"))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

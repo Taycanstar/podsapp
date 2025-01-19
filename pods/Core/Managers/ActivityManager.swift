@@ -210,43 +210,7 @@ class ActivityManager: ObservableObject {
         }
     }
     
-//    func updateActivity(
-//        activityId: Int,
-//        notes: String?,
-//        items: [(id: Int, notes: String?, columnValues: [String: Any])],
-//        completion: @escaping (Result<Void, Error>) -> Void
-//    ) {
-//        // 1) Make sure we have the needed info
-//        guard let userEmail = userEmail else {
-//            let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "ActivityManager not initialized"])
-//            completion(.failure(error))
-//            return
-//        }
-//
-//        // 2) Call networkManager’s update endpoint
-//        networkManager.updateActivity(
-//            activityId: activityId,
-//            userEmail: userEmail,
-//            notes: notes,
-//            items: items
-//        ) { [weak self] result in
-//            DispatchQueue.main.async {
-//                guard let self = self else { return }
-//                
-//                switch result {
-//                case .success(let updatedActivity):
-//                    // 3) Update local array so UI sees the changes
-//                    if let index = self.activities.firstIndex(where: { $0.id == updatedActivity.id }) {
-//                        self.activities[index] = updatedActivity
-//                    }
-//                    completion(.success(()))
-//                    
-//                case .failure(let error):
-//                    completion(.failure(error))
-//                }
-//            }
-//        }
-//    }
+
     func updateActivity(
         activityId: Int,
         notes: String?,
