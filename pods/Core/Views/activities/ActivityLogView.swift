@@ -27,15 +27,29 @@ struct ActivityLogView: View {
             // MARK: - Main content
             if selectedTab == 0 {
 
+//                ForEach(filteredActivities) { activity in
+//                     NavigationLink(
+//                         value: NavigationDestination.fullActivitySummary(
+//                             activityId: activity.id,
+//                             columns: columns
+//                         )
+//                     ) {
+//                         ActivityRow(activity: activity)
+//                     }
                 ForEach(filteredActivities) { activity in
-                     NavigationLink(
-                         value: NavigationDestination.fullActivitySummary(
-                             activityId: activity.id,
-                             columns: columns
-                         )
-                     ) {
-                         ActivityRow(activity: activity)
-                     }
+                    ZStack(alignment: .leading) {
+                        NavigationLink(
+                            value: NavigationDestination.fullActivitySummary(
+                                activityId: activity.id,
+                                columns: columns
+                            )
+                        ) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+                        
+                        ActivityRow(activity: activity)
+                    }
                      .buttonStyle(PlainButtonStyle())
                      .padding(.horizontal)
                      .padding(.vertical, 4)
