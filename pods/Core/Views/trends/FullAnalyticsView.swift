@@ -1,14 +1,286 @@
-
+//
+//import SwiftUI
+//import Mixpanel
+//
+//struct FullAnalyticsView: View {
+//    let column: PodColumn
+//    let activityLogs: [PodItemActivityLog]
+//    @State private var selectedTimeRange: TimeRange = .last30Days
+//    @State private var selectedTimeUnit: TimeUnit = .seconds
+//    @State private var selectedXAxisInterval: XAxisInterval = .day
+//    @State private var selectedMeasurement: MeasurementType = .unique // Default to unique values
+//    @State private var processedData: [ProcessedDataPoint] = []
+//    @State private var currentStreak: Int = 0
+//    @State private var longestStreak: Int = 0
+//    @Environment(\.colorScheme) private var colorScheme
+//    @State private var chartProxy: ScrollViewProxy? = nil
+//    
+//    var body: some View {
+//        ScrollView {
+//            VStack(alignment: .leading, spacing: 10) {
+//                HStack(spacing: 16) {
+//                    timeRangeDropdown
+//                    xAxisIntervalDropdown
+//                    measurementDropdown // New dropdown for measurement type
+//                    if column.type == "time" {
+//                        DropdownButton(
+//                            label: "Time Unit",
+//                            options: TimeUnit.allCases,
+//                            selectedOption: $selectedTimeUnit
+//                        )
+//                    }
+//                }
+//
+//                ColumnTrendView(
+//                    column: column,
+//                    processedData: processedData,
+//                    selectedTimeRange: selectedTimeRange,
+//                    selectedTimeUnit: selectedTimeUnit,
+//                    selectedXAxisInterval: selectedXAxisInterval,
+//                    proxy: $chartProxy
+//                )
+//                BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
+//                ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
+//                PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
+//                Spacer()
+//            }
+//            .frame(maxWidth: .infinity, alignment: .topLeading)
+//            .padding()
+//        }
+//        .navigationBarTitle(column.name, displayMode: .inline)
+//        .onAppear {
+//            setDefaultsForTimeRange()
+//            updateProcessedData()
+//            Mixpanel.mainInstance().time(event: "Viewed Trends")
+//        }
+//        .onDisappear {
+//            Mixpanel.mainInstance().track(event: "Viewed Trends", properties: [
+//                "column_name": column.name,
+//                "time_range": selectedTimeRange.rawValue,
+//                "measurement_type": selectedMeasurement.rawValue
+//            ])
+//        }
+//        .onChange(of: selectedTimeRange) { _, _ in
+//             setDefaultsForTimeRange()
+//             updateProcessedData()
+//             scrollToRecentData()
+//         }
+//         .onChange(of: selectedXAxisInterval) { _, _ in
+//             scrollToRecentData()
+//         }
+//         .onChange(of: selectedMeasurement) { _, _ in
+//             updateProcessedData()
+//             scrollToRecentData()
+//         }
+//    }
+//    
+//    
+//    private func scrollToRecentData() {
+//        if let proxy = chartProxy {
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+//                withAnimation {
+//                    proxy.scrollTo("chart", anchor: .trailing)
+//                }
+//            }
+//        }
+//    }
+//    
+//    private func setDefaultsForTimeRange() {
+//        switch selectedTimeRange {
+//        case .last7Days:
+//            selectedXAxisInterval = .day
+//            selectedMeasurement = .unique
+//        case .last30Days:
+//            selectedXAxisInterval = .day
+//            selectedMeasurement = .unique
+//        case .last3Months:
+//            selectedXAxisInterval = .week
+//            selectedMeasurement = .average
+//        case .last6Months:
+//            selectedXAxisInterval = .week
+//            selectedMeasurement = .average
+//        case .last12Months:
+//            selectedXAxisInterval = .month
+//            selectedMeasurement = .average
+//        default:
+//            selectedXAxisInterval = .day
+//            selectedMeasurement = .unique
+//        }
+//    }
+//    
+//    private var timeRangeDropdown: some View {
+//        DropdownButton(
+//            label: "Time Range",
+//            options: TimeRange.allCases,
+//            selectedOption: $selectedTimeRange
+//        )
+//    }
+//
+//    private var xAxisIntervalDropdown: some View {
+//        DropdownButton(
+//            label: "X-Axis Interval",
+//            options: XAxisInterval.allCases,
+//            selectedOption: $selectedXAxisInterval
+//        )
+//    }
+//    
+//    private var measurementDropdown: some View {
+//        DropdownButton(
+//            label: "Measurement",
+//            options: MeasurementType.allCases,
+//            selectedOption: $selectedMeasurement
+//        )
+//    }
+//
+//    private func updateProcessedData() {
+//        switch selectedMeasurement {
+//        case .unique:
+//            processedData = fetchUniqueData(for: selectedTimeRange)
+//        default:
+//            processedData = fetchAggregateData(for: selectedTimeRange, measurement: selectedMeasurement)
+//        }
+//        calculateStreaks()
+//    }
+//    
+//    // Fetches unique (non-aggregated) data points for the specified time range
+//    private func fetchUniqueData(for timeRange: TimeRange) -> [ProcessedDataPoint] {
+//        let calendar = Calendar.current
+//        let startDate = timeRange.startDate(using: calendar)
+//        
+//        return activityLogs
+//            .filter { $0.loggedAt >= startDate }
+//            .compactMap { log in
+//                guard let value = numericValue(for: log) else { return nil }
+//                return ProcessedDataPoint(date: log.loggedAt, value: value)
+//            }
+//            .sorted(by: { $0.date < $1.date })
+//    }
+//
+//    // Fetches aggregated data points based on the selected measurement type and time range
+//    private func fetchAggregateData(for timeRange: TimeRange, measurement: MeasurementType) -> [ProcessedDataPoint] {
+//        let calendar = Calendar.current
+//        let interval = timeRange.intervalComponent()
+//        let startDate = timeRange.startDate(using: calendar)
+//        
+//        // Grouping data points based on the time interval
+//        var groupedData: [Date: [Double]] = [:]
+//        for log in activityLogs where log.loggedAt >= startDate {
+//            guard let value = numericValue(for: log) else { continue }
+//            let intervalStart = calendar.startOfDay(for: log.loggedAt)
+//            groupedData[intervalStart, default: []].append(value)
+//        }
+//
+//        return groupedData.map { (date, values) in
+//            let aggregatedValue: Double
+//            switch measurement {
+//            case .sum:
+//                aggregatedValue = values.reduce(0, +)
+//            case .average:
+//                aggregatedValue = values.reduce(0, +) / Double(values.count)
+//            case .max:
+//                aggregatedValue = values.max() ?? 0
+//            case .min:
+//                aggregatedValue = values.min() ?? 0
+//            case .unique:
+//                aggregatedValue = values.last ?? 0 // Default unique value behavior if needed
+//            case .median:
+//                     let sortedValues = values.sorted()
+//                     if sortedValues.count % 2 == 0 {
+//                         aggregatedValue = (sortedValues[sortedValues.count / 2 - 1] + sortedValues[sortedValues.count / 2]) / 2
+//                     } else {
+//                         aggregatedValue = sortedValues[sortedValues.count / 2]
+//                     }
+//            }
+//            return ProcessedDataPoint(date: date, value: aggregatedValue)
+//        }
+//        .sorted { $0.date < $1.date }
+//    }
+//
+//
+//    private func numericValue(for log: PodItemActivityLog) -> Double? {
+//        guard let columnValue = log.columnValues[String(column.id)] else { return nil }
+//
+//        switch columnValue {
+//        case .number(let value):
+//            return value
+//        case .string(let value):
+//            return Double(value)
+//        case .time(let timeValue):
+//            return Double(timeValue.totalSeconds)
+//        case .array(let array):
+//            // Aggregate numeric values from the array
+//            let numericValues = array.compactMap { element -> Double? in
+//                switch element {
+//                case .number(let value):
+//                    return value
+//                case .string(let value):
+//                    return Double(value)
+//                case .time(let timeValue):
+//                    return Double(timeValue.totalSeconds)
+//                case .array:
+//                    return nil // Nested arrays are ignored to keep it simple
+//                case .null:
+//                    return nil
+//                }
+//            }
+//            return numericValues.reduce(0, +) // Sum of all numeric values in the array
+//        case .null:
+//            return nil
+//        }
+//    }
+//
+//
+//
+//    private func calculateStreaks() {
+//        let sortedData = processedData.sorted { $0.date < $1.date }
+//        var current = 0
+//        var longest = 0
+//        var lastDate: Date?
+//        let calendar = Calendar.current
+//        let today = Date()
+//        
+//        for point in sortedData {
+//            if let last = lastDate {
+//                let dayDifference = calendar.dateComponents([.day], from: calendar.startOfDay(for: last), to: calendar.startOfDay(for: point.date)).day ?? 0
+//                if dayDifference == 1 {
+//                    current += 1
+//                } else if dayDifference > 1 {
+//                    longest = max(longest, current)
+//                    current = 1
+//                }
+//            } else {
+//                current = 1
+//            }
+//            lastDate = point.date
+//        }
+//        
+//        if let lastLogDate = lastDate {
+//            let daysSinceLastLog = calendar.dateComponents([.day], from: calendar.startOfDay(for: lastLogDate), to: calendar.startOfDay(for: today)).day ?? 0
+//            if daysSinceLastLog > 1 {
+//                current = 0
+//            }
+//        } else {
+//            current = 0
+//        }
+//        
+//        longest = max(longest, current)
+//        currentStreak = current
+//        longestStreak = longest
+//    }
+//}
 import SwiftUI
 import Mixpanel
 
 struct FullAnalyticsView: View {
     let column: PodColumn
-    let activityLogs: [PodItemActivityLog]
+    let activities: [Activity]
+    let itemId: Int
+    let getHighestValue: (Activity) -> Double?
+    
     @State private var selectedTimeRange: TimeRange = .last30Days
     @State private var selectedTimeUnit: TimeUnit = .seconds
     @State private var selectedXAxisInterval: XAxisInterval = .day
-    @State private var selectedMeasurement: MeasurementType = .unique // Default to unique values
+    @State private var selectedMeasurement: MeasurementType = .unique
     @State private var processedData: [ProcessedDataPoint] = []
     @State private var currentStreak: Int = 0
     @State private var longestStreak: Int = 0
@@ -21,7 +293,7 @@ struct FullAnalyticsView: View {
                 HStack(spacing: 16) {
                     timeRangeDropdown
                     xAxisIntervalDropdown
-                    measurementDropdown // New dropdown for measurement type
+                    measurementDropdown
                     if column.type == "time" {
                         DropdownButton(
                             label: "Time Unit",
@@ -39,9 +311,28 @@ struct FullAnalyticsView: View {
                     selectedXAxisInterval: selectedXAxisInterval,
                     proxy: $chartProxy
                 )
-                BoundsView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
-                ConsistencyTrackerView(column: column, currentStreak: currentStreak, longestStreak: longestStreak, selectedTimeRange: selectedTimeRange)
-                PerformanceVariabilityView(column: column, processedData: processedData, selectedTimeRange: selectedTimeRange, selectedTimeUnit: selectedTimeUnit)
+                
+                BoundsView(
+                    column: column,
+                    processedData: processedData,
+                    selectedTimeRange: selectedTimeRange,
+                    selectedTimeUnit: selectedTimeUnit
+                )
+                
+                ConsistencyTrackerView(
+                    column: column,
+                    currentStreak: currentStreak,
+                    longestStreak: longestStreak,
+                    selectedTimeRange: selectedTimeRange
+                )
+                
+                PerformanceVariabilityView(
+                    column: column,
+                    processedData: processedData,
+                    selectedTimeRange: selectedTimeRange,
+                    selectedTimeUnit: selectedTimeUnit
+                )
+                
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -61,19 +352,18 @@ struct FullAnalyticsView: View {
             ])
         }
         .onChange(of: selectedTimeRange) { _, _ in
-             setDefaultsForTimeRange()
-             updateProcessedData()
-             scrollToRecentData()
-         }
-         .onChange(of: selectedXAxisInterval) { _, _ in
-             scrollToRecentData()
-         }
-         .onChange(of: selectedMeasurement) { _, _ in
-             updateProcessedData()
-             scrollToRecentData()
-         }
+            setDefaultsForTimeRange()
+            updateProcessedData()
+            scrollToRecentData()
+        }
+        .onChange(of: selectedXAxisInterval) { _, _ in
+            scrollToRecentData()
+        }
+        .onChange(of: selectedMeasurement) { _, _ in
+            updateProcessedData()
+            scrollToRecentData()
+        }
     }
-    
     
     private func scrollToRecentData() {
         if let proxy = chartProxy {
@@ -142,31 +432,29 @@ struct FullAnalyticsView: View {
         calculateStreaks()
     }
     
-    // Fetches unique (non-aggregated) data points for the specified time range
     private func fetchUniqueData(for timeRange: TimeRange) -> [ProcessedDataPoint] {
         let calendar = Calendar.current
         let startDate = timeRange.startDate(using: calendar)
         
-        return activityLogs
+        return activities
             .filter { $0.loggedAt >= startDate }
-            .compactMap { log in
-                guard let value = numericValue(for: log) else { return nil }
-                return ProcessedDataPoint(date: log.loggedAt, value: value)
+            .compactMap { activity in
+                guard let value = getHighestValue(activity) else { return nil }
+                return ProcessedDataPoint(date: activity.loggedAt, value: value)
             }
             .sorted(by: { $0.date < $1.date })
     }
 
-    // Fetches aggregated data points based on the selected measurement type and time range
     private func fetchAggregateData(for timeRange: TimeRange, measurement: MeasurementType) -> [ProcessedDataPoint] {
         let calendar = Calendar.current
-        let interval = timeRange.intervalComponent()
         let startDate = timeRange.startDate(using: calendar)
         
-        // Grouping data points based on the time interval
+        // Group activities by date interval
         var groupedData: [Date: [Double]] = [:]
-        for log in activityLogs where log.loggedAt >= startDate {
-            guard let value = numericValue(for: log) else { continue }
-            let intervalStart = calendar.startOfDay(for: log.loggedAt)
+        
+        for activity in activities where activity.loggedAt >= startDate {
+            guard let value = getHighestValue(activity) else { continue }
+            let intervalStart = calendar.startOfDay(for: activity.loggedAt)
             groupedData[intervalStart, default: []].append(value)
         }
 
@@ -182,54 +470,19 @@ struct FullAnalyticsView: View {
             case .min:
                 aggregatedValue = values.min() ?? 0
             case .unique:
-                aggregatedValue = values.last ?? 0 // Default unique value behavior if needed
+                aggregatedValue = values.last ?? 0
             case .median:
-                     let sortedValues = values.sorted()
-                     if sortedValues.count % 2 == 0 {
-                         aggregatedValue = (sortedValues[sortedValues.count / 2 - 1] + sortedValues[sortedValues.count / 2]) / 2
-                     } else {
-                         aggregatedValue = sortedValues[sortedValues.count / 2]
-                     }
+                let sortedValues = values.sorted()
+                if sortedValues.count % 2 == 0 {
+                    aggregatedValue = (sortedValues[sortedValues.count / 2 - 1] + sortedValues[sortedValues.count / 2]) / 2
+                } else {
+                    aggregatedValue = sortedValues[sortedValues.count / 2]
+                }
             }
             return ProcessedDataPoint(date: date, value: aggregatedValue)
         }
         .sorted { $0.date < $1.date }
     }
-
-
-    private func numericValue(for log: PodItemActivityLog) -> Double? {
-        guard let columnValue = log.columnValues[String(column.id)] else { return nil }
-
-        switch columnValue {
-        case .number(let value):
-            return value
-        case .string(let value):
-            return Double(value)
-        case .time(let timeValue):
-            return Double(timeValue.totalSeconds)
-        case .array(let array):
-            // Aggregate numeric values from the array
-            let numericValues = array.compactMap { element -> Double? in
-                switch element {
-                case .number(let value):
-                    return value
-                case .string(let value):
-                    return Double(value)
-                case .time(let timeValue):
-                    return Double(timeValue.totalSeconds)
-                case .array:
-                    return nil // Nested arrays are ignored to keep it simple
-                case .null:
-                    return nil
-                }
-            }
-            return numericValues.reduce(0, +) // Sum of all numeric values in the array
-        case .null:
-            return nil
-        }
-    }
-
-
 
     private func calculateStreaks() {
         let sortedData = processedData.sorted { $0.date < $1.date }
@@ -268,7 +521,6 @@ struct FullAnalyticsView: View {
         longestStreak = longest
     }
 }
-
 // Enum to define measurement types
 enum MeasurementType: String, CaseIterable {
     case unique = "Unique"

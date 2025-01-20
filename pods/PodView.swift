@@ -8,12 +8,12 @@ enum NavigationDestination: Hashable {
     case podMembers
     case activityLog
     case trends(podId: Int)
-    case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
+//    case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
+    case fullAnalytics(column: PodColumn, activities: [Activity], itemId: Int)
     case gracie(podId: Int)
     case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
     case activitySummary(pod: Pod, duration: Int, startTime: Date, endTime: Date, podColumns: [PodColumn], notes: String?)
     case fullSummary(items: [PodItem], columns: [PodColumn])
-//    case fullActivitySummary(activity: Activity, columns: [PodColumn])
     case fullActivitySummary(activityId: Int, columns: [PodColumn])
     case itemSummary(itemId: Int, columns: [PodColumn])
     
@@ -33,9 +33,14 @@ enum NavigationDestination: Hashable {
         case .trends(let podId):
             hasher.combine("trends")
             hasher.combine(podId)
-        case .fullAnalytics(let column, _):
+//        case .fullAnalytics(let column, _):
+//                    hasher.combine("fullAnalytics")
+//                    hasher.combine(column.name)
+        case .fullAnalytics(let column, let activities, let itemId):
                     hasher.combine("fullAnalytics")
                     hasher.combine(column.name)
+                    hasher.combine(itemId)
+                    hasher.combine(activities.map { $0.id })
         case .gracie(let podId):
             hasher.combine("gracie")
             hasher.combine(podId)
@@ -56,18 +61,10 @@ enum NavigationDestination: Hashable {
                   hasher.combine("fullSummary")
                   hasher.combine(items.map { $0.id })
             hasher.combine(columns.map { $0.id })
-//        case .fullActivitySummary(let activity, let columns):
-//            hasher.combine("fullActivitySummary")
-//            hasher.combine(activity.id)               // Unique identifier for the activity
-//            hasher.combine(columns.map { $0.id })
         case .fullActivitySummary(let activityId, let columns):
                     hasher.combine("fullActivitySummary")
                     hasher.combine(activityId)
                     hasher.combine(columns.map { $0.id })
-//        case .itemSummary(let item, let columns):
-//                    hasher.combine("itemSummary")
-//                    hasher.combine(item.id)
-//                    hasher.combine(columns.map { $0.id })
         case .itemSummary(let itemId, let columns):
                     hasher.combine("itemSummary")
                     hasher.combine(itemId)
@@ -87,8 +84,13 @@ enum NavigationDestination: Hashable {
             return id1 == id2
         case (.gracie(let id1), .gracie(let id2)):
             return id1 == id2
-        case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
-                    return column1.name == column2.name
+//        case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
+//                    return column1.name == column2.name
+        case (.fullAnalytics(let column1, let activities1, let itemId1),
+                      .fullAnalytics(let column2, let activities2, let itemId2)):
+                    return column1.name == column2.name &&
+                           activities1.map { $0.id } == activities2.map { $0.id } &&
+                           itemId1 == itemId2
         case (.fullActivityLog(let log1, _, _), .fullActivityLog(let log2, _, _)):
             return log1.id == log2.id
         case (.activitySummary(let pod1, let duration1, let startTime1, let endTime1, let columns1, let notes1),
@@ -103,18 +105,10 @@ enum NavigationDestination: Hashable {
                 case (.fullSummary(let items1, let columns1), .fullSummary(let items2, let columns2)):
                     return items1.map { $0.id } == items2.map { $0.id } &&
                            columns1.map { $0.id } == columns2.map { $0.id }
-//        case (.fullActivitySummary(let activity1, let columns1),
-//              .fullActivitySummary(let activity2, let columns2)):
-//            return activity1.id == activity2.id &&
-//                   columns1.map { $0.id } == columns2.map { $0.id }
         case (.fullActivitySummary(let activityId1, let columns1),
                       .fullActivitySummary(let activityId2, let columns2)):
                     return activityId1 == activityId2 &&
                            columns1.map { $0.id } == columns2.map { $0.id }
-//        case (.itemSummary(let item1, let columns1),
-//                      .itemSummary(let item2, let columns2)):
-//                    return item1.id == item2.id &&
-//                           columns1.map { $0.id } == columns2.map { $0.id }
         case (.itemSummary(let itemId1, let columns1),
                       .itemSummary(let itemId2, let columns2)):
                     return itemId1 == itemId2 &&
@@ -322,10 +316,37 @@ struct PodView: View {
                         userEmail: viewModel.email
                     )
             case .trends(let podId):
-
                 ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
-            case .fullAnalytics(let column, let logs):
-                            FullAnalyticsView(column: column, activityLogs: logs)
+//            case .fullAnalytics(let column, let logs):
+//                            FullAnalyticsView(column: column, activityLogs: logs)
+            case .fullAnalytics(let column, let activities, let itemId):
+                    FullAnalyticsView(
+                        column: column,
+                        activities: activities,
+                        itemId: itemId,
+                        getHighestValue: { activity in
+                            let relevantItem = activity.items.first { $0.itemId == itemId }
+                            guard let columnValue = relevantItem?.columnValues[String(column.id)] else { return nil }
+                            
+                            switch columnValue {
+                            case .number(let value):
+                                return value
+                            case .time(let timeValue):
+                                return Double(timeValue.totalSeconds)
+                            case .array(let values):
+                                let numericValues = values.compactMap { value -> Double? in
+                                    switch value {
+                                    case .number(let num): return num
+                                    case .time(let time): return Double(time.totalSeconds)
+                                    default: return nil
+                                    }
+                                }
+                                return numericValues.max()
+                            default:
+                                return nil
+                            }
+                        }
+                    )
             case .gracie(let podId):
                 GracieView(podId: podId)
 
