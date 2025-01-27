@@ -60,7 +60,7 @@ struct ContentView: View {
                             case 2:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                             case 3:
-                                PodsView()
+                                PodsContainerView()
                             default:
                                 EmptyView()
                             }

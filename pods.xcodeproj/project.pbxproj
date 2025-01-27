@@ -46,6 +46,7 @@
 		363AFA172D4746A900C91A14 /* PodsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA152D4746A900C91A14 /* PodsView.swift */; };
 		363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA182D47471B00C91A14 /* DashboardView.swift */; };
 		363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA1A2D474FB400C91A14 /* PodsViewModel.swift */; };
+		363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363AFA1C2D4759E000C91A14 /* FoldersView.swift */; };
 		3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3641F5112C73A13500256E85 /* PodInfoView.swift */; };
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
@@ -184,6 +185,7 @@
 		363AFA152D4746A900C91A14 /* PodsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodsView.swift; sourceTree = "<group>"; };
 		363AFA182D47471B00C91A14 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		363AFA1A2D474FB400C91A14 /* PodsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PodsViewModel.swift; path = Pods/viewModels/PodsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		363AFA1C2D4759E000C91A14 /* FoldersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoldersView.swift; path = Pods/Core/Views/pods/FoldersView.swift; sourceTree = SOURCE_ROOT; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -331,6 +333,7 @@
 			isa = PBXGroup;
 			children = (
 				363AFA152D4746A900C91A14 /* PodsView.swift */,
+				363AFA1C2D4759E000C91A14 /* FoldersView.swift */,
 			);
 			path = pods;
 			sourceTree = "<group>";
@@ -924,6 +927,7 @@
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
+				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
