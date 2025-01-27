@@ -55,9 +55,12 @@ struct ContentView: View {
                         Group {
                             switch selectedTab {
                             case 0:
-                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
+//                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
+                                DashboardView()
                             case 2:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
+                            case 3:
+                                PodsView()
                             default:
                                 EmptyView()
                             }

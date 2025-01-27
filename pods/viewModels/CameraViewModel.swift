@@ -293,8 +293,8 @@ struct PodJSON: Codable {
     let workspace: String?
     var isFavorite: Bool?
     var lastVisited: Date?
-    var columns: [PodColumn]
-    var visibleColumns: [String]
+    var columns: [PodColumn]? = []
+    var visibleColumns: [String]? = []
     var role: String?
     var description: String?
     var instructions: String?
@@ -676,50 +676,69 @@ struct PodResponse: Codable {
 
 }
 
+//extension Pod {
+//    init(from podJSON: PodJSON) {
+//
+//        
+//        self.id = podJSON.id
+//
+//        
+//        self.title = podJSON.title
+//
+//        self.items = podJSON.items?.map { item in
+//
+//            let mappedItem = PodItem(from: item)
+//
+//            return mappedItem
+//        } ?? []
+//        
+//        self.templateId = podJSON.templateId
+//        self.workspace = podJSON.workspace ?? "Main workspace"
+//        self.isFavorite = podJSON.isFavorite
+//        self.lastVisited = podJSON.lastVisited
+//        
+//    
+//        self.columns = podJSON.columns
+//
+//        self.visibleColumns = podJSON.visibleColumns
+//        self.role = podJSON.role
+//        self.description = podJSON.description
+//        self.instructions = podJSON.instructions
+//        self.type = podJSON.type
+//        self.teamId = podJSON.teamId
+//
+//        if let recentActivityLogs = podJSON.recentActivityLogs {
+//            self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
+//                do {
+//                    return try PodItemActivityLog(from: logJSON)
+//                } catch {
+//                    print("Error parsing activity log: \(error)")
+//                    return nil
+//                }
+//            }
+//        } else {
+//            self.recentActivityLogs = nil
+//        }
+//    }
+//}
 extension Pod {
-    init(from podJSON: PodJSON) {
-
-        
-        self.id = podJSON.id
-
-        
-        self.title = podJSON.title
-
-        self.items = podJSON.items?.map { item in
-
-            let mappedItem = PodItem(from: item)
-
-            return mappedItem
-        } ?? []
-        
-        self.templateId = podJSON.templateId
-        self.workspace = podJSON.workspace ?? "Main workspace"
-        self.isFavorite = podJSON.isFavorite
-        self.lastVisited = podJSON.lastVisited
-        
-    
-        self.columns = podJSON.columns
-
-        self.visibleColumns = podJSON.visibleColumns
-        self.role = podJSON.role
-        self.description = podJSON.description
-        self.instructions = podJSON.instructions
-        self.type = podJSON.type
-        self.teamId = podJSON.teamId
-
-        if let recentActivityLogs = podJSON.recentActivityLogs {
-            self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
-                do {
-                    return try PodItemActivityLog(from: logJSON)
-                } catch {
-                    print("Error parsing activity log: \(error)")
-                    return nil
-                }
-            }
-        } else {
-            self.recentActivityLogs = nil
-        }
-    }
+   init(from podJSON: PodJSON) {
+       self.id = podJSON.id
+       self.title = podJSON.title
+       self.items = []
+       self.templateId = nil
+       self.workspace = nil
+       self.isFavorite = nil
+       self.lastVisited = nil
+       self.columns = podJSON.columns ?? []
+       self.visibleColumns = podJSON.visibleColumns ?? []
+       self.role = nil
+       self.description = nil
+       self.instructions = nil
+       self.type = nil
+       self.teamId = nil
+       self.recentActivityLogs = nil
+   }
 }
 
 

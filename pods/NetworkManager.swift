@@ -13,10 +13,9 @@ enum NetworkError: Error {
 
 
 class NetworkManager {
-
-//  
-    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//    let baseUrl = "http://192.168.1.79:8000"
+ 
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+    let baseUrl = "http://192.168.1.79:8000"
 //    let baseUrl = "http://172.20.10.3:8000"
 
     
@@ -821,6 +820,35 @@ class NetworkManager {
                       }
                   }
                 completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func fetchPodsForUser2(email: String, completion: @escaping ([Pod]?, Error?) -> Void) {
+        let urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        
+        guard let url = URL(string: urlString) else {
+            completion(nil, NetworkError.invalidURL)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+            
+            guard let data = data else {
+                completion(nil, NetworkError.noData)
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(PodResponse.self, from: data)
+                let pods = response.pods.map { Pod(from: $0) }
+                completion(pods, nil)
+            } catch {
+                completion(nil, error)
             }
         }.resume()
     }

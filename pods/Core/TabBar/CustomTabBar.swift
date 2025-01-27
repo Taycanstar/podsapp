@@ -5,7 +5,6 @@ struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @Binding var showVideoCreationScreen: Bool
-//    @Binding var AddOptionsSheet: Bool
     @Binding var showQuickPodView: Bool
     @EnvironmentObject var sharedViewModel: SharedViewModel
 
@@ -24,21 +23,23 @@ struct CustomTabBar: View {
                     TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                         .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                     Spacer()
-                    TabBarButton(iconName: "plus.app", label: "Add", isSelected: selectedTab == 1, iconSize: 20) {
-                        // Directly trigger the video creation screen without changing the selectedTab
-//                        showVideoCreationScreen = true
+                 
+                    TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
                         showQuickPodView = true
                     }
-                        .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
+//                        .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
+                    .foregroundColor(.accentColor)
                     Spacer()
                     TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
                         .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                    Spacer()
+                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
+                        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
                 }
                 .padding(.horizontal, 45)
                 .padding(.top, 11)
                 .background(
                     Material.ultraThin)
-//                .background(tabBarBackgroundColor)
                 
             }
            
@@ -82,7 +83,7 @@ struct CustomTabBar: View {
 // Custom tab button
 struct TabBarButton: View {
     var iconName: String
-    var label: String
+    var label: String?  // Make label optional
     var isSelected: Bool
     var iconSize: CGFloat = UIFont.preferredFont(forTextStyle: .title1).pointSize
     var action: () -> Void
@@ -93,9 +94,11 @@ struct TabBarButton: View {
                 Image(systemName: isSelected ? iconName + ".fill" : iconName)
                     .imageScale(.large)
                     .font(.system(size: iconSize))
-                Text(label)
-                    .font(.caption)
-                    .padding(.top, 0.5 )
+                if let label = label {  // Only show label if provided
+                    Text(label)
+                        .font(.caption)
+                        .padding(.top, 0.5)
+                }
             }
         }
     }
