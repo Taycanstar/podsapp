@@ -824,34 +824,91 @@ class NetworkManager {
         }.resume()
     }
     
-    func fetchPodsForUser2(email: String, completion: @escaping ([Pod]?, Error?) -> Void) {
-        let urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+//    func fetchPodsForUser2(email: String, completion: @escaping ([Pod]?, Error?) -> Void) {
+//        let urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+//        
+//        guard let url = URL(string: urlString) else {
+//            completion(nil, NetworkError.invalidURL)
+//            return
+//        }
+//        
+//        URLSession.shared.dataTask(with: url) { data, response, error in
+//            if let error = error {
+//                completion(nil, error)
+//                return
+//            }
+//            
+//            guard let data = data else {
+//                completion(nil, NetworkError.noData)
+//                return
+//            }
+//            
+//            do {
+//                let response = try JSONDecoder().decode(PodResponse.self, from: data)
+//                let pods = response.pods.map { Pod(from: $0) }
+//                completion(pods, nil)
+//            } catch {
+//                completion(nil, error)
+//            }
+//        }.resume()
+//    }
+    func fetchPodsForUser2(email: String, folderName: String = "Pods", completion: @escaping (Result<PodResponse, Error>) -> Void) {
+            let urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")?folder=\(folderName)"
+            
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    let response = try JSONDecoder().decode(PodResponse.self, from: data)
+                    completion(.success(response))
+                } catch {
+                    completion(.failure(error))
+                }
+            }.resume()
+        }
+    
+    
+    func fetchUserFolders(email: String, completion: @escaping (Result<FolderResponse, Error>) -> Void) {
+        let urlString = "\(baseUrl)/get-user-folders/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
         
         guard let url = URL(string: urlString) else {
-            completion(nil, NetworkError.invalidURL)
+            completion(.failure(NetworkError.invalidURL))
             return
         }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                completion(nil, error)
+                completion(.failure(error))
                 return
             }
             
             guard let data = data else {
-                completion(nil, NetworkError.noData)
+                completion(.failure(NetworkError.noData))
                 return
             }
             
             do {
-                let response = try JSONDecoder().decode(PodResponse.self, from: data)
-                let pods = response.pods.map { Pod(from: $0) }
-                completion(pods, nil)
+                let response = try JSONDecoder().decode(FolderResponse.self, from: data)
+                completion(.success(response))
             } catch {
-                completion(nil, error)
+                completion(.failure(error))
             }
         }.resume()
     }
+
 
     func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
          let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"

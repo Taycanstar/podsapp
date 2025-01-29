@@ -28,20 +28,41 @@ struct FoldersView: View {
 }
 
 
+//struct PodsContainerView: View {
+//    @State private var path = NavigationPath()
+//    
+//    var body: some View {
+//        NavigationStack(path: $path) {
+//            FoldersView(path: $path)
+//                // Move `.navigationDestination` up here:
+//                .navigationDestination(for: FolderDestination.self) { destination in
+//                    switch destination {
+//                    case .pods:
+//                        PodsView()
+//                    }
+//                }
+//        }
+//    }
+//}
 struct PodsContainerView: View {
+    @StateObject var podsViewModel = PodsViewModel()
     @State private var path = NavigationPath()
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     var body: some View {
         NavigationStack(path: $path) {
             FoldersView(path: $path)
-                // Move `.navigationDestination` up here:
                 .navigationDestination(for: FolderDestination.self) { destination in
                     switch destination {
                     case .pods:
                         PodsView()
+                            .onAppear {
+                                podsViewModel.initialize(email: viewModel.email)  // Removed if let
+                            }
                     }
                 }
         }
+        .environmentObject(podsViewModel)
     }
 }
 

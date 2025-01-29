@@ -100,49 +100,7 @@ class ActivityManager: ObservableObject {
             }
         }
     }
-    
 
-//    func createActivity(
-//        duration: Int,
-//        notes: String?,
-//        items: [(id: Int, notes: String?, columnValues: [String: Any])],
-//        tempId: Int? = nil, // Optional tempId
-//        completion: @escaping (Result<Activity, Error>) -> Void
-//    ) {
-//        guard let podId = podId, let userEmail = userEmail else {
-//            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
-//            return
-//        }
-//
-//        networkManager.createActivity(
-//            podId: podId,
-//            userEmail: userEmail,
-//            duration: duration,
-//            notes: notes,
-//            items: items
-//        ) { [weak self] result in
-//            DispatchQueue.main.async {
-//                guard let self = self else { return }
-//                switch result {
-//                case .success(let activity):
-//                    if let tempId = tempId,
-//                       let index = self.activities.firstIndex(where: { $0.id == tempId }) {
-//                        // Replace temporary activity with actual activity
-//                        self.activities[index] = activity
-//                    } else {
-//                        // Insert actual activity normally
-//                        self.activities.insert(activity, at: 0)
-//                    }
-//                    completion(.success(activity))
-//
-//                case .failure(let error):
-//                    self.error = error
-//                    completion(.failure(error))
-//                }
-//            }
-//        }
-//    }
-//
    
     func createActivity(
         duration: Int,

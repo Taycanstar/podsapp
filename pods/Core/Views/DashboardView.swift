@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+//struct DashboardView: View {
+//    @EnvironmentObject var podsViewModel: PodsViewModel
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//    
+//    var body: some View {
+//        Text("Dashboard")
+//            .onAppear {
+//                podsViewModel.fetchPods(email: viewModel.email) {}
+//            }
+//    }
+//}
+//
+
 struct DashboardView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
@@ -14,8 +27,7 @@ struct DashboardView: View {
     var body: some View {
         Text("Dashboard")
             .onAppear {
-                podsViewModel.fetchPods(email: viewModel.email) {}
+                podsViewModel.initialize(email: viewModel.email)  // Use initialize instead of fetchPods
             }
     }
 }
-

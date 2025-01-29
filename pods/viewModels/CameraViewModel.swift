@@ -671,10 +671,36 @@ struct TimeValue: Codable, Equatable {
 
 
 
+//struct PodResponse: Codable {
+//    let pods: [PodJSON]
+//
+//}
 struct PodResponse: Codable {
-    let pods: [PodJSON]
-
+    let folder: FolderData?  // Optional because existing responses don't include folder
+    let pods: [PodJSON]      // This stays required as it's the core data
+    let totalPods: Int?      // Optional to maintain backward compatibility
+    
+    enum CodingKeys: String, CodingKey {
+        case folder
+        case pods
+        case totalPods = "totalPods"
+    }
 }
+struct FolderData: Codable {
+    let id: Int
+    let name: String
+    let isDefault: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case isDefault = "is_default"
+    }
+}
+
+struct FolderResponse: Codable {
+    let folders: [Folder]
+}
+
 
 //extension Pod {
 //    init(from podJSON: PodJSON) {
@@ -796,6 +822,18 @@ enum CameraMode: String, CaseIterable {
     }
 }
 
+struct Folder: Identifiable, Codable {
+    let id: Int
+    let name: String
+    let isDefault: Bool
+    let podCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case isDefault = "is_default"
+        case podCount = "pod_count"
+    }
+}
 
 // MARK: Camera View Model
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
