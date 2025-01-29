@@ -66,6 +66,7 @@ struct ContentView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .ignoresSafeArea(.keyboard)
                         .onChange(of: selectedTab) {_, _ in
                             if selectedTab == 1 {
                                 showingVideoCreationScreen = true
@@ -77,8 +78,10 @@ struct ContentView: View {
                     }
                     if isTabBarVisible {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
+                            .ignoresSafeArea(.keyboard)
                     }
                 }
+                .ignoresSafeArea(.keyboard)
                 .sheet(isPresented: $showAddSheet) {
                     AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])

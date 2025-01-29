@@ -23,7 +23,9 @@ struct CustomTabBar: View {
                     TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                         .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                     Spacer()
-                 
+                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
+                        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
+                    Spacer()
                     TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
                         showQuickPodView = true
                     }
@@ -32,9 +34,8 @@ struct CustomTabBar: View {
                     Spacer()
                     TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
                         .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
-                    Spacer()
-                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
-                        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
+                    
+                   
                 }
                 .padding(.horizontal, 45)
                 .padding(.top, 11)

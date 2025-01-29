@@ -9,12 +9,24 @@ import SwiftUI
 
 struct PodsView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel
+    @State private var searchText = ""
+    
+    var filteredPods: [Pod] {
+        if searchText.isEmpty {
+            return podsViewModel.pods
+        } else {
+            return podsViewModel.pods.filter { pod in
+                pod.title.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
     
     var body: some View {
-        List(podsViewModel.pods) { pod in
+        List(filteredPods) { pod in
             Text(pod.title)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
         }
-        .navigationTitle("Pods") // The back button will say "Folders" automatically
+        .navigationTitle("Pods")
+        .searchable(text: $searchText, prompt: "Search")
     }
 }
