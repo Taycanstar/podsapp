@@ -87,6 +87,8 @@ class PodsViewModel: ObservableObject {
         }
     }
     
+
+    
     func deletePod(podId: Int) {
         networkManager.deletePod(podId: podId) { [weak self] success, error in
             DispatchQueue.main.async {

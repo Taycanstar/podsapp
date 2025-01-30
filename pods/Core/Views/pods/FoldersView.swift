@@ -54,7 +54,7 @@ struct FoldersView: View {
 
 
 struct PodsContainerView: View {
-    @StateObject var podsViewModel = PodsViewModel()
+    @EnvironmentObject var podsViewModel: PodsViewModel
     @State private var path = NavigationPath()
     @EnvironmentObject var viewModel: OnboardingViewModel
     
@@ -65,13 +65,11 @@ struct PodsContainerView: View {
                     switch destination {
                     case .pods:
                         PodsView()
-                            .onAppear {
-                                podsViewModel.initialize(email: viewModel.email)  // Removed if let
-                            }
+                           
                     }
                 }
         }
-        .environmentObject(podsViewModel)
+        
     }
 }
 
