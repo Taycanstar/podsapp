@@ -702,51 +702,6 @@ struct FolderResponse: Codable {
 }
 
 
-//extension Pod {
-//    init(from podJSON: PodJSON) {
-//
-//        
-//        self.id = podJSON.id
-//
-//        
-//        self.title = podJSON.title
-//
-//        self.items = podJSON.items?.map { item in
-//
-//            let mappedItem = PodItem(from: item)
-//
-//            return mappedItem
-//        } ?? []
-//        
-//        self.templateId = podJSON.templateId
-//        self.workspace = podJSON.workspace ?? "Main workspace"
-//        self.isFavorite = podJSON.isFavorite
-//        self.lastVisited = podJSON.lastVisited
-//        
-//    
-//        self.columns = podJSON.columns
-//
-//        self.visibleColumns = podJSON.visibleColumns
-//        self.role = podJSON.role
-//        self.description = podJSON.description
-//        self.instructions = podJSON.instructions
-//        self.type = podJSON.type
-//        self.teamId = podJSON.teamId
-//
-//        if let recentActivityLogs = podJSON.recentActivityLogs {
-//            self.recentActivityLogs = recentActivityLogs.compactMap { logJSON in
-//                do {
-//                    return try PodItemActivityLog(from: logJSON)
-//                } catch {
-//                    print("Error parsing activity log: \(error)")
-//                    return nil
-//                }
-//            }
-//        } else {
-//            self.recentActivityLogs = nil
-//        }
-//    }
-//}
 extension Pod {
    init(from podJSON: PodJSON) {
        self.id = podJSON.id

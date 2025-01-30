@@ -15,7 +15,7 @@ struct FoldersView: View {
     
     var filteredFolders: [Folder] {
         if searchText.isEmpty {
-            return podsViewModel.folders.filter { $0.name != "Pods" }  // Filter out Pods folder from deletion
+            return podsViewModel.folders.filter { $0.name != "Pods" }
         } else {
             return podsViewModel.folders.filter { folder in
                 folder.name != "Pods" && folder.name.localizedCaseInsensitiveContains(searchText)
@@ -26,9 +26,32 @@ struct FoldersView: View {
     var body: some View {
         List {
             Section {
-                NavigationLink("Pods", value: FolderDestination.pods)
+                // Pods folder with count
+                NavigationLink(value: FolderDestination.pods) {
+                    HStack {
+                        Image(systemName: "folder")
+                            .font(.system(size: 21))
+                            .foregroundColor(.accentColor)
+                        Text("Pods")
+                        Spacer()
+                        Text("\(podsViewModel.pods.count)")
+                            .foregroundColor(.gray)
+                    }
+                }
+                
+                // Other folders
                 ForEach(filteredFolders) { folder in
-                    Text(folder.name)
+                    HStack {
+                        Image(systemName: "folder")
+                            .font(.system(size: 21))
+                            .foregroundColor(.accentColor)
+                        Text(folder.name)
+                        Spacer()
+                     
+                        Text("\(folder.podCount)")
+                                .foregroundColor(.gray)
+                      
+                    }
                 }
                 .onDelete(perform: deleteFolder)
             }
