@@ -1212,6 +1212,49 @@ class NetworkManager {
         }.resume()
     }
     
+    func deleteFolder(folderId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/delete-folder/\(folderId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            switch httpResponse.statusCode {
+            case 200, 204:
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            default:
+                var errorMessage = "Failed to delete folder: \(httpResponse.statusCode)"
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let serverMessage = json["error"] as? String {
+                    errorMessage = serverMessage
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                }
+            }
+        }.resume()
+    }
+    
     func reorderPods(email: String, podIds: [Int], completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/reorder-pods/") else {
             completion(false, "Invalid URL")

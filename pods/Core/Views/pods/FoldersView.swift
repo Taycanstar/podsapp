@@ -11,14 +11,14 @@ struct FoldersView: View {
     @Binding var path: NavigationPath
     @State private var searchText = ""
     @EnvironmentObject var podsViewModel: PodsViewModel
-    @State private var shouldNavigateToPodsOnAppear = true  // Add this back
+    @State private var shouldNavigateToPodsOnAppear = true
     
     var filteredFolders: [Folder] {
         if searchText.isEmpty {
-            return podsViewModel.folders
+            return podsViewModel.folders.filter { $0.name != "Pods" }  // Filter out Pods folder from deletion
         } else {
             return podsViewModel.folders.filter { folder in
-                folder.name.localizedCaseInsensitiveContains(searchText)
+                folder.name != "Pods" && folder.name.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -28,19 +28,26 @@ struct FoldersView: View {
             Section {
                 NavigationLink("Pods", value: FolderDestination.pods)
                 ForEach(filteredFolders) { folder in
-                    if folder.name != "Pods" {
-                        Text(folder.name)
-                    }
+                    Text(folder.name)
                 }
+                .onDelete(perform: deleteFolder)
             }
         }
         .navigationTitle("Folders")
         .searchable(text: $searchText, prompt: "Search")
-        .onAppear {  // Add this back
+        .padding(.bottom, 49)
+        .onAppear {
             if shouldNavigateToPodsOnAppear {
                 path.append(FolderDestination.pods)
                 shouldNavigateToPodsOnAppear = false
             }
+        }
+    }
+    
+    private func deleteFolder(at offsets: IndexSet) {
+        for index in offsets {
+            let folder = filteredFolders[index]
+            podsViewModel.deleteFolder(folderId: folder.id)
         }
     }
 }
