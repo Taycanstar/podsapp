@@ -191,19 +191,22 @@ struct ImmediateFocusTextField: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField(frame: .zero)
         
-        // (A) Make it look more like SwiftUI’s default
+        // Match SwiftUI styling as close as possible
         textField.borderStyle = .none
         textField.font = UIFont.preferredFont(forTextStyle: .body)
-        textField.placeholder = "Folder Name"     // Move your placeholder here
+        textField.placeholder = "Folder Name"
         textField.autocorrectionType = .default
         textField.autocapitalizationType = .sentences
         
-        // (B) Ensure we capture changes in real time
+        // Enable the 'x' button
+        textField.clearButtonMode = .whileEditing
+        
+        // Bind changes back to SwiftUI
         textField.addTarget(context.coordinator,
                             action: #selector(Coordinator.textDidChange(_:)),
                             for: .editingChanged)
         
-        // (C) Immediately focus
+        // Focus immediately
         DispatchQueue.main.async {
             textField.becomeFirstResponder()
         }
@@ -212,7 +215,7 @@ struct ImmediateFocusTextField: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UITextField, context: Context) {
-        // Only update if SwiftUI's value differs from UITextField's
+        // Sync from SwiftUI to UITextField
         if uiView.text != text {
             uiView.text = text
         }
@@ -226,8 +229,10 @@ struct ImmediateFocusTextField: UIViewRepresentable {
         }
         
         @objc func textDidChange(_ sender: UITextField) {
+            // Sync from UITextField to SwiftUI
             parent.text = sender.text ?? ""
         }
     }
 }
+
 
