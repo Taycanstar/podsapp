@@ -15,8 +15,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    let baseUrl = "http://192.168.1.79:8000"
-//    let baseUrl = "http://172.20.10.3:8000"
+//    let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -1208,6 +1208,44 @@ class NetworkManager {
                 DispatchQueue.main.async {
                     completion(false, errorMessage)
                 }
+            }
+        }.resume()
+    }
+    
+    func createFolder(email: String, name: String, completion: @escaping (Result<Folder, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/create-folder/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let body = [
+            "email": email,
+            "name": name
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(body)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                let folderResponse = try JSONDecoder().decode(FolderResponse.self, from: data)
+                // Save to cache
+                UserDefaults.standard.set(data, forKey: "folders_cache")
+                completion(.success(folderResponse.folders.first!))  // Since we know we just created one folder
+            } catch {
+                completion(.failure(error))
             }
         }.resume()
     }

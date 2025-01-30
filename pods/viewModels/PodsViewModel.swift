@@ -115,4 +115,23 @@ class PodsViewModel: ObservableObject {
                }
            }
        }
+    
+    func createFolder(name: String, email: String) {
+        networkManager.createFolder(email: email, name: name) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let folder):
+                    self?.folders.append(folder)
+                    // Update cache with new folders list
+                    if let folders = self?.folders {
+                        let response = FolderResponse(folders: folders)
+                        self?.cacheFolders(response)
+                    }
+                case .failure(let error):
+                    print("Failed to create folder: \(error)")
+                    self?.error = error
+                }
+            }
+        }
+    }
 }
