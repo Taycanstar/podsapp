@@ -94,19 +94,7 @@ struct FoldersView: View {
                             .foregroundColor(.gray)
                     }
                 }
-                
-                // Other folders
-//                ForEach(filteredFolders) { folder in
-//                    HStack {
-//                        Image(systemName: "folder")
-//                            .font(.system(size: 21))
-//                            .foregroundColor(.accentColor)
-//                        Text(folder.name)
-//                        Spacer()
-//                        Text("\(folder.podCount)")
-//                            .foregroundColor(.gray)
-//                    }
-//                }
+
                 ForEach(filteredFolders) { folder in
                     NavigationLink(value: FolderDestination.folder(folder)) {
                         HStack {
@@ -119,10 +107,13 @@ struct FoldersView: View {
                                 .foregroundColor(.gray)
                         }
                     }
+                
                 }
                 .onDelete(perform: deleteFolder)
+              
             }
         }
+
         .navigationTitle("Folders")
         .searchable(text: $searchText, prompt: "Search")
         .padding(.bottom, 49)
