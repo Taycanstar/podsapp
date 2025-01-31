@@ -277,6 +277,7 @@ struct Pod: Identifiable {
     var type: String?
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLog]?
+    var folderId: Int?
 
 }
 
@@ -301,6 +302,7 @@ struct PodJSON: Codable {
     var type: String?
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLogJSON]?
+    var folderId: Int?
   
  
 }
@@ -719,6 +721,7 @@ extension Pod {
        self.type = nil
        self.teamId = nil
        self.recentActivityLogs = nil
+       self.folderId = podJSON.folderId
    }
 }
 
@@ -776,8 +779,41 @@ enum CameraMode: String, CaseIterable {
         }
     }
 }
+//
+//struct Folder: Identifiable, Codable {
+//    let id: Int
+//    let name: String
+//    let isDefault: Bool
+//    let podCount: Int
+//    
+//    enum CodingKeys: String, CodingKey {
+//        case id, name
+//        case isDefault = "is_default"
+//        case podCount = "pod_count"
+//    }
+//}
 
-struct Folder: Identifiable, Codable {
+struct Folder: Identifiable, Codable, Hashable {
+    let id: Int
+    let name: String
+    let isDefault: Bool
+    let podCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case isDefault = "is_default"
+        case podCount = "pod_count"
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: Folder, rhs: Folder) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+struct CreateFolderResponse: Codable {
     let id: Int
     let name: String
     let isDefault: Bool
@@ -789,7 +825,6 @@ struct Folder: Identifiable, Codable {
         case podCount = "pod_count"
     }
 }
-
 // MARK: Camera View Model
 class CameraViewModel: NSObject,ObservableObject,AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate{
     

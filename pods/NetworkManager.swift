@@ -15,8 +15,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//    let baseUrl = "http://192.168.1.79:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+    let baseUrl = "http://192.168.1.79:8000"
+//    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -1240,11 +1240,11 @@ class NetworkManager {
             }
             
             do {
-                let folderResponse = try JSONDecoder().decode(FolderResponse.self, from: data)
-                // Save to cache
-                UserDefaults.standard.set(data, forKey: "folders_cache")
-                completion(.success(folderResponse.folders.first!))  // Since we know we just created one folder
+                let response = try JSONDecoder().decode(CreateFolderResponse.self, from: data)
+                let folder = Folder(id: response.id, name: response.name, isDefault: response.isDefault, podCount: response.podCount)
+                completion(.success(folder))
             } catch {
+                print("Decoding error: \(error)")
                 completion(.failure(error))
             }
         }.resume()

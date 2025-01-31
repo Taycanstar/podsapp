@@ -19,6 +19,8 @@ struct PodsContainerView: View {
                     switch destination {
                     case .pods:
                         PodsView()
+                    case .folder(let folder):
+                            PodsView(folder: folder)
                            
                     }
                 }
@@ -27,9 +29,36 @@ struct PodsContainerView: View {
     }
 }
 
+//
+//enum FolderDestination: Hashable {
+//    case pods
+//    case folder(Folder)
+//}
 
 enum FolderDestination: Hashable {
     case pods
+    case folder(Folder)
+    
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .pods:
+            hasher.combine("pods")
+        case .folder(let folder):
+            hasher.combine("folder")
+            hasher.combine(folder)
+        }
+    }
+    
+    static func == (lhs: FolderDestination, rhs: FolderDestination) -> Bool {
+        switch (lhs, rhs) {
+        case (.pods, .pods):
+            return true
+        case (.folder(let f1), .folder(let f2)):
+            return f1 == f2
+        default:
+            return false
+        }
+    }
 }
 struct FoldersView: View {
     @Binding var path: NavigationPath
@@ -67,15 +96,28 @@ struct FoldersView: View {
                 }
                 
                 // Other folders
+//                ForEach(filteredFolders) { folder in
+//                    HStack {
+//                        Image(systemName: "folder")
+//                            .font(.system(size: 21))
+//                            .foregroundColor(.accentColor)
+//                        Text(folder.name)
+//                        Spacer()
+//                        Text("\(folder.podCount)")
+//                            .foregroundColor(.gray)
+//                    }
+//                }
                 ForEach(filteredFolders) { folder in
-                    HStack {
-                        Image(systemName: "folder")
-                            .font(.system(size: 21))
-                            .foregroundColor(.accentColor)
-                        Text(folder.name)
-                        Spacer()
-                        Text("\(folder.podCount)")
-                            .foregroundColor(.gray)
+                    NavigationLink(value: FolderDestination.folder(folder)) {
+                        HStack {
+                            Image(systemName: "folder")
+                                .font(.system(size: 21))
+                                .foregroundColor(.accentColor)
+                            Text(folder.name)
+                            Spacer()
+                            Text("\(folder.podCount)")
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
                 .onDelete(perform: deleteFolder)
@@ -141,42 +183,98 @@ struct FoldersView: View {
     }
 }
 
+//struct CreateFolderSheet: View {
+//    @Binding var isPresented: Bool
+//    @State private var folderName = ""
+//    @EnvironmentObject var podsViewModel: PodsViewModel
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//    @FocusState private var isFocused: Bool 
+//    
+//    var body: some View {
+//        NavigationView {
+//            Form {
+//
+//                ImmediateFocusTextField(text: $folderName)
+//            }
+//
+//            .navigationTitle("New Folder")
+//            .navigationBarTitleDisplayMode(.inline)
+//            
+//            .navigationBarItems(
+//                leading: Button("Cancel") {
+//                    isPresented = false
+//                },
+//                trailing: Button("Done") {
+//                    if !folderName.isEmpty {
+//                        podsViewModel.createFolder(name: folderName, email: viewModel.email)
+//                        isPresented = false
+//                    }
+//                }
+//                    .fontWeight(.semibold)
+//                .disabled(folderName.isEmpty)
+//            )
+//        }
+//        
+//    
+//     
+//           
+//
+//    }
+//}
+
 struct CreateFolderSheet: View {
     @Binding var isPresented: Bool
     @State private var folderName = ""
+    @State private var showingNameTakenAlert = false
     @EnvironmentObject var podsViewModel: PodsViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @FocusState private var isFocused: Bool 
+    
+    private func suggestFolderName() -> String {
+        let baseName = "New Folder"
+        var counter = 1
+        var suggestedName = baseName
+        
+        while podsViewModel.folders.contains(where: { $0.name == suggestedName }) {
+            counter += 1
+            suggestedName = "\(baseName) \(counter)"
+        }
+        
+        return suggestedName
+    }
     
     var body: some View {
         NavigationView {
             Form {
-
                 ImmediateFocusTextField(text: $folderName)
             }
-
             .navigationTitle("New Folder")
             .navigationBarTitleDisplayMode(.inline)
-            
             .navigationBarItems(
                 leading: Button("Cancel") {
                     isPresented = false
                 },
                 trailing: Button("Done") {
                     if !folderName.isEmpty {
-                        podsViewModel.createFolder(name: folderName, email: viewModel.email)
-                        isPresented = false
+                        if podsViewModel.folders.contains(where: { $0.name == folderName }) {
+                            showingNameTakenAlert = true
+                        } else {
+                            podsViewModel.createFolder(name: folderName, email: viewModel.email)
+                            isPresented = false
+                        }
                     }
                 }
-                    .fontWeight(.semibold)
+                .fontWeight(.semibold)
                 .disabled(folderName.isEmpty)
             )
         }
-        
-    
-     
-           
-
+        .alert("Name Taken", isPresented: $showingNameTakenAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please choose a different name.")
+        }
+        .onAppear {
+            folderName = suggestFolderName()
+        }
     }
 }
 
@@ -206,10 +304,15 @@ struct ImmediateFocusTextField: UIViewRepresentable {
                             action: #selector(Coordinator.textDidChange(_:)),
                             for: .editingChanged)
         
-        // Focus immediately
+//        // Focus immediately
+//        DispatchQueue.main.async {
+//            textField.becomeFirstResponder()
+//        }
+        
         DispatchQueue.main.async {
-            textField.becomeFirstResponder()
-        }
+               textField.becomeFirstResponder()
+               textField.selectAll(nil)
+           }
         
         return textField
     }
