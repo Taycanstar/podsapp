@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var forceRefresh: Bool = false
 
     @State private var showAddSheet = false
+    @State private var showNewSheet = false
     @State private var showQuickPodView = false
     
     @State private var shouldNavigateToNewPod = false
@@ -77,16 +78,12 @@ struct ContentView: View {
                         }
                     }
                     if isTabBarVisible {
-                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
+                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
                             .ignoresSafeArea(.keyboard)
                     }
                 }
                 .ignoresSafeArea(.keyboard)
-                .sheet(isPresented: $showAddSheet) {
-                    AddSheetView(showAddSheet: $showAddSheet, showingVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
-                }
-             
+
                 .fullScreenCover(isPresented: $showingVideoCreationScreen) {
                     CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                         .background(Color.black.edgesIgnoringSafeArea(.all))
@@ -99,7 +96,14 @@ struct ContentView: View {
                             self.shouldNavigateToNewPod = true
                         }
                     }
-                    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                    
+                }
+                
+                .sheet(isPresented: $showNewSheet) {
+                    NewSheetView(showNewSheet: $showAddSheet,
+                                 showingVideoCreationScreen: $showingVideoCreationScreen,
+                                 showQuickPodView: $showQuickPodView)
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
@@ -162,9 +166,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
                  fetchSubscriptionInfo()
              }
-//             .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
-//                 forceRefresh.toggle()
-//             }
+
         .onChange(of: isAuthenticated) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
         }
@@ -195,7 +197,7 @@ struct ContentView: View {
                         canCreateNewTeam: subscriptionInfo.canCreateNewTeam
                     )
                     
-//                    self.printSubscriptionInfo(source: "Network")
+
                     
                 case .failure(let error):
                     print("Failed to fetch subscription info: \(error.localizedDescription)")

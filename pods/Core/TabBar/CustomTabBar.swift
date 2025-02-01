@@ -6,6 +6,7 @@ struct CustomTabBar: View {
     @Environment(\.colorScheme) var colorScheme
     @Binding var showVideoCreationScreen: Bool
     @Binding var showQuickPodView: Bool
+    @Binding var showNewSheet: Bool
     @EnvironmentObject var sharedViewModel: SharedViewModel
 
     var body: some View {
@@ -27,7 +28,7 @@ struct CustomTabBar: View {
                         .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
                     Spacer()
                     TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
-                        showQuickPodView = true
+                        showNewSheet = true
                     }
 //                        .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
                     .foregroundColor(.accentColor)

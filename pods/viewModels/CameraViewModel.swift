@@ -278,6 +278,8 @@ struct Pod: Identifiable {
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLog]?
     var folderId: Int?
+    var privacy: String?
+    var pod_type: String?
 
 }
 
@@ -303,6 +305,9 @@ struct PodJSON: Codable {
     var teamId: Int?
     var recentActivityLogs: [PodItemActivityLogJSON]?
     var folderId: Int?
+    var privacy: String?
+    var pod_type: String?
+ 
   
  
 }
@@ -722,6 +727,8 @@ extension Pod {
        self.teamId = nil
        self.recentActivityLogs = nil
        self.folderId = podJSON.folderId
+       self.privacy = podJSON.privacy
+       self.pod_type = podJSON.pod_type
    }
 }
 
@@ -779,19 +786,7 @@ enum CameraMode: String, CaseIterable {
         }
     }
 }
-//
-//struct Folder: Identifiable, Codable {
-//    let id: Int
-//    let name: String
-//    let isDefault: Bool
-//    let podCount: Int
-//    
-//    enum CodingKeys: String, CodingKey {
-//        case id, name
-//        case isDefault = "is_default"
-//        case podCount = "pod_count"
-//    }
-//}
+
 
 struct Folder: Identifiable, Codable, Hashable {
     let id: Int

@@ -2171,73 +2171,132 @@ class NetworkManager {
             }.resume()
         }
     
-    func createQuickPod(podTitle: String, templateId: Int, email: String, workspaceId: Int?, completion: @escaping (Bool, String?) -> Void) {
+//    func createQuickPod(podTitle: String, templateId: Int, email: String, workspaceId: Int?, completion: @escaping (Bool, String?) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
+//            completion(false, "Invalid URL")
+//            return
+//        }
+//
+//        var body: [String: Any] = [
+//            "title": podTitle,
+//            "templateId": templateId,
+//            "email": email
+//        ]
+//
+//        if let workspaceId = workspaceId {
+//            body["workspace_id"] = workspaceId
+//        }
+//
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(false, "Failed to encode request body")
+//            return
+//        }
+//
+//
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                DispatchQueue.main.async {
+//                    completion(false, "Network error: \(error.localizedDescription)")
+//                }
+//                return
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse else {
+//                DispatchQueue.main.async {
+//                    completion(false, "No response from server")
+//                }
+//                return
+//            }
+//
+//            if httpResponse.statusCode == 201 {
+//                if let data = data,
+//                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+//                   let podId = json["pod_id"] as? Int {
+//                    DispatchQueue.main.async {
+//                        completion(true, String(podId))
+//                    }
+//                } else {
+//                    DispatchQueue.main.async {
+//                        completion(false, "Pod created successfully, but couldn't retrieve pod ID")
+//                    }
+//                }
+//            } else {
+//                if let data = data,
+//                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+//                   let errorMessage = json["error"] as? String {
+//                    DispatchQueue.main.async {
+//                        completion(false, errorMessage)
+//                    }
+//                } else {
+//                    DispatchQueue.main.async {
+//                        completion(false, "Failed to create pod. Status code: \(httpResponse.statusCode)")
+//                    }
+//                }
+//            }
+//        }.resume()
+//    }
+    
+    func createQuickPod(
+        podTitle: String,
+        podType: String,
+        privacy: String,
+        email: String,
+        completion: @escaping (Result<Pod, Error>) -> Void
+    ) {
         guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
-            completion(false, "Invalid URL")
+            completion(.failure(NetworkError.invalidURL))
             return
         }
 
-        var body: [String: Any] = [
+        let body: [String: Any] = [
             "title": podTitle,
-            "templateId": templateId,
+            "pod_type": podType,
+            "privacy": privacy,
             "email": email
         ]
-
-        if let workspaceId = workspaceId {
-            body["workspace_id"] = workspaceId
-        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
-            completion(false, "Failed to encode request body")
+            completion(.failure(error))
             return
         }
-
-
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    completion(false, "Network error: \(error.localizedDescription)")
+                    completion(.failure(error))
                 }
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
+            guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(false, "No response from server")
+                    completion(.failure(NetworkError.noData))
                 }
                 return
             }
 
-            if httpResponse.statusCode == 201 {
-                if let data = data,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let podId = json["pod_id"] as? Int {
-                    DispatchQueue.main.async {
-                        completion(true, String(podId))
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        completion(false, "Pod created successfully, but couldn't retrieve pod ID")
-                    }
+            do {
+                let podJSON = try JSONDecoder().decode(PodJSON.self, from: data)
+                let pod = Pod(from: podJSON)
+                DispatchQueue.main.async {
+                    completion(.success(pod))
                 }
-            } else {
-                if let data = data,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let errorMessage = json["error"] as? String {
-                    DispatchQueue.main.async {
-                        completion(false, errorMessage)
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        completion(false, "Failed to create pod. Status code: \(httpResponse.statusCode)")
-                    }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
                 }
             }
         }.resume()

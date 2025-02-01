@@ -167,8 +167,11 @@ struct FoldersView: View {
     }
     
     private func deleteFolder(at offsets: IndexSet) {
-        for index in offsets {
-            let folder = filteredFolders[index]
+        // Map filtered indices to actual folders
+        let foldersToDelete = offsets.map { filteredFolders[$0] }
+        
+        // Delete each folder
+        for folder in foldersToDelete {
             podsViewModel.deleteFolder(folderId: folder.id)
         }
     }

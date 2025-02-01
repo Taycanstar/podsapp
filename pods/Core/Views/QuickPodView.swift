@@ -10,7 +10,8 @@ import SwiftUI
 struct QuickPodView: View {
     @Binding var isPresented: Bool
     @State private var podName: String = ""
-    @State private var podTemplate: PodTemplate = .standard
+    @State private var podType: PodType = .custom
+    @State private var podPrivacy: PodPrivacy = .only
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var viewModel: OnboardingViewModel
     var networkManager: NetworkManager = NetworkManager()
@@ -18,25 +19,58 @@ struct QuickPodView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
     
-    enum PodTemplate: String, CaseIterable {
-        case standard = "Standard"
+    enum PodType: String, CaseIterable {
+        case custom = "Custom"
         case workout = "Workout"
+        case meal = "Meal"
         
         var id: Int {
             switch self {
-            case .standard:
+            case .custom:
                 return 0
             case .workout:
                 return 1
+            case .meal:
+                return 2
             }
         }
         
         var displayText: String {
             switch self {
-            case .standard:
+            case .custom:
                 return "From scratch"
             case .workout:
                 return "Workout"
+            case .meal:
+                return "Meal"
+            }
+        }
+    }
+    
+    enum PodPrivacy: String, CaseIterable {
+        case everyone = "Everyone"
+        case friends = "Friends"
+        case only = "Only Me"
+        
+        var id: Int {
+            switch self {
+            case .everyone:
+                return 0
+            case .friends:
+                return 1
+            case .only:
+                return 2
+            }
+        }
+        
+        var displayText: String {
+            switch self {
+            case .everyone:
+                return "Everyone"
+            case .friends:
+                return "Friends"
+            case .only:
+                return "Only Me"
             }
         }
     }
@@ -67,11 +101,33 @@ struct QuickPodView: View {
                     HStack {
                         Image(systemName: "list.bullet")
                             .foregroundColor(.blue)
-                        Text("Pod Template")
+                        Text("Type")
                         Spacer()
-                        Picker("Pod Template", selection: $podTemplate) {
-                            ForEach(PodTemplate.allCases, id: \.self) { template in
-                                Text(template.displayText)
+                        Picker("Type", selection: $podType) {
+                            ForEach(PodType.allCases, id: \.self) { pType in
+                                Text(pType.displayText)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                    }
+                    .padding()
+                    .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0)
+                    )
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    
+                    // Pod Mode Selection
+                    HStack {
+                        Image(systemName: "lock.fill")
+                            .foregroundColor(.blue)
+                        Text("Privacy")
+                        Spacer()
+                        Picker("Pod Privacy", selection: $podPrivacy) {
+                            ForEach(PodPrivacy.allCases, id: \.self) { privacy in
+                                Text(privacy.displayText)
                             }
                         }
                         .pickerStyle(MenuPickerStyle())
@@ -101,6 +157,7 @@ struct QuickPodView: View {
                             // Handle pod creation here
                             createQuickPod()
                         }
+                        .fontWeight(.semibold)
                         .disabled(podName.isEmpty)
                         .foregroundColor(podName.isEmpty ? .gray : .blue)
                     }
@@ -114,28 +171,53 @@ struct QuickPodView: View {
         colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
 
+//    private func createQuickPod() {
+//            guard !podName.isEmpty else {
+//                errorMessage = "Pod name is required."
+//                return
+//            }
+//            
+//            let activeWorkspaceId = viewModel.activeWorkspaceId
+//            
+//            networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email, workspaceId: activeWorkspaceId) { [self] success, podIdString in
+//                DispatchQueue.main.async {
+//                    if success, let podIdString = podIdString, let podId = Int(podIdString) {
+//                        print("Quick Pod created successfully with ID: \(podId)")
+//                        let newPod = Pod(id: podId, items: [], title: self.podName, templateId: self.podTemplate.id)
+//                        print("New pod created with mode: \(String(describing: newPod.templateId))")
+//                        self.homeViewModel.appendNewPod(newPod)
+//                        self.isPresented = false
+//                        self.onPodCreated(newPod)
+//                    } else {
+//                        print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
+//                        self.errorMessage = podIdString
+//                    }
+//                }
+//            }
+//        }
+    // QuickPodView
     private func createQuickPod() {
-            guard !podName.isEmpty else {
-                errorMessage = "Pod name is required."
-                return
-            }
-            
-            let activeWorkspaceId = viewModel.activeWorkspaceId
-            
-            networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email, workspaceId: activeWorkspaceId) { [self] success, podIdString in
-                DispatchQueue.main.async {
-                    if success, let podIdString = podIdString, let podId = Int(podIdString) {
-                        print("Quick Pod created successfully with ID: \(podId)")
-                        let newPod = Pod(id: podId, items: [], title: self.podName, templateId: self.podTemplate.id)
-                        print("New pod created with mode: \(String(describing: newPod.templateId))")
-                        self.homeViewModel.appendNewPod(newPod)
-                        self.isPresented = false
-                        self.onPodCreated(newPod)
-                    } else {
-                        print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
-                        self.errorMessage = podIdString
-                    }
+        guard !podName.isEmpty else {
+            errorMessage = "Pod name is required."
+            return
+        }
+        
+        networkManager.createQuickPod(
+            podTitle: podName,
+            podType: podType.rawValue.lowercased(),
+            privacy: podPrivacy.rawValue.lowercased(),
+            email: viewModel.email
+        ) { [self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let pod):
+                    homeViewModel.appendNewPod(pod)
+                    isPresented = false
+                    onPodCreated(pod)
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
                 }
             }
         }
+    }
 }

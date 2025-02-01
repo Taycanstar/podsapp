@@ -96,6 +96,7 @@
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
+		36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B851682D4EBAB200A876C3 /* NewSheetView.swift */; };
 		36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36BBC80F2C2B39C70037CF74 /* TourView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
@@ -187,7 +188,7 @@
 		363AFA1A2D474FB400C91A14 /* PodsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PodsViewModel.swift; path = Pods/viewModels/PodsViewModel.swift; sourceTree = SOURCE_ROOT; };
 		363AFA1C2D4759E000C91A14 /* FoldersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoldersView.swift; path = Pods/Core/Views/pods/FoldersView.swift; sourceTree = SOURCE_ROOT; };
 		3641F5112C73A13500256E85 /* PodInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodInfoView.swift; sourceTree = "<group>"; };
-		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
+		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/Core/Managers/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
@@ -231,6 +232,7 @@
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
+		36B851682D4EBAB200A876C3 /* NewSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSheetView.swift; sourceTree = "<group>"; };
 		36BBC80F2C2B39C70037CF74 /* TourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* Pods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pods.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 			children = (
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
 				363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */,
+				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -396,6 +399,7 @@
 				363AF9FC2D2095D600C91A14 /* GroupedColumnActivityView.swift */,
 				363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */,
 				363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */,
+				36B851682D4EBAB200A876C3 /* NewSheetView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -505,7 +509,6 @@
 				363889402BAA92010062631B /* VideoEditorRepresentable.swift */,
 				36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */,
 				3642C2252B9D3BF100D059B9 /* viewModels */,
-				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
 				3698E4F72C248EBB0040AF60 /* RegionManager.swift */,
 				3696B9572B98305C00D211D7 /* auth */,
 				368A27352B977F320001BBCA /* onboarding */,
@@ -839,6 +842,7 @@
 				3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */,
 				3638CCAA2C954BA900CCA675 /* TeamInvitationView.swift in Sources */,
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
+				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,

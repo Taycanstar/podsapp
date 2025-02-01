@@ -102,33 +102,35 @@ class PodsViewModel: ObservableObject {
         }
     }
     
-       func deleteFolder(folderId: Int) {
-           networkManager.deleteFolder(folderId: folderId) { [weak self] result in
-               DispatchQueue.main.async {
-                   switch result {
-                   case .success:
-                       self?.folders.removeAll { $0.id == folderId }
-                   case .failure(let error):
-                       print("Failed to delete folder: \(error)")
-                       self?.error = error
-                   }
-               }
-           }
-       }
-    
     func createFolder(name: String, email: String) {
         networkManager.createFolder(email: email, name: name) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let folder):
                     self?.folders.append(folder)
-                    // Update cache with new folders list
                     if let folders = self?.folders {
                         let response = FolderResponse(folders: folders)
                         self?.cacheFolders(response)
                     }
                 case .failure(let error):
-                    print("Failed to create folder: \(error)")
+                    self?.error = error
+                }
+            }
+        }
+    }
+    
+    func deleteFolder(folderId: Int) {
+        networkManager.deleteFolder(folderId: folderId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.folders.removeAll { $0.id == folderId }
+                    // Update cache with current folders
+                    if let folders = self?.folders {
+                        let response = FolderResponse(folders: folders)
+                        self?.cacheFolders(response)
+                    }
+                case .failure(let error):
                     self?.error = error
                 }
             }
