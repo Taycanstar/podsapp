@@ -92,6 +92,7 @@ struct ContentView: View {
                     QuickPodView(isPresented: $showQuickPodView) { newPod in
                         self.newPodId = newPod.id
                         self.selectedTab = 0
+                        self.showNewSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.shouldNavigateToNewPod = true
                         }
@@ -100,7 +101,7 @@ struct ContentView: View {
                 }
                 
                 .sheet(isPresented: $showNewSheet) {
-                    NewSheetView(showNewSheet: $showAddSheet,
+                    NewSheetView(isPresented: $showNewSheet,
                                  showingVideoCreationScreen: $showingVideoCreationScreen,
                                  showQuickPodView: $showQuickPodView)
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])

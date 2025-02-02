@@ -9,7 +9,7 @@ import SwiftUI
 
 
 struct NewSheetView: View {
-    @Binding var showNewSheet: Bool
+    @Binding var isPresented: Bool
     @Binding var showingVideoCreationScreen: Bool
     @Binding var showQuickPodView: Bool
 
@@ -54,7 +54,7 @@ struct NewSheetView: View {
                     // Handle tap
                     switch option.0 {
                       case "Pod":
-                          showNewSheet = false  // Close current sheet
+                          isPresented = false  
                           showQuickPodView = true
                       default:
                           break

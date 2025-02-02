@@ -312,6 +312,11 @@ struct PodJSON: Codable {
  
 }
 
+struct CreatePodResponse: Codable {
+    let message: String
+    let pod: Int  // matches the pod id from backend
+}
+
 struct PodItemJSON: Codable {
     let id: Int
     let videoURL: String?

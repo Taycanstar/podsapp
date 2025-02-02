@@ -18,6 +18,7 @@ struct QuickPodView: View {
     @State private var errorMessage: String?
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var homeViewModel: HomeViewModel
+    @EnvironmentObject var podsViewModel: PodsViewModel
     
     enum PodType: String, CaseIterable {
         case custom = "Custom"
@@ -82,7 +83,7 @@ struct QuickPodView: View {
             ZStack {
                 (colorScheme == .dark ? Color(rgb: 44,44,44) : .white)
                     .edgesIgnoringSafeArea(.all)
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     // Pod Name Input
                     HStack {
                         TextField("Pod Name", text: $podName)
@@ -110,7 +111,7 @@ struct QuickPodView: View {
                         }
                         .pickerStyle(MenuPickerStyle())
                     }
-                    .padding()
+                    .padding(10)
                     .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -119,7 +120,7 @@ struct QuickPodView: View {
                     .cornerRadius(10)
                     .padding(.horizontal)
                     
-                    // Pod Mode Selection
+                    // Pod privacy
                     HStack {
                         Image(systemName: "lock.fill")
                             .foregroundColor(.blue)
@@ -132,7 +133,7 @@ struct QuickPodView: View {
                         }
                         .pickerStyle(MenuPickerStyle())
                     }
-                    .padding()
+                    .padding(10)
                     .background(colorScheme == .dark ? Color(rgb: 44,44,44) : Color(rgb:244, 246, 247))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -171,30 +172,6 @@ struct QuickPodView: View {
         colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
 
-//    private func createQuickPod() {
-//            guard !podName.isEmpty else {
-//                errorMessage = "Pod name is required."
-//                return
-//            }
-//            
-//            let activeWorkspaceId = viewModel.activeWorkspaceId
-//            
-//            networkManager.createQuickPod(podTitle: podName, templateId: podTemplate.id, email: viewModel.email, workspaceId: activeWorkspaceId) { [self] success, podIdString in
-//                DispatchQueue.main.async {
-//                    if success, let podIdString = podIdString, let podId = Int(podIdString) {
-//                        print("Quick Pod created successfully with ID: \(podId)")
-//                        let newPod = Pod(id: podId, items: [], title: self.podName, templateId: self.podTemplate.id)
-//                        print("New pod created with mode: \(String(describing: newPod.templateId))")
-//                        self.homeViewModel.appendNewPod(newPod)
-//                        self.isPresented = false
-//                        self.onPodCreated(newPod)
-//                    } else {
-//                        print("Failed to create quick pod: \(podIdString ?? "Unknown error")")
-//                        self.errorMessage = podIdString
-//                    }
-//                }
-//            }
-//        }
     // QuickPodView
     private func createQuickPod() {
         guard !podName.isEmpty else {
@@ -211,9 +188,8 @@ struct QuickPodView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let pod):
-                    homeViewModel.appendNewPod(pod)
+                    podsViewModel.pods.append(pod)
                     isPresented = false
-                    onPodCreated(pod)
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }

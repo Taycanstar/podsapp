@@ -177,44 +177,6 @@ struct FoldersView: View {
     }
 }
 
-//struct CreateFolderSheet: View {
-//    @Binding var isPresented: Bool
-//    @State private var folderName = ""
-//    @EnvironmentObject var podsViewModel: PodsViewModel
-//    @EnvironmentObject var viewModel: OnboardingViewModel
-//    @FocusState private var isFocused: Bool 
-//    
-//    var body: some View {
-//        NavigationView {
-//            Form {
-//
-//                ImmediateFocusTextField(text: $folderName)
-//            }
-//
-//            .navigationTitle("New Folder")
-//            .navigationBarTitleDisplayMode(.inline)
-//            
-//            .navigationBarItems(
-//                leading: Button("Cancel") {
-//                    isPresented = false
-//                },
-//                trailing: Button("Done") {
-//                    if !folderName.isEmpty {
-//                        podsViewModel.createFolder(name: folderName, email: viewModel.email)
-//                        isPresented = false
-//                    }
-//                }
-//                    .fontWeight(.semibold)
-//                .disabled(folderName.isEmpty)
-//            )
-//        }
-//        
-//    
-//     
-//           
-//
-//    }
-//}
 
 struct CreateFolderSheet: View {
     @Binding var isPresented: Bool

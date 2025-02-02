@@ -2289,8 +2289,14 @@ class NetworkManager {
             }
 
             do {
-                let podJSON = try JSONDecoder().decode(PodJSON.self, from: data)
-                let pod = Pod(from: podJSON)
+                let response = try JSONDecoder().decode(CreatePodResponse.self, from: data)
+                let pod = Pod(
+                    id: response.pod,
+                    items: [],
+                    title: podTitle,
+                    type: podType,
+                    privacy: privacy
+                )
                 DispatchQueue.main.async {
                     completion(.success(pod))
                 }
