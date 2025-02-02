@@ -2257,7 +2257,7 @@ class NetworkManager {
 
         let body: [String: Any] = [
             "title": podTitle,
-            "pod_type": podType,
+            "pod_type": podType.lowercased(),  // Make sure it matches backend expectations
             "privacy": privacy,
             "email": email
         ]
@@ -2275,35 +2275,34 @@ class NetworkManager {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
+                completion(.failure(error))
                 return
             }
 
             guard let data = data else {
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
-                }
+                completion(.failure(NetworkError.noData))
                 return
             }
 
             do {
                 let response = try JSONDecoder().decode(CreatePodResponse.self, from: data)
+                // When creating a workout pod, we know it will have specific columns
+                let columns: [PodColumn] = podType.lowercased() == "workout" ? [
+                    PodColumn(id: 0, name: "Sets", type: "number", groupingType: "grouped"),
+                    PodColumn(id: 1, name: "Weight", type: "number", groupingType: "grouped"),
+                    PodColumn(id: 2, name: "Reps", type: "number", groupingType: "grouped")
+                ] : []
+                
                 let pod = Pod(
                     id: response.pod,
-                    items: [],
                     title: podTitle,
-                    type: podType,
-                    privacy: privacy
+                    columns: columns,
+                    privacy: privacy, pod_type: podType
+                  
                 )
-                DispatchQueue.main.async {
-                    completion(.success(pod))
-                }
+                completion(.success(pod))
             } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
+                completion(.failure(error))
             }
         }.resume()
     }

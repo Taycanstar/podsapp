@@ -213,6 +213,10 @@ struct PodView: View {
         case table = "Table"
         case calendar = "Calendar"
     }
+    
+    private var hasCompleteData: Bool {
+        return !pod.columns.isEmpty && !pod.items.isEmpty
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -413,8 +417,14 @@ struct PodView: View {
             
 
         
-             fetchFullPodDetails(showLoadingIndicator: true)
-//            logManager.initialize(podId: pod.id, userEmail: viewModel.email)
+            
+              // Only fetch if we don't have complete data
+              if !hasCompleteData {
+                  fetchFullPodDetails(showLoadingIndicator: true)
+              } else {
+                  isLoading = false  // Skip loading state if we have data
+              }
+
             initializeManagers()
              // Listen for app becoming active
              NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
