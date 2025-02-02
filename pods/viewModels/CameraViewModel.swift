@@ -261,7 +261,7 @@ struct ActivityLogResponse: Codable {
 }
 
 
-struct Pod: Identifiable {
+struct Pod: Identifiable, Hashable {
     var id: Int
     var items: [PodItem] = []
     var title: String
@@ -281,6 +281,13 @@ struct Pod: Identifiable {
     var privacy: String?
     var pod_type: String?
 
+    func hash(into hasher: inout Hasher) {
+          hasher.combine(id)  // Only need the id since it's unique
+      }
+      
+      static func == (lhs: Pod, rhs: Pod) -> Bool {
+          lhs.id == rhs.id    // Only compare ids
+      }
 }
 
 
@@ -714,28 +721,53 @@ struct FolderResponse: Codable {
 }
 
 
+//extension Pod {
+//   init(from podJSON: PodJSON) {
+//       self.id = podJSON.id
+//       self.title = podJSON.title
+//       self.items = []
+//       self.templateId = nil
+//       self.workspace = nil
+//       self.isFavorite = nil
+//       self.lastVisited = nil
+//       self.columns = podJSON.columns ?? []
+//       self.visibleColumns = podJSON.visibleColumns ?? []
+//       self.role = nil
+//       self.description = nil
+//       self.instructions = nil
+//       self.type = nil
+//       self.teamId = nil
+//       self.recentActivityLogs = nil
+//       self.folderId = podJSON.folderId
+//       self.privacy = podJSON.privacy
+//       self.pod_type = podJSON.pod_type
+//   }
+//}
+
 extension Pod {
-   init(from podJSON: PodJSON) {
-       self.id = podJSON.id
-       self.title = podJSON.title
-       self.items = []
-       self.templateId = nil
-       self.workspace = nil
-       self.isFavorite = nil
-       self.lastVisited = nil
-       self.columns = podJSON.columns ?? []
-       self.visibleColumns = podJSON.visibleColumns ?? []
-       self.role = nil
-       self.description = nil
-       self.instructions = nil
-       self.type = nil
-       self.teamId = nil
-       self.recentActivityLogs = nil
-       self.folderId = podJSON.folderId
-       self.privacy = podJSON.privacy
-       self.pod_type = podJSON.pod_type
-   }
+    init(from podJSON: PodJSON) {
+        self.id = podJSON.id
+        self.title = podJSON.title
+        // Map items from JSON to PodItem array
+        self.items = podJSON.items?.map { PodItem(from: $0) } ?? []
+        self.templateId = podJSON.templateId
+        self.workspace = podJSON.workspace
+        self.isFavorite = podJSON.isFavorite
+        self.lastVisited = podJSON.lastVisited  // Assuming the JSON already decodes this to a Date; adjust if needed.
+        self.columns = podJSON.columns ?? []
+        self.visibleColumns = podJSON.visibleColumns ?? []
+        self.role = podJSON.role
+        self.description = podJSON.description
+        self.instructions = podJSON.instructions
+        self.type = podJSON.type
+        self.teamId = podJSON.teamId
+        self.recentActivityLogs = nil // Convert if needed
+        self.folderId = podJSON.folderId
+        self.privacy = podJSON.privacy
+        self.pod_type = podJSON.pod_type
+    }
 }
+
 
 
 extension PodItem {

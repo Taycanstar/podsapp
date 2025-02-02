@@ -97,6 +97,7 @@
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
 		36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B851682D4EBAB200A876C3 /* NewSheetView.swift */; };
+		36B8516B2D4FEEB700A876C3 /* HomePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B8516A2D4FEEB700A876C3 /* HomePodView.swift */; };
 		36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36BBC80F2C2B39C70037CF74 /* TourView.swift */; };
 		36C458BA2B7421100060355F /* podsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458B92B7421100060355F /* podsApp.swift */; };
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
@@ -233,6 +234,7 @@
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
 		36B851682D4EBAB200A876C3 /* NewSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSheetView.swift; sourceTree = "<group>"; };
+		36B8516A2D4FEEB700A876C3 /* HomePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePodView.swift; sourceTree = "<group>"; };
 		36BBC80F2C2B39C70037CF74 /* TourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourView.swift; sourceTree = "<group>"; };
 		36C458B62B7421100060355F /* Pods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pods.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458B92B7421100060355F /* podsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsApp.swift; sourceTree = "<group>"; };
@@ -337,6 +339,7 @@
 			children = (
 				363AFA152D4746A900C91A14 /* PodsView.swift */,
 				363AFA1C2D4759E000C91A14 /* FoldersView.swift */,
+				36B8516A2D4FEEB700A876C3 /* HomePodView.swift */,
 			);
 			path = pods;
 			sourceTree = "<group>";
@@ -852,6 +855,7 @@
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */,
+				36B8516B2D4FEEB700A876C3 /* HomePodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
