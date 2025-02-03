@@ -59,9 +59,12 @@ struct ContentView: View {
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
                                 DashboardView()
                             case 2:
-                                ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
-                            case 3:
+                                
                                 PodsContainerView()
+                            case 3:
+                                FriendsView()
+                            case 4:
+                                ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                             default:
                                 EmptyView()
                             }

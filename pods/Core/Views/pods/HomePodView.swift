@@ -349,18 +349,49 @@ struct HomePodView: View {
         activityManager.initialize(podId: pod?.id ?? 0, userEmail: viewModel.email)
     }
     
+//    private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
+//        guard let currentPod = pod else { return }
+//        if showLoadingIndicator { isLoading = true }
+//        networkManager.fetchFullPodDetails(email: viewModel.email, podId: currentPod.id) { result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success(let fullPod):
+//                    // Update global pod in the view model.
+//                    if let index = podsViewModel.pods.firstIndex(where: { $0.id == fullPod.id }) {
+//                        podsViewModel.pods[index] = fullPod
+//                    }
+//                    // Update local state.
+//                    self.reorderedItems = fullPod.items
+//                    self.podColumns = fullPod.columns
+//                    self.visibleColumns = fullPod.visibleColumns
+//                    self.currentTitle = fullPod.title
+//                    self.currentDescription = fullPod.description ?? ""
+//                    self.currentInstructions = fullPod.instructions ?? ""
+//                    self.currentType = fullPod.type ?? ""
+//                case .failure(let error):
+//                    print("Failed to load pod details: \(error.localizedDescription)")
+//                }
+//                if showLoadingIndicator { isLoading = false }
+//            }
+//        }
+//    }
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
         guard let currentPod = pod else { return }
+
+        // If we already have full details, do not fetch again.
+        if hasCompleteData {
+            isLoading = false
+            return
+        }
+
         if showLoadingIndicator { isLoading = true }
         networkManager.fetchFullPodDetails(email: viewModel.email, podId: currentPod.id) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let fullPod):
-                    // Update global pod in the view model.
                     if let index = podsViewModel.pods.firstIndex(where: { $0.id == fullPod.id }) {
                         podsViewModel.pods[index] = fullPod
                     }
-                    // Update local state.
                     self.reorderedItems = fullPod.items
                     self.podColumns = fullPod.columns
                     self.visibleColumns = fullPod.visibleColumns
@@ -375,6 +406,7 @@ struct HomePodView: View {
             }
         }
     }
+
     
     private func deletePod() {
         guard let currentPod = pod else { return }

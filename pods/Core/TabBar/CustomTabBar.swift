@@ -18,38 +18,44 @@ struct CustomTabBar: View {
                     .frame(height: 0.5)
                     .foregroundColor(sharedViewModel.isItemViewActive ? Color(uiColor: UIColor.darkGray) : (colorScheme == .dark ? Color(uiColor: UIColor.darkGray) : Color(red: 0.9, green: 0.9, blue: 0.9)))
                     .zIndex(1)
-                
+
                 HStack {
-                    // Pass the action directly to avoid confusion with parameter labels
+//                    Spacer()
                     TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                         .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
-                    Spacer()
-                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
-                        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
-                    Spacer()
+                    
+                    Spacer() // Equal spacing
+                    
+                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
+                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                    
+                    Spacer() // Equal spacing
+
                     TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
                         showNewSheet = true
                     }
-//                        .foregroundColor(selectedTab == 1 ? selectedIconColor : .gray)
                     .foregroundColor(.accentColor)
-                    Spacer()
-                    TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
-                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                    .offset(y: -5) // Slight offset for a floating effect
                     
-                   
+                    Spacer() // Equal spacing
+
+                    TabBarButton(iconName: "person.2", label: "Friends", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
+                        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
+
+                    Spacer() // Equal spacing
+
+                    TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
+                        .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
+//                    Spacer()
                 }
-                .padding(.horizontal, 45)
+                .padding(.horizontal, 26)
                 .padding(.top, 11)
-                .background(
-                    Material.ultraThin)
-                
+                .background(Material.ultraThin)
+
             }
-           
-          
         }
-
-
     }
+
 
     // Updated the background color to adapt to light/dark mode
     var tabBarBackgroundColor: Color {
@@ -58,7 +64,7 @@ struct CustomTabBar: View {
             return .black
         } else if selectedTab == 1 { // Camera tab is selected
             return .black
-        } else if selectedTab == 4 { // Saved for when tab is like for u page
+        } else if selectedTab == 5 { // Saved for when tab is like for u page
             return .black
         } else {
             // Modified to adapt to the color scheme
@@ -73,7 +79,7 @@ struct CustomTabBar: View {
             return .white
         } else if selectedTab == 1 { // Camera tab is selected
             return .white
-        } else if selectedTab == 4 { // Saved for when tab is like for u page
+        } else if selectedTab == 5 { // Saved for when tab is like for u page
             return .white
         } else {
             // Modified to adapt to the color scheme
