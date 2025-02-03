@@ -348,7 +348,7 @@ import SwiftUI
 enum AppNavigationDestination: Hashable {
     case pods               // Default Pods folder
     case folder(Folder)     // A user-created folder
-    case podDetails(Pod)    // Pod details view
+    case podDetails(Int)    // Pod details view
 }
 
 // MARK: - PodsContainerView
@@ -367,8 +367,9 @@ struct PodsContainerView: View {
                         PodsView()  // Default Pods folder view
                     case .folder(let folder):
                         PodsView(folder: folder) // Pods for a specific folder
-                    case .podDetails(let pod):
-                        HomePodView(pod: .constant(pod), needsRefresh: .constant(false))
+                    case .podDetails(let podId):
+                                            // Pass the pod id to HomePodView.
+                                            HomePodView(podId: podId, needsRefresh: .constant(false))
                     }
                 }
         }
