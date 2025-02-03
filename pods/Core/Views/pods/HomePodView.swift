@@ -146,7 +146,7 @@ struct HomePodView: View {
                 Button(action: {
                     showPodOptionsSheet = true
                 }) {
-                    I      ZStack {
+                          ZStack {
                         Circle()
                             .fill(Color(UIColor.secondarySystemFill))
                             .frame(width: 30, height: 30)
