@@ -209,6 +209,7 @@ struct HomePodView: View {
                     showCardSheet = true
                     HapticFeedback.generate()
                 }
+            
             }
             if isCreatingNewItem {
                 newItemInputView
@@ -218,6 +219,7 @@ struct HomePodView: View {
         .refreshable {
             fetchFullPodDetails(showLoadingIndicator: false)
         }
+
     }
     
     // MARK: - Footer View
