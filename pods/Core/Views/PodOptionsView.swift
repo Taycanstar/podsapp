@@ -20,7 +20,8 @@ struct PodOptionsView: View {
     var podId: Int
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
-    var navigationAction: (NavigationDestination) -> Void
+//    var navigationAction: (NavigationDestination) -> Void
+    var navigationAction: (AppNavigationDestination) -> Void
     
 //    @State private var shareItem: ActivityItem?
     @State private var shareItem: ShareSheetItem?  // Changed from ActivityItem
@@ -57,7 +58,7 @@ struct PodOptionsView: View {
                     MenuItemView(iconName: "info.circle", text: "Pod info", action: {
                         dismiss()
                         HapticFeedback.generate()
-                            navigationAction(.podInfo)
+                        navigationAction(.podInfo(podId: podId))
                          
                     }, color: .primary)
                     
@@ -65,7 +66,7 @@ struct PodOptionsView: View {
                         dismiss()
                             print("Tapped pod members")
                         HapticFeedback.generate()
-                                navigationAction(.podMembers)
+                        navigationAction(.podMembers(podId: podId)) 
                           
                      
                        
@@ -92,17 +93,13 @@ struct PodOptionsView: View {
                     
                     MenuItemView(iconName: "list.clipboard", text: "Logs", action: {
                         dismiss()
-//                        onActivityLogSelected()
-                     
-                            navigationAction(.activityLog)
+                        navigationAction(.activityLog(podId: podId, columns: []))
                      
                         HapticFeedback.generate()
                     }, color: .primary)
                     
                     MenuItemView(iconName: "sparkles", text: "Gracie Pod Assistant", action: {
                         dismiss()
-//                        onActivityLogSelected()
-                     
                             navigationAction(.gracie(podId: podId))
                      
                         HapticFeedback.generate()
@@ -159,11 +156,7 @@ struct PodOptionsView: View {
     }
 }
 
-//struct ActivityItem: Identifiable {
-//    let id = UUID()
-//    let items: [Any]
-//    let activities: [UIActivity]? = nil
-//}
+
 struct ShareSheetItem: Identifiable {
     let id = UUID()
     let items: [Any]

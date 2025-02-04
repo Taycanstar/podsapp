@@ -8,31 +8,224 @@
 import SwiftUI
 
 
-enum AppNavigationDestination: Hashable {
-    case pods               // Default Pods folder
-    case folder(Folder)     // A user-created folder
-    case podDetails(Int)    // Pod details view
-}
+//enum AppNavigationDestination: Hashable {
+//    case pods               // Default Pods folder
+//    case folder(Folder)     // A user-created folder
+//    case podDetails(Int)    // Pod details view
+//}
 
+enum AppNavigationDestination: Hashable {
+    case pods                   // Default Pods folder
+    case folder(Folder)         // A user-created folder
+    case podDetails(Int)        // Pod details view
+    case player(item: PodItem)  // Video player
+    case podInfo(podId: Int)    // Pod info
+    case podMembers(podId: Int) // Pod members
+    case activityLog(podId: Int, columns: [PodColumn])
+    case trends(podId: Int)
+    case fullAnalytics(column: PodColumn, activities: [Activity], itemId: Int)
+    case gracie(podId: Int)
+    case activitySummary(podId: Int, duration: Int, startTime: Date, endTime: Date, podColumns: [PodColumn], notes: String?)
+    case fullSummary(items: [PodItem], columns: [PodColumn])
+    case fullActivitySummary(activityId: Int, columns: [PodColumn])
+    case itemSummary(itemId: Int, columns: [PodColumn])
+    
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .pods:
+            hasher.combine("pods")
+        case .folder(let folder):
+            hasher.combine("folder")
+            hasher.combine(folder)
+        case .podDetails(let id):
+            hasher.combine("podDetails")
+            hasher.combine(id)
+        case .player(let item):
+            hasher.combine("player")
+            hasher.combine(item.id)
+        case .podInfo(let podId):
+            hasher.combine("podInfo")
+            hasher.combine(podId)
+        case .podMembers(let podId):
+            hasher.combine("podMembers")
+            hasher.combine(podId)
+        case .activityLog(let podId, let columns):
+            hasher.combine("activityLog")
+            hasher.combine(podId)
+            hasher.combine(columns.map { $0.id })
+        case .trends(let podId):
+            hasher.combine("trends")
+            hasher.combine(podId)
+        case .fullAnalytics(let column, let activities, let itemId):
+            hasher.combine("fullAnalytics")
+            hasher.combine(column.name)
+            hasher.combine(itemId)
+            hasher.combine(activities.map { $0.id })
+        case .gracie(let podId):
+            hasher.combine("gracie")
+            hasher.combine(podId)
+        case .activitySummary(let podId, let duration, let startTime, let endTime, let columns, let notes):
+            hasher.combine("activitySummary")
+            hasher.combine(podId)
+            hasher.combine(duration)
+            hasher.combine(startTime)
+            hasher.combine(endTime)
+            hasher.combine(columns.map { $0.id })
+            hasher.combine(notes)
+        case .fullSummary(let items, let columns):
+            hasher.combine("fullSummary")
+            hasher.combine(items.map { $0.id })
+            hasher.combine(columns.map { $0.id })
+        case .fullActivitySummary(let activityId, let columns):
+            hasher.combine("fullActivitySummary")
+            hasher.combine(activityId)
+            hasher.combine(columns.map { $0.id })
+        case .itemSummary(let itemId, let columns):
+            hasher.combine("itemSummary")
+            hasher.combine(itemId)
+            hasher.combine(columns.map { $0.id })
+        }
+    }
+    
+    static func == (lhs: AppNavigationDestination, rhs: AppNavigationDestination) -> Bool {
+        switch (lhs, rhs) {
+        case (.pods, .pods):
+            return true
+        case (.folder(let f1), .folder(let f2)):
+            return f1 == f2
+        case (.podDetails(let id1), .podDetails(let id2)):
+            return id1 == id2
+        case (.player(let item1), .player(let item2)):
+            return item1.id == item2.id
+        case (.podInfo(let id1), .podInfo(let id2)):
+            return id1 == id2
+        case (.podMembers(let id1), .podMembers(let id2)):
+            return id1 == id2
+        case (.activityLog(let id1, let cols1), .activityLog(let id2, let cols2)):
+            return id1 == id2 && cols1.map { $0.id } == cols2.map { $0.id }
+        case (.trends(let id1), .trends(let id2)):
+            return id1 == id2
+        case (.fullAnalytics(let col1, let acts1, let itemId1), .fullAnalytics(let col2, let acts2, let itemId2)):
+            return col1.name == col2.name && acts1.map { $0.id } == acts2.map { $0.id } && itemId1 == itemId2
+        case (.gracie(let id1), .gracie(let id2)):
+            return id1 == id2
+        case (.activitySummary(let pid1, let d1, let st1, let et1, let c1, let n1),
+              .activitySummary(let pid2, let d2, let st2, let et2, let c2, let n2)):
+            return pid1 == pid2 && d1 == d2 && st1 == st2 && et1 == et2 &&
+                   c1.map { $0.id } == c2.map { $0.id } && n1 == n2
+        case (.fullSummary(let items1, let cols1), .fullSummary(let items2, let cols2)):
+            return items1.map { $0.id } == items2.map { $0.id } &&
+                   cols1.map { $0.id } == cols2.map { $0.id }
+        case (.fullActivitySummary(let id1, let cols1), .fullActivitySummary(let id2, let cols2)):
+            return id1 == id2 && cols1.map { $0.id } == cols2.map { $0.id }
+        case (.itemSummary(let id1, let cols1), .itemSummary(let id2, let cols2)):
+            return id1 == id2 && cols1.map { $0.id } == cols2.map { $0.id }
+        default:
+            return false
+        }
+    }
+}
 // MARK: - PodsContainerView
 
+//struct PodsContainerView: View {
+//    @EnvironmentObject var podsViewModel: PodsViewModel
+//    @State private var path = NavigationPath()
+//    @EnvironmentObject var viewModel: OnboardingViewModel
+//
+//    var body: some View {
+//        NavigationStack(path: $path) {
+//            FoldersView(path: $path)
+//                .navigationDestination(for: AppNavigationDestination.self) { destination in
+//                    switch destination {
+//                    case .pods:
+//                        PodsView()  // Default Pods folder view
+//                    case .folder(let folder):
+//                        PodsView(folder: folder) // Pods for a specific folder
+//                    case .podDetails(let podId):
+//                                            // Pass the pod id to HomePodView.
+//                                            HomePodView(podId: podId, needsRefresh: .constant(false))
+//                    }
+//                }
+//        }
+//    }
+//}
 struct PodsContainerView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel
     @State private var path = NavigationPath()
     @EnvironmentObject var viewModel: OnboardingViewModel
-
+    
     var body: some View {
         NavigationStack(path: $path) {
             FoldersView(path: $path)
                 .navigationDestination(for: AppNavigationDestination.self) { destination in
                     switch destination {
                     case .pods:
-                        PodsView()  // Default Pods folder view
+                        PodsView()
                     case .folder(let folder):
-                        PodsView(folder: folder) // Pods for a specific folder
+                        PodsView(folder: folder)
                     case .podDetails(let podId):
-                                            // Pass the pod id to HomePodView.
-                                            HomePodView(podId: podId, needsRefresh: .constant(false))
+                        HomePodView(podId: podId, needsRefresh: .constant(false), navigationPath: $path)
+                    case .player(let item):
+                        SingleVideoPlayerView(item: item)
+                    case .podInfo(let podId):
+                        if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
+                            PodInfoView(pod: .constant(pod),
+                                      currentTitle: .constant(pod.title),
+                                      currentDescription: .constant(pod.description ?? ""),
+                                      currentType: .constant(pod.type ?? ""),
+                                      currentInstructions: .constant(pod.instructions ?? "")) { _, _, _, _ in }
+                        }
+                    case .podMembers(let podId):
+                        if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
+                            PodMembersView(podId: podId, teamId: pod.teamId)
+                        }
+                    case .activityLog(let podId, let columns):
+                        ActivityLogView(columns: columns, podId: podId, userEmail: viewModel.email)
+                    case .trends(let podId):
+                        if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
+                            ItemTrendsView(podId: podId, podItems: pod.items, podColumns: pod.columns)
+                        }
+                    case .fullAnalytics(let column, let activities, let itemId):
+                        FullAnalyticsView(column: column, activities: activities, itemId: itemId) { activity in
+                            let relevantItem = activity.items.first { $0.itemId == itemId }
+                            guard let columnValue = relevantItem?.columnValues[String(column.id)] else { return nil }
+                            
+                            switch columnValue {
+                            case .number(let value): return value
+                            case .time(let timeValue): return Double(timeValue.totalSeconds)
+                            case .array(let values):
+                                let numericValues = values.compactMap { value -> Double? in
+                                    switch value {
+                                    case .number(let num): return num
+                                    case .time(let time): return Double(time.totalSeconds)
+                                    default: return nil
+                                    }
+                                }
+                                return numericValues.max()
+                            default: return nil
+                            }
+                        }
+                    case .gracie(let podId):
+                        GracieView(podId: podId)
+                    case .activitySummary(let podId, let duration, let startTime, let endTime, let columns, let notes):
+                        if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
+                            ActivitySummaryView(pod: pod,
+                                             duration: duration,
+                                             items: pod.items,
+                                             startTime: startTime,
+                                             endTime: endTime,
+                                             podColumns: columns,
+                                             navigationAction: { destination in
+                                                 path.append(destination)
+                                             },
+                                             notes: notes)
+                        }
+                    case .fullSummary(let items, let columns):
+                        FullSummaryView(items: items, columns: columns)
+                    case .fullActivitySummary(let activityId, let columns):
+                        FullActivitySummaryView(activityId: activityId, columns: columns)
+                    case .itemSummary(let itemId, let columns):
+                        ItemSummaryView(itemId: itemId, columns: columns)
                     }
                 }
         }

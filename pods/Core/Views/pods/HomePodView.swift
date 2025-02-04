@@ -65,6 +65,7 @@ struct HomePodView: View {
     @StateObject private var activityManager = ActivityManager()
     @ObservedObject private var activityState = ActivityState.shared
     @State private var showCountdown: Bool = false
+    @Binding var navigationPath: NavigationPath
 
     var networkManager: NetworkManager = NetworkManager()
 
@@ -177,7 +178,16 @@ struct HomePodView: View {
                 onDeletePod: { deletePod() },
                 podName: pod?.title ?? "",
                 podId: pod?.id ?? 0,
-                navigationAction: { _ in }
+                navigationAction: { destination in
+                            showPodOptionsSheet = false
+                    let wasActivityOpen = isActivityOpen
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        navigationPath.append(destination)
+                        if wasActivityOpen {
+                                       isActivityOpen = true
+                                   }
+                    }
+                        }
             )
         }
         // (Additional sheets and full-screen covers can be attached similarly.)
@@ -349,32 +359,6 @@ struct HomePodView: View {
         activityManager.initialize(podId: pod?.id ?? 0, userEmail: viewModel.email)
     }
     
-//    private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
-//        guard let currentPod = pod else { return }
-//        if showLoadingIndicator { isLoading = true }
-//        networkManager.fetchFullPodDetails(email: viewModel.email, podId: currentPod.id) { result in
-//            DispatchQueue.main.async {
-//                switch result {
-//                case .success(let fullPod):
-//                    // Update global pod in the view model.
-//                    if let index = podsViewModel.pods.firstIndex(where: { $0.id == fullPod.id }) {
-//                        podsViewModel.pods[index] = fullPod
-//                    }
-//                    // Update local state.
-//                    self.reorderedItems = fullPod.items
-//                    self.podColumns = fullPod.columns
-//                    self.visibleColumns = fullPod.visibleColumns
-//                    self.currentTitle = fullPod.title
-//                    self.currentDescription = fullPod.description ?? ""
-//                    self.currentInstructions = fullPod.instructions ?? ""
-//                    self.currentType = fullPod.type ?? ""
-//                case .failure(let error):
-//                    print("Failed to load pod details: \(error.localizedDescription)")
-//                }
-//                if showLoadingIndicator { isLoading = false }
-//            }
-//        }
-//    }
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
         guard let currentPod = pod else { return }
 

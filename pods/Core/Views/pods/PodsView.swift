@@ -43,9 +43,7 @@ struct PodsView: View {
                 .simultaneousGesture(TapGesture().onEnded {
                     loadPodDetails(for: pod) // Only fetch when tapped
                 })
-//                .onAppear {
-//                    loadPodDetails(for: pod)
-//                }
+
             }
             .onDelete(perform: deletePod)
         }

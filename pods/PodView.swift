@@ -8,7 +8,6 @@ enum NavigationDestination: Hashable {
     case podMembers
     case activityLog
     case trends(podId: Int)
-//    case fullAnalytics(column: PodColumn, logs: [PodItemActivityLog])
     case fullAnalytics(column: PodColumn, activities: [Activity], itemId: Int)
     case gracie(podId: Int)
     case fullActivityLog(log: Binding<PodItemActivityLog>, columns: [PodColumn], onLogUpdated: (PodItemActivityLog) -> Void)
@@ -33,9 +32,7 @@ enum NavigationDestination: Hashable {
         case .trends(let podId):
             hasher.combine("trends")
             hasher.combine(podId)
-//        case .fullAnalytics(let column, _):
-//                    hasher.combine("fullAnalytics")
-//                    hasher.combine(column.name)
+
         case .fullAnalytics(let column, let activities, let itemId):
                     hasher.combine("fullAnalytics")
                     hasher.combine(column.name)
@@ -84,8 +81,6 @@ enum NavigationDestination: Hashable {
             return id1 == id2
         case (.gracie(let id1), .gracie(let id2)):
             return id1 == id2
-//        case (.fullAnalytics(let column1, _), .fullAnalytics(let column2, _)):
-//                    return column1.name == column2.name
         case (.fullAnalytics(let column1, let activities1, let itemId1),
                       .fullAnalytics(let column2, let activities2, let itemId2)):
                     return column1.name == column2.name &&
