@@ -172,7 +172,7 @@ struct PodsContainerView: View {
                             PodInfoView(pod: .constant(pod),
                                       currentTitle: .constant(pod.title),
                                       currentDescription: .constant(pod.description ?? ""),
-                                      currentType: .constant(pod.type ?? ""),
+                                        currentType: .constant(pod.type ?? ""), currentPrivacy: .constant(pod.privacy ?? ""),
                                       currentInstructions: .constant(pod.instructions ?? "")) { _, _, _, _ in }
                         }
                     case .podMembers(let podId):

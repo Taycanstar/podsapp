@@ -292,7 +292,7 @@ struct PodView: View {
                 PodInfoView(pod: $pod,
                             currentTitle: $currentTitle,
                             currentDescription: $currentDescription,
-                            currentType: $currentType,
+                            currentType: $currentType, currentPrivacy: $currentType,
                             currentInstructions: $currentInstructions,
                         
                             onSave: { updatedTitle, updatedDescription, updatedInstructions, updatedType in
