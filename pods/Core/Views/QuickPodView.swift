@@ -49,9 +49,9 @@ struct QuickPodView: View {
     }
     
     enum PodPrivacy: String, CaseIterable {
-        case everyone = "Everyone"
-        case friends = "Friends"
-        case only = "Only Me"
+        case everyone = "public"
+        case friends = "friends"
+        case only = "private"
         
         var id: Int {
             switch self {
@@ -71,7 +71,7 @@ struct QuickPodView: View {
             case .friends:
                 return "Friends"
             case .only:
-                return "Only Me"
+                return "Only You"
             }
         }
     }
