@@ -173,24 +173,60 @@ struct QuickPodView: View {
     }
 
     // QuickPodView
+//    private func createQuickPod() {
+//        guard !podName.isEmpty else {
+//            errorMessage = "Pod name is required."
+//            return
+//        }
+//        
+//        networkManager.createQuickPod(
+//            podTitle: podName,
+//            podType: podType.rawValue.lowercased(),
+//            privacy: podPrivacy.rawValue.lowercased(),
+//            email: viewModel.email
+//        ) { [self] result in
+//            DispatchQueue.main.async {
+//                switch result {
+//                case .success(let pod):
+//                    podsViewModel.pods.append(pod)
+//                    onPodCreated(pod)
+//                    isPresented = false
+//                case .failure(let error):
+//                    print("error is", error)
+//                    errorMessage = error.localizedDescription
+//                }
+//            }
+//        }
+//    }
     private func createQuickPod() {
         guard !podName.isEmpty else {
+            print("Pod name is empty")  // Debug
             errorMessage = "Pod name is required."
             return
         }
         
+        print("Starting pod creation with name: \(podName)")  // Debug
+        print("Type: \(podType.rawValue.lowercased())")      // Debug
+        print("Privacy: \(podPrivacy.rawValue)")             // Debug
+        print("Email: \(viewModel.email)")                   // Debug
+        
         networkManager.createQuickPod(
             podTitle: podName,
             podType: podType.rawValue.lowercased(),
-            privacy: podPrivacy.rawValue.lowercased(),
+            privacy: podPrivacy.rawValue,
             email: viewModel.email
         ) { [self] result in
+            print("Received API response")  // Debug
             DispatchQueue.main.async {
                 switch result {
                 case .success(let pod):
+                    print("Successfully created pod with id: \(pod.id)")  // Debug
                     podsViewModel.pods.append(pod)
+                    onPodCreated(pod)
                     isPresented = false
                 case .failure(let error):
+                    print("Failed to create pod: \(error)")  // Debug
+                    print("Error description: \(error.localizedDescription)")  // Debug
                     errorMessage = error.localizedDescription
                 }
             }
