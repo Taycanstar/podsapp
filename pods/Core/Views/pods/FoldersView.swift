@@ -169,14 +169,29 @@ struct PodsContainerView: View {
                     case .player(let item):
                         SingleVideoPlayerView(item: item)
                     case .podInfo(let podId):
-                        if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
-                            PodInfoView(pod: .constant(pod),
-                                      currentTitle: .constant(pod.title),
-                                      currentDescription: .constant(pod.description ?? ""),
-                                        currentType: .constant(pod.type ?? ""),
-                                        currentPrivacy: .constant(pod.privacy ?? ""),
-                                      currentInstructions: .constant(pod.instructions ?? "")) { _, _, _, _, _ in }
+                        if let podIndex = podsViewModel.pods.firstIndex(where: { $0.id == podId }) {
+                            PodInfoView(pod: $podsViewModel.pods[podIndex],
+                                        currentTitle: $podsViewModel.pods[podIndex].title,
+                                        currentDescription: Binding(
+                                            get: { podsViewModel.pods[podIndex].description ?? "" },
+                                            set: { podsViewModel.pods[podIndex].description = $0 }
+                                        ),
+                                        currentType: Binding(
+                                            get: { podsViewModel.pods[podIndex].type ?? "" },
+                                            set: { podsViewModel.pods[podIndex].type = $0 }
+                                        ),
+                                        currentPrivacy: Binding(
+                                            get: { podsViewModel.pods[podIndex].privacy ?? "" },
+                                            set: { podsViewModel.pods[podIndex].privacy = $0 }
+                                        ),
+                                        currentInstructions: Binding(
+                                            get: { podsViewModel.pods[podIndex].instructions ?? "" },
+                                            set: { podsViewModel.pods[podIndex].instructions = $0 }
+                                        )) { updatedTitle, updatedDescription, updatedInstructions, updatedType, updatedPrivacy in
+                                            // Optionally do additional work here.
+                                        }
                         }
+
                     case .podMembers(let podId):
                         if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {
                             PodMembersView(podId: podId, teamId: pod.teamId)
