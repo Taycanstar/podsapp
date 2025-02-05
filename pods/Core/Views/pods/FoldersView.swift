@@ -149,6 +149,7 @@ enum AppNavigationDestination: Hashable {
 //        }
 //    }
 //}
+
 struct PodsContainerView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel
     @State private var path = NavigationPath()
@@ -172,8 +173,9 @@ struct PodsContainerView: View {
                             PodInfoView(pod: .constant(pod),
                                       currentTitle: .constant(pod.title),
                                       currentDescription: .constant(pod.description ?? ""),
-                                        currentType: .constant(pod.type ?? ""), currentPrivacy: .constant(pod.privacy ?? ""),
-                                      currentInstructions: .constant(pod.instructions ?? "")) { _, _, _, _ in }
+                                        currentType: .constant(pod.type ?? ""),
+                                        currentPrivacy: .constant(pod.privacy ?? ""),
+                                      currentInstructions: .constant(pod.instructions ?? "")) { _, _, _, _, _ in }
                         }
                     case .podMembers(let podId):
                         if let pod = podsViewModel.pods.first(where: { $0.id == podId }) {

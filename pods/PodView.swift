@@ -279,108 +279,110 @@ struct PodView: View {
                 
             }
         }
-        .navigationDestination(for: NavigationDestination.self) { destination in
-            switch destination {
-            case .player(let item):
-                    SingleVideoPlayerView(item: item)
-                    .onDisappear {
-                        if activityState.isActivityInProgress {
-                            isActivityOpen = true
-                        }
-                    }
-            case .podInfo:
-                PodInfoView(pod: $pod,
-                            currentTitle: $currentTitle,
-                            currentDescription: $currentDescription,
-                            currentType: $currentType, currentPrivacy: $currentType,
-                            currentInstructions: $currentInstructions,
-                        
-                            onSave: { updatedTitle, updatedDescription, updatedInstructions, updatedType in
-                    self.currentTitle = updatedTitle
-                    self.currentDescription = updatedDescription
-                    self.currentInstructions = updatedInstructions
-                    self.currentType = updatedType
-                    self.needsRefresh = true
-                    fetchFullPodDetails()
-                }
-                )
-            case .podMembers:
-                PodMembersView(podId: pod.id, teamId: pod.teamId)
-            case .activityLog:
-//                ActivityLogView(manager: logManager, columns: podColumns)
-//                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
-                ActivityLogView(
-                        columns: podColumns,
-                        podId: pod.id,
-                        userEmail: viewModel.email
-                    )
-            case .trends(let podId):
-                ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
-//            case .fullAnalytics(let column, let logs):
-//                            FullAnalyticsView(column: column, activityLogs: logs)
-            case .fullAnalytics(let column, let activities, let itemId):
-                    FullAnalyticsView(
-                        column: column,
-                        activities: activities,
-                        itemId: itemId,
-                        getHighestValue: { activity in
-                            let relevantItem = activity.items.first { $0.itemId == itemId }
-                            guard let columnValue = relevantItem?.columnValues[String(column.id)] else { return nil }
-                            
-                            switch columnValue {
-                            case .number(let value):
-                                return value
-                            case .time(let timeValue):
-                                return Double(timeValue.totalSeconds)
-                            case .array(let values):
-                                let numericValues = values.compactMap { value -> Double? in
-                                    switch value {
-                                    case .number(let num): return num
-                                    case .time(let time): return Double(time.totalSeconds)
-                                    default: return nil
-                                    }
-                                }
-                                return numericValues.max()
-                            default:
-                                return nil
-                            }
-                        }
-                    )
-            case .gracie(let podId):
-                GracieView(podId: podId)
-
-            case .fullActivityLog(let log, let columns, let onLogUpdated):
-                FullActivityLogView(log: log,
-                                   columns: columns,
-                                   onDelete: { _ in },
-                                   onUpdate: onLogUpdated)
-                
-            case .activitySummary(let pod, let duration, let startTime, let endTime,  let podColumns, let notes):
-                    ActivitySummaryView(
-                        pod: pod,
-                        duration: duration,
-                        items: reorderedItems,
-                        startTime: startTime,
-                        endTime: endTime,
-                        podColumns: podColumns,
-                        navigationAction: { destination in
-                                    navigationPath.append(destination)
-                                },
-                        notes: notes
-                    )
-            case .fullSummary(let items, let columns):
-                FullSummaryView(items: items, columns: podColumns)
-//            case .fullActivitySummary(let activity, let columns):
-//                FullActivitySummaryView(activity: activity, columns: columns)
-            case .fullActivitySummary(let activityId, let columns):
-                   FullActivitySummaryView(activityId: activityId, columns: columns)
-            case .itemSummary(let itemId, let columns):
-                    ItemSummaryView(itemId: itemId, columns: columns)
-
-
-                            
-            }
-        }
+//        .navigationDestination(for: NavigationDestination.self) { destination in
+//            switch destination {
+//            case .player(let item):
+//                    SingleVideoPlayerView(item: item)
+//                    .onDisappear {
+//                        if activityState.isActivityInProgress {
+//                            isActivityOpen = true
+//                        }
+//                    }
+//            case .podInfo:
+//                PodInfoView(pod: $pod,
+//                            currentTitle: $currentTitle,
+//                            currentDescription: $currentDescription,
+//                            currentType: $currentType, currentPrivacy: $currentType,
+//                            currentInstructions: $currentInstructions,
+//                            
+//                        
+//                            onSave: { updatedTitle, updatedDescription, updatedInstructions, updatedType, updatedPrivacy in
+//                    self.currentTitle = updatedTitle
+//                    self.currentDescription = updatedDescription
+//                    self.currentInstructions = updatedInstructions
+//                    self.currentType = updatedType
+//                    self.needsRefresh = true
+//
+//                    fetchFullPodDetails()
+//                }
+//                )
+//            case .podMembers:
+//                PodMembersView(podId: pod.id, teamId: pod.teamId)
+//            case .activityLog:
+////                ActivityLogView(manager: logManager, columns: podColumns)
+////                ActivityLogView(columns: podColumns, podId: pod.id, userEmail: viewModel.email)
+//                ActivityLogView(
+//                        columns: podColumns,
+//                        podId: pod.id,
+//                        userEmail: viewModel.email
+//                    )
+//            case .trends(let podId):
+//                ItemTrendsView(podId: podId, podItems: reorderedItems, podColumns: podColumns)
+////            case .fullAnalytics(let column, let logs):
+////                            FullAnalyticsView(column: column, activityLogs: logs)
+//            case .fullAnalytics(let column, let activities, let itemId):
+//                    FullAnalyticsView(
+//                        column: column,
+//                        activities: activities,
+//                        itemId: itemId,
+//                        getHighestValue: { activity in
+//                            let relevantItem = activity.items.first { $0.itemId == itemId }
+//                            guard let columnValue = relevantItem?.columnValues[String(column.id)] else { return nil }
+//                            
+//                            switch columnValue {
+//                            case .number(let value):
+//                                return value
+//                            case .time(let timeValue):
+//                                return Double(timeValue.totalSeconds)
+//                            case .array(let values):
+//                                let numericValues = values.compactMap { value -> Double? in
+//                                    switch value {
+//                                    case .number(let num): return num
+//                                    case .time(let time): return Double(time.totalSeconds)
+//                                    default: return nil
+//                                    }
+//                                }
+//                                return numericValues.max()
+//                            default:
+//                                return nil
+//                            }
+//                        }
+//                    )
+//            case .gracie(let podId):
+//                GracieView(podId: podId)
+//
+//            case .fullActivityLog(let log, let columns, let onLogUpdated):
+//                FullActivityLogView(log: log,
+//                                   columns: columns,
+//                                   onDelete: { _ in },
+//                                   onUpdate: onLogUpdated)
+//                
+//            case .activitySummary(let pod, let duration, let startTime, let endTime,  let podColumns, let notes):
+//                    ActivitySummaryView(
+//                        pod: pod,
+//                        duration: duration,
+//                        items: reorderedItems,
+//                        startTime: startTime,
+//                        endTime: endTime,
+//                        podColumns: podColumns,
+//                        navigationAction: { destination in
+//                                    navigationPath.append(destination)
+//                                },
+//                        notes: notes
+//                    )
+//            case .fullSummary(let items, let columns):
+//                FullSummaryView(items: items, columns: podColumns)
+////            case .fullActivitySummary(let activity, let columns):
+////                FullActivitySummaryView(activity: activity, columns: columns)
+//            case .fullActivitySummary(let activityId, let columns):
+//                   FullActivitySummaryView(activityId: activityId, columns: columns)
+//            case .itemSummary(let itemId, let columns):
+//                    ItemSummaryView(itemId: itemId, columns: columns)
+//
+//
+//                            
+//            }
+//        }
 
         .toolbar(.hidden, for: .navigationBar)
         

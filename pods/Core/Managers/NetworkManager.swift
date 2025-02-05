@@ -15,8 +15,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    let baseUrl = "http://192.168.1.79:8000"
-//    let baseUrl = "http://172.20.10.3:8000"
+//    let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -3278,7 +3278,68 @@ class NetworkManager {
     
 
     
-    func updatePodDetails(podId: Int, title: String, description: String, instructions: String, type: String, completion: @escaping (Result<(String, String, String, String), Error>) -> Void) {
+//    func updatePodDetails(podId: Int, title: String, description: String, instructions: String, type: String, completion: @escaping (Result<(String, String, String, String), Error>) -> Void) {
+//        guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
+//            completion(.failure(NetworkError.invalidURL))
+//            return
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "PUT"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//        
+//        let body: [String: Any] = [
+//            "title": title,
+//            "description": description,
+//            "instructions": instructions,
+//            "type": type,
+//            
+//        ]
+//        
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+//        } catch {
+//            completion(.failure(error))
+//            return
+//        }
+//        
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion(.failure(error))
+//                return
+//            }
+//            
+//            guard let data = data else {
+//                completion(.failure(NetworkError.noData))
+//                return
+//            }
+//            
+//            do {
+//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+//                   let podData = json["pod"] as? [String: Any],
+//                   let updatedTitle = podData["title"] as? String,
+//                   let updatedDescription = podData["description"] as? String,
+//                   let updatedInstructions = podData["instructions"] as? String,
+//                   let updatedType = podData["type"] as? String {
+//                    completion(.success((updatedTitle, updatedDescription, updatedInstructions, updatedType)))
+//                } else {
+//                    completion(.failure(NetworkError.decodingError))
+//                }
+//            } catch {
+//                completion(.failure(error))
+//            }
+//        }.resume()
+//    }
+    
+    func updatePodDetails(
+        podId: Int,
+        title: String,
+        description: String,
+        instructions: String,
+        type: String,
+        privacy: String,
+        completion: @escaping (Result<(String, String, String, String, String), Error>) -> Void
+    ) {
         guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -3292,7 +3353,8 @@ class NetworkManager {
             "title": title,
             "description": description,
             "instructions": instructions,
-            "type": type
+            "type": type,
+            "privacy": privacy
         ]
         
         do {
@@ -3313,18 +3375,37 @@ class NetworkManager {
                 return
             }
             
+            // Print response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("Response: \(responseString)")
+            }
+            
             do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+                
+                if let json = json,
                    let podData = json["pod"] as? [String: Any],
                    let updatedTitle = podData["title"] as? String,
                    let updatedDescription = podData["description"] as? String,
                    let updatedInstructions = podData["instructions"] as? String,
-                   let updatedType = podData["type"] as? String {
-                    completion(.success((updatedTitle, updatedDescription, updatedInstructions, updatedType)))
+                   let updatedType = podData["type"] as? String,
+                   let updatedPrivacy = podData["privacy"] as? String {
+                    completion(.success((
+                        updatedTitle,
+                        updatedDescription,
+                        updatedInstructions,
+                        updatedType,
+                        updatedPrivacy
+                    )))
                 } else {
+                    // Now json is accessible here
+                    if let podData = json?["pod"] as? [String: Any] {
+                        print("Pod data received: \(podData)")
+                    }
                     completion(.failure(NetworkError.decodingError))
                 }
             } catch {
+                print("Decoding error: \(error)")
                 completion(.failure(error))
             }
         }.resume()
