@@ -76,20 +76,14 @@ struct HomePodView: View {
         podsViewModel.pods.first(where: { $0.id == podId })
     }
     
-    /// Returns true if the pod has been fully loaded.
-    var hasCompleteData: Bool {
-        if let pod = pod {
-            return !pod.columns.isEmpty && !pod.items.isEmpty
-        }
-        return false
-    }
+
     
     // MARK: - Body
 
     var body: some View {
         Group {
             if let pod = pod {
-                if isLoading || !hasCompleteData {
+                if isLoading {
                     // Show loader if data is missing.
                     VStack {
                         Spacer()
@@ -154,11 +148,11 @@ struct HomePodView: View {
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
                 withAnimation { keyboardOffset = 0 }
             }
-            if !hasCompleteData {
-                fetchFullPodDetails(showLoadingIndicator: true)
-            } else {
-                isLoading = false
-            }
+//            if !hasCompleteData {
+//                fetchFullPodDetails(showLoadingIndicator: true)
+//            } else {
+//                isLoading = false
+//            }
             initializeManagers()
             NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                 fetchFullPodDetails(showLoadingIndicator: false)
@@ -362,11 +356,6 @@ struct HomePodView: View {
     private func fetchFullPodDetails(showLoadingIndicator: Bool = true) {
         guard let currentPod = pod else { return }
 
-        // If we already have full details, do not fetch again.
-        if hasCompleteData {
-            isLoading = false
-            return
-        }
 
         if showLoadingIndicator { isLoading = true }
         networkManager.fetchFullPodDetails(email: viewModel.email, podId: currentPod.id) { result in
