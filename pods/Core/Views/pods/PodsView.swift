@@ -16,12 +16,15 @@ struct PodsView: View {
     @State private var loadedPods: [Int: Pod] = [:]
     @State private var showingOptionsMenu = false
     @State private var showQuickPodView = false
+    @State private var selectedPodId: Int?
+    @Binding var navigationPath: NavigationPath
     
     let folder: Folder?
     let networkManager = NetworkManager()
     
-    init(folder: Folder? = nil) {
+    init(folder: Folder? = nil, navigationPath: Binding<NavigationPath>) {
         self.folder = folder
+        _navigationPath = navigationPath
     }
     
     var filteredPods: [Pod] {
@@ -84,6 +87,7 @@ struct PodsView: View {
         .sheet(isPresented: $showQuickPodView) {
                 QuickPodView(isPresented: $showQuickPodView) { newPod in
                     loadPodDetails(for: newPod)
+                    navigationPath.append(AppNavigationDestination.podDetails(newPod.id))
                 }
             }
         .confirmationDialog("Options", isPresented: $showingOptionsMenu) {

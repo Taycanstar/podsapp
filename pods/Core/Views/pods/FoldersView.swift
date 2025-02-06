@@ -131,9 +131,9 @@ struct PodsContainerView: View {
                 .navigationDestination(for: AppNavigationDestination.self) { destination in
                     switch destination {
                     case .pods:
-                        PodsView()
+                        PodsView(navigationPath: $path)
                     case .folder(let folder):
-                        PodsView(folder: folder)
+                        PodsView(folder: folder, navigationPath: $path)
                     case .podDetails(let podId):
                         HomePodView(podId: podId, needsRefresh: .constant(false), navigationPath: $path)
                     case .player(let item):
