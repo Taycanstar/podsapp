@@ -15,8 +15,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    let baseUrl = "http://192.168.1.79:8000"
-//    let baseUrl = "http://172.20.10.3:8000"
+//    let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -2241,77 +2241,7 @@ class NetworkManager {
             }.resume()
         }
     
-//    func createQuickPod(podTitle: String, templateId: Int, email: String, workspaceId: Int?, completion: @escaping (Bool, String?) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/create-quick-pod/") else {
-//            completion(false, "Invalid URL")
-//            return
-//        }
-//
-//        var body: [String: Any] = [
-//            "title": podTitle,
-//            "templateId": templateId,
-//            "email": email
-//        ]
-//
-//        if let workspaceId = workspaceId {
-//            body["workspace_id"] = workspaceId
-//        }
-//
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//
-//        do {
-//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-//        } catch {
-//            completion(false, "Failed to encode request body")
-//            return
-//        }
-//
-//
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                DispatchQueue.main.async {
-//                    completion(false, "Network error: \(error.localizedDescription)")
-//                }
-//                return
-//            }
-//
-//            guard let httpResponse = response as? HTTPURLResponse else {
-//                DispatchQueue.main.async {
-//                    completion(false, "No response from server")
-//                }
-//                return
-//            }
-//
-//            if httpResponse.statusCode == 201 {
-//                if let data = data,
-//                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-//                   let podId = json["pod_id"] as? Int {
-//                    DispatchQueue.main.async {
-//                        completion(true, String(podId))
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Pod created successfully, but couldn't retrieve pod ID")
-//                    }
-//                }
-//            } else {
-//                if let data = data,
-//                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-//                   let errorMessage = json["error"] as? String {
-//                    DispatchQueue.main.async {
-//                        completion(false, errorMessage)
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Failed to create pod. Status code: \(httpResponse.statusCode)")
-//                    }
-//                }
-//            }
-//        }.resume()
-//    }
+
     
     func createQuickPod(
         podTitle: String,
@@ -4975,6 +4905,35 @@ class NetworkManager {
             }
         }
         task.resume()
+    }
+    
+    func updatePodVisited(podId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+       guard let url = URL(string: "\(baseUrl)/update-pod-visited/\(podId)/") else {
+           completion(.failure(NetworkError.invalidURL))
+           return
+       }
+       
+       var request = URLRequest(url: url)
+       request.httpMethod = "POST"
+       request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+       
+       URLSession.shared.dataTask(with: request) { data, response, error in
+           if let error = error {
+               completion(.failure(error))
+               return
+           }
+           
+           guard let httpResponse = response as? HTTPURLResponse else {
+               completion(.failure(NetworkError.invalidResponse))
+               return
+           }
+           
+           if httpResponse.statusCode == 200 {
+               completion(.success(()))
+           } else {
+               completion(.failure(NetworkError.unknownError))
+           }
+       }.resume()
     }
 
 

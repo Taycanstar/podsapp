@@ -148,11 +148,9 @@ struct HomePodView: View {
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
                 withAnimation { keyboardOffset = 0 }
             }
-//            if !hasCompleteData {
-//                fetchFullPodDetails(showLoadingIndicator: true)
-//            } else {
-//                isLoading = false
-//            }
+            
+            podsViewModel.updatePodVisited(podId: podId)
+            
             initializeManagers()
             NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
                 fetchFullPodDetails(showLoadingIndicator: false)

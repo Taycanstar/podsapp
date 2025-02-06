@@ -172,32 +172,6 @@ struct QuickPodView: View {
         colorScheme == .dark ? Color(rgb: 86, 86, 86) : Color(rgb: 230, 230, 230)
     }
 
-    // QuickPodView
-//    private func createQuickPod() {
-//        guard !podName.isEmpty else {
-//            errorMessage = "Pod name is required."
-//            return
-//        }
-//        
-//        networkManager.createQuickPod(
-//            podTitle: podName,
-//            podType: podType.rawValue.lowercased(),
-//            privacy: podPrivacy.rawValue.lowercased(),
-//            email: viewModel.email
-//        ) { [self] result in
-//            DispatchQueue.main.async {
-//                switch result {
-//                case .success(let pod):
-//                    podsViewModel.pods.append(pod)
-//                    onPodCreated(pod)
-//                    isPresented = false
-//                case .failure(let error):
-//                    print("error is", error)
-//                    errorMessage = error.localizedDescription
-//                }
-//            }
-//        }
-//    }
     private func createQuickPod() {
         guard !podName.isEmpty else {
             print("Pod name is empty")  // Debug
@@ -220,8 +194,9 @@ struct QuickPodView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let pod):
-                    print("Successfully created pod with id: \(pod.id)")  // Debug
+                    print("Successfully created pod with id: \(pod.id)")
                     podsViewModel.pods.append(pod)
+                    podsViewModel.updatePodsCache()
                     onPodCreated(pod)
                     isPresented = false
                 case .failure(let error):

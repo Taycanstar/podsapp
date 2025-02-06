@@ -38,7 +38,7 @@ class PodsViewModel: ObservableObject {
         }
     }
     
-    private func cachePods(_ response: PodResponse) {
+     func cachePods(_ response: PodResponse) {
         if let encoded = try? JSONEncoder().encode(response) {
             UserDefaults.standard.set(encoded, forKey: "pods_cache")
         }
@@ -94,6 +94,7 @@ class PodsViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if success {
                     self?.pods.removeAll { $0.id == podId }
+                    self?.updatePodsCache()
                 } else if let error = error {
                     print("Failed to delete pod: \(error)")
                     self?.error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: error])
@@ -136,4 +137,33 @@ class PodsViewModel: ObservableObject {
             }
         }
     }
+    
+    func updatePodsCache() {
+        let podJSONs = pods.map { PodJSON(from: $0) }
+        let response = PodResponse(folder: currentFolder, pods: podJSONs, totalPods: podJSONs.count)
+        if let encoded = try? JSONEncoder().encode(response) {
+            UserDefaults.standard.set(encoded, forKey: "pods_cache")
+        }
+    }
+
+    func updatePodVisited(podId: Int) {
+        networkManager.updatePodVisited(podId: podId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Move pod to top of the list
+                    if let index = self?.pods.firstIndex(where: { $0.id == podId }) {
+                        if let pod = self?.pods.remove(at: index) {
+                            self?.pods.insert(pod, at: 0)
+                            // Update cache with new order
+                            self?.updatePodsCache()
+                        }
+                    }
+                case .failure(let error):
+                    print("Failed to update pod visited time: \(error)")
+                }
+            }
+        }
+    }
+
 }

@@ -768,6 +768,33 @@ extension Pod {
     }
 }
 
+extension PodJSON {
+    init(from pod: Pod) {
+        self.id = pod.id
+        self.title = pod.title
+        // Use the current date for created_at (or use a stored date if available)
+        self.created_at = ISO8601DateFormatter().string(from: Date())
+        // Adjust this if you want to convert pod.items properly:
+        self.items = nil
+        self.templateId = pod.templateId
+        self.workspace = pod.workspace
+        self.isFavorite = pod.isFavorite
+        self.lastVisited = pod.lastVisited
+        self.columns = pod.columns
+        self.visibleColumns = pod.visibleColumns
+        self.role = pod.role
+        self.description = pod.description
+        self.instructions = pod.instructions
+        self.type = pod.type
+        self.teamId = pod.teamId
+        self.recentActivityLogs = nil // Convert if needed
+        self.folderId = pod.folderId
+        self.privacy = pod.privacy
+        self.pod_type = pod.pod_type
+    }
+}
+
+
 
 
 extension PodItem {
