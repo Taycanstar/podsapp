@@ -165,5 +165,33 @@ class PodsViewModel: ObservableObject {
             }
         }
     }
+    
+    
+    func updatePodsOrder(podIds: [Int]) {
+        // Create a new array of pods in the correct order
+        let orderedPods = podIds.compactMap { id in
+            pods.first { $0.id == id }
+        }
+        
+        // Update the pods array with the new order
+        pods = orderedPods
+        
+        // Cache the new order
+        let podJSONs = orderedPods.map { PodJSON(from: $0) }
+        let response = PodResponse(folder: currentFolder, pods: podJSONs, totalPods: podJSONs.count)
+        cachePods(response)
+        
+        // Update backend
+        networkManager.updatePodsOrder(podIds: podIds) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Pod order updated successfully")
+                case .failure(let error):
+                    print("Failed to update pod order: \(error)")
+                }
+            }
+        }
+    }
 
 }

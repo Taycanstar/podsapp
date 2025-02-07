@@ -18,6 +18,7 @@ struct PodsView: View {
     @State private var showQuickPodView = false
     @State private var selectedPodId: Int?
     @Binding var navigationPath: NavigationPath
+    @State private var isEditMode: EditMode = .inactive
     
     let folder: Folder?
     let networkManager = NetworkManager()
@@ -50,40 +51,44 @@ struct PodsView: View {
                 })
 
             }
+           
             .onDelete(perform: deletePod)
+               
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
-                    Button(action: {
-//                        create pod sheet
-                        showQuickPodView = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(UIColor.secondarySystemFill))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "plus")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.accentColor)
-                        }
-                    }
                     
-                    Button(action: {
-                        showingOptionsMenu = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(UIColor.secondarySystemFill))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.accentColor)
+                        Button(action: {
+                            showQuickPodView = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemFill))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.accentColor)
+                            }
                         }
-                    }
+                        
+//                        Button(action: {
+//                            showingOptionsMenu = true
+//                        }) {
+//                            ZStack {
+//                                Circle()
+//                                    .fill(Color(UIColor.secondarySystemFill))
+//                                    .frame(width: 30, height: 30)
+//                                Image(systemName: "ellipsis")
+//                                    .font(.system(size: 11, weight: .bold))
+//                                    .foregroundColor(.accentColor)
+//                            }
+//                        }
+                   
                 }
             }
         }
+        .environment(\.editMode, $isEditMode)
         .sheet(isPresented: $showQuickPodView) {
                 QuickPodView(isPresented: $showQuickPodView) { newPod in
                     loadPodDetails(for: newPod)
@@ -91,14 +96,27 @@ struct PodsView: View {
                 }
             }
         .confirmationDialog("Options", isPresented: $showingOptionsMenu) {
-            Button("Edit") { /* Edit mode */ }
-            Button("Select") { /* Select mode */ }
-            Button("Cancel", role: .cancel) { }
-        }
+                  Button("Edit") {
+                      withAnimation {
+                          isEditMode = .active
+                      }
+                  }
+             
+                  Button("Cancel", role: .cancel) { }
+              }
         .navigationTitle(folder?.name ?? "Pods")
         .searchable(text: $searchText, prompt: "Search")
         .padding(.bottom, 49)
     }
+    
+    private func movePods(from source: IndexSet, to destination: Int) {
+          var updatedPods = filteredPods
+          updatedPods.move(fromOffsets: source, toOffset: destination)
+          
+          // Update the order in the view model
+          let podIds = updatedPods.map { $0.id }
+          podsViewModel.updatePodsOrder(podIds: podIds)
+      }
     
     private func loadPodDetails(for pod: Pod) {
         networkManager.fetchFullPodDetails(email: viewModel.email, podId: pod.id) { result in
