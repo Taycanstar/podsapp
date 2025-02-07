@@ -229,6 +229,7 @@ struct FoldersView: View {
     @State private var shouldNavigateToPodsOnAppear = true
     @State private var showingCreateFolderSheet = false
     @State private var showingOptionsMenu = false
+    @State private var isEditMode: EditMode = .inactive
 
     var filteredFolders: [Folder] {
         if searchText.isEmpty {
@@ -270,6 +271,7 @@ struct FoldersView: View {
                         }
                     }
                 }
+                .onMove(perform: moveFolders)
                 .onDelete(perform: deleteFolder)
             }
         }
@@ -279,31 +281,42 @@ struct FoldersView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
-                    Button(action: {
-                        showingCreateFolderSheet = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(UIColor.secondarySystemFill))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "plus")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.accentColor)
-                        }
-                    }
+                 
                     
-                    Button(action: {
-                        showingOptionsMenu = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(UIColor.secondarySystemFill))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.accentColor)
+                    if isEditMode == .inactive {
+                        Button(action: {
+                            showingCreateFolderSheet = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemFill))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.accentColor)
+                            }
                         }
+                        Button(action: {
+                            showingOptionsMenu = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemFill))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    } else{
+                        Button(action: {
+                                                   isEditMode = .inactive
+                                               }) {
+                                                   Text("Done")
+                                                       .foregroundColor(.accentColor)
+                                               }
                     }
+                 
                 }
             }
         }
@@ -311,8 +324,12 @@ struct FoldersView: View {
             CreateFolderSheet(isPresented: $showingCreateFolderSheet)
         }
         .confirmationDialog("Options", isPresented: $showingOptionsMenu) {
-            Button("Edit") { /* Edit mode */ }
-            Button("Select") { /* Select mode */ }
+            Button("Edit") {
+                withAnimation {
+                    isEditMode = .active
+                }
+            }
+            
             Button("Cancel", role: .cancel) { }
         }
         .onAppear {
@@ -323,6 +340,14 @@ struct FoldersView: View {
             }
         }
     }
+    
+    private func moveFolders(from source: IndexSet, to destination: Int) {
+           var updatedFolders = filteredFolders
+           updatedFolders.move(fromOffsets: source, toOffset: destination)
+           
+           let folderIds = updatedFolders.map { $0.id }
+           podsViewModel.updateFoldersOrder(folderIds: folderIds)
+       }
     
     private func deleteFolder(at offsets: IndexSet) {
         // Map filtered indices to actual folders

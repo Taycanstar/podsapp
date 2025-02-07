@@ -193,5 +193,31 @@ class PodsViewModel: ObservableObject {
             }
         }
     }
+    
+    func updateFoldersOrder(folderIds: [Int]) {
+        // Create a new array of folders in the correct order
+        let orderedFolders = folderIds.compactMap { id in
+            folders.first { $0.id == id }
+        }
+        
+        // Update the folders array with the new order
+        folders = orderedFolders
+        
+        // Update cache
+        let response = FolderResponse(folders: orderedFolders)
+        cacheFolders(response)
+        
+        // Update backend
+        networkManager.updateFoldersOrder(folderIds: folderIds) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Folder order updated successfully")
+                case .failure(let error):
+                    print("Failed to update folder order: \(error)")
+                }
+            }
+        }
+    }
 
 }
