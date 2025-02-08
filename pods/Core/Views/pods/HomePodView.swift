@@ -105,7 +105,7 @@ struct HomePodView: View {
                                            footerView
                                        }
                     }
-                    .padding(.bottom, keyboardOffset)
+//                    .padding(.bottom, keyboardOffset)
                 }
             } else {
                 Text("Pod not found")
@@ -237,7 +237,6 @@ struct HomePodView: View {
                     
                     Spacer()
                     
-                    // Add this VStack for the icon menu
                     VStack {
                         Spacer()
                         if itemsWithRecentActivity.contains(reorderedItems[index].id) {
@@ -257,9 +256,51 @@ struct HomePodView: View {
                     showCardSheet = true
                     HapticFeedback.generate()
                 }
+                .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
+                .listRowBackground(Color("bg"))
             }
+            
             if isCreatingNewItem {
-                newItemInputView
+                HStack(alignment: .top, spacing: 0) {
+                    TextField("Add Item", text: $newItemText)
+                        .id("NewItemTextField")
+                        .font(.system(size: 14))
+                        .fontWeight(.regular)
+                        .focused($isNewItemFocused)
+                        .onSubmit {
+                            if !newItemText.isEmpty {
+                                createNewPodItem()
+                            }
+                        }
+                    
+                    Spacer()
+                    
+                    if isAddInputLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    } else {
+                        Button(action: {
+                            if !newItemText.isEmpty {
+                                createNewPodItem()
+                            }
+                        }) {
+                            Text("Add")
+                                .fontWeight(.regular)
+                                .font(.system(size: 14))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
+                        .disabled(newItemText.isEmpty)
+                    }
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
+                .listRowBackground(Color("bg"))
+                .listRowSeparator(.hidden)
             }
         }
         .listStyle(PlainListStyle())
@@ -283,14 +324,14 @@ struct HomePodView: View {
                     selectedItemForMedia = item
                     showCameraView = true
                 }) {
-                    Label("Change Video", systemImage: "video.badge.plus")
+                    Label("Change Media", systemImage: "video.badge.plus")
                 }
             } else {
                 Button(action: {
                     selectedItemForMedia = item
                     showCameraView = true
                 }) {
-                    Label("Add Video", systemImage: "video.badge.plus")
+                    Label("Add Media", systemImage: "video.badge.plus")
                 }
             }
         } label: {
@@ -356,53 +397,6 @@ struct HomePodView: View {
         )
     }
     
-    // MARK: - New Item Input View
-    
-    private var newItemInputView: some View {
-        HStack {
-            TextField("Add Item", text: $newItemText)
-                .id("NewItemTextField")
-                .font(.system(size: 14))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 5)
-                .background(Color("iosnp"))
-                .focused($isNewItemFocused)
-                .onSubmit {
-                    if !newItemText.isEmpty {
-                        createNewPodItem()
-                    }
-                }
-            Button(action: {
-                if !newItemText.isEmpty {
-                    createNewPodItem()
-                }
-            }) {
-                if isAddInputLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                } else {
-                    Text("Add")
-                        .fontWeight(.regular)
-                        .font(.system(size: 14))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(6)
-                }
-            }
-            .disabled(newItemText.isEmpty)
-        }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 5)
-        .background(Color("iosnp"))
-        .cornerRadius(12)
-        .padding(.horizontal, 15)
-        .padding(.bottom, 20)
-        .padding(.top, 10)
-    }
     
     // MARK: - Column View
     

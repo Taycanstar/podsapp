@@ -1039,14 +1039,12 @@ class NetworkManager {
             
             // Debug: Print the raw JSON response
             if let rawResponse = String(data: data, encoding: .utf8) {
-                print("Raw JSON response:\n\(rawResponse)")
+//                print("Raw JSON response:\n\(rawResponse)")I still see a fucking sheet 
             }
             
             do {
                 let decoder = JSONDecoder()
                 
-                // Date decoding: assume 'created_at' uses "yyyy-MM-dd HH:mm:ss"
-                // and 'lastVisited' uses ISO8601 with fractional seconds.
                 let createdAtFormatter = DateFormatter()
                 createdAtFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
                 let iso8601Formatter = ISO8601DateFormatter()
@@ -1121,7 +1119,7 @@ class NetworkManager {
                 
                 completion(.success(activityLogs))
             } catch {
-                print("Decoding error: \(error)")
+           
                 completion(.failure(error))
             }
         }.resume()
