@@ -137,20 +137,17 @@ struct LoginView: View {
         authenticateUser()
         
     }
-
     private func authenticateUser() {
         isLoading = true
-        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId in
+        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId in
             DispatchQueue.main.async {
                 if success {
                     let userIdString = "\(userId ?? 0)"
                     self.isAuthenticated = true
                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                    UserDefaults.standard.set(userId, forKey: "userId")
+                    self.viewModel.userId = userId
                     
-                    UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
-                               self.viewModel.userId = userId
-                 
-                   
                     if let email = email {
                         self.viewModel.email = email
                         UserDefaults.standard.set(email, forKey: "userEmail")
@@ -158,14 +155,6 @@ struct LoginView: View {
                     if let username = username {
                         self.viewModel.username = username
                         UserDefaults.standard.set(username, forKey: "username")
-                    }
-                    if let activeTeamId = activeTeamId {
-                        self.viewModel.activeTeamId = activeTeamId
-                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
-                    }
-                    if let activeWorkspaceId = activeWorkspaceId {
-                        self.viewModel.activeWorkspaceId = activeWorkspaceId
-                        UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
                     }
                     if let profileInitial = profileInitial {
                         self.viewModel.profileInitial = profileInitial
@@ -182,17 +171,14 @@ struct LoginView: View {
                         expiresAt: subscriptionExpiresAt,
                         renews: subscriptionRenews,
                         seats: subscriptionSeats,
-                        canCreateNewTeam: canCreateNewTeam
+                        canCreateNewTeam: nil
                     )
                     
-                    // Mixpanel: Identify the user and set properties
-                                           Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
-                                           Mixpanel.mainInstance().people.set(properties: [
-                                               "$email": viewModel.email,
-                                               "$name": viewModel.username
-                                           ])
-
-                 
+                    Mixpanel.mainInstance().identify(distinctId: userIdString)
+                    Mixpanel.mainInstance().people.set(properties: [
+                        "$email": viewModel.email,
+                        "$name": viewModel.username
+                    ])
                 } else {
                     self.errorMessage = error ?? "Invalid credentials"
                 }
@@ -200,6 +186,61 @@ struct LoginView: View {
             }
         }
     }
+//    private func authenticateUser() {
+//        isLoading = true
+//        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId in
+//            DispatchQueue.main.async {
+//                if success {
+//                    let userIdString = "\(userId ?? 0)"
+//                    self.isAuthenticated = true
+//                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
+//                    UserDefaults.standard.set(userId, forKey: "userId")  // Save user ID
+//                               self.viewModel.userId = userId
+//                    if let email = email {
+//                        self.viewModel.email = email
+//                        UserDefaults.standard.set(email, forKey: "userEmail")
+//                    }
+//                    if let username = username {
+//                        self.viewModel.username = username
+//                        UserDefaults.standard.set(username, forKey: "username")
+//                    }
+//                    if let activeTeamId = activeTeamId {
+//                        self.viewModel.activeTeamId = activeTeamId
+//                        UserDefaults.standard.set(activeTeamId, forKey: "activeTeamId")
+//                    }
+//                    if let activeWorkspaceId = activeWorkspaceId {
+//                        self.viewModel.activeWorkspaceId = activeWorkspaceId
+//                        UserDefaults.standard.set(activeWorkspaceId, forKey: "activeWorkspaceId")
+//                    }
+//                    if let profileInitial = profileInitial {
+//                        self.viewModel.profileInitial = profileInitial
+//                        UserDefaults.standard.set(profileInitial, forKey: "profileInitial")
+//                    }
+//                    if let profileColor = profileColor {
+//                        self.viewModel.profileColor = profileColor
+//                        UserDefaults.standard.set(profileColor, forKey: "profileColor")
+//                    }
+//                    
+//                    self.viewModel.updateSubscriptionInfo(
+//                        status: subscriptionStatus,
+//                        plan: subscriptionPlan,
+//                        expiresAt: subscriptionExpiresAt,
+//                        renews: subscriptionRenews,
+//                        seats: subscriptionSeats,
+//                        canCreateNewTeam: canCreateNewTeam
+//                    )
+//                                           Mixpanel.mainInstance().identify(distinctId: userIdString)  // Identify user with Mixpanel
+//                                           Mixpanel.mainInstance().people.set(properties: [
+//                                               "$email": viewModel.email,
+//                                               "$name": viewModel.username
+//                                           ])
+//                } else {
+//                    self.errorMessage = error ?? "Invalid credentials"
+//                }
+//                self.isLoading = false
+//            }
+//        }
+//    }
 }
 
 

@@ -266,7 +266,7 @@ struct Pod: Identifiable, Hashable {
     var items: [PodItem] = []
     var title: String
     var templateId: Int?
-    var workspace: String?
+    var workspace: String? = nil
     var isFavorite: Bool?
     var lastVisited: Date?
     var columns: [PodColumn] = []
@@ -275,7 +275,7 @@ struct Pod: Identifiable, Hashable {
     var description: String?
     var instructions: String?
     var type: String?
-    var teamId: Int?
+    var teamId: Int? = nil
     var recentActivityLogs: [PodItemActivityLog]?
     var folderId: Int?
     var privacy: String?

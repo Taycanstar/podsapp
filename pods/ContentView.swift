@@ -57,12 +57,13 @@ struct ContentView: View {
                             switch selectedTab {
                             case 0:
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
-                                DashboardView()
-                            case 2:
-                                
+//                                DashboardView()
                                 PodsContainerView()
-                            case 3:
-                                FriendsView()
+//                            case 2:
+//                                
+//                                PodsContainerView()
+//                            case 3:
+//                                FriendsView()
                             case 4:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                             default:

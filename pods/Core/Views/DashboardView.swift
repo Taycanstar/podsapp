@@ -7,18 +7,7 @@
 
 import SwiftUI
 
-//struct DashboardView: View {
-//    @EnvironmentObject var podsViewModel: PodsViewModel
-//    @EnvironmentObject var viewModel: OnboardingViewModel
-//    
-//    var body: some View {
-//        Text("Dashboard")
-//            .onAppear {
-//                podsViewModel.fetchPods(email: viewModel.email) {}
-//            }
-//    }
-//}
-//
+
 
 struct DashboardView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel

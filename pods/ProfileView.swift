@@ -47,14 +47,7 @@ struct ProfileView: View {
                                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                                     .foregroundColor(iconColor)
                             }
-                            NavigationLink(destination: MyTeamsView()) {
-                                Label("My team", systemImage: "person.2")
-                                    .foregroundColor(iconColor)
-                            }
-                            NavigationLink(destination: MyWorkspacesView()) {
-                                Label("My workspace", systemImage: "sparkles.rectangle.stack")
-                                    .foregroundColor(iconColor)
-                            }
+                          
                             
                         }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
