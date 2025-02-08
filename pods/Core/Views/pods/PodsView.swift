@@ -19,6 +19,7 @@ struct PodsView: View {
     @State private var selectedPodId: Int?
     @Binding var navigationPath: NavigationPath
     @State private var isEditMode: EditMode = .inactive
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     
     let folder: Folder?
     let networkManager = NetworkManager()
@@ -54,6 +55,9 @@ struct PodsView: View {
            
             .onDelete(perform: deletePod)
                
+        }
+        .onAppear {
+            isTabBarVisible.wrappedValue = true
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

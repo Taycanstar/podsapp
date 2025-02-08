@@ -15,7 +15,7 @@ struct ActivitySummaryView: View {
     let startTime: Date
     let endTime: Date
     let podColumns: [PodColumn]
-    let navigationAction: (NavigationDestination) -> Void
+    let navigationAction: (AppNavigationDestination) -> Void
     let notes: String? 
     
     @State private var cityName: String = "Loading..."

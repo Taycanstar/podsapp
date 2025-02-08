@@ -23,10 +23,12 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var podsViewModel: PodsViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     
     var body: some View {
         Text("Dashboard")
             .onAppear {
+                isTabBarVisible.wrappedValue = true
                 podsViewModel.initialize(email: viewModel.email)  // Use initialize instead of fetchPods
             }
     }

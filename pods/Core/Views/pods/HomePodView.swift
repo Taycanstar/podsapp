@@ -157,7 +157,7 @@ struct HomePodView: View {
             }
         }
         .onDisappear {
-            isTabBarVisible.wrappedValue = true
+//            isTabBarVisible.wrappedValue = true
             NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
@@ -192,6 +192,36 @@ struct HomePodView: View {
             )
             .onDisappear {
                 fetchFullPodDetails(showLoadingIndicator: false)
+            }
+        }
+        .sheet(isPresented: $isActivityOpen) {
+            if let podIndex = podsViewModel.pods.firstIndex(where: { $0.id == podId }) {
+                ActivityView(
+                    pod: Binding(
+                        get: { self.podsViewModel.pods[podIndex] },
+                        set: { self.podsViewModel.pods[podIndex] = $0 }
+                    ),
+                    podColumns: $podColumns,
+                    items: $reorderedItems,
+                    onActivityFinished: { duration, startTime, endTime, notes in
+                        navigationPath.append(AppNavigationDestination.activitySummary(
+                            podId: podId,
+                            duration: duration,
+                            startTime: startTime,
+                            endTime: endTime,
+                            podColumns: podColumns,
+                            notes: notes
+                        ))
+                    }
+                )
+                .presentationDetents([.height(50), .large], selection: $activityState.sheetHeight)
+                .interactiveDismissDisabled(activityState.isActivityInProgress)
+                .presentationBackgroundInteraction(.enabled)
+                .onChange(of: activityState.sheetHeight) { newHeight in
+                    if !activityState.isActivityInProgress {
+                        activityState.sheetHeight = .large
+                    }
+                }
             }
         }
         .fullScreenCover(isPresented: $showCameraView) {

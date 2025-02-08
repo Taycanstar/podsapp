@@ -22,6 +22,8 @@ struct GracieView: View {
     @State private var showScrollButton = false
     @State private var textEditorHeight: CGFloat = 40
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.isTabBarVisible) var isTabBarVisible
+
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,11 +87,7 @@ struct GracieView: View {
             
             // Message input area
             HStack(spacing: 12) {
-//                TextField("Message", text: $newMessage)
-//                    .padding(12)
-//                    .background(Color(.systemGray6))
-//                    .cornerRadius(20)
-//                    .focused($isFocused)
+
                 ZStack(alignment: .leading) {
                     TextEditor(text: $newMessage)
                     
@@ -97,9 +95,6 @@ struct GracieView: View {
                         .scrollContentBackground(.hidden) // Removes default background
                         .cornerRadius(20)
                         .focused($isFocused)
-//
-//                        .padding(.trailing, 8)
-//                        .padding(.top, 8)
                         .onChange(of: newMessage) { _ in
                             // Dynamically calculate height based on content
                             let size = CGSize(width: UIScreen.main.bounds.width - 100, height: .infinity)
@@ -140,7 +135,6 @@ struct GracieView: View {
             .padding(.vertical, 12)
        
                 .background(Color("dkBg"))
-//            .background(colorScheme == .dark ? Color("mdBg") : borderColor)
             .overlay(
                 Rectangle()
                     .frame(height: 1)
@@ -154,6 +148,7 @@ struct GracieView: View {
         .onAppear {
             setupInitialMessages()
             fetchActivityLogs()
+            isTabBarVisible.wrappedValue = false
         }
     }
     
