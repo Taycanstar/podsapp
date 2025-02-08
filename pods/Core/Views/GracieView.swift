@@ -87,47 +87,24 @@ struct GracieView: View {
             
             // Message input area
             HStack(spacing: 12) {
+                TextEditor(text: $newMessage)
+                    .frame(height: min(max(35, textEditorHeight), 100))
+                    .scrollContentBackground(.hidden)
+                    .cornerRadius(20)
+                    .focused($isFocused)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 100)
+                            .stroke(borderColor, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 12)
 
-                ZStack(alignment: .leading) {
-                    TextEditor(text: $newMessage)
-                    
-                        .frame(height: min(max(40, textEditorHeight), 100)) // Grows between 40-100
-                        .scrollContentBackground(.hidden) // Removes default background
-                        .cornerRadius(20)
-                        .focused($isFocused)
-                        .onChange(of: newMessage) { _ in
-                            // Dynamically calculate height based on content
-                            let size = CGSize(width: UIScreen.main.bounds.width - 100, height: .infinity)
-                            let estimatedSize = newMessage.boundingRect(
-                                with: size,
-                                options: .usesLineFragmentOrigin,
-                                attributes: [.font: UIFont.systemFont(ofSize: 17)],
-                                context: nil
-                            )
-                            textEditorHeight = estimatedSize.height + 20 // Add padding
-                        }
-                    
-                    
-                    if newMessage.isEmpty {
-                        Text("Message")
-                            .foregroundColor(Color(.placeholderText))
-                            .padding(.leading, 12)
-                            .padding(.top, 8)
-                    }
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 100)
-                        .stroke(borderColor, lineWidth: 1)
-                )
-                .padding(.horizontal, 12)
-           
-                
                 Button(action: sendMessage) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
                         .foregroundColor(.blue)
                 }
-             
                 .disabled(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.leading, 12)
