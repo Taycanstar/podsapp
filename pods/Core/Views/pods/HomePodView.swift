@@ -182,7 +182,38 @@ struct HomePodView: View {
                         }
             )
         }
-        // (Additional sheets and full-screen covers can be attached similarly.)
+        .sheet(isPresented: $showPodColumnsView) {
+            PodColumnsView(
+                podColumns: $podColumns,
+                isPresented: $showPodColumnsView,
+                podId: podId,
+                networkManager: networkManager,
+                visibleColumns: $visibleColumns
+            )
+            .onDisappear {
+                fetchFullPodDetails(showLoadingIndicator: false)
+            }
+        }
+        .fullScreenCover(isPresented: $showCameraView) {
+                   if let selectedItem = selectedItemForMedia {
+                       CameraView(
+                           showingVideoCreationScreen: $showCameraView,
+                           selectedTab: .constant(0),
+                           podId: podId,
+                           itemId: selectedItem.id
+                       ) { updatedItemId in
+                           refreshItem(with: updatedItemId)
+                       }
+                   }
+               }
+            
+        .fullScreenCover(isPresented: $showCountdown) {
+            ActivityCountdownView(isPresented: $showCountdown) {
+                // This closure is called when countdown finishes
+                activityState.sheetHeight = .large
+                isActivityOpen = true
+            }
+        }
     }
     
     // MARK: - List View
@@ -203,7 +234,22 @@ struct HomePodView: View {
                     }
                     .padding(.vertical, 6)
                     .padding(.leading, 10)
+                    
                     Spacer()
+                    
+                    // Add this VStack for the icon menu
+                    VStack {
+                        Spacer()
+                        if itemsWithRecentActivity.contains(reorderedItems[index].id) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.green)
+                                .transition(.opacity)
+                        } else {
+                            iconView(for: reorderedItems[index], index: index)
+                        }
+                        Spacer()
+                    }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -211,7 +257,6 @@ struct HomePodView: View {
                     showCardSheet = true
                     HapticFeedback.generate()
                 }
-            
             }
             if isCreatingNewItem {
                 newItemInputView
@@ -221,7 +266,43 @@ struct HomePodView: View {
         .refreshable {
             fetchFullPodDetails(showLoadingIndicator: false)
         }
-
+    }
+    
+    private func iconView(for item: PodItem, index: Int) -> some View {
+        Menu {
+            if item.videoURL != nil || item.imageURL != nil {
+                Button(action: {
+                    navigationPath.append(AppNavigationDestination.player(item: item))
+                    let wasActivityOpen = isActivityOpen
+                    isActivityOpen = false
+                }) {
+                    Label("Play Video", systemImage: "play.circle")
+                }
+                
+                Button(action: {
+                    selectedItemForMedia = item
+                    showCameraView = true
+                }) {
+                    Label("Change Video", systemImage: "video.badge.plus")
+                }
+            } else {
+                Button(action: {
+                    selectedItemForMedia = item
+                    showCameraView = true
+                }) {
+                    Label("Add Video", systemImage: "video.badge.plus")
+                }
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.clear)
+                    .frame(width: 30, height: 30)
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15))
+                    .foregroundColor(.accentColor)
+            }
+        }
     }
     
     // MARK: - Footer View

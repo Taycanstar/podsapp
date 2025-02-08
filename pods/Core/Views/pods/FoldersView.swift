@@ -24,6 +24,8 @@ enum AppNavigationDestination: Hashable {
     case fullActivitySummary(activityId: Int, columns: [PodColumn])
     case itemSummary(itemId: Int, columns: [PodColumn])
     
+      
+    
     func hash(into hasher: inout Hasher) {
         switch self {
         case .pods:

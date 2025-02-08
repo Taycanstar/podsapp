@@ -15,8 +15,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//    let baseUrl = "http://192.168.1.79:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+    let baseUrl = "http://192.168.1.79:8000"
+//    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -3353,11 +3353,13 @@ class NetworkManager {
                 
                 if let json = json,
                    let podData = json["pod"] as? [String: Any],
-                   let updatedTitle = podData["title"] as? String,
-                   let updatedDescription = podData["description"] as? String,
-                   let updatedInstructions = podData["instructions"] as? String,
-                   let updatedType = podData["type"] as? String,
-                   let updatedPrivacy = podData["privacy"] as? String {
+                   let updatedTitle = podData["title"] as? String {
+                    // Use nil coalescing to provide default empty strings
+                    let updatedDescription = (podData["description"] as? String) ?? ""
+                    let updatedInstructions = (podData["instructions"] as? String) ?? ""
+                    let updatedType = (podData["type"] as? String) ?? "custom"
+                    let updatedPrivacy = (podData["privacy"] as? String) ?? "private"
+                    
                     completion(.success((
                         updatedTitle,
                         updatedDescription,
@@ -3366,10 +3368,8 @@ class NetworkManager {
                         updatedPrivacy
                     )))
                 } else {
-                    // Now json is accessible here
-                    if let podData = json?["pod"] as? [String: Any] {
-                        print("Pod data received: \(podData)")
-                    }
+                    // Add more detailed error logging
+                    print("Failed to decode response. Pod data received: \(String(describing: json?["pod"]))")
                     completion(.failure(NetworkError.decodingError))
                 }
             } catch {

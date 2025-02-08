@@ -840,11 +840,7 @@ struct PodView: View {
                 .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))
                 .contentShape(Rectangle())
                 .onTapGesture {
-//                                                   selectedItemIndex = index
-//                                                   showLogActivitySheet = true
-//                                        let wasActivityOpen = isActivityOpen
-//                                        isActivityOpen = false
-                    
+
                     selectedItemIndex = index
                     showCardSheet = true
                     let wasActivityOpen = isActivityOpen
