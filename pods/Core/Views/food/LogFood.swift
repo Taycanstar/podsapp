@@ -14,6 +14,8 @@ struct LogFood: View {
     @Binding var selectedTab: Int
     @State private var searchText = ""
     @State private var selectedFoodTab: FoodTab = .all
+    @State private var searchResults: [Food] = []
+    @State private var isSearching = false
     
     enum FoodTab {
         case all, meals, recipes, foods
@@ -62,12 +64,12 @@ struct LogFood: View {
         VStack(spacing: 0) {
             // Horizontal tab panel
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 35) {  // Increased spacing between tabs
+                HStack(spacing: 35) {
                     ForEach(foodTabs, id: \.self) { tab in
                         VStack(spacing: 8) {
                             Text(tab.title)
-                                .font(.system(size: 17))  // Increased font size
-                                .fontWeight(.semibold)  // Added semibold weight
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
                                 .foregroundColor(selectedFoodTab == tab ? .primary : .gray)
                             
                             // Indicator bar
@@ -89,21 +91,53 @@ struct LogFood: View {
             Divider()
             
             // Content based on selected tab
-            switch selectedFoodTab {
-            case .all:
-                Text("All content")
-            case .meals:
-                Text("Meals content")
-            case .recipes:
-                Text("Recipes content")
-            case .foods:
-                Text("Foods content")
+            if selectedFoodTab == .all || selectedFoodTab == .foods {
+                List {
+                    ForEach(searchResults) { food in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(food.displayName)
+                                .font(.headline)
+                            
+                            HStack {
+                                if let calories = food.calories {
+                                    Text("\(Int(calories)) cal")
+                                }
+                                Text("•")
+                                Text(food.servingSizeText)
+                                if let brand = food.brandText {
+                                    Text("•")
+                                    Text(brand)
+                                }
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .listStyle(.plain)
+                .padding(.bottom, 60) 
+            } else {
+                switch selectedFoodTab {
+                case .meals:
+                    Text("Meals content")
+                case .recipes:
+                    Text("Recipes content")
+                default:
+                    EmptyView()
+                }
             }
             
             Spacer()
         }
         .edgesIgnoringSafeArea(.horizontal)
         .searchable(text: $searchText, prompt: selectedFoodTab.searchPrompt)
+        .onChange(of: searchText) { newValue in
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                await searchFoods()
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -120,16 +154,33 @@ struct LogFood: View {
                     Button("Lunch") { selectedMeal = "Lunch" }
                     Button("Dinner") { selectedMeal = "Dinner" }
                 } label: {
-                    HStack(spacing: 4) {  // Reduced spacing between text and chevron
-                        Text(selectedMeal)  // Show the selected meal instead of "Select a Meal"
+                    HStack(spacing: 4) {
+                        Text(selectedMeal)
                             .foregroundColor(.primary)
                             .fontWeight(.semibold)
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 10))  // Even smaller chevron
+                            .font(.system(size: 10))
                             .foregroundColor(.primary)
                     }
                 }
             }
         }
     }
+    
+    private func searchFoods() async {
+    guard !searchText.isEmpty else {
+        searchResults = []
+        return
+    }
+    
+    isSearching = true
+    do {
+        let response = try await FoodService.shared.searchFoods(query: searchText)
+        searchResults = response.foods
+    } catch {
+        print("Search error:", error)
+        searchResults = []
+    }
+    isSearching = false
+}
 }
