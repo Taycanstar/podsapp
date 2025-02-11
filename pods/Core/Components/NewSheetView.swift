@@ -12,6 +12,8 @@ struct NewSheetView: View {
     @Binding var isPresented: Bool
     @Binding var showingVideoCreationScreen: Bool
     @Binding var showQuickPodView: Bool
+    @Binding var selectedTab: Int 
+    
 
     let options = [
         ("Pod", "plus.circle"),
@@ -56,6 +58,9 @@ struct NewSheetView: View {
                       case "Pod":
                           isPresented = false  
                           showQuickPodView = true
+                      case "Log Food":
+                        isPresented = false
+                        selectedTab = 5
                       default:
                           break
                       }

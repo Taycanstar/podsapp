@@ -80,6 +80,7 @@ enum AppNavigationDestination: Hashable {
             hasher.combine("itemSummary")
             hasher.combine(itemId)
             hasher.combine(columns.map { $0.id })
+        
         }
     }
     
@@ -116,6 +117,7 @@ enum AppNavigationDestination: Hashable {
             return id1 == id2 && cols1.map { $0.id } == cols2.map { $0.id }
         case (.itemSummary(let id1, let cols1), .itemSummary(let id2, let cols2)):
             return id1 == id2 && cols1.map { $0.id } == cols2.map { $0.id }
+        
         default:
             return false
         }
@@ -215,14 +217,15 @@ struct PodsContainerView: View {
                         FullActivitySummaryView(activityId: activityId, columns: columns)
                     case .itemSummary(let itemId, let columns):
                         ItemSummaryView(itemId: itemId, columns: columns)
+                    
                     }
                 }
         }
-        .onAppear {
-                   // Initialize your pods here instead of in DashboardView
-                   podsViewModel.initialize(email: viewModel.email)
-            print("APPEARING NOW")
-               }
+        // .onAppear {
+        //            // Initialize your pods here instead of in DashboardView
+        //            podsViewModel.initialize(email: viewModel.email)
+        //     print("APPEARING NOW")
+        //        }
     }
 }
 

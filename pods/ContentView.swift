@@ -57,15 +57,17 @@ struct ContentView: View {
                             switch selectedTab {
                             case 0:
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
-//                                DashboardView()
-                                PodsContainerView()
-//                            case 2:
-//                                
-//                                PodsContainerView()
-//                            case 3:
-//                                FriendsView()
+                               DashboardView()
+
+                           case 2:
+                               
+                               PodsContainerView()
+                           case 3:
+                               FriendsView()
                             case 4:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
+                            case 5:  // Add new case without adding tab
+                            FoodContainerView(selectedTab: $selectedTab)
                             default:
                                 EmptyView()
                             }
@@ -107,7 +109,8 @@ struct ContentView: View {
                 .sheet(isPresented: $showNewSheet) {
                     NewSheetView(isPresented: $showNewSheet,
                                  showingVideoCreationScreen: $showingVideoCreationScreen,
-                                 showQuickPodView: $showQuickPodView)
+                                 showQuickPodView: $showQuickPodView, selectedTab: $selectedTab)
+                        
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                 }
 
