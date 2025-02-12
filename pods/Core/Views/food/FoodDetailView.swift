@@ -67,8 +67,7 @@ struct FoodDetailsView: View {
                    HStack {
                         Text("Number of Servings")
                         Spacer()
-                        
-                            
+      
                         Stepper("", value: $numberOfServings, in: 1...10)
                        Text("\(numberOfServings)")
                            .frame(minWidth: 40)
@@ -112,39 +111,78 @@ struct FoodDetailsView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(10)
                 
-                // Macros Overview
-                VStack(spacing: 15) {
-                    let calories = food.calories ?? 0
-                    Text("\(Int(calories)) Cal")
-                        .font(.title)
-                        .fontWeight(.bold)
+
+                HStack(spacing: 15) {
+    // Calories with circular progress
+                  // In your FoodDetailsView
+            ZStack {
+                // Background circle
+                Circle()
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                    .frame(width: 80, height: 80)
+                
+                // Carbs segment
+                Circle()
+                    .trim(from: 0, to: CGFloat(macroPercentages.carbs) / 100)
+                    .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                // Fat segment (starts where carbs ends)
+                Circle()
+                    .trim(from: CGFloat(macroPercentages.carbs) / 100, 
+                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100)
+                    .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                // Protein segment (starts where fat ends)
+                Circle()
+                    .trim(from: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100,
+                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat + macroPercentages.protein) / 100)
+                    .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                // Calories value in center
+                VStack(spacing: 0) {
+                    Text("\(Int(food.calories ?? 0))")
+                        .font(.system(size: 20, weight: .bold))
+                    Text("Cal")
+                        .font(.system(size: 14))
+                }
+            }
+                    Spacer()
                     
-                    HStack(spacing: 25) {
+                    // Macros row
+                    HStack(spacing: 40) {
+                        // Carbs
                         MacroView(
-                            name: "Carbs",
                             value: food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value ?? 0,
-                            unit: "g",
-                            percentage: macroPercentages.carbs
+                            percentage: macroPercentages.carbs,
+                                    label: "Carbs",
+                            percentageColor: Color("teal")
                         )
                         
+                        // Fat
                         MacroView(
-                            name: "Fat",
                             value: food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value ?? 0,
-                            unit: "g",
-                            percentage: macroPercentages.fat
+                            percentage: macroPercentages.fat,
+                            label: "Fat",
+                            percentageColor: Color("pinkRed")
                         )
                         
+                        // Protein
                         MacroView(
-                            name: "Protein",
                             value: food.foodNutrients.first { $0.nutrientName == "Protein" }?.value ?? 0,
-                            unit: "g",
-                            percentage: macroPercentages.protein
+                            percentage: macroPercentages.protein,
+                            label: "Protein",
+                            percentageColor: Color("purple")
                         )
                     }
                 }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(10)
+                  .padding()
+                // .background(Color(.systemBackground))
                 
                 // Daily Goals Section
                 DailyGoalsSection(food: food)
@@ -170,21 +208,21 @@ struct FoodDetailsView: View {
 }
 
 struct MacroView: View {
-    let name: String
     let value: Double
-    let unit: String
     let percentage: Double
+    let label: String
+    let percentageColor: Color
     
     var body: some View {
         VStack(spacing: 4) {
-            Text(name)
+            Text("\(Int(percentage))%")
+                .foregroundColor(percentageColor)
                 .font(.caption)
-                .foregroundColor(.secondary)
-            Text("\(Int(value))\(unit)")
-                .font(.headline)
-            Text(String(format: "%.0f%%", percentage))
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            Text("\(Int(value))g")
+                .font(.body)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.gray)
         }
     }
 }
