@@ -62,6 +62,7 @@ struct FoodMeasure: Codable, Hashable {
     let modifier: String?
     let measureUnitName: String
     let rank: Int
+    
 }
 
 class FoodService {
@@ -79,4 +80,7 @@ class FoodService {
         let (data, _) = try await URLSession.shared.data(from: url)
         return try JSONDecoder().decode(FoodSearchResponse.self, from: data)
     }
+
+
 }
+

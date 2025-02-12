@@ -16,6 +16,8 @@ struct FoodDetailsView: View {
     @State private var numberOfServings: Int = 1
     @State private var selectedDate = Date()
     @State private var showServingSizePicker = false
+
+    private let foodService = FoodService.shared
     
     init(food: Food, selectedMeal: Binding<String>) {
         print("Initializing FoodDetailsView")
@@ -48,55 +50,33 @@ struct FoodDetailsView: View {
             VStack(spacing: 20) {
                 // Basic Info Section
                 VStack(alignment: .leading, spacing: 12) {
-                    // Serving Size Row
-                    HStack {
+                
+                  HStack {
                         Text("Serving Size")
                         Spacer()
-                        Button(action: { showServingSizePicker = true }) {
-                            HStack {
-                                Text(servingSize)
-                                    .foregroundColor(.primary)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(8)
-                        .background(Color(.tertiarySystemFill))
-                        .cornerRadius(8)
+                        TextField("Enter serving", text: $servingSize)
+                            // .multilineTextAlignment(.trailing)
+                            // .frame(maxWidth: 120)
+                            .multilineTextAlignment(.center)
+                            .fixedSize() 
+                            .padding(8)
+                            .background(Color(.tertiarySystemFill))
+                            .cornerRadius(8)
                     }
-                    
-                    // Number of Servings Row
-                     HStack {
-                        Text("Serving Size")
+
+                   HStack {
+                        Text("Number of Servings")
                         Spacer()
-                        Menu {
-                            // Default serving size
-                            Button(food.servingSizeText) {
-                                servingSize = food.servingSizeText
-                            }
+                        
                             
-                            // Food-specific measures from USDA
-                            if !food.foodMeasures.isEmpty {
-                                ForEach(food.foodMeasures, id: \.id) { measure in
-                                    Button(measure.disseminationText) {
-                                        servingSize = measure.disseminationText
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text(servingSize)
-                                    .foregroundColor(.primary)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(8)
-                        .background(Color(.tertiarySystemFill))
-                        .cornerRadius(8)
+                        Stepper("", value: $numberOfServings, in: 1...10)
+                       Text("\(numberOfServings)")
+                           .frame(minWidth: 40)
+                           .padding(8)
+                           .background(Color(.tertiarySystemFill))
+                           .cornerRadius(8)
                     }
+                  
                     
                     // Time Row
                     HStack {
@@ -117,6 +97,7 @@ struct FoodDetailsView: View {
                         } label: {
                             HStack {
                                 Text(selectedMeal)
+                                .foregroundColor(.primary)
                                 Image(systemName: "chevron.up.chevron.down")
                                     .font(.system(size: 10))
                                     .foregroundColor(.gray)
@@ -179,45 +160,13 @@ struct FoodDetailsView: View {
             }
             .padding()
         }
+       
         .navigationTitle(food.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showServingSizePicker) {
-            NavigationView {
-                List {
-                    // Default serving size
-                    Section(header: Text("Standard")) {
-                        Text(food.servingSizeText)
-                            .onTapGesture {
-                                servingSize = food.servingSizeText
-                                showServingSizePicker = false
-                            }
-                    }
-                    
-                    // Food-specific measures from USDA
-                    if !food.foodMeasures.isEmpty {
-                        Section(header: Text("Common")) {
-                            ForEach(food.foodMeasures, id: \.id) { measure in
-                                Text(measure.disseminationText)
-                                    .onTapGesture {
-                                        servingSize = measure.disseminationText
-                                        showServingSizePicker = false
-                                    }
-                            }
-                        }
-                    }
-                }
-                .navigationTitle("Select Serving Size")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            showServingSizePicker = false
-                        }
-                    }
-                }
-            }
-        }
+
     }
+
+    
 }
 
 struct MacroView: View {

@@ -57,7 +57,7 @@ struct ContentView: View {
                             switch selectedTab {
                             case 0:
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
-                            //    DashboardView()
+                                DashboardView()
                             
 
                            case 2:

@@ -1,10 +1,4 @@
-////
-////  FoldersView.swift
-////  Pods
-////
-////  Created by Dimi Nunez on 1/27/25.
-////
-//
+
 import SwiftUI
 
 
@@ -221,11 +215,11 @@ struct PodsContainerView: View {
                     }
                 }
         }
-         .onAppear {
-                    // Initialize your pods here instead of in DashboardView
-                    podsViewModel.initialize(email: viewModel.email)
-             print("APPEARING NOW")
-                }
+        //  .onAppear {
+        //             // Initialize your pods here instead of in DashboardView
+        //             podsViewModel.initialize(email: viewModel.email)
+        //      print("APPEARING NOW")
+        //         }
     }
 }
 
