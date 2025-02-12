@@ -12,6 +12,7 @@ struct FullActivitySummaryView: View {
     
     // Add computed property to get fresh activity data
     private var activity: Activity? {
+        
         activityManager.activities.first { $0.id == activityId }
     }
     
@@ -141,6 +142,8 @@ extension FullActivitySummaryView {
     private func columnValuesGrid(for item: ActivityItem) -> some View {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
+
+
 
         return VStack(alignment: .leading, spacing: 24) {
             // MARK: - Grouped columns

@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct ConsistencyTrackerView: View {
@@ -70,12 +69,15 @@ struct ConsistencyTrackerView: View {
     //        }
     //    }
     private var streakUnit: String {
-        switch selectedTimeRange {
-        case .today, .yesterday, .last7Days, .last30Days:
-            return "days"
-        case .last3Months, .last6Months, .last12Months:
-            return "months"
+        let baseUnit = switch selectedTimeRange {
+            case .today, .yesterday, .last7Days, .last30Days:
+                "day"
+            case .last3Months, .last6Months, .last12Months:
+                "month"
         }
+        
+        // Add 's' for plural (any number except 1)
+        return currentStreak == 1 ? baseUnit : baseUnit + "s"
     }
 
 }

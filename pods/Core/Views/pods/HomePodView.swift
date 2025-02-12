@@ -179,7 +179,8 @@ struct HomePodView: View {
                                        isActivityOpen = true
                                    }
                     }
-                        }
+                        },
+                podColumns: podColumns
             )
         }
         .sheet(isPresented: $showPodColumnsView) {

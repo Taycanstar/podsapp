@@ -435,20 +435,20 @@ struct PodView: View {
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
-        .sheet(isPresented: $showPodOptionsSheet) {
-            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,    navigationAction: { destination in
-                showPodOptionsSheet = false
-                let wasActivityOpen = isActivityOpen
-                       isActivityOpen = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    navigationPath.append(destination)
-                    if wasActivityOpen {
-                                   isActivityOpen = true
-                               }
-                }
-            })
-            
-        }
+//        .sheet(isPresented: $showPodOptionsSheet) {
+//            PodOptionsView(showPodOptionsSheet: $showPodOptionsSheet, showPodColumnsView: $showPodColumnsView, onDeletePod: deletePod, podName: pod.title, podId: pod.id,    navigationAction: { destination in
+//                showPodOptionsSheet = false
+//                let wasActivityOpen = isActivityOpen
+//                       isActivityOpen = false
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                    navigationPath.append(destination)
+//                    if wasActivityOpen {
+//                                   isActivityOpen = true
+//                               }
+//                }
+//            })
+//            
+//        }
 
         .sheet(isPresented: $isActivityOpen) {
             ActivityView(pod: $pod, podColumns: $podColumns, items: $reorderedItems,    onActivityFinished: { duration, startTime, endTime, notes in

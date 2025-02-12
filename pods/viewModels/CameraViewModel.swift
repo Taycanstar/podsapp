@@ -721,28 +721,6 @@ struct FolderResponse: Codable {
 }
 
 
-//extension Pod {
-//   init(from podJSON: PodJSON) {
-//       self.id = podJSON.id
-//       self.title = podJSON.title
-//       self.items = []
-//       self.templateId = nil
-//       self.workspace = nil
-//       self.isFavorite = nil
-//       self.lastVisited = nil
-//       self.columns = podJSON.columns ?? []
-//       self.visibleColumns = podJSON.visibleColumns ?? []
-//       self.role = nil
-//       self.description = nil
-//       self.instructions = nil
-//       self.type = nil
-//       self.teamId = nil
-//       self.recentActivityLogs = nil
-//       self.folderId = podJSON.folderId
-//       self.privacy = podJSON.privacy
-//       self.pod_type = podJSON.pod_type
-//   }
-//}
 
 extension Pod {
     init(from podJSON: PodJSON) {

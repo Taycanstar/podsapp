@@ -9,7 +9,8 @@ import SwiftUI
 
 struct LogFood: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedMeal: String
+    // @State private var selectedMeal: String
+    @Binding var selectedMeal: String
     @State private var showMealPicker = false
     @Binding var selectedTab: Int
     @State private var searchText = ""
@@ -43,7 +44,7 @@ struct LogFood: View {
     
     let foodTabs: [FoodTab] = [.all, .meals, .recipes, .foods]
     
-    init(selectedTab: Binding<Int>) {
+    init(selectedTab: Binding<Int>, selectedMeal: Binding<String>) {
         _selectedTab = selectedTab
         // Set initial meal based on time of day
         let hour = Calendar.current.component(.hour, from: Date())
@@ -57,7 +58,8 @@ struct LogFood: View {
         default:  // 4:01 PM to 3:59 AM
             defaultMeal = "Dinner"
         }
-        _selectedMeal = State(initialValue: defaultMeal)
+        // _selectedMeal = State(initialValue: defaultMeal)
+        _selectedMeal = selectedMeal
     }
     
     var body: some View {
@@ -94,25 +96,33 @@ struct LogFood: View {
             if selectedFoodTab == .all || selectedFoodTab == .foods {
                 List {
                     ForEach(searchResults) { food in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(food.displayName)
-                                .font(.headline)
-                            
-                            HStack {
-                                if let calories = food.calories {
-                                    Text("\(Int(calories)) cal")
-                                }
-                                Text("•")
-                                Text(food.servingSizeText)
-                                if let brand = food.brandText {
+                        NavigationLink(value: FoodNavigationDestination.foodDetails(food, $selectedMeal)) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(food.displayName)
+                                    .font(.headline)
+                                
+                                HStack {
+                                    if let calories = food.calories {
+                                        Text("\(Int(calories)) cal")
+                                    }
                                     Text("•")
-                                    Text(brand)
+                                    Text(food.servingSizeText)
+                                    if let brand = food.brandText {
+                                        Text("•")
+                                        Text(brand)
+                                    }
                                 }
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
                             }
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .padding(.vertical, 4)
+                            .onTapGesture {
+                                print("Food tapped:", food)
+                                print("Nutrients:", food.foodNutrients)
+                                print("Calories:", food.calories)
+                                print("Selected Meal:", selectedMeal)
+                            }
                         }
-                        .padding(.vertical, 4)
                     }
                 }
                 .listStyle(.plain)

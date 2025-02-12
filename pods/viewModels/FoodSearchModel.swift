@@ -10,7 +10,7 @@ struct FoodSearchResponse: Codable {
     let foods: [Food]
 }
 
-struct Food: Codable, Identifiable {
+struct Food: Codable, Identifiable, Hashable {
     let fdcId: Int
     let description: String
     let brandOwner: String?
@@ -19,6 +19,7 @@ struct Food: Codable, Identifiable {
     let servingSizeUnit: String?
     let householdServingFullText: String?
     let foodNutrients: [Nutrient]
+    let foodMeasures: [FoodMeasure]
     
     var id: Int { fdcId }
     
@@ -37,12 +38,30 @@ struct Food: Codable, Identifiable {
     var brandText: String? {
         brandName ?? brandOwner
     }
+    
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(fdcId)
+    }
+    
+    static func == (lhs: Food, rhs: Food) -> Bool {
+        lhs.fdcId == rhs.fdcId
+    }
 }
 
 struct Nutrient: Codable {
     let nutrientName: String
     let value: Double
     let unitName: String
+}
+
+struct FoodMeasure: Codable, Hashable {
+    let disseminationText: String // This contains the human-readable measure (e.g., "1 cup", "2 eggs")
+    let gramWeight: Double
+    let id: Int
+    let modifier: String?
+    let measureUnitName: String
+    let rank: Int
 }
 
 class FoodService {

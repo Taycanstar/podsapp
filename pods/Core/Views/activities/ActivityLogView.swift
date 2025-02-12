@@ -27,25 +27,17 @@ struct ActivityLogView: View {
             // MARK: - Main content
             if selectedTab == 0 {
 
-//                ForEach(filteredActivities) { activity in
-//                     NavigationLink(
-//                         value: NavigationDestination.fullActivitySummary(
-//                             activityId: activity.id,
-//                             columns: columns
-//                         )
-//                     ) {
-//                         ActivityRow(activity: activity)
-//                     }
                 ForEach(filteredActivities) { activity in
                     ZStack(alignment: .leading) {
                         NavigationLink(
-                            value: NavigationDestination.fullActivitySummary(
+                            value: AppNavigationDestination.fullActivitySummary(
                                 activityId: activity.id,
                                 columns: columns
                             )
                         ) {
                             EmptyView()
                         }
+                      
                         .opacity(0)
                         
                         ActivityRow(activity: activity)
@@ -79,15 +71,14 @@ struct ActivityLogView: View {
                 // Items section - showing all ActivityItems
                 ForEach(filteredItems, id: \.id) { item in
                         NavigationLink(
-                            value: NavigationDestination.itemSummary(
-//                                item: item,
-//                                columns: columns
+                            value: AppNavigationDestination.itemSummary(
                                 itemId: item.id,  
                                 columns: columns
                             )
                         ) {
                             ItemRow(item: item)
                         }
+                       
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                     .id(item.id)

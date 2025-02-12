@@ -20,10 +20,11 @@ struct PodOptionsView: View {
     var podId: Int
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
-//    var navigationAction: (NavigationDestination) -> Void
+
     var navigationAction: (AppNavigationDestination) -> Void
+    let podColumns: [PodColumn]
     
-//    @State private var shareItem: ActivityItem?
+
     @State private var shareItem: ShareSheetItem?  // Changed from ActivityItem
     var body: some View {
         ZStack {
@@ -93,7 +94,7 @@ struct PodOptionsView: View {
                     
                     MenuItemView(iconName: "list.clipboard", text: "Logs", action: {
                         dismiss()
-                        navigationAction(.activityLog(podId: podId, columns: []))
+                        navigationAction(.activityLog(podId: podId, columns: podColumns))
                      
                         HapticFeedback.generate()
                     }, color: .primary)
