@@ -58,11 +58,11 @@ struct ContentView: View {
                             case 0:
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
                             //    DashboardView()
-                            PodsContainerView()
+                            
 
-                        //    case 2:
+                           case 2:
                                
-                        //        PodsContainerView()
+                               PodsContainerView()
                            case 3:
                                FriendsView()
                             case 4:
