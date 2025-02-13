@@ -177,25 +177,25 @@ struct FoodDetailsView: View {
                 Text("Daily Goals")
                     .font(.title2)
                     .fontWeight(.bold)
+                    .padding(.bottom, 0)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 VStack {
                     DailyGoalsSection(food: food)
                 }
-                .padding(.horizontal)
-                 .padding(.bottom)
+                .padding()
                 .background(Color("iosnp"))
                 .cornerRadius(10)
                 
                 // Nutrition Facts Section
                 Text("Nutrition Facts")
+                 .padding(.bottom, 0)
                     .font(.title2)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 VStack {
                     NutritionFactsSection(nutrients: food.foodNutrients)
                 }
-                  .padding(.horizontal)
-                 .padding(.bottom)
+                  .padding()
                 .background(Color("iosnp"))
                 .cornerRadius(10)
             }
