@@ -94,39 +94,101 @@ struct LogFood: View {
             
             // Content based on selected tab
             if selectedFoodTab == .all || selectedFoodTab == .foods {
-                List {
-                    ForEach(searchResults) { food in
-                        NavigationLink(value: FoodNavigationDestination.foodDetails(food, $selectedMeal)) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(food.displayName)
-                                    .font(.headline)
+                // List {
+                //     ForEach(searchResults) { food in
+                //         NavigationLink(value: FoodNavigationDestination.foodDetails(food, $selectedMeal)) {
+                //             HStack {
+                //                            VStack(alignment: .leading, spacing: 4) {
+                //                 Text(food.displayName)
+                //                     .font(.headline)
                                 
-                                HStack {
-                                    if let calories = food.calories {
-                                        Text("\(Int(calories)) cal")
-                                    }
-                                    Text("•")
-                                    Text(food.servingSizeText)
-                                    if let brand = food.brandText {
-                                        Text("•")
-                                        Text(brand)
-                                    }
-                                }
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                            }
+                //                 HStack {
+                //                     if let calories = food.calories {
+                //                         Text("\(Int(calories)) cal")
+                //                     }
+                //                     Text("•")
+                //                     Text(food.servingSizeText)
+                //                     if let brand = food.brandText {
+                //                         Text("•")
+                //                         Text(brand)
+                //                     }
+                //                 }
+                //                 .font(.subheadline)
+                //                 .foregroundColor(.gray)  
+                               
+                //             }
                            
-                            .onTapGesture {
-                                print("Food tapped:", food)
-                                print("Nutrients:", food.foodNutrients)
-                                print("Calories:", food.calories)
-                                print("Selected Meal:", selectedMeal)
-                            }
+                //                 Spacer()
+                //                 Button(action: {
+                //                        print("tapped plus")
+
+                //                     }) {
+                //                        Image(systemName: "plus.circle.fill")
+                //                        .foregroundColor(.accentColor)
+                //                 .font(.system(size: 24))
+                //                     }
+                //             }
+                         
+                //             .onTapGesture {
+                //                 print("Food tapped:", food)
+                //                 print("Nutrients:", food.foodNutrients)
+                //                 print("Calories:", food.calories)
+                //                 print("Selected Meal:", selectedMeal)
+                //             }
+                //         }
+                     
+                       
+                     
+                //     }
+                   
+                // }
+                List {
+    ForEach(searchResults) { food in
+        ZStack {
+            // Invisible NavigationLink providing the navigation
+            NavigationLink(value: FoodNavigationDestination.foodDetails(food, $selectedMeal)) {
+                EmptyView()
+            }
+            .opacity(0)
+            
+            // Your custom row content
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(food.displayName)
+                        .font(.headline)
+                    HStack {
+                        if let calories = food.calories {
+                            Text("\(Int(calories)) cal")
+                        }
+                        Text("•")
+                        Text(food.servingSizeText)
+                        if let brand = food.brandText {
+                            Text("•")
+                            Text(brand)
                         }
                     }
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
                 }
+                Spacer()
+                Button(action: {
+                    print("Tapped plus")
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 24))
+                }
+                // Prevent the button tap from triggering the navigation:
+                .buttonStyle(PlainButtonStyle())
+            }
+            .contentShape(Rectangle()) // Makes the whole row tappable
+        }
+    }
+        }        
                 .listStyle(.plain)
-                .padding(.bottom, 60) 
+                .safeAreaInset(edge: .bottom) {
+    Color.clear.frame(height: 60)
+}
             } else {
                 switch selectedFoodTab {
                 case .meals:
