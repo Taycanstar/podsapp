@@ -115,7 +115,7 @@ struct LogFood: View {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                             }
-                            .padding(.vertical, 4)
+                           
                             .onTapGesture {
                                 print("Food tapped:", food)
                                 print("Nutrients:", food.foodNutrients)

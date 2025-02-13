@@ -164,7 +164,7 @@ struct FoodDetailsView: View {
                                 value: food.foodNutrients.first { $0.nutrientName == "Protein" }?.value ?? 0,
                                 percentage: macroPercentages.protein,
                                 label: "Protein",
-                                percentageColor: Color("purple")
+                                percentageColor: .purple
                             )
                         }
                     }
@@ -177,7 +177,7 @@ struct FoodDetailsView: View {
                 Text("Daily Goals")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .padding(.bottom, 0)
+                    .padding(.bottom, -5)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 VStack {
                     DailyGoalsSection(food: food)
@@ -188,7 +188,7 @@ struct FoodDetailsView: View {
                 
                 // Nutrition Facts Section
                 Text("Nutrition Facts")
-                 .padding(.bottom, 0)
+                 .padding(.bottom, -5)
                     .font(.title2)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -201,7 +201,18 @@ struct FoodDetailsView: View {
             }
             .padding()
         }
-        .padding(.bottom, 60)
+              .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            // Handle pod creation here
+                            print("tapped done")
+                        }
+                        .fontWeight(.semibold)
+                     
+                        .foregroundColor(.accentColor)
+                    }
+                }
+        .padding(.bottom, 65)
         .background(Color("iosbg"))
         .navigationTitle(food.displayName)
         .navigationBarTitleDisplayMode(.inline)
@@ -254,8 +265,26 @@ struct DailyGoalsSection: View {
                 value: food.calories ?? 0,
                 goal: Double(goals.calories),
                 unit: "cal",
-                color: .orange,
+                color: .red,
                 percentage: percentages.calories
+            )
+
+            GoalProgressBar(
+                label: "Carbs",
+                value: food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value ?? 0,
+                goal: Double(goals.carbs),
+                unit: "g",
+                color: Color("teal"),
+                percentage: percentages.carbs
+            )
+
+            GoalProgressBar(
+                label: "Fat",
+                value: food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value ?? 0,
+                goal: Double(goals.fat),
+                unit: "g",
+                color: .red,
+                percentage: percentages.fat
             )
             
             GoalProgressBar(
@@ -265,25 +294,8 @@ struct DailyGoalsSection: View {
                 unit: "g",
                 color: .purple,
                 percentage: percentages.protein
-            )
+            )    
             
-            GoalProgressBar(
-                label: "Carbs",
-                value: food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value ?? 0,
-                goal: Double(goals.carbs),
-                unit: "g",
-                color: .blue,
-                percentage: percentages.carbs
-            )
-            
-            GoalProgressBar(
-                label: "Fat",
-                value: food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value ?? 0,
-                goal: Double(goals.fat),
-                unit: "g",
-                color: .red,
-                percentage: percentages.fat
-            )
         }
     }
 }
