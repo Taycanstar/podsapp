@@ -48,163 +48,164 @@ struct FoodDetailsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Basic Info Section
-                VStack(alignment: .leading, spacing: 12) {
-                
-                  HStack {
-                        Text("Serving Size")
-                        Spacer()
-                        TextField("Enter serving", text: $servingSize)
-                            // .multilineTextAlignment(.trailing)
-                            // .frame(maxWidth: 120)
-                            .multilineTextAlignment(.center)
-                            .fixedSize() 
+                // Basic Info Section with Macros
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Serving Size")
+                            Spacer()
+                            TextField("Enter serving", text: $servingSize)
+                                .multilineTextAlignment(.center)
+                                .fixedSize()
+                                .padding(8)
+                                .background(Color(.tertiarySystemFill))
+                                .cornerRadius(8)
+                        }
+
+                        HStack {
+                            Text("Number of Servings")
+                            Spacer()
+                            Stepper("", value: $numberOfServings, in: 1...10)
+                            Text("\(numberOfServings)")
+                                .frame(minWidth: 40)
+                                .padding(8)
+                                .background(Color(.tertiarySystemFill))
+                                .cornerRadius(8)
+                        }
+                        
+                        // Time Row
+                        HStack {
+                            Text("Time")
+                            Spacer()
+                            DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                                .labelsHidden()
+                        }
+                        
+                        // Meal Row
+                        HStack {
+                            Text("Meal")
+                            Spacer()
+                            Menu {
+                                Button("Breakfast") { selectedMeal = "Breakfast" }
+                                Button("Lunch") { selectedMeal = "Lunch" }
+                                Button("Dinner") { selectedMeal = "Dinner" }
+                            } label: {
+                                HStack {
+                                    Text(selectedMeal)
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.gray)
+                                }
+                            }
                             .padding(8)
                             .background(Color(.tertiarySystemFill))
                             .cornerRadius(8)
-                    }
-
-                   HStack {
-                        Text("Number of Servings")
-                        Spacer()
-      
-                        Stepper("", value: $numberOfServings, in: 1...10)
-                       Text("\(numberOfServings)")
-                           .frame(minWidth: 40)
-                           .padding(8)
-                           .background(Color(.tertiarySystemFill))
-                           .cornerRadius(8)
-                    }
-                  
-                    
-                    // Time Row
-                    HStack {
-                        Text("Time")
-                        Spacer()
-                        DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-                            .labelsHidden()
-                    }
-                    
-                    // Meal Row
-                    HStack {
-                        Text("Meal")
-                        Spacer()
-                        Menu {
-                            Button("Breakfast") { selectedMeal = "Breakfast" }
-                            Button("Lunch") { selectedMeal = "Lunch" }
-                            Button("Dinner") { selectedMeal = "Dinner" }
-                        } label: {
-                            HStack {
-                                Text(selectedMeal)
-                                .foregroundColor(.primary)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.gray)
-                            }
                         }
-                        .padding(8)
-                        .background(Color(.tertiarySystemFill))
-                        .cornerRadius(8)
+                        
+                        // Macros section with the circular progress
+                        HStack(spacing: 40) {
+                            ZStack {
+                                // Background circle
+                                Circle()
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                                    .frame(width: 80, height: 80)
+                                
+                                // Carbs segment
+                                Circle()
+                                    .trim(from: 0, to: CGFloat(macroPercentages.carbs) / 100)
+                                    .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                                    .frame(width: 80, height: 80)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // Fat segment (starts where carbs ends)
+                                Circle()
+                                    .trim(from: CGFloat(macroPercentages.carbs) / 100, 
+                                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100)
+                                    .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                                    .frame(width: 80, height: 80)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // Protein segment (starts where fat ends)
+                                Circle()
+                                    .trim(from: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100,
+                                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat + macroPercentages.protein) / 100)
+                                    .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                                    .frame(width: 80, height: 80)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // Calories value in center
+                                VStack(spacing: 0) {
+                                    Text("\(Int(food.calories ?? 0))")
+                                        .font(.system(size: 20, weight: .bold))
+                                    Text("Cal")
+                                        .font(.system(size: 14))
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // Macros (Carbs, Fat, Protein)
+                            MacroView(
+                                value: food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value ?? 0,
+                                percentage: macroPercentages.carbs,
+                                label: "Carbs",
+                                percentageColor: Color("teal")
+                            )
+                            
+                            MacroView(
+                                value: food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value ?? 0,
+                                percentage: macroPercentages.fat,
+                                label: "Fat",
+                                percentageColor: Color("pinkRed")
+                            )
+                            
+                            MacroView(
+                                value: food.foodNutrients.first { $0.nutrientName == "Protein" }?.value ?? 0,
+                                percentage: macroPercentages.protein,
+                                label: "Protein",
+                                percentageColor: Color("purple")
+                            )
+                        }
                     }
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color("iosnp"))
                 .cornerRadius(10)
                 
-
-                HStack(spacing: 15) {
-    // Calories with circular progress
-                  // In your FoodDetailsView
-            ZStack {
-                // Background circle
-                Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-                    .frame(width: 80, height: 80)
-                
-                // Carbs segment
-                Circle()
-                    .trim(from: 0, to: CGFloat(macroPercentages.carbs) / 100)
-                    .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                    .frame(width: 80, height: 80)
-                    .rotationEffect(.degrees(-90))
-                
-                // Fat segment (starts where carbs ends)
-                Circle()
-                    .trim(from: CGFloat(macroPercentages.carbs) / 100, 
-                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100)
-                    .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                    .frame(width: 80, height: 80)
-                    .rotationEffect(.degrees(-90))
-                
-                // Protein segment (starts where fat ends)
-                Circle()
-                    .trim(from: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100,
-                        to: CGFloat(macroPercentages.carbs + macroPercentages.fat + macroPercentages.protein) / 100)
-                    .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                    .frame(width: 80, height: 80)
-                    .rotationEffect(.degrees(-90))
-                
-                // Calories value in center
-                VStack(spacing: 0) {
-                    Text("\(Int(food.calories ?? 0))")
-                        .font(.system(size: 20, weight: .bold))
-                    Text("Cal")
-                        .font(.system(size: 14))
-                }
-            }
-                    Spacer()
-                    
-                    // Macros row
-                    HStack(spacing: 40) {
-                        // Carbs
-                        MacroView(
-                            value: food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value ?? 0,
-                            percentage: macroPercentages.carbs,
-                                    label: "Carbs",
-                            percentageColor: Color("teal")
-                        )
-                        
-                        // Fat
-                        MacroView(
-                            value: food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value ?? 0,
-                            percentage: macroPercentages.fat,
-                            label: "Fat",
-                            percentageColor: Color("pinkRed")
-                        )
-                        
-                        // Protein
-                        MacroView(
-                            value: food.foodNutrients.first { $0.nutrientName == "Protein" }?.value ?? 0,
-                            percentage: macroPercentages.protein,
-                            label: "Protein",
-                            percentageColor: Color("purple")
-                        )
-                    }
-                }
-                  .padding()
-                // .background(Color(.systemBackground))
-                
                 // Daily Goals Section
-                DailyGoalsSection(food: food)
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(10)
+                Text("Daily Goals")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack {
+                    DailyGoalsSection(food: food)
+                }
+                .padding(.horizontal)
+                 .padding(.bottom)
+                .background(Color("iosnp"))
+                .cornerRadius(10)
                 
-                // Nutrition Facts
-                NutritionFactsSection(nutrients: food.foodNutrients)
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(10)
+                // Nutrition Facts Section
+                Text("Nutrition Facts")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack {
+                    NutritionFactsSection(nutrients: food.foodNutrients)
+                }
+                  .padding(.horizontal)
+                 .padding(.bottom)
+                .background(Color("iosnp"))
+                .cornerRadius(10)
             }
             .padding()
         }
-       
+        .padding(.bottom, 60)
+        .background(Color("iosbg"))
         .navigationTitle(food.displayName)
         .navigationBarTitleDisplayMode(.inline)
-
     }
-
-    
 }
 
 struct MacroView: View {
@@ -246,8 +247,7 @@ struct DailyGoalsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("Daily Goals")
-                .font(.headline)
+    
             
             GoalProgressBar(
                 label: "Calories",
@@ -293,18 +293,15 @@ struct NutritionFactsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Nutrition Facts")
-                .font(.headline)
-            
-            Divider()
-            
-            ForEach(nutrients, id: \.nutrientName) { nutrient in
+            ForEach(Array(nutrients.enumerated()), id: \.element.nutrientName) { index, nutrient in
                 HStack {
                     Text(nutrient.nutrientName)
                     Spacer()
-                    Text("\(Int(nutrient.value))\(nutrient.unitName)")
+                    Text("\(Int(nutrient.value))\(nutrient.unitName.lowercased())")
                 }
-                Divider()
+                if index < nutrients.count - 1 {  // Only add Divider if it's not the last item
+                    Divider()
+                }
             }
         }
     }
