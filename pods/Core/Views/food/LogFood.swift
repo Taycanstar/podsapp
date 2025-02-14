@@ -129,53 +129,51 @@ struct LogFood: View {
                 Spacer()
 
 
-           Button(action: {
-               DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation {
-                                checkmarkStates[food.id] = false
-                            }
-                        }
-                        HapticFeedback.generate()
-            foodManager.logFood(
-                email: viewModel.email,
-                food: food,
-                meal: selectedMeal,
-                servings: 1,
-                date: Date(),
-                notes: nil,
-                completion: { result in
-                    switch result {
-                    case .success(let loggedFood):
-                        print("Food logged successfully: \(loggedFood)")
-                        
-                        withAnimation {
-                            checkmarkStates[food.id] = true
-                        }
-                     
-                    case .failure(let error):
-                        print("Error logging food: \(error)")
-                        errorMessage = "An error occurred while logging. Please try again."
-                        showErrorAlert = true
-                    }
-                }
-            )
-        }) {
-            if checkmarkStates[food.id] == true {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.green)
-                    .transition(.opacity)
-            } else {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.accentColor)
+         Button(action: {
+            HapticFeedback.generate()
+    foodManager.logFood(
+        email: viewModel.email,
+        food: food,
+        meal: selectedMeal,
+        servings: 1,
+        date: Date(),
+        notes: nil
+    ) { result in
+        switch result {
+        case .success(let loggedFood):
+            print("Food logged successfully: \(loggedFood)")
+            
+            withAnimation {
+                checkmarkStates[food.id] = true
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    checkmarkStates[food.id] = false
+                }
+            }
+        case .failure(let error):
+            print("Error logging food: \(error)")
+            errorMessage = "An error occurred while logging"
+            showErrorAlert = true
         }
-        .alert("Unable to Log Food", isPresented: $showErrorAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
-        }
+    }
+}) {
+    if checkmarkStates[food.id] == true {
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 24))
+            .foregroundColor(.green)
+            .transition(.opacity)
+    } else {
+        Image(systemName: "plus.circle.fill")
+            .font(.system(size: 24))
+            .foregroundColor(.accentColor)
+    }
+}
+.alert("Unable to Log Food", isPresented: $showErrorAlert) {
+    Button("OK", role: .cancel) { }
+} message: {
+    Text(errorMessage)
+}
                 // Prevent the button tap from triggering the navigation:
                 .buttonStyle(PlainButtonStyle())
             }
