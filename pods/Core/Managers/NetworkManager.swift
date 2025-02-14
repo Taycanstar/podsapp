@@ -11,6 +11,18 @@ enum NetworkError: Error {
     case noData
 }
 
+ struct GracieResponse: Codable {
+        let response: String
+    }
+    
+    // Add this new response type
+    struct PaginatedActivityLogResponse: Codable {
+        let logs: [PodItemActivityLogJSON]
+        let hasMore: Bool
+        let totalPages: Int
+        let currentPage: Int
+    }
+
 
 class NetworkManager {
  
@@ -3972,7 +3984,7 @@ class NetworkManager {
         items: [(id: Int, notes: String?, columnValues: [String: Any])],
         completion: @escaping (Result<Activity, Error>) -> Void
     ) {
-        // 1) Construct the URL for your “update-activity/<id>/” endpoint
+        // 1) Construct the URL for your "update-activity/<id>/" endpoint
         let urlString = "\(baseUrl)/update-activity/\(activityId)/"
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
@@ -5081,16 +5093,81 @@ class NetworkManager {
     }
 
 
-    struct GracieResponse: Codable {
-        let response: String
+    
+
+func logFood(
+    userEmail: String,
+    food: Food,
+    meal: String,
+    servings: Int,
+    date: Date,
+    notes: String?,
+    completion: @escaping (Result<LoggedFood, Error>) -> Void
+) {
+    let urlString = "\(baseUrl)/log-food/"
+    
+    guard let url = URL(string: urlString) else {
+        completion(.failure(NetworkError.invalidURL))
+        return
     }
     
-    // Add this new response type
-    struct PaginatedActivityLogResponse: Codable {
-        let logs: [PodItemActivityLogJSON]
-        let hasMore: Bool
-        let totalPages: Int
-        let currentPage: Int
+    // Convert foodNutrients to a serializable format
+    let nutrients = food.foodNutrients.map { [
+        "nutrientName": $0.nutrientName,
+        "value": $0.value,
+        "unitName": $0.unitName
+    ] }
+    
+    let parameters: [String: Any] = [
+        "user_email": userEmail,
+        "food": [
+            "fdcId": food.id,
+            "description": food.displayName,
+            "brandOwner": food.brandText ?? "",
+            "servingSize": food.servingSize ?? 0,
+            "servingSizeUnit": food.servingSizeUnit ?? "",
+            "householdServingFullText": food.servingSizeText,
+            "foodNutrients": nutrients  // Use the converted nutrients
+        ],
+        "meal": meal,
+        "servings": servings,
+        "date": ISO8601DateFormatter().string(from: date),
+        "notes": notes ?? ""
+    ]
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        print("JSON Serialization Error: \(error)")  // Add debug print
+        completion(.failure(NetworkError.encodingError))
+        return
     }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            let loggedFood = try decoder.decode(LoggedFood.self, from: data)
+            completion(.success(loggedFood))
+        } catch {
+            print("JSON Decoding Error: \(error)")  // Add debug print
+            completion(.failure(error))
+        }
+    }.resume()
+}
+   
 }
 

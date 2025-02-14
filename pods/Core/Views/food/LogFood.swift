@@ -9,7 +9,8 @@ import SwiftUI
 
 struct LogFood: View {
     @Environment(\.dismiss) private var dismiss
-    // @State private var selectedMeal: String
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Binding var selectedMeal: String
     @State private var showMealPicker = false
     @Binding var selectedTab: Int
@@ -17,6 +18,9 @@ struct LogFood: View {
     @State private var selectedFoodTab: FoodTab = .all
     @State private var searchResults: [Food] = []
     @State private var isSearching = false
+   @State private var checkmarkStates: [Int: Bool] = [:]
+   @State private var showErrorAlert = false
+    @State private var errorMessage = ""
     
     enum FoodTab {
         case all, meals, recipes, foods
@@ -94,54 +98,6 @@ struct LogFood: View {
             
             // Content based on selected tab
             if selectedFoodTab == .all || selectedFoodTab == .foods {
-                // List {
-                //     ForEach(searchResults) { food in
-                //         NavigationLink(value: FoodNavigationDestination.foodDetails(food, $selectedMeal)) {
-                //             HStack {
-                //                            VStack(alignment: .leading, spacing: 4) {
-                //                 Text(food.displayName)
-                //                     .font(.headline)
-                                
-                //                 HStack {
-                //                     if let calories = food.calories {
-                //                         Text("\(Int(calories)) cal")
-                //                     }
-                //                     Text("•")
-                //                     Text(food.servingSizeText)
-                //                     if let brand = food.brandText {
-                //                         Text("•")
-                //                         Text(brand)
-                //                     }
-                //                 }
-                //                 .font(.subheadline)
-                //                 .foregroundColor(.gray)  
-                               
-                //             }
-                           
-                //                 Spacer()
-                //                 Button(action: {
-                //                        print("tapped plus")
-
-                //                     }) {
-                //                        Image(systemName: "plus.circle.fill")
-                //                        .foregroundColor(.accentColor)
-                //                 .font(.system(size: 24))
-                //                     }
-                //             }
-                         
-                //             .onTapGesture {
-                //                 print("Food tapped:", food)
-                //                 print("Nutrients:", food.foodNutrients)
-                //                 print("Calories:", food.calories)
-                //                 print("Selected Meal:", selectedMeal)
-                //             }
-                //         }
-                     
-                       
-                     
-                //     }
-                   
-                // }
                 List {
     ForEach(searchResults) { food in
         ZStack {
@@ -171,13 +127,55 @@ struct LogFood: View {
                     .foregroundColor(.gray)
                 }
                 Spacer()
-                Button(action: {
-                    print("Tapped plus")
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.accentColor)
-                        .font(.system(size: 24))
+
+
+           Button(action: {
+               DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            withAnimation {
+                                checkmarkStates[food.id] = false
+                            }
+                        }
+                        HapticFeedback.generate()
+            foodManager.logFood(
+                email: viewModel.email,
+                food: food,
+                meal: selectedMeal,
+                servings: 1,
+                date: Date(),
+                notes: nil,
+                completion: { result in
+                    switch result {
+                    case .success(let loggedFood):
+                        print("Food logged successfully: \(loggedFood)")
+                        
+                        withAnimation {
+                            checkmarkStates[food.id] = true
+                        }
+                     
+                    case .failure(let error):
+                        print("Error logging food: \(error)")
+                        errorMessage = "An error occurred while logging. Please try again."
+                        showErrorAlert = true
+                    }
                 }
+            )
+        }) {
+            if checkmarkStates[food.id] == true {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.green)
+                    .transition(.opacity)
+            } else {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .alert("Unable to Log Food", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
                 // Prevent the button tap from triggering the navigation:
                 .buttonStyle(PlainButtonStyle())
             }

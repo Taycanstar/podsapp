@@ -212,7 +212,9 @@ struct FoodDetailsView: View {
                         .foregroundColor(.accentColor)
                     }
                 }
-        .padding(.bottom, 65)
+                      .safeAreaInset(edge: .bottom) {
+    Color.clear.frame(height: 60)
+}
         .background(Color("iosbg"))
         .navigationTitle(food.displayName)
         .navigationBarTitleDisplayMode(.inline)

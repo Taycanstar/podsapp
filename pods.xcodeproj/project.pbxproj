@@ -117,6 +117,7 @@
 		36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03322D5BA200006A74E9 /* FoodDetailView.swift */; };
 		36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03342D5BA5AC006A74E9 /* UserGoals.swift */; };
 		36CB03372D5C6D68006A74E9 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 36CB03362D5C6D68006A74E9 /* Mixpanel */; };
+		36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03382D5E4B2A006A74E9 /* FoodManager.swift */; };
 		36D044102C71196900B01998 /* InvitationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D0440F2C71196900B01998 /* InvitationView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
@@ -264,6 +265,7 @@
 		36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodSearchModel.swift; path = Pods/viewModels/FoodSearchModel.swift; sourceTree = SOURCE_ROOT; };
 		36CB03322D5BA200006A74E9 /* FoodDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDetailView.swift; sourceTree = "<group>"; };
 		36CB03342D5BA5AC006A74E9 /* UserGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGoals.swift; sourceTree = "<group>"; };
+		36CB03382D5E4B2A006A74E9 /* FoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
 		36CE7F002C1176DA001774F9 /* pods.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = pods.entitlements; sourceTree = "<group>"; };
 		36D0440F2C71196900B01998 /* InvitationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
@@ -344,6 +346,7 @@
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
 				363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */,
 				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
+				36CB03382D5E4B2A006A74E9 /* FoodManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -931,6 +934,7 @@
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
+				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				363AF9FB2D2095AA00C91A14 /* SingularColumnActivityView.swift in Sources */,
