@@ -9,6 +9,8 @@ import SwiftUI
 
 struct FoodDetailsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     let food: Food
     @Binding var selectedMeal: String 
     
@@ -16,6 +18,9 @@ struct FoodDetailsView: View {
     @State private var numberOfServings: Int = 1
     @State private var selectedDate = Date()
     @State private var showServingSizePicker = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
+    @State private var isLoading = false
 
     private let foodService = FoodService.shared
     
@@ -201,23 +206,55 @@ struct FoodDetailsView: View {
             }
             .padding()
         }
-              .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            // Handle pod creation here
-                            print("tapped done")
-                        }
-                        .fontWeight(.semibold)
-                     
-                        .foregroundColor(.accentColor)
-                    }
-                }
-                      .safeAreaInset(edge: .bottom) {
+                              .safeAreaInset(edge: .bottom) {
     Color.clear.frame(height: 60)
 }
         .background(Color("iosbg"))
         .navigationTitle(food.displayName)
         .navigationBarTitleDisplayMode(.inline)
+             .toolbar {
+    ToolbarItem(placement: .navigationBarTrailing) {
+        Button {
+            isLoading = true
+            foodManager.logFood(
+                email: viewModel.email,
+                food: food,
+                meal: selectedMeal,
+                servings: numberOfServings,
+                date: selectedDate,
+                notes: nil
+            ) { result in
+                isLoading = false
+                switch result {
+                case .success(let loggedFood):
+                    print("Food logged successfully: \(loggedFood)")
+                    dismiss()
+                case .failure(let error):
+                    print("Error logging food: \(error)")
+                    errorMessage = "An error occurred while logging"
+                    showErrorAlert = true
+                }
+            }
+        } label: {
+            if isLoading {
+                ProgressView()
+                    .tint(.accentColor)
+                    .frame(width: 45, height: 20)  // Match "Done" text size
+                    .contentShape(Rectangle())
+            } else {
+                Text("Done")
+            }
+        }
+        .fontWeight(.semibold)
+        .foregroundColor(.accentColor)
+        .disabled(isLoading)
+    }
+}
+        .alert("Unable to Log Food", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
     }
 }
 

@@ -153,7 +153,7 @@ struct LogFood: View {
             }
         case .failure(let error):
             print("Error logging food: \(error)")
-            errorMessage = "An error occurred while logging"
+            errorMessage = "An error occurred while logging. Try again."
             showErrorAlert = true
         }
     }
@@ -169,7 +169,7 @@ struct LogFood: View {
             .foregroundColor(.accentColor)
     }
 }
-.alert("Unable to Log Food", isPresented: $showErrorAlert) {
+.alert("Something went wrong", isPresented: $showErrorAlert) {
     Button("OK", role: .cancel) { }
 } message: {
     Text(errorMessage)
