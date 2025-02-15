@@ -27,8 +27,8 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //   let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.79:8000"
-      let baseUrl = "http://172.20.10.3:8000"
+//  let baseUrl = "http://192.168.1.79:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -229,78 +229,7 @@ class NetworkManager {
     }
 
 
-//    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?, Int?) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/login/") else {
-//            print("Invalid URL for login endpoint")
-//            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//            return
-//        }
-//
-//        let body: [String: Any] = ["username": identifier, "password": password]
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-//        
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                print("Login request failed: \(error.localizedDescription)")
-//                DispatchQueue.main.async {
-//                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//                }
-//                return
-//            }
-//            
-//            guard let httpResponse = response as? HTTPURLResponse, let responseData = data else {
-//                print("No response or data received from login request")
-//                DispatchQueue.main.async {
-//                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//                }
-//                return
-//            }
-//            
-//            print("Received HTTP response status code: \(httpResponse.statusCode)")
-//            let responseString = String(data: responseData, encoding: .utf8)
-//            print("Response data string: \(String(describing: responseString))")
-//            
-//            if httpResponse.statusCode == 200 {
-//                do {
-//                    if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
-//                        let userId = json["userId"] as? Int  // Get userId as integer
-//                        let token = json["token"] as? String
-//                        let email = json["email"] as? String
-//                        let username = json["username"] as? String
-//                        let activeTeamId = json["activeTeamId"] as? Int
-//                        let activeWorkspaceId = json["activeWorkspaceId"] as? Int
-//                        let profileInitial = json["profileInitial"] as? String
-//                        let profileColor = json["profileColor"] as? String
-//                        let subscriptionStatus = json["subscriptionStatus"] as? String
-//                        let subscriptionPlan = json["subscriptionPlan"] as? String
-//                        let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
-//                        let subscriptionRenews = json["subscriptionRenews"] as? Bool
-//                        let subscriptionSeats = json["subscriptionSeats"] as? Int
-//                        let canCreateNewTeam = json["canCreateNewTeam"] as? Bool
-//                        
-//                        DispatchQueue.main.async {
-//                            completion(true, nil, email, username, activeTeamId, activeWorkspaceId, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, canCreateNewTeam, userId)
-//                        }
-//                    } else {
-//                        DispatchQueue.main.async {
-//                            completion(false, "Invalid response format", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//                        }
-//                    }
-//                } catch {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//                    }
-//                }
-//            } else {
-//                DispatchQueue.main.async {
-//                    completion(false, responseString ?? "Login failed with status code: \(httpResponse.statusCode)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-//                }
-//            }
-//        }.resume()
-//    }
+
     
     func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
@@ -1740,179 +1669,7 @@ class NetworkManager {
             }
         }.resume()
     }
-//    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?, Int?, Bool) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-//            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//            return
-//        }
-//
-//        let body: [String: Any] = ["token": idToken]
-//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
-//
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = finalBody
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                print("Network error: \(error.localizedDescription)")
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//                return
-//            }
-//
-//            guard let data = data else {
-//                print("No data received from server")
-//                DispatchQueue.main.async {
-//                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//                return
-//            }
-//
-//            do {
-//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-//                    let token = json["token"] as? String
-//                    let email = json["email"] as? String
-//                    let username = json["username"] as? String
-//                    let activeTeamId = (json["activeTeamId"] as? NSNumber)?.intValue
-//                    let activeWorkspaceId = (json["activeWorkspaceId"] as? NSNumber)?.intValue
-//                    let profileInitial = json["profileInitial"] as? String
-//                    let profileColor = json["profileColor"] as? String
-//                    let subscriptionStatus = json["subscriptionStatus"] as? String
-//                    let subscriptionPlan = json["subscriptionPlan"] as? String
-//                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
-//                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
-//                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
-//                    let canCreateNewTeam = json["canCreateNewTeam"] as? Bool ?? false
-//                    let userId = (json["userId"] as? NSNumber)?.intValue
-//                    let isNewUser = json["isNewUser"] as? Bool ?? false
-//
-//                    print("Debug - Server Response: \(json)")
-//
-//                    DispatchQueue.main.async {
-//                        completion(
-//                            token != nil,
-//                            nil,
-//                            email,
-//                            username,
-//                            activeTeamId,
-//                            activeWorkspaceId,
-//                            profileInitial,
-//                            profileColor,
-//                            subscriptionStatus,
-//                            subscriptionPlan,
-//                            subscriptionExpiresAt,
-//                            subscriptionRenews,
-//                            subscriptionSeats,
-//                            canCreateNewTeam,
-//                            userId,
-//                            isNewUser
-//                        )
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Invalid data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                    }
-//                }
-//            } catch {
-//                DispatchQueue.main.async {
-//                    completion(false, "Failed to parse response: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//            }
-//        }.resume()
-//    }
 
-//    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, String?, String?, Int?, Int?, String?, String?, String?, String?, String?, Bool?, Int?, Bool?, Int?, Bool) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/apple-login/") else {
-//            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//            return
-//        }
-//
-//        let body: [String: Any] = [
-//            "token": idToken,
-//            "nonce": nonce
-//        ]
-//        let finalBody = try? JSONSerialization.data(withJSONObject: body)
-//
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//        request.httpBody = finalBody
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                print("Network error: \(error.localizedDescription)")
-//                DispatchQueue.main.async {
-//                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//                return
-//            }
-//
-//            guard let data = data else {
-//                print("No data received from server")
-//                DispatchQueue.main.async {
-//                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//                return
-//            }
-//
-//            do {
-//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-//                    let token = json["token"] as? String
-//                    let email = json["email"] as? String
-//                    let username = json["username"] as? String
-//                    let activeTeamId = (json["activeTeamId"] as? NSNumber)?.intValue
-//                    let activeWorkspaceId = (json["activeWorkspaceId"] as? NSNumber)?.intValue
-//                    let profileInitial = json["profileInitial"] as? String
-//                    let profileColor = json["profileColor"] as? String
-//                    let subscriptionStatus = json["subscriptionStatus"] as? String
-//                    let subscriptionPlan = json["subscriptionPlan"] as? String
-//                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
-//                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
-//                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
-//                    let canCreateNewTeam = json["canCreateNewTeam"] as? Bool ?? false
-//                    let userId = (json["userId"] as? NSNumber)?.intValue
-//                    let isNewUser = json["isNewUser"] as? Bool ?? false
-//
-//                    print("Debug - Server Response: \(json)")
-//                 
-//                    print("Debug - Raw isNewUser from backend: \(String(describing: json["isNewUser"]))")
-//
-//                    DispatchQueue.main.async {
-//                        completion(
-//                            token != nil,
-//                            nil,
-//                            email,
-//                            username,
-//                            activeTeamId,
-//                            activeWorkspaceId,
-//                            profileInitial,
-//                            profileColor,
-//                            subscriptionStatus,
-//                            subscriptionPlan,
-//                            subscriptionExpiresAt,
-//                            subscriptionRenews,
-//                            subscriptionSeats,
-//                            canCreateNewTeam,
-//                            userId,
-//                            isNewUser
-//                        )
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        completion(false, "Invalid data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                    }
-//                }
-//            } catch {
-//                DispatchQueue.main.async {
-//                    completion(false, "Failed to parse response: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-//                }
-//            }
-//        }.resume()
-//    }
-    
 
 
     func addNewItem(podId: Int, itemType: String, videoURL: URL?, image: UIImage?, label: String, thumbnail: UIImage?, notes: String, email: String, completion: @escaping (Bool, String?) -> Void) {
@@ -3325,60 +3082,7 @@ class NetworkManager {
     
     
 
-    
-//    func updatePodDetails(podId: Int, title: String, description: String, instructions: String, type: String, completion: @escaping (Result<(String, String, String, String), Error>) -> Void) {
-//        guard let url = URL(string: "\(baseUrl)/update-pod-details/\(podId)/") else {
-//            completion(.failure(NetworkError.invalidURL))
-//            return
-//        }
-//        
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "PUT"
-//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-//        
-//        let body: [String: Any] = [
-//            "title": title,
-//            "description": description,
-//            "instructions": instructions,
-//            "type": type,
-//            
-//        ]
-//        
-//        do {
-//            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-//        } catch {
-//            completion(.failure(error))
-//            return
-//        }
-//        
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                completion(.failure(error))
-//                return
-//            }
-//            
-//            guard let data = data else {
-//                completion(.failure(NetworkError.noData))
-//                return
-//            }
-//            
-//            do {
-//                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-//                   let podData = json["pod"] as? [String: Any],
-//                   let updatedTitle = podData["title"] as? String,
-//                   let updatedDescription = podData["description"] as? String,
-//                   let updatedInstructions = podData["instructions"] as? String,
-//                   let updatedType = podData["type"] as? String {
-//                    completion(.success((updatedTitle, updatedDescription, updatedInstructions, updatedType)))
-//                } else {
-//                    completion(.failure(NetworkError.decodingError))
-//                }
-//            } catch {
-//                completion(.failure(error))
-//            }
-//        }.resume()
-//    }
-    
+
     func updatePodDetails(
         podId: Int,
         title: String,
@@ -3849,68 +3553,7 @@ class NetworkManager {
            }.resume()
        }
     
-//    func createActivity(podId: Int,
-//                        userEmail: String,
-//                        duration: Int,
-//                        notes: String?,
-//                        items: [(id: Int, notes: String?, columnValues: [String: Any])],
-//                        completion: @escaping (Result<Activity, Error>) -> Void) {
-//         
-//         let urlString = "\(baseUrl)/create-activity/"
-//         guard let url = URL(string: urlString) else {
-//             completion(.failure(NetworkError.invalidURL))
-//             return
-//         }
-//         
-//         let itemsData = items.map { item in
-//             [
-//                 "itemId": item.id,
-//                 "notes": item.notes ?? "",
-//                 "columnValues": item.columnValues
-//             ]
-//         }
-//         
-//         let parameters: [String: Any] = [
-//             "podId": podId,
-//             "userEmail": userEmail,
-//             "duration": duration,
-//             "notes": notes ?? "",
-//             "loggedAt": ISO8601DateFormatter().string(from: Date()),
-//             "items": itemsData
-//         ]
-//         
-//         var request = URLRequest(url: url)
-//         request.httpMethod = "POST"
-//         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-//         
-//         do {
-//             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-//         } catch {
-//             completion(.failure(error))
-//             return
-//         }
-//         
-//         URLSession.shared.dataTask(with: request) { data, response, error in
-//             if let error = error {
-//                 completion(.failure(error))
-//                 return
-//             }
-//             
-//             guard let data = data else {
-//                 completion(.failure(NetworkError.noData))
-//                 return
-//             }
-//             
-//             do {
-//                 let decoder = JSONDecoder()
-//                 let activity = try decoder.decode(Activity.self, from: data)
-//                 completion(.success(activity))
-//             } catch {
-//                 completion(.failure(error))
-//             }
-//         }.resume()
-//     }
-//
+
     
     func createActivity(
         podId: Int,
@@ -5095,15 +4738,81 @@ class NetworkManager {
 
     
 
-func logFood(
-    userEmail: String,
-    food: Food,
-    meal: String,
-    servings: Int,
-    date: Date,
-    notes: String?,
-    completion: @escaping (Result<LoggedFood, Error>) -> Void
-) {
+// func logFood(
+//     userEmail: String,
+//     food: Food,
+//     meal: String,
+//     servings: Int,
+//     date: Date,
+//     notes: String?,
+//     completion: @escaping (Result<LoggedFood, Error>) -> Void
+// ) {
+//     let urlString = "\(baseUrl)/log-food/"
+    
+//     guard let url = URL(string: urlString) else {
+//         completion(.failure(NetworkError.invalidURL))
+//         return
+//     }
+    
+//     // Convert foodNutrients to a serializable format
+//     let nutrients = food.foodNutrients.map { [
+//         "nutrientName": $0.nutrientName,
+//         "value": $0.value,
+//         "unitName": $0.unitName
+//     ] }
+    
+//     let parameters: [String: Any] = [
+//         "user_email": userEmail,
+//         "food": [
+//             "fdcId": food.id,
+//             "description": food.displayName,
+//             "brandOwner": food.brandText ?? "",
+//             "servingSize": food.servingSize ?? 0,
+//             "servingSizeUnit": food.servingSizeUnit ?? "",
+//             "householdServingFullText": food.servingSizeText,
+//             "foodNutrients": nutrients  // Use the converted nutrients
+//         ],
+//         "meal": meal,
+//         "servings": servings,
+//         "date": ISO8601DateFormatter().string(from: date),
+//         "notes": notes ?? ""
+//     ]
+    
+//     var request = URLRequest(url: url)
+//     request.httpMethod = "POST"
+//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+//     do {
+//         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+//     } catch {
+//         print("JSON Serialization Error: \(error)")  // Add debug print
+//         completion(.failure(NetworkError.encodingError))
+//         return
+//     }
+    
+//     URLSession.shared.dataTask(with: request) { data, response, error in
+//         if let error = error {
+//             completion(.failure(error))
+//             return
+//         }
+        
+//         guard let data = data else {
+//             completion(.failure(NetworkError.noData))
+//             return
+//         }
+        
+//         do {
+//             let decoder = JSONDecoder()
+//             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
+//             completion(.success(loggedFood))
+//         } catch {
+//             print("JSON Decoding Error: \(error)")  // Add debug print
+//             completion(.failure(error))
+//         }
+//     }.resume()
+// }
+
+        func logFood(userEmail: String, food: Food, meal: String, servings: Int, date: Date, notes: String?, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     let urlString = "\(baseUrl)/log-food/"
     
     guard let url = URL(string: urlString) else {
@@ -5123,11 +4832,11 @@ func logFood(
         "food": [
             "fdcId": food.id,
             "description": food.displayName,
-            "brandOwner": food.brandText ?? "",
+            "brandOwner": food.brandText ?? "",  // Make sure we're sending the brand
             "servingSize": food.servingSize ?? 0,
             "servingSizeUnit": food.servingSizeUnit ?? "",
             "householdServingFullText": food.servingSizeText,
-            "foodNutrients": nutrients  // Use the converted nutrients
+            "foodNutrients": nutrients
         ],
         "meal": meal,
         "servings": servings,
@@ -5142,13 +4851,14 @@ func logFood(
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
     } catch {
-        print("JSON Serialization Error: \(error)")  // Add debug print
+        print("JSON Serialization Error: \(error)")
         completion(.failure(NetworkError.encodingError))
         return
     }
     
     URLSession.shared.dataTask(with: request) { data, response, error in
         if let error = error {
+            print("Network Error: \(error)")
             completion(.failure(error))
             return
         }
@@ -5160,14 +4870,55 @@ func logFood(
         
         do {
             let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
             completion(.success(loggedFood))
         } catch {
-            print("JSON Decoding Error: \(error)")  // Add debug print
+            print("Decoding Error: \(error)")
             completion(.failure(error))
         }
     }.resume()
 }
+
+    func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/get-food-logs/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add user email to query params
+        let queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+        request.url?.append(queryItems: queryItems)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase  // Add this line
+                let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
+                completion(.success(loggedFoods))
+            } catch {
+                print("Decoding error: \(error)")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Received JSON:", jsonString)
+                }
+                completion(.failure(error))
+            }
+        }.resume()
+    }
    
 }
 

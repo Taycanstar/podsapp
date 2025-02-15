@@ -84,19 +84,55 @@ class FoodService {
 
 }
 
+
+// For logged foods from our database
+struct LoggedFoodItem: Codable {
+    let displayName: String
+    let calories: Double
+    let servingSizeText: String
+    let brandText: String?
+}
+
 struct LoggedFood: Codable, Identifiable {
     let status: String
     let foodLogId: Int
-    let calories: Double  // Changed back to Double since backend sends float
+    let calories: Double
     let message: String
+    let food: LoggedFoodItem  // Changed from Food to LoggedFoodItem
+    let meal: String
     
-    // Computed property to satisfy Identifiable
     var id: Int { foodLogId }
-    
-    enum CodingKeys: String, CodingKey {
-        case status
-        case foodLogId = "food_log_id"
-        case calories
-        case message
-    }
 }
+
+// struct LoggedFood: Codable, Identifiable {
+//     let status: String
+//     let foodLogId: Int
+//     let calories: Double 
+//     let message: String
+//     let food: Food 
+//     let meal: String
+
+    
+//     // Computed property to satisfy Identifiable
+//     var id: Int { foodLogId }
+    
+//     // enum CodingKeys: String, CodingKey {
+//     //     case status
+//     //     case foodLogId = "food_log_id"
+//     //     case calories
+//     //     case message
+//     // }
+
+//        // Add computed properties to match Food display
+//     var displayName: String {
+//         food.displayName
+//     }
+    
+//     var servingSizeText: String {
+//         food.servingSizeText
+//     }
+    
+//     var brandText: String? {
+//         food.brandText
+//     }
+// }
