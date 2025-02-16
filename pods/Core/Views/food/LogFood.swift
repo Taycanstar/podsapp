@@ -95,6 +95,7 @@ struct LogFood: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .padding(.vertical, 8)
+                                 .listRowSeparator(.hidden) 
                             
                             ForEach(foodManager.loggedFoods) { loggedFood in
                                 HistoryRow(
@@ -127,10 +128,7 @@ struct LogFood: View {
             
             Spacer()
         }
-        // .task {
-        //     // Load logged foods when view appears
-        //     try? await foodManager.loadLoggedFoods(email: viewModel.email)
-        // }
+     
         .edgesIgnoringSafeArea(.horizontal)
         .searchable(text: $searchText, prompt: selectedFoodTab.searchPrompt)
         .onChange(of: searchText) { _ in
