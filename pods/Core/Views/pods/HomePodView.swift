@@ -92,9 +92,9 @@ struct HomePodView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .gray))
                         Spacer()
                     }
-                    .onAppear {
-                        fetchFullPodDetails(showLoadingIndicator: true)
-                    }
+                    // .onAppear {
+                    //     fetchFullPodDetails(showLoadingIndicator: true)
+                    // }
                 } else {
                     // Data is complete – display the list view.
                     VStack(spacing: 0) {
@@ -111,6 +111,7 @@ struct HomePodView: View {
                 Text("Pod not found")
             }
         }
+        
         .navigationTitle(pod?.title ?? "Pod Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -127,7 +128,10 @@ struct HomePodView: View {
                 }
             }
         }
+  
         .onAppear {
+              fetchFullPodDetails(showLoadingIndicator: true)
+                
             isTabBarVisible.wrappedValue = false
             if let pod = pod {
                 // Update local state from the global pod.
@@ -162,6 +166,7 @@ struct HomePodView: View {
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
+
         // Attach sheets.
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(

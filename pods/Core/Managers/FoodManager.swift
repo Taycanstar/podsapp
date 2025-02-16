@@ -43,7 +43,7 @@ class FoodManager: ObservableObject {
     }
     
     func loadLoggedFoods(email: String) {
-        guard !isLoading else { return }
+        // guard !isLoading else { return }
         
         print("FoodManager: Loading food logs for \(email)")
         isLoading = true

@@ -4919,6 +4919,50 @@ class NetworkManager {
             }
         }.resume()
     }
+
+//     func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
+//     // Use URLComponents to construct the URL with query parameters
+//     guard var urlComponents = URLComponents(string: "\(baseUrl)/get-food-logs/") else {
+//         completion(.failure(NetworkError.invalidURL))
+//         return
+//     }
+    
+//     urlComponents.queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+    
+//     guard let url = urlComponents.url else {
+//         completion(.failure(NetworkError.invalidURL))
+//         return
+//     }
+    
+//     var request = URLRequest(url: url)
+//     request.httpMethod = "GET"
+//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+//     URLSession.shared.dataTask(with: request) { data, response, error in
+//         if let error = error {
+//             completion(.failure(error))
+//             return
+//         }
+        
+//         guard let data = data else {
+//             completion(.failure(NetworkError.noData))
+//             return
+//         }
+        
+//         do {
+//             let decoder = JSONDecoder()
+//             decoder.keyDecodingStrategy = .convertFromSnakeCase
+//             let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
+//             completion(.success(loggedFoods))
+//         } catch {
+//             print("Decoding error: \(error)")
+//             if let jsonString = String(data: data, encoding: .utf8) {
+//                 print("Received JSON:", jsonString)
+//             }
+//             completion(.failure(error))
+//         }
+//     }.resume()
+// }
    
 }
 
