@@ -9,6 +9,7 @@ class FoodManager: ObservableObject {
     @Published var hasMore = true
     @Published var error: Error?
     @Published var lastLoggedFoodId: Int? = nil
+    @Published var showToast = false
 
     
     private let networkManager: NetworkManager
@@ -233,6 +234,16 @@ func loadMoreFoods(refresh: Bool = false) {
                 )
                 self.cacheFoods(response, forPage: 1)
                 print("💾 Cached first page with IDs: \(firstPageFoods.map { $0.foodLogId })")
+                
+                withAnimation {
+                    self.showToast = true
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        self.showToast = false
+                    }
+                }
                 
                 completion(.success(loggedFood))
                 

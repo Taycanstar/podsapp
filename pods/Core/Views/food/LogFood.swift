@@ -12,10 +12,10 @@ struct LogFood: View {
     @State private var selectedFoodTab: FoodTab = .all
     @State private var searchResults: [Food] = []
     @State private var isSearching = false
-    // We’re handling per‑row checkmarks in the FoodRow subview.
+    // We're handling per‑row checkmarks in the FoodRow subview.
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
-    @State private var showToast = false
+
     
     enum FoodTab: Hashable {
         case all, meals, recipes, foods
@@ -101,7 +101,7 @@ struct LogFood: View {
                                  .listRowSeparator(.hidden) 
                             
         ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
-                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, showToast: $showToast)
+                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal)
                             .onAppear {
                           
                                 foodManager.loadMoreIfNeeded(food: loggedFood)
@@ -111,7 +111,7 @@ struct LogFood: View {
                                 
                             } else {
                                 ForEach(searchResults) { food in
-                                    FoodRow(food: food, selectedMeal: $selectedMeal, showToast: $showToast )
+                                    FoodRow(food: food, selectedMeal: $selectedMeal)
                                 }
                             }
                         }
@@ -176,21 +176,27 @@ struct LogFood: View {
             Text(errorMessage)
         }
 
-      if showToast {
-    Text("Food logged successfully")
-    .font(.system(size: 14))
-        .foregroundColor(.primary)
-        .frame(maxWidth: .infinity)  // Make it extend full width
-        .padding(.vertical, 16)
-        .background(Material.ultraThin)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)  // 30px margins on sides
-        .padding(.bottom, 65)  // Above tab bar
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-}
+                    if foodManager.showToast {
+                    Text("Food logged successfully")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(.label))  // Adapt to color scheme
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            Material.ultraThin,  // Apply the glass effect
+                            in: RoundedRectangle(cornerRadius: 12)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(.label).opacity(0.7), lineWidth: 1)  // Add a border for contrast
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 65)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                }
     }
-    }
-    
+                
     // MARK: - Search
     private func searchFoods() async {
         guard !searchText.isEmpty else {
@@ -221,7 +227,6 @@ struct FoodRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
-     @Binding var showToast: Bool
     
     var body: some View {
         ZStack {
@@ -290,14 +295,14 @@ struct FoodRow: View {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
                 withAnimation { 
-                    showToast = true
+                   
                     checkmarkVisible = true 
                     }
                 // foodManager.refresh()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation { 
                         checkmarkVisible = false
-                        showToast = false
+                        
                          }
                 }
             case .failure(let error):
@@ -317,13 +322,12 @@ struct HistoryRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var errorMessage: String = ""
     @State private var showErrorAlert: Bool = false
-    @Binding var showToast: Bool
+    
     
     var body: some View {
         FoodRow(
             food: loggedFood.food.asFood,
-            selectedMeal: selectedMeal,
-            showToast: $showToast)
+            selectedMeal: selectedMeal)
         
 
     }
