@@ -417,7 +417,10 @@ private func onCancelActivity() {
                 values = existingValues
             }
             
-            if column.type == "number" {
+            if column.name == "Set" {
+                // Automatically assign the next set number
+                values.append(.number(Double(values.count + 1)))
+            } else if column.type == "number" {
                 if case .number(1.0) = values.first {
                     values.append(.number(Double(values.count + 1)))
                 } else {
@@ -439,10 +442,18 @@ private func onCancelActivity() {
                case .array(var array) = values,
                index < array.count {
                 array.remove(at: index)
+                
+                // Renumber sets if the column is named "Set"
+                if column.name == "Set" {
+                    for i in 0..<array.count {
+                        array[i] = .number(Double(i + 1))
+                    }
+                }
+                
                 columnValues[itemId]?[String(column.id)] = .array(array)
             }
         }
-        
+
         let groupType = columnGroup.first?.groupingType ?? ""
         if let currentCount = groupedRowsCounts[itemId]?[groupType],
            currentCount > 0 {
