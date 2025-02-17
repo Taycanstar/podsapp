@@ -87,6 +87,7 @@ class FoodService {
 
 // For logged foods from our database
 struct LoggedFoodItem: Codable {
+    let fdcId: Int 
     let displayName: String
     let calories: Double
     let servingSizeText: String
@@ -104,35 +105,35 @@ struct LoggedFood: Codable, Identifiable {
     var id: Int { foodLogId }
 }
 
-// struct LoggedFood: Codable, Identifiable {
-//     let status: String
-//     let foodLogId: Int
-//     let calories: Double 
-//     let message: String
-//     let food: Food 
-//     let meal: String
 
-    
-//     // Computed property to satisfy Identifiable
-//     var id: Int { foodLogId }
-    
-//     // enum CodingKeys: String, CodingKey {
-//     //     case status
-//     //     case foodLogId = "food_log_id"
-//     //     case calories
-//     //     case message
-//     // }
 
-//        // Add computed properties to match Food display
-//     var displayName: String {
-//         food.displayName
-//     }
-    
-//     var servingSizeText: String {
-//         food.servingSizeText
-//     }
-    
-//     var brandText: String? {
-//         food.brandText
-//     }
-// }
+// Add this struct to your models
+struct FoodLogsResponse: Codable {
+    let foodLogs: [LoggedFood]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+}
+
+extension LoggedFoodItem {
+    var asFood: Food {
+        Food(
+            fdcId: self.fdcId,  // Use the actual USDA/external id here instead of 0.
+            description: displayName,
+            brandOwner: nil,
+            brandName: brandText,
+            servingSize: nil,
+            servingSizeUnit: nil,
+            householdServingFullText: servingSizeText,
+            foodNutrients: [
+                Nutrient(
+                    nutrientName: "Energy",
+                    value: calories,
+                    unitName: "kcal"
+                )
+            ],
+            foodMeasures: []
+        )
+    }
+}
+

@@ -27,7 +27,7 @@ enum NetworkError: Error {
 class NetworkManager {
  
 //   let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.79:8000"
+  let baseUrl = "http://192.168.1.92:8000"
 //    let baseUrl = "http://172.20.10.3:8000"
 
     
@@ -4880,89 +4880,93 @@ class NetworkManager {
     }.resume()
 }
 
-    func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/get-food-logs/") else {
-            completion(.failure(NetworkError.invalidURL))
+    // func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
+    //     guard let url = URL(string: "\(baseUrl)/get-food-logs/") else {
+    //         completion(.failure(NetworkError.invalidURL))
+    //         return
+    //     }
+        
+    //     var request = URLRequest(url: url)
+    //     request.httpMethod = "GET"
+    //     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+    //     // Add user email to query params
+    //     let queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+    //     request.url?.append(queryItems: queryItems)
+        
+    //     URLSession.shared.dataTask(with: request) { data, response, error in
+    //         if let error = error {
+    //             completion(.failure(error))
+    //             return
+    //         }
+            
+    //         guard let data = data else {
+    //             completion(.failure(NetworkError.noData))
+    //             return
+    //         }
+            
+    //         do {
+    //             let decoder = JSONDecoder()
+    //             decoder.keyDecodingStrategy = .convertFromSnakeCase  // Add this line
+    //             let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
+    //             completion(.success(loggedFoods))
+    //         } catch {
+    //             print("Decoding error: \(error)")
+    //             if let jsonString = String(data: data, encoding: .utf8) {
+    //                 print("Received JSON:", jsonString)
+    //             }
+    //             completion(.failure(error))
+    //         }
+    //     }.resume()
+    // }
+
+    func getFoodLogs(userEmail: String, page: Int = 1, completion: @escaping (Result<FoodLogsResponse, Error>) -> Void) {
+    guard var urlComponents = URLComponents(string: "\(baseUrl)/get-food-logs/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    urlComponents.queryItems = [
+        URLQueryItem(name: "user_email", value: userEmail),
+        URLQueryItem(name: "page", value: String(page))
+    ]
+    
+    guard let url = urlComponents.url else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
             return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
         
-        // Add user email to query params
-        let queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
-        request.url?.append(queryItems: queryItems)
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let response = try decoder.decode(FoodLogsResponse.self, from: data)
+            completion(.success(response))
+        } catch {
+            print("Decoding error: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Received JSON:", jsonString)
             }
-            
-            guard let data = data else {
-                completion(.failure(NetworkError.noData))
-                return
-            }
-            
-            do {
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase  // Add this line
-                let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
-                completion(.success(loggedFoods))
-            } catch {
-                print("Decoding error: \(error)")
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Received JSON:", jsonString)
-                }
-                completion(.failure(error))
-            }
-        }.resume()
-    }
+            completion(.failure(error))
+        }
+    }.resume()
+}
 
-//     func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
-//     // Use URLComponents to construct the URL with query parameters
-//     guard var urlComponents = URLComponents(string: "\(baseUrl)/get-food-logs/") else {
-//         completion(.failure(NetworkError.invalidURL))
-//         return
-//     }
-    
-//     urlComponents.queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
-    
-//     guard let url = urlComponents.url else {
-//         completion(.failure(NetworkError.invalidURL))
-//         return
-//     }
-    
-//     var request = URLRequest(url: url)
-//     request.httpMethod = "GET"
-//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    
-//     URLSession.shared.dataTask(with: request) { data, response, error in
-//         if let error = error {
-//             completion(.failure(error))
-//             return
-//         }
-        
-//         guard let data = data else {
-//             completion(.failure(NetworkError.noData))
-//             return
-//         }
-        
-//         do {
-//             let decoder = JSONDecoder()
-//             decoder.keyDecodingStrategy = .convertFromSnakeCase
-//             let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
-//             completion(.success(loggedFoods))
-//         } catch {
-//             print("Decoding error: \(error)")
-//             if let jsonString = String(data: data, encoding: .utf8) {
-//                 print("Received JSON:", jsonString)
-//             }
-//             completion(.failure(error))
-//         }
-//     }.resume()
-// }
+
    
 }
 

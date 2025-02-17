@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct LogFood: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
@@ -14,6 +15,7 @@ struct LogFood: View {
     // We’re handling per‑row checkmarks in the FoodRow subview.
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
+    @State private var showToast = false
     
     enum FoodTab: Hashable {
         case all, meals, recipes, foods
@@ -59,6 +61,7 @@ struct LogFood: View {
     }
     
     var body: some View {
+          ZStack(alignment: .bottom) {
         VStack(spacing: 0) {
             // Horizontal tab panel
             ScrollView(.horizontal, showsIndicators: false) {
@@ -94,41 +97,43 @@ struct LogFood: View {
                             Text("History")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .padding(.vertical, 8)
+                                .padding(.top, 8)
                                  .listRowSeparator(.hidden) 
                             
-                            ForEach(foodManager.loggedFoods) { loggedFood in
-                                HistoryRow(
-                                    loggedFood: loggedFood,
-                                    selectedMeal: $selectedMeal
-                                )
+        ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
+                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, showToast: $showToast)
+                            .onAppear {
+                          
+                                foodManager.loadMoreIfNeeded(food: loggedFood)
+                            }
+                    }
+                                }
+                                
+                            } else {
+                                ForEach(searchResults) { food in
+                                    FoodRow(food: food, selectedMeal: $selectedMeal, showToast: $showToast )
+                                }
                             }
                         }
+                        .listStyle(.plain)
+                        .safeAreaInset(edge: .bottom) {
+                            Color.clear.frame(height: 60)
+                        }
                     } else {
-                        ForEach(searchResults) { food in
-                            FoodRow(food: food, selectedMeal: $selectedMeal)
+                        // Content for other tabs
+                        switch selectedFoodTab {
+                        case .meals:
+                            Text("Meals content")
+                        case .recipes:
+                            Text("Recipes content")
+                        default:
+                            EmptyView()
                         }
                     }
+                    
+                    Spacer()
                 }
-                .listStyle(.plain)
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 60)
-                }
-            } else {
-                // Content for other tabs
-                switch selectedFoodTab {
-                case .meals:
-                    Text("Meals content")
-                case .recipes:
-                    Text("Recipes content")
-                default:
-                    EmptyView()
-                }
-            }
-            
-            Spacer()
-        }
-     
+       
         .edgesIgnoringSafeArea(.horizontal)
         .searchable(text: $searchText, prompt: selectedFoodTab.searchPrompt)
         .onChange(of: searchText) { _ in
@@ -170,6 +175,20 @@ struct LogFood: View {
         } message: {
             Text(errorMessage)
         }
+
+      if showToast {
+    Text("Food logged successfully")
+    .font(.system(size: 14))
+        .foregroundColor(.primary)
+        .frame(maxWidth: .infinity)  // Make it extend full width
+        .padding(.vertical, 16)
+        .background(Material.ultraThin)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)  // 30px margins on sides
+        .padding(.bottom, 65)  // Above tab bar
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+}
+    }
     }
     
     // MARK: - Search
@@ -188,120 +207,10 @@ struct LogFood: View {
         }
         isSearching = false
     }
+
+    
 }
 
-// MARK: - FoodRow (for search results)
-// struct FoodRow: View {
-//     @EnvironmentObject var foodManager: FoodManager
-//     @EnvironmentObject var viewModel: OnboardingViewModel
-//     let food: Food
-//     let selectedMeal: Binding<String>
-//     @State private var checkmarkVisible: Bool = false
-//     @State private var showErrorAlert: Bool = false
-//     @State private var errorMessage: String = ""
-    
-//     var body: some View {
-//         ZStack {
-//             NavigationLink(value: FoodNavigationDestination.foodDetails(food, selectedMeal)) {
-//                 EmptyView()
-//             }
-//             .opacity(0)
-            
-//             HStack {
-//                 VStack(alignment: .leading, spacing: 4) {
-//                     Text(food.displayName)
-//                         .font(.headline)
-//                     HStack {
-//                         if let calories = food.calories {
-//                             Text("\(Int(calories)) cal")
-//                         }
-//                         Text("•")
-//                         Text(food.servingSizeText)
-//                         if let brand = food.brandText {
-//                             Text("•")
-//                             Text(brand)
-//                         }
-//                     }
-//                     .font(.subheadline)
-//                     .foregroundColor(.gray)
-//                 }
-//                 Spacer()
-//                 Button {
-//                     HapticFeedback.generate()
-//                     logFood()
-//                 } label: {
-//                     if checkmarkVisible {
-//                         Image(systemName: "checkmark.circle.fill")
-//                             .font(.system(size: 24))
-//                             .foregroundColor(.green)
-//                             .transition(.opacity)
-//                     } else {
-//                         Image(systemName: "plus.circle.fill")
-//                             .font(.system(size: 24))
-//                             .foregroundColor(.accentColor)
-//                     }
-//                 }
-//                 .buttonStyle(PlainButtonStyle())
-//             }
-//             .contentShape(Rectangle())
-//         }
-//         .alert("Something went wrong", isPresented: $showErrorAlert) {
-//             Button("OK", role: .cancel) { }
-//         } message: {
-//             Text(errorMessage)
-//         }
-//     }
-    
-//    private func logFood() {
-//         foodManager.logFood(
-//             email: viewModel.email,
-//             food: food,
-//             meal: selectedMeal.wrappedValue,
-//             servings: 1,
-//             date: Date(),
-//             notes: nil
-//         ) { result in
-//             switch result {
-//             case .success(let loggedFood):
-//                 print("Food logged successfully: \(loggedFood)")
-//                 withAnimation { checkmarkVisible = true }
-//                 // Refresh the logged foods list
-//                 foodManager.refreshLoggedFoods(email: viewModel.email)
-//                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//                     withAnimation { checkmarkVisible = false }
-//                 }
-//             case .failure(let error):
-//                 print("Error logging food: \(error)")
-//                 errorMessage = "An error occurred while logging. Try again."
-//                 showErrorAlert = true
-//             }
-//         }
-//     }
-// }
-
-// MARK: - HistoryRow (for logged foods)
-// Since LoggedFood has no 'displayName' or 'servingSizeText', we use its available properties.
-// struct HistoryRow: View {
-//     let loggedFood: LoggedFood
-    
-//     var body: some View {
-//         HStack {
-//             VStack(alignment: .leading, spacing: 4) {
-//                 // Use the logged message as the title
-//                 Text(loggedFood.message)
-//                     .font(.headline)
-//                 HStack {
-//                     Text("\(Int(loggedFood.calories)) cal")
-//                     Text("•")
-//                     Text("Log ID: \(loggedFood.foodLogId)")
-//                 }
-//                 .font(.subheadline)
-//                 .foregroundColor(.gray)
-//             }
-//             Spacer()
-//         }
-//     }
-// }
 
 
 struct FoodRow: View {
@@ -312,6 +221,7 @@ struct FoodRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
+     @Binding var showToast: Bool
     
     var body: some View {
         ZStack {
@@ -345,7 +255,7 @@ struct FoodRow: View {
                     HapticFeedback.generate()
                     logFood()
                 } label: {
-                    if checkmarkVisible {
+                    if foodManager.lastLoggedFoodId  == food.fdcId {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 24))
                             .foregroundColor(.green)
@@ -379,10 +289,16 @@ struct FoodRow: View {
             switch result {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
-                withAnimation { checkmarkVisible = true }
-                foodManager.refreshLoggedFoods(email: viewModel.email)
+                withAnimation { 
+                    showToast = true
+                    checkmarkVisible = true 
+                    }
+                // foodManager.refresh()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation { checkmarkVisible = false }
+                    withAnimation { 
+                        checkmarkVisible = false
+                        showToast = false
+                         }
                 }
             case .failure(let error):
                 print("Error logging food: \(error)")
@@ -401,33 +317,15 @@ struct HistoryRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var errorMessage: String = ""
     @State private var showErrorAlert: Bool = false
+    @Binding var showToast: Bool
     
     var body: some View {
         FoodRow(
             food: loggedFood.food.asFood,
-            selectedMeal: selectedMeal
-        )
+            selectedMeal: selectedMeal,
+            showToast: $showToast)
+        
+
     }
 }
 
-extension LoggedFoodItem {
-    var asFood: Food {
-        Food(
-            fdcId: 0,  // Local food
-            description: displayName,
-            brandOwner: nil,
-            brandName: brandText,
-            servingSize: nil,
-            servingSizeUnit: nil,
-            householdServingFullText: servingSizeText,
-            foodNutrients: [
-                Nutrient(
-                    nutrientName: "Energy",
-                    value: calories,
-                    unitName: "kcal"
-                )
-            ],
-            foodMeasures: []
-        )
-    }
-}
