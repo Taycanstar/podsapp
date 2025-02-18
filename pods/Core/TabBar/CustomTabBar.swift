@@ -49,8 +49,8 @@ struct CustomTabBar: View {
                         .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
 
                 }
-               .padding(.horizontal, 26)
-                // .padding(.horizontal, 46)
+            //    .padding(.horizontal, 26)
+                .padding(.horizontal, 46)
                 .padding(.top, 11)
                 .background(Material.ultraThin)
 
