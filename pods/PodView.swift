@@ -702,24 +702,68 @@ struct PodView: View {
         }
     }
     
-    func onActivityLogged(newLog: PodItemActivityLog) {
-          showTemporaryCheckmark(for: newLog.itemId)
+    // func onActivityLogged(newLog: PodItemActivityLog) {
+    //       showTemporaryCheckmark(for: newLog.itemId)
           
-          // Update the reorderedItems and pod.items
-          if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
-              if self.reorderedItems[itemIndex].columnValues == nil {
-                  self.reorderedItems[itemIndex].columnValues = [:]
-              }
+    //       // Update the reorderedItems and pod.items
+    //       if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
+    //           if self.reorderedItems[itemIndex].columnValues == nil {
+    //               self.reorderedItems[itemIndex].columnValues = [:]
+    //           }
               
-              for (key, value) in newLog.columnValues {
-                  self.reorderedItems[itemIndex].columnValues?[key] = value
-              }
+    //           for (key, value) in newLog.columnValues {
+    //               self.reorderedItems[itemIndex].columnValues?[key] = value
+    //           }
               
-              if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
-                  self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
-              }
-          }
-      }
+    //           if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
+    //               self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
+    //           }
+    //       }
+    //   }
+
+func onActivityLogged(newLog: PodItemActivityLog) {
+    showTemporaryCheckmark(for: newLog.itemId)
+    
+    if let itemIndex = self.reorderedItems.firstIndex(where: { $0.id == newLog.itemId }) {
+        // If the new log indicates that no column values remain, reset to defaults.
+        print("Before updating global model, item \(newLog.itemId) columnValues:", self.reorderedItems[itemIndex].columnValues ?? "nil")
+        if newLog.columnValues.isEmpty {
+            self.reorderedItems[itemIndex].columnValues = [:]
+            // For each grouped column, initialize the default as an array.
+            for column in pod.columns where column.groupingType == "grouped" {
+                let key = String(column.id)
+                if column.name == "Set" {
+                    self.reorderedItems[itemIndex].columnValues?[key] = .array([.number(1.0)])
+                } else {
+                    self.reorderedItems[itemIndex].columnValues?[key] = .array([.null])
+                }
+            }
+        } else {
+            // Otherwise, update the existing columnValues.
+            if self.reorderedItems[itemIndex].columnValues == nil {
+                self.reorderedItems[itemIndex].columnValues = [:]
+            }
+            for (key, value) in newLog.columnValues {
+                // If the value isn’t already an array, wrap it in one.
+                if case .array(_) = value {
+                    self.reorderedItems[itemIndex].columnValues?[key] = value
+                } else {
+                    self.reorderedItems[itemIndex].columnValues?[key] = .array([value])
+                }
+            }
+        }
+        
+        // Sync changes back to the global pod model.
+        if let podItemIndex = self.pod.items.firstIndex(where: { $0.id == newLog.itemId }) {
+            self.pod.items[podItemIndex].columnValues = self.reorderedItems[itemIndex].columnValues
+        }
+        
+        // Debug print to confirm the update.
+        print("onActivityLogged: After update, item \(newLog.itemId) columnValues:",
+              self.reorderedItems[itemIndex].columnValues ?? "nil")
+    }
+}
+
 
     private func refreshItem(with id: Int) {
         networkManager.fetchPodItem(podId: pod.id, itemId: id, userEmail: viewModel.email) { result in

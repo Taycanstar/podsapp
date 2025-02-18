@@ -2,6 +2,7 @@
 
 import SwiftUI
 
+
 struct GroupedColumnActivityView: View {
     let itemId: Int
     let columnGroup: [PodColumn]
@@ -15,13 +16,15 @@ struct GroupedColumnActivityView: View {
     
     let onValueChanged: () -> Void
     @State private var rows: [Int] = []
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // The header row (column names)
             GroupedColumnHeaderView(columnGroup: columnGroup)
+
             List {
-                ForEach(0..<groupedRowsCount, id: \.self) { rowIdx in
+                // If groupedRowsCount == 0, we display 1 row *visually*, but do *not* call onAddRow in the model.
+                // ForEach(0 ..< max(1, groupedRowsCount), id: \.self) { rowIdx in
+                ForEach(0 ..< groupedRowsCount, id: \.self) { rowIdx in
                     GroupedColumnRowActivityView(
                         itemId: itemId,
                         columnGroup: columnGroup,
@@ -29,52 +32,38 @@ struct GroupedColumnActivityView: View {
                         columnValues: $columnValues,
                         focusedField: focusedField,
                         expandedColumn: $expandedColumn,
-//                        onDelete: { onDeleteRow(rowIdx) },
                         onDelete: {
-                                                   withAnimation {
-                                                       rows.removeAll(where: { $0 == rowIdx })
-                                                       onDeleteRow(rowIdx)
-                                                   }
-                                               },
+                            withAnimation {
+                                rows.removeAll { $0 == rowIdx }
+                                onDeleteRow(rowIdx)
+                            }
+                        },
                         onValueChanged: onValueChanged
                     )
                     .listRowInsets(EdgeInsets())
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
-                        .listStyle(PlainListStyle())
-                        .frame(minHeight: CGFloat(rows.count * 50)) 
-                   
-          
-            
-//            // "Add Row" button at bottom
-//            Button(action: onAddRow) {
-//                Text("Add Row")
-//                    .foregroundColor(.accentColor)
-//            }
+            .listStyle(PlainListStyle())
+            .frame(minHeight: CGFloat(rows.count * 50))
+
             Button(action: {
-                          withAnimation {
-                              rows.append(groupedRowsCount)
-                              onAddRow()
-                          }
-                      }) {
-                          Text("Add Row")
-                              .foregroundColor(.accentColor)
-                      }
+                withAnimation {
+                    rows.append(groupedRowsCount)
+                    onAddRow()
+                }
+            }) {
+                Text("Add Row")
+                    .foregroundColor(.accentColor)
+            }
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
         }
-        .padding(.top, 5)
         .onAppear {
-            // Initialize with at least one row, or use existing count if greater
-            let initialRowCount = max(1, groupedRowsCount)
-            rows = Array(0..<initialRowCount)
-            
-            // If no rows exist in the data, add one
-            if groupedRowsCount == 0 {
-                onAddRow()
-            }
+            // Don’t store a default row in the model if it's empty!
+            // Just show 1 placeholder visually in the UI.
+            rows = Array(0 ..< max(1, groupedRowsCount))
         }
     }
 }
@@ -158,6 +147,7 @@ struct GroupedColumnInputActivityView: View {
                     }
                     mutable[rowIndex] = .string(newVal)
                     columnValues[colID] = .array(mutable)
+                    print("Updated column \(colID) for item \(itemId) at row \(rowIndex) to: \(mutable)")
                     onValueChanged()
                 }
             )

@@ -293,9 +293,9 @@ private func handleFinish() {
             }
         }
         
-        if itemColumnValues.isEmpty || !hasValidValues {
-            return nil
-        }
+        // if itemColumnValues.isEmpty || !hasValidValues {
+        //     return nil
+        // }
         return (id: item.id, notes: nil, columnValues: itemColumnValues.mapValues { convertColumnValueToAny($0) })
     }
     
@@ -373,100 +373,6 @@ private func handleFinish() {
     }
 }
 
-
-    // private func handleFinish() {
-    //     guard !isCreatingActivity else { return }
-    //     isCreatingActivity = true
-        
-    //     let endTime = Date()
-    //     let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
-    //     let duration = Int(activityState.stopwatch.elapsedTime)
-        
-    //     print("Preparing to create activity...")
-        
-    //     // Prepare items data for the backend
-    //     let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
-    //         let values = columnValues[item.id] ?? [:]
-    //         let convertedValues = values.mapValues { value in
-    //             convertColumnValueToAny(value)
-    //         }
-    //         return (
-    //             id: item.id,
-    //             notes: nil,
-    //             columnValues: convertedValues
-    //         )
-    //     }
-        
-    //     // Step 1: Create a temporary activity with a unique negative temporary ID
-    //     let tempId = Int.random(in: Int.min ... -1) // Unique negative ID
-    //     let tempActivity = Activity(
-    //         id: tempId, // Temporary negative ID
-    //         podId: pod.id,
-    //         podTitle: pod.title,
-    //         userEmail: viewModel.email,
-    //         userName: viewModel.username, // Ensure 'userName' is available in viewModel
-    //         duration: duration,
-    //         loggedAt: startTime,
-    //         notes: activityNotes.isEmpty ? nil : activityNotes,
-    //         isSingleItem: false,
-    //         items: items.map { item in
-    //             ActivityItem(
-    //                 id: Int.random(in: Int.min ... -1), // Unique negative ID for ActivityItem
-    //                 activityId: tempId, // Link to the temporary activity
-    //                 itemId: item.id, // Assuming 'item.id' corresponds to 'pod_item.id'
-    //                 itemLabel: item.metadata, // Use 'metadata' instead of 'label'
-    //                 loggedAt: startTime,
-    //                 notes: nil, // 'notes' is optional
-    //                 columnValues: columnValues[item.id] ?? [:]
-    //             )
-    //         }
-    //     )
-        
-    //     // Step 2: Insert the temporary activity into ActivityManager's activities array
-    //     activityManager.activities.insert(tempActivity, at: 0)
-    //     print("Inserted temporary activity with ID: \(tempId)")
-        
-    //     // Step 3: Dismiss ActivityView immediately to show the temporary activity in ActivityLogView
-    //     dismiss()
-    //     print("Dismissed ActivityView to show temporary activity.")
-        
-    //     // Step 4: Call onActivityFinished to navigate to ActivitySummaryView immediately
-    //     onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
-    //     print("Called onActivityFinished to navigate to ActivitySummaryView.")
-
-    //     print("Column values before creating activity:", columnValues)
-    //     print("Items data being sent to backend:", itemsData)
-        
-    //     // Step 5: Perform the network request to create the activity on the backend, passing tempId
-    //     activityManager.createActivity(
-    //         duration: duration,
-    //         notes: activityNotes.isEmpty ? nil : activityNotes,
-    //         items: itemsData,
-    //         tempId: tempId // Pass tempId here
-    //     ) { result in
-    //         DispatchQueue.main.async {
-    //             switch result {
-    //             case .success(let actualActivity):
-    //                 // ActivityManager handles replacing the temp activity
-    //                 activityState.finishActivity()
-    //                 print("Activity creation completed.")
-    //                 isCreatingActivity = false
-                    
-    //             case .failure(let error):
-    //                 // Step 5B: Remove the temporary activity and notify the user
-    //                 activityManager.activities.removeAll { $0.id == tempId }
-    //                 print("Failed to create activity on backend, removed temporary activity ID: \(tempId)")
-    //                 isCreatingActivity = false
-    //                 // Optionally, handle error notification here or in ActivitySummaryView
-    //                 // showErrorAlert(message: "Failed to create activity. Please try again.")
-    //             }
-    //         }
-    //     }
-    // }
-
-
-
-
     
     private func clearFocusedField() {
         guard let fieldID = focusedField else { return }
@@ -504,92 +410,147 @@ private func handleFinish() {
         )
     }
     
-    func initializeColumnValues() {
-        for item in items {
-            var itemColumnValues = item.columnValues ?? [:]
-            
-            var rowCounts: [String: Int] = [:]
-            for column in podColumns where column.groupingType == "grouped" {
-                let columnId = String(column.id)
-                
-                // If no values exist for this column, initialize with empty array
-                if itemColumnValues[columnId] == nil {
-                    if column.name == "Set" {
-                        // Initialize "Set" column with a value of 1
-                        itemColumnValues[columnId] = .array([.number(1)])
-                    } else {
-                        // Initialize other grouped columns with a null value
-                        itemColumnValues[columnId] = .array([.null])
-                    }
-                    rowCounts[column.groupingType ?? ""] = 1
-                } else if case .array(let array) = itemColumnValues[columnId] {
-                    rowCounts[column.groupingType ?? ""] = array.count
-                }
-            }
-            
-            columnValues[item.id] = itemColumnValues
-            groupedRowsCounts[item.id] = rowCounts
-        }
-        
-        // Debug print to verify initialization
-        print("Initialized column values:", columnValues)
-    }
-    
-    private func addRow(for columnGroup: [PodColumn], itemId: Int) {
-        let groupType = columnGroup.first?.groupingType ?? ""
-        let currentRowIndex = groupedRowsCounts[itemId]?[groupType] ?? 1
-        
-        for column in columnGroup {
-            let currentValue = columnValues[itemId]?[String(column.id)] ?? .array([])
-            var values: [ColumnValue] = []
-            
-            if case .array(let existingValues) = currentValue {
-                values = existingValues
-            }
-            
-            if column.name == "Set" {
-                // Automatically assign the next set number
-                values.append(.number(Double(values.count + 1)))
-            } else if column.type == "number" {
-                if case .number(1.0) = values.first {
-                    values.append(.number(Double(values.count + 1)))
-                } else {
-                    values.append(values.last ?? .null)
-                }
-            } else {
-                values.append(values.last ?? .null)
-            }
-            
-            columnValues[itemId]?[String(column.id)] = .array(values)
-        }
-        
-        groupedRowsCounts[itemId]?[groupType] = currentRowIndex + 1
-    }
-    
-    private func deleteRow(at index: Int, in columnGroup: [PodColumn], itemId: Int) {
-        for column in columnGroup {
-            if var values = columnValues[itemId]?[String(column.id)],
-               case .array(var array) = values,
-               index < array.count {
-                array.remove(at: index)
-                
-                // Renumber sets if the column is named "Set"
-                if column.name == "Set" {
-                    for i in 0..<array.count {
-                        array[i] = .number(Double(i + 1))
-                    }
-                }
-                
-                columnValues[itemId]?[String(column.id)] = .array(array)
-            }
-        }
 
-        let groupType = columnGroup.first?.groupingType ?? ""
-        if let currentCount = groupedRowsCounts[itemId]?[groupType],
-           currentCount > 0 {
-            groupedRowsCounts[itemId]?[groupType] = currentCount - 1
+func initializeColumnValues() {
+    for item in items {
+        var itemColumnValues = item.columnValues ?? [:]
+        var rowCounts: [String: Int] = [:]
+        
+        // For each grouped column
+        for column in podColumns where column.groupingType == "grouped" {
+            let key = String(column.id)
+            
+            if let existingVal = itemColumnValues[key] {
+                // If we do have some data for this column:
+                if case .array(let arr) = existingVal {
+                    
+                    if arr.isEmpty {
+                        // Force at least 1 row
+                        if column.name == "Set" {
+                            itemColumnValues[key] = .array([.number(1.0)])
+                        } else {
+                            itemColumnValues[key] = .array([.null])
+                        }
+                        rowCounts[column.groupingType ?? ""] = 1
+                    } else {
+                        // The array is non-empty; use its count
+                        rowCounts[column.groupingType ?? ""] = arr.count
+                    }
+                } else {
+                    // The stored value is not an array—wrap it in an array
+                    itemColumnValues[key] = .array([existingVal])
+                    rowCounts[column.groupingType ?? ""] = 1
+                }
+                
+            } else {
+                // This item has no stored value for this column—init with 1 row
+                if column.name == "Set" {
+                    itemColumnValues[key] = .array([.number(1.0)])
+                } else {
+                    itemColumnValues[key] = .array([.null])
+                }
+                rowCounts[column.groupingType ?? ""] = 1
+            }
         }
+        
+        // Save updated values
+        columnValues[item.id] = itemColumnValues
+        groupedRowsCounts[item.id] = rowCounts
     }
+    
+    print("Initialized column values:", columnValues)
+}
+
+
+
+    
+   
+  private func addRow(for columnGroup: [PodColumn], itemId: Int) {
+    let groupType = columnGroup.first?.groupingType ?? ""
+    let currentRowIndex = groupedRowsCounts[itemId]?[groupType] ?? 1
+
+  
+    
+    for column in columnGroup {
+        let currentValue = columnValues[itemId]?[String(column.id)] ?? .array([])
+        var values: [ColumnValue] = []
+        
+        if case .array(let existingValues) = currentValue {
+            values = existingValues
+        }
+     
+        if column.name == "Set" {
+            if values.isEmpty {
+                values = [.number(1.0)]  // Initialize with 1 if empty
+            }
+            values.append(.number(Double(values.count + 1)))
+        } else if column.type == "number" {
+            if values.isEmpty {
+                values = [.number(0)]  // Initialize with 0 if empty
+            }
+            values.append(values.last ?? .number(0))
+        } else {
+            if values.isEmpty {
+                values = [.null]  // Initialize with null if empty
+            }
+            values.append(values.last ?? .null)
+        }
+ 
+        columnValues[itemId]?[String(column.id)] = .array(values)
+    }
+    
+    groupedRowsCounts[itemId]?[groupType] = currentRowIndex + 1
+    print("After updating row count, groupedRowsCounts[\(itemId)][\(groupType)] = \(groupedRowsCounts[itemId]?[groupType] ?? 0)")
+}
+    
+   
+private func deleteRow(at index: Int, in columnGroup: [PodColumn], itemId: Int) {
+    for column in columnGroup {
+        let colKey = String(column.id)
+        guard var colValue = columnValues[itemId]?[colKey],
+              case .array(var arr) = colValue,
+              index < arr.count
+        else {
+            print("No array value found for item \(itemId), column \(colKey) to delete from")
+            continue
+        }
+        
+        print("Deleting row \(index) for item \(itemId), column \(colKey) – original array: \(arr)")
+        arr.remove(at: index)
+        
+        // If we remove the last row, let the array become empty (so the global model sees “no value”).
+        // That way, summary sees it as not logged.
+        if arr.isEmpty {
+            print("Array is empty after deletion => storing empty array in global model.")
+        } else if column.name == "Set" {
+            // If it’s a Set column, renumber any remaining rows from 1..
+            for i in 0..<arr.count {
+                arr[i] = .number(Double(i + 1))
+            }
+        }
+        
+        columnValues[itemId]?[colKey] = .array(arr)
+        print("After deletion, new array for item \(itemId), column \(colKey): \(arr)")
+    }
+    
+    // For the UI: if the array becomes empty, we still want to *display* 1 row.
+    let groupType = columnGroup.first?.groupingType ?? ""
+    if let firstColumn = columnGroup.first {
+        let firstKey = String(firstColumn.id)
+        if let val = columnValues[itemId]?[firstKey],
+           case .array(let arr) = val {
+            // If the array is empty, we set row count = 0, and the UI code will treat 0 as “display 1 row.”
+            groupedRowsCounts[itemId]?[groupType] = arr.count
+            print("Updated row count for item \(itemId) in group \(groupType) to: \(arr.count)")
+        }
+    } else {
+        groupedRowsCounts[itemId]?[groupType] = 0
+    }
+}
+
+
+
+
 
 
 }

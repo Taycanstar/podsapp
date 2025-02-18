@@ -67,6 +67,7 @@ struct HomePodView: View {
     @State private var showCountdown: Bool = false
     @Binding var navigationPath: NavigationPath
 
+
     var networkManager: NetworkManager = NetworkManager()
 
     // MARK: - Computed Properties
@@ -96,7 +97,7 @@ struct HomePodView: View {
                     //     fetchFullPodDetails(showLoadingIndicator: true)
                     // }
                 } else {
-                    // Data is complete – display the list view.
+                   
                     VStack(spacing: 0) {
                         listView
                     }
@@ -105,12 +106,26 @@ struct HomePodView: View {
                                            footerView
                                        }
                     }
-//                    .padding(.bottom, keyboardOffset)
+
                 }
             } else {
                 Text("Pod not found")
             }
         }
+.sheet(isPresented: $showCardSheet) {
+    if let index = selectedItemIndex {
+        CardDetailView(
+            item: .constant(reorderedItems[index]),
+            podId: podId,
+            podTitle: currentTitle,
+            podColumns: .constant(podColumns),
+            networkManager: networkManager,
+            allItems: .constant(reorderedItems),
+            visibleColumns: .constant(visibleColumns)
+        )
+    }
+}
+
         
         .navigationTitle(pod?.title ?? "Pod Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -168,6 +183,7 @@ struct HomePodView: View {
         }
 
         // Attach sheets.
+          
         .sheet(isPresented: $showPodOptionsSheet) {
             PodOptionsView(
                 showPodOptionsSheet: $showPodOptionsSheet,
@@ -290,6 +306,7 @@ struct HomePodView: View {
                 .onTapGesture {
                     selectedItemIndex = index
                     showCardSheet = true
+                    // selectedItem = item
                     HapticFeedback.generate()
                 }
                 .listRowInsets(EdgeInsets(top: 6, leading: 15, bottom: 6, trailing: 15))

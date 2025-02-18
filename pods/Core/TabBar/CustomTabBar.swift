@@ -21,13 +21,13 @@ struct CustomTabBar: View {
 
                 HStack {
                 
-                   TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
-                       .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
+                //    TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
+                //        .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                    
-                   Spacer() 
+                //    Spacer() 
                     
-                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
-                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
+                        .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                     
                     Spacer() 
 
@@ -40,10 +40,10 @@ struct CustomTabBar: View {
                     
                     Spacer() 
 
-                   TabBarButton(iconName: "person.2", label: "Friends", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
-                       .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
+                //    TabBarButton(iconName: "person.2", label: "Friends", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
+                //        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
 
-                   Spacer() 
+                //    Spacer() 
 
                     TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
                         .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
