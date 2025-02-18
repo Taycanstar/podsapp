@@ -2364,7 +2364,8 @@ struct GroupedColumnView: View {
 
     init(columnGroup: [PodColumn], groupedRowsCount: Int, onAddRow: @escaping () -> Void, onDeleteRow: @escaping (Int) -> Void, columnValues: Binding<[String: ColumnValue]>, focusedField: FocusState<String?>, expandedColumn: Binding<String?>, onValueChanged: @escaping () -> Void) {
         self.columnGroup = columnGroup
-        self._groupedRowsCount = State(initialValue: max(groupedRowsCount, 1)) // Ensure at least one row
+        // This is where we need to ensure at least one row
+        self._groupedRowsCount = State(initialValue: max(1, groupedRowsCount))  // Force at least 1 row
         self.onAddRow = onAddRow
         self.onDeleteRow = onDeleteRow
         self._columnValues = columnValues
@@ -2377,7 +2378,8 @@ struct GroupedColumnView: View {
         VStack(alignment: .leading, spacing: 10) {
             GroupedColumnHeaderView(columnGroup: columnGroup)
 
-            ForEach(0..<groupedRowsCount, id: \.self) { rowIndex in
+            // Always show at least one row
+            ForEach(0..<max(1, groupedRowsCount), id: \.self) { rowIndex in
                 GroupedColumnRowView(
                     columnGroup: columnGroup,
                     rowIndex: rowIndex,
@@ -2397,11 +2399,11 @@ struct GroupedColumnView: View {
             .padding(.top, 8)
         }
         .padding(.top, 5)
-        .onAppear {
-            if groupedRowsCount == 0 {
-                onAddRow()
-            }
-        }
+        // .onAppear {
+        //     if groupedRowsCount == 0 {
+        //         onAddRow()
+        //     }
+        // }
     }
 }
 

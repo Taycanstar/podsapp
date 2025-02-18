@@ -67,15 +67,18 @@ struct GroupedColumnActivityView: View {
         }
         .padding(.top, 5)
         .onAppear {
-            // If no rows exist, we can auto-add one if desired
-            rows = Array(0..<groupedRowsCount)
+            // Initialize with at least one row, or use existing count if greater
+            let initialRowCount = max(1, groupedRowsCount)
+            rows = Array(0..<initialRowCount)
             
+            // If no rows exist in the data, add one
             if groupedRowsCount == 0 {
                 onAddRow()
             }
         }
     }
 }
+
 
 
 struct GroupedColumnRowActivityView: View {

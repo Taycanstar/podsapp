@@ -244,8 +244,8 @@ private func onCancelActivity() {
     dismiss()
 }
 
-    
-    private func convertColumnValueToAny(_ value: ColumnValue) -> Any {
+
+        private func convertColumnValueToAny(_ value: ColumnValue) -> Any {
             switch value {
             case .number(let num):
                 return num
@@ -260,93 +260,209 @@ private func onCancelActivity() {
             }
         }
     
+private func handleFinish() {
+    guard !isCreatingActivity else { return }
+    isCreatingActivity = true
 
-    private func handleFinish() {
-        guard !isCreatingActivity else { return }
-        isCreatingActivity = true
-        
-        let endTime = Date()
-        let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
-        let duration = Int(activityState.stopwatch.elapsedTime)
-        
-        print("Preparing to create activity...")
-        
-        // Prepare items data for the backend
-        let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
-            let values = columnValues[item.id] ?? [:]
-            let convertedValues = values.mapValues { value in
-                convertColumnValueToAny(value)
+    let endTime = Date()
+    let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
+    let duration = Int(activityState.stopwatch.elapsedTime)
+    
+    // Update local items with the latest columnValues from the temporary state
+    for index in items.indices {
+        items[index].columnValues = columnValues[items[index].id] ?? [:]
+    }
+    
+    // Write back the updated items into the bound pod so the global state reflects the deletions/changes.
+    pod.items = items
+
+    print("Preparing to create activity...")
+    
+    // Prepare items data for the backend using the updated items
+    let itemsData = items.compactMap { item -> (id: Int, notes: String?, columnValues: [String: Any])? in
+        let itemColumnValues = columnValues[item.id] ?? [:]
+        // Check if this item has any valid (non-null/non-empty) values
+        let hasValidValues = itemColumnValues.values.contains { value in
+            switch value {
+            case .null:
+                return false
+            case .array(let arr):
+                return !arr.isEmpty
+            default:
+                return true
             }
-            return (
-                id: item.id,
-                notes: nil,
-                columnValues: convertedValues
-            )
         }
         
-        // Step 1: Create a temporary activity with a unique negative temporary ID
-        let tempId = Int.random(in: Int.min ... -1) // Unique negative ID
-        let tempActivity = Activity(
-            id: tempId, // Temporary negative ID
-            podId: pod.id,
-            podTitle: pod.title,
-            userEmail: viewModel.email,
-            userName: viewModel.username, // Ensure 'userName' is available in viewModel
-            duration: duration,
-            loggedAt: startTime,
-            notes: activityNotes.isEmpty ? nil : activityNotes,
-            isSingleItem: false,
-            items: items.map { item in
-                ActivityItem(
-                    id: Int.random(in: Int.min ... -1), // Unique negative ID for ActivityItem
-                    activityId: tempId, // Link to the temporary activity
-                    itemId: item.id, // Assuming 'item.id' corresponds to 'pod_item.id'
-                    itemLabel: item.metadata, // Use 'metadata' instead of 'label'
-                    loggedAt: startTime,
-                    notes: nil, // 'notes' is optional
-                    columnValues: columnValues[item.id] ?? [:]
-                )
-            }
-        )
-        
-        // Step 2: Insert the temporary activity into ActivityManager's activities array
-        activityManager.activities.insert(tempActivity, at: 0)
-        print("Inserted temporary activity with ID: \(tempId)")
-        
-        // Step 3: Dismiss ActivityView immediately to show the temporary activity in ActivityLogView
-        dismiss()
-        print("Dismissed ActivityView to show temporary activity.")
-        
-        // Step 4: Call onActivityFinished to navigate to ActivitySummaryView immediately
-        onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
-        print("Called onActivityFinished to navigate to ActivitySummaryView.")
-        
-        // Step 5: Perform the network request to create the activity on the backend, passing tempId
-        activityManager.createActivity(
-            duration: duration,
-            notes: activityNotes.isEmpty ? nil : activityNotes,
-            items: itemsData,
-            tempId: tempId // Pass tempId here
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let actualActivity):
-                    // ActivityManager handles replacing the temp activity
-                    activityState.finishActivity()
-                    print("Activity creation completed.")
-                    isCreatingActivity = false
-                    
-                case .failure(let error):
-                    // Step 5B: Remove the temporary activity and notify the user
-                    activityManager.activities.removeAll { $0.id == tempId }
-                    print("Failed to create activity on backend, removed temporary activity ID: \(tempId)")
-                    isCreatingActivity = false
-                    // Optionally, handle error notification here or in ActivitySummaryView
-                    // showErrorAlert(message: "Failed to create activity. Please try again.")
+        if itemColumnValues.isEmpty || !hasValidValues {
+            return nil
+        }
+        return (id: item.id, notes: nil, columnValues: itemColumnValues.mapValues { convertColumnValueToAny($0) })
+    }
+    
+    // Step 1: Create a temporary activity with a unique negative temporary ID
+    let tempId = Int.random(in: Int.min ... -1)
+    let tempActivity = Activity(
+        id: tempId,
+        podId: pod.id,
+        podTitle: pod.title,
+        userEmail: viewModel.email,
+        userName: viewModel.username,
+        duration: duration,
+        loggedAt: startTime,
+        notes: activityNotes.isEmpty ? nil : activityNotes,
+        isSingleItem: false,
+        items: itemsData.compactMap { item -> ActivityItem? in
+            guard !item.columnValues.isEmpty else { return nil }
+            return ActivityItem(
+                id: Int.random(in: Int.min ... -1),
+                activityId: tempId,
+                itemId: item.id,
+                itemLabel: items.first(where: { $0.id == item.id })?.metadata ?? "",
+                loggedAt: startTime,
+                notes: item.notes,
+                columnValues: item.columnValues.mapValues { value in
+                    if let array = value as? [Double], !array.isEmpty {
+                        return .array(array.map { .number($0) })
+                    } else if let number = value as? Double {
+                        return .number(number)
+                    }
+                    return .null
                 }
+            )
+        }
+    )
+    
+    // Step 2: Insert the temporary activity into ActivityManager's activities array
+    activityManager.activities.insert(tempActivity, at: 0)
+    print("Inserted temporary activity with ID: \(tempId)")
+    
+    // Step 3: Dismiss ActivityView immediately so that the temporary activity appears in the log
+    dismiss()
+    print("Dismissed ActivityView to show temporary activity.")
+    
+    // Step 4: Navigate to ActivitySummaryView by calling onActivityFinished
+    onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+    print("Called onActivityFinished to navigate to ActivitySummaryView.")
+
+    print("Column values before creating activity:", columnValues)
+    print("Items data being sent to backend:", itemsData)
+    
+    // Step 5: Perform the network request to create the activity on the backend, passing tempId
+    activityManager.createActivity(
+        duration: duration,
+        notes: activityNotes.isEmpty ? nil : activityNotes,
+        items: itemsData,
+        tempId: tempId
+    ) { result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let actualActivity):
+                // ActivityManager will replace the temporary activity with the actual one.
+                activityState.finishActivity()
+                print("Activity creation completed.")
+                isCreatingActivity = false
+                
+            case .failure(let error):
+                // On failure, remove the temporary activity.
+                activityManager.activities.removeAll { $0.id == tempId }
+                print("Failed to create activity on backend, removed temporary activity ID: \(tempId)")
+                isCreatingActivity = false
+                // Optionally, you can show an error alert here.
             }
         }
     }
+}
+
+
+    // private func handleFinish() {
+    //     guard !isCreatingActivity else { return }
+    //     isCreatingActivity = true
+        
+    //     let endTime = Date()
+    //     let startTime = endTime.addingTimeInterval(-activityState.stopwatch.elapsedTime)
+    //     let duration = Int(activityState.stopwatch.elapsedTime)
+        
+    //     print("Preparing to create activity...")
+        
+    //     // Prepare items data for the backend
+    //     let itemsData: [(id: Int, notes: String?, columnValues: [String: Any])] = items.map { item in
+    //         let values = columnValues[item.id] ?? [:]
+    //         let convertedValues = values.mapValues { value in
+    //             convertColumnValueToAny(value)
+    //         }
+    //         return (
+    //             id: item.id,
+    //             notes: nil,
+    //             columnValues: convertedValues
+    //         )
+    //     }
+        
+    //     // Step 1: Create a temporary activity with a unique negative temporary ID
+    //     let tempId = Int.random(in: Int.min ... -1) // Unique negative ID
+    //     let tempActivity = Activity(
+    //         id: tempId, // Temporary negative ID
+    //         podId: pod.id,
+    //         podTitle: pod.title,
+    //         userEmail: viewModel.email,
+    //         userName: viewModel.username, // Ensure 'userName' is available in viewModel
+    //         duration: duration,
+    //         loggedAt: startTime,
+    //         notes: activityNotes.isEmpty ? nil : activityNotes,
+    //         isSingleItem: false,
+    //         items: items.map { item in
+    //             ActivityItem(
+    //                 id: Int.random(in: Int.min ... -1), // Unique negative ID for ActivityItem
+    //                 activityId: tempId, // Link to the temporary activity
+    //                 itemId: item.id, // Assuming 'item.id' corresponds to 'pod_item.id'
+    //                 itemLabel: item.metadata, // Use 'metadata' instead of 'label'
+    //                 loggedAt: startTime,
+    //                 notes: nil, // 'notes' is optional
+    //                 columnValues: columnValues[item.id] ?? [:]
+    //             )
+    //         }
+    //     )
+        
+    //     // Step 2: Insert the temporary activity into ActivityManager's activities array
+    //     activityManager.activities.insert(tempActivity, at: 0)
+    //     print("Inserted temporary activity with ID: \(tempId)")
+        
+    //     // Step 3: Dismiss ActivityView immediately to show the temporary activity in ActivityLogView
+    //     dismiss()
+    //     print("Dismissed ActivityView to show temporary activity.")
+        
+    //     // Step 4: Call onActivityFinished to navigate to ActivitySummaryView immediately
+    //     onActivityFinished(duration, startTime, endTime, activityNotes.isEmpty ? nil : activityNotes)
+    //     print("Called onActivityFinished to navigate to ActivitySummaryView.")
+
+    //     print("Column values before creating activity:", columnValues)
+    //     print("Items data being sent to backend:", itemsData)
+        
+    //     // Step 5: Perform the network request to create the activity on the backend, passing tempId
+    //     activityManager.createActivity(
+    //         duration: duration,
+    //         notes: activityNotes.isEmpty ? nil : activityNotes,
+    //         items: itemsData,
+    //         tempId: tempId // Pass tempId here
+    //     ) { result in
+    //         DispatchQueue.main.async {
+    //             switch result {
+    //             case .success(let actualActivity):
+    //                 // ActivityManager handles replacing the temp activity
+    //                 activityState.finishActivity()
+    //                 print("Activity creation completed.")
+    //                 isCreatingActivity = false
+                    
+    //             case .failure(let error):
+    //                 // Step 5B: Remove the temporary activity and notify the user
+    //                 activityManager.activities.removeAll { $0.id == tempId }
+    //                 print("Failed to create activity on backend, removed temporary activity ID: \(tempId)")
+    //                 isCreatingActivity = false
+    //                 // Optionally, handle error notification here or in ActivitySummaryView
+    //                 // showErrorAlert(message: "Failed to create activity. Please try again.")
+    //             }
+    //         }
+    //     }
+    // }
 
 
 
@@ -390,19 +506,33 @@ private func onCancelActivity() {
     
     func initializeColumnValues() {
         for item in items {
-            columnValues[item.id] = item.columnValues ?? [:]
+            var itemColumnValues = item.columnValues ?? [:]
             
             var rowCounts: [String: Int] = [:]
             for column in podColumns where column.groupingType == "grouped" {
-                if let values = item.columnValues?[String(column.id)],
-                   case .array(let array) = values {
+                let columnId = String(column.id)
+                
+                // If no values exist for this column, initialize with empty array
+                if itemColumnValues[columnId] == nil {
+                    if column.name == "Set" {
+                        // Initialize "Set" column with a value of 1
+                        itemColumnValues[columnId] = .array([.number(1)])
+                    } else {
+                        // Initialize other grouped columns with a null value
+                        itemColumnValues[columnId] = .array([.null])
+                    }
+                    rowCounts[column.groupingType ?? ""] = 1
+                } else if case .array(let array) = itemColumnValues[columnId] {
                     rowCounts[column.groupingType ?? ""] = array.count
-                } else {
-                    rowCounts[column.groupingType ?? ""] = 0
                 }
             }
+            
+            columnValues[item.id] = itemColumnValues
             groupedRowsCounts[item.id] = rowCounts
         }
+        
+        // Debug print to verify initialization
+        print("Initialized column values:", columnValues)
     }
     
     private func addRow(for columnGroup: [PodColumn], itemId: Int) {
@@ -460,6 +590,8 @@ private func onCancelActivity() {
             groupedRowsCounts[itemId]?[groupType] = currentCount - 1
         }
     }
+
+
 }
 
 class Stopwatch: ObservableObject {

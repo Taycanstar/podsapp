@@ -101,47 +101,258 @@ class ActivityManager: ObservableObject {
         }
     }
 
-   
-    func createActivity(
-        duration: Int,
-        notes: String?,
-        items: [(id: Int, notes: String?, columnValues: [String: Any])],
-        isSingleItem: Bool = false,  // Add this parameter with default false
-        tempId: Int? = nil,
-        completion: @escaping (Result<Activity, Error>) -> Void
-    ) {
-        guard let podId = podId, let userEmail = userEmail else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
-            return
-        }
-
-        networkManager.createActivity(
-            podId: podId,
-            userEmail: userEmail,
-            duration: duration,
-            notes: notes,
-            items: items,
-            isSingleItem: isSingleItem  // Pass it to network request
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                switch result {
-                case .success(let activity):
-                    if let tempId = tempId,
-                       let index = self.activities.firstIndex(where: { $0.id == tempId }) {
-                        self.activities[index] = activity
-                    } else {
-                        self.activities.insert(activity, at: 0)
+func createActivity(
+    duration: Int,
+    notes: String?,
+    items: [(id: Int, notes: String?, columnValues: [String: Any])],
+    isSingleItem: Bool = false,
+    tempId: Int? = nil,
+    completion: @escaping (Result<Activity, Error>) -> Void
+) {
+    // Verify that the manager is properly initialized.
+    guard let podId = podId, let userEmail = userEmail else {
+        completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
+        return
+    }
+    
+    // If a temporary ID is provided, create and insert a temporary activity.
+    if let tempId = tempId {
+        let tempItems = items.map { item in
+            ActivityItem(
+                id: Int.random(in: Int.min ... -1),
+                activityId: tempId,
+                itemId: item.id,
+                itemLabel: "Temporary Item",
+                loggedAt: Date(),
+                notes: item.notes,
+                columnValues: item.columnValues.mapValues { value in
+                    if let array = value as? [Any] {
+                        return .array(array.map { val in
+                            if let number = val as? Double {
+                                return .number(number)
+                            } else if let string = val as? String, let timeValue = TimeValue.fromString(string) {
+                                return .time(timeValue)
+                            } else if let string = val as? String {
+                                return .string(string)
+                            }
+                            return .null
+                        })
+                    } else if let number = value as? Double {
+                        return .number(number)
+                    } else if let string = value as? String, let timeValue = TimeValue.fromString(string) {
+                        return .time(timeValue)
+                    } else if let string = value as? String {
+                        return .string(string)
                     }
-                    completion(.success(activity))
-
-                case .failure(let error):
-                    self.error = error
-                    completion(.failure(error))
+                    return .null
                 }
+            )
+        }
+        
+        let tempActivity = Activity(
+            id: tempId,
+            podId: podId,
+            podTitle: "", // Adjust as needed.
+            userEmail: userEmail,
+            userName: "",
+            duration: duration,
+            loggedAt: Date(),
+            notes: notes,
+            isSingleItem: isSingleItem,
+            items: tempItems
+        )
+        
+        self.activities.insert(tempActivity, at: 0)
+        print("Inserted temporary activity with ID: \(tempId)")
+    }
+    
+    // Perform the network request to create the activity.
+    networkManager.createActivity(
+        podId: podId,
+        userEmail: userEmail,
+        duration: duration,
+        notes: notes,
+        items: items,
+        isSingleItem: isSingleItem
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            switch result {
+            case .success(let activity):
+                print("Activity received from server: \(activity)")
+                if let tempId = tempId,
+                   let index = self.activities.firstIndex(where: { $0.id == tempId }) {
+                    var updatedActivity = activity
+                    // Rebuild ActivityItems using the input items (with updated column values)
+                    updatedActivity.items = items.map { inputItem in
+                        // Convert the provided columnValues into the proper [String: ColumnValue] representation.
+                        let convertedCV: [String: ColumnValue] = inputItem.columnValues.mapValues { value in
+                            if let array = value as? [Any] {
+                                return .array(array.map { val in
+                                    if let num = val as? Double {
+                                        return .number(num)
+                                    } else if let str = val as? String, let timeValue = TimeValue.fromString(str) {
+                                        return .time(timeValue)
+                                    } else if let str = val as? String {
+                                        return .string(str)
+                                    }
+                                    return .null
+                                })
+                            } else if let num = value as? Double {
+                                return .number(num)
+                            } else if let str = value as? String, let timeValue = TimeValue.fromString(str) {
+                                return .time(timeValue)
+                            } else if let str = value as? String {
+                                return .string(str)
+                            }
+                            return .null
+                        }
+                        
+                        // Check if the server returned an item for this input item.
+                        if let serverItem = activity.items.first(where: { $0.itemId == inputItem.id }) {
+                            var mergedItem = serverItem
+                            // If updated column values exist, merge them in.
+                            if !convertedCV.isEmpty {
+                                mergedItem.columnValues = convertedCV
+                            }
+                            return mergedItem
+                        } else {
+                            // Otherwise, manually create an ActivityItem.
+                            return ActivityItem(
+                                id: Int.random(in: Int.min ... -1),
+                                activityId: activity.id,
+                                itemId: inputItem.id,
+                                itemLabel: "Item", // Adjust the label if needed.
+                                loggedAt: activity.loggedAt,
+                                notes: inputItem.notes,
+                                columnValues: convertedCV
+                            )
+                        }
+                    }
+                    self.activities[index] = updatedActivity
+                    print("Updated activity at index \(index): \(updatedActivity)")
+                } else {
+                    self.activities.insert(activity, at: 0)
+                    print("Inserted activity from server at index 0: \(activity)")
+                }
+                completion(.success(activity))
+                
+            case .failure(let error):
+                if let tempId = tempId {
+                    self.activities.removeAll { $0.id == tempId }
+                    print("Removed temporary activity with ID: \(tempId) due to error: \(error)")
+                }
+                self.error = error
+                completion(.failure(error))
             }
         }
     }
+}
+   
+//     func createActivity(
+//     duration: Int,
+//     notes: String?,
+//     items: [(id: Int, notes: String?, columnValues: [String: Any])],
+//     isSingleItem: Bool = false,
+//     tempId: Int? = nil,
+//     completion: @escaping (Result<Activity, Error>) -> Void
+// ) {
+//     guard let podId = podId, let userEmail = userEmail else {
+//         completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not initialized"])))
+//         return
+//     }
+
+//     if let tempId = tempId {
+//         let tempItems = items.map { item in
+//             ActivityItem(
+//                 id: Int.random(in: Int.min ... -1),
+//                 activityId: tempId,
+//                 itemId: item.id,
+//                 itemLabel: "Temporary Item",
+//                 loggedAt: Date(),
+//                 notes: item.notes,
+//                 columnValues: item.columnValues.mapValues { value in
+//                     if let array = value as? [Any] {
+//                         return .array(array.map { val in
+//                             if let number = val as? Double {
+//                                 return .number(number)
+//                             } else if let string = val as? String {
+//                                 if let timeValue = TimeValue.fromString(string) {
+//                                     return .time(timeValue)
+//                                 }
+//                                 return .string(string)
+//                             }
+//                             return .null
+//                         })
+//                     } else if let number = value as? Double {
+//                         return .number(number)
+//                     } else if let string = value as? String {
+//                         if let timeValue = TimeValue.fromString(string) {
+//                             return .time(timeValue)
+//                         }
+//                         return .string(string)
+//                     }
+//                     return .null
+//                 }
+//             )
+//         }
+        
+//         let tempActivity = Activity(
+//             id: tempId,
+//             podId: podId,
+//             podTitle: "",
+//             userEmail: userEmail,
+//             userName: "",
+//             duration: duration,
+//             loggedAt: Date(),
+//             notes: notes,
+//             isSingleItem: isSingleItem,
+//             items: tempItems
+//         )
+        
+//         self.activities.insert(tempActivity, at: 0)
+//     }
+
+//         networkManager.createActivity(
+//             podId: podId,
+//             userEmail: userEmail,
+//             duration: duration,
+//             notes: notes,
+//             items: items,
+//             isSingleItem: isSingleItem
+//         ) { [weak self] result in
+//             DispatchQueue.main.async {
+//                 guard let self = self else { return }
+//                 switch result {
+//                 case .success(let activity):
+//                     if let tempId = tempId,
+//                        let index = self.activities.firstIndex(where: { $0.id == tempId }) {
+//                         var updatedActivity = activity
+//                         updatedActivity.items = activity.items.map { item in
+//                             var updatedItem = item
+//                             if let tempItem = self.activities[index].items.first(where: { $0.itemId == item.itemId }) {
+//                                 updatedItem.columnValues = tempItem.columnValues
+//                             }
+//                             return updatedItem
+//                         }
+//                         self.activities[index] = updatedActivity
+//                     } else {
+//                         self.activities.insert(activity, at: 0)
+//                     }
+//                     completion(.success(activity))
+
+//                 case .failure(let error):
+//                     if let tempId = tempId {
+//                         self.activities.removeAll { $0.id == tempId }
+//                     }
+//                     self.error = error
+//                     completion(.failure(error))
+//                 }
+//             }
+//         }
+//     }
+    
+
     
     func deleteActivity(_ activity: Activity) {
         networkManager.deleteActivity(activityId: activity.id) { [weak self] result in
