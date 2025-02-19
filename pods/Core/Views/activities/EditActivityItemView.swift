@@ -80,9 +80,29 @@ struct EditActivityItemView: View {
                                     )
                                 }
                             } else {
+//                                GroupedColumnView(
+//                                    columnGroup: columnGroup,
+//                                    groupedRowsCount: groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1,
+//                                    onAddRow: {
+//                                        addRow(for: columnGroup)
+//                                    },
+//                                    onDeleteRow: { idx in
+//                                        deleteRow(at: idx, in: columnGroup)
+//                                    },
+//                                    columnValues: $columnValues,
+//                                    focusedField: _focusedField,
+//                                    expandedColumn: $expandedColumn,
+//                                    onValueChanged: { }
+//                                )
+                                // In the ForEach where GroupedColumnView is called, change to:
                                 GroupedColumnView(
                                     columnGroup: columnGroup,
-                                    groupedRowsCount: groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1,
+                                    groupedRowsCount: Binding(
+                                        get: { groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1 },
+                                        set: { newValue in
+                                            groupedRowsCounts[columnGroup.first?.groupingType ?? ""] = newValue
+                                        }
+                                    ),
                                     onAddRow: {
                                         addRow(for: columnGroup)
                                     },
@@ -94,6 +114,7 @@ struct EditActivityItemView: View {
                                     expandedColumn: $expandedColumn,
                                     onValueChanged: { }
                                 )
+                              
                                 .padding(.horizontal)
                             }
                         }

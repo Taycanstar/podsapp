@@ -118,6 +118,7 @@
 		36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03342D5BA5AC006A74E9 /* UserGoals.swift */; };
 		36CB03372D5C6D68006A74E9 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 36CB03362D5C6D68006A74E9 /* Mixpanel */; };
 		36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03382D5E4B2A006A74E9 /* FoodManager.swift */; };
+		36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB033C2D64E0CC006A74E9 /* CardDetailView.swift */; };
 		36D044102C71196900B01998 /* InvitationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D0440F2C71196900B01998 /* InvitationView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
@@ -266,6 +267,7 @@
 		36CB03322D5BA200006A74E9 /* FoodDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDetailView.swift; sourceTree = "<group>"; };
 		36CB03342D5BA5AC006A74E9 /* UserGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGoals.swift; sourceTree = "<group>"; };
 		36CB03382D5E4B2A006A74E9 /* FoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
+		36CB033C2D64E0CC006A74E9 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailView.swift; sourceTree = "<group>"; };
 		36CE7F002C1176DA001774F9 /* pods.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = pods.entitlements; sourceTree = "<group>"; };
 		36D0440F2C71196900B01998 /* InvitationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
@@ -421,6 +423,7 @@
 				363AFA002D223EAF00C91A14 /* MinimizedActivityView.swift */,
 				363AFA022D24D27600C91A14 /* ActivityCountdownView.swift */,
 				36B851682D4EBAB200A876C3 /* NewSheetView.swift */,
+				36CB033C2D64E0CC006A74E9 /* CardDetailView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -978,6 +981,7 @@
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
+				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
@@ -1188,7 +1192,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.2;
+				MARKETING_VERSION = 1.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1255,7 +1259,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.2;
+				MARKETING_VERSION = 1.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

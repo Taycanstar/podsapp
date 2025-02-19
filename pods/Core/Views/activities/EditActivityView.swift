@@ -72,24 +72,48 @@ struct EditActivityView: View {
                                 )
                             }
                         } else {
-                            GroupedColumnView(
-                                columnGroup: columnGroup,
-                                groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
-                                onAddRow: {
-                                    withAnimation {
-                                        addRow(for: columnGroup)
-                                    }
-                                },
-                                onDeleteRow: { rowIndex in
-                                    withAnimation {
-                                        deleteRow(at: rowIndex, in: columnGroup)
-                                    }
-                                },
-                                columnValues: $columnValues,
-                                focusedField: _focusedField,
-                                expandedColumn: $expandedColumn,
-                                onValueChanged: { }
-                            )
+                            // GroupedColumnView(
+                            //     columnGroup: columnGroup,
+                            //     groupedRowsCount: groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1,
+                            //     onAddRow: {
+                            //         withAnimation {
+                            //             addRow(for: columnGroup)
+                            //         }
+                            //     },
+                            //     onDeleteRow: { rowIndex in
+                            //         withAnimation {
+                            //             deleteRow(at: rowIndex, in: columnGroup)
+                            //         }
+                            //     },
+                            //     columnValues: $columnValues,
+                            //     focusedField: _focusedField,
+                            //     expandedColumn: $expandedColumn,
+                            //     onValueChanged: { }
+                            // )
+                            // In the ForEach where GroupedColumnView is called, change to:
+                                GroupedColumnView(
+                                    columnGroup: columnGroup,
+                                    groupedRowsCount: Binding(
+                                        get: { groupedRowsCount[columnGroup.first?.groupingType ?? ""] ?? 1 },
+                                        set: { newValue in
+                                            groupedRowsCount[columnGroup.first?.groupingType ?? ""] = newValue
+                                        }
+                                    ),
+                                    onAddRow: {
+                                        withAnimation {
+                                            addRow(for: columnGroup)
+                                        }
+                                    },
+                                    onDeleteRow: { rowIndex in
+                                        withAnimation {
+                                            deleteRow(at: rowIndex, in: columnGroup)
+                                        }
+                                    },
+                                    columnValues: $columnValues,
+                                    focusedField: _focusedField,
+                                    expandedColumn: $expandedColumn,
+                                    onValueChanged: { }
+                                )
                         }
                     }
                     
