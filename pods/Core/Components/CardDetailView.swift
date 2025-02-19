@@ -52,61 +52,7 @@ struct CardDetailView: View {
         }
     
 
-    // init(item: Binding<PodItem>, podId: Int,podTitle: String, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
-    //     self._item = item
-    //     self.podTitle = podTitle
-    //     self._itemName = State(initialValue: item.wrappedValue.metadata)
-    //     self._podColumns = podColumns
-    //     self.networkManager = networkManager
-    //     self._allItems = allItems
-    //     self.podId = podId
-    //     self._itemNotes = State(initialValue: item.wrappedValue.notes ?? "")
-    //     self._visibleColumns = visibleColumns
 
-    //     // Initialize columnValues based on item's columnValues or with empty values
-    //     var initialColumnValues: [String: ColumnValue] = [:]
-    //     var initialGroupedRowsCount: [String: Int] = [:]
-
-        
-    //     print("Raw columns:", podColumns.wrappedValue)
-            
-    //         for column in podColumns.wrappedValue {
-    //             let columnId = String(column.id)
-    //             print("Processing column:", column.name, "with ID:", columnId)
-                
-    //             if let value = item.wrappedValue.columnValues?[columnId] {
-    //                 print("Found value for column", column.name, ":", value)
-    //                 if column.groupingType == "grouped" {
-    //                     if case .array(let columnValues) = value {
-    //                         initialColumnValues[columnId] = .array(columnValues)
-    //                         initialGroupedRowsCount[column.groupingType ?? ""] = columnValues.count
-    //                     } else {
-    //                         initialColumnValues[columnId] = .array([value])
-    //                         initialGroupedRowsCount[column.groupingType ?? ""] = 1
-    //                     }
-    //                 } else {
-    //                     initialColumnValues[columnId] = value
-    //                 }
-    //             } else {
-    //                 print("No value found for column", column.name)
-    //                 if column.groupingType == "grouped" {
-    //                     initialColumnValues[columnId] = .array([])
-    //                     initialGroupedRowsCount[column.groupingType ?? ""] = 0
-    //                 } else {
-    //                     initialColumnValues[columnId] = .null
-    //                 }
-    //             }
-    //         }
-
-    //         print("Final initialColumnValues:", initialColumnValues)
-
-
-    //        self._columnValues = State(initialValue: initialColumnValues)
-    //        self._groupedRowsCount = State(initialValue: initialGroupedRowsCount)
-        
-    //     print("Initializing columns:", podColumns)
-    //     print("Initial column values:", columnValues)
-    // }
 
   init(item: Binding<PodItem>, podId: Int, podTitle: String, podColumns: Binding<[PodColumn]>, networkManager: NetworkManager, allItems: Binding<[PodItem]>, visibleColumns: Binding<[String]>) {
     self._item = item
@@ -483,83 +429,123 @@ struct CardDetailView: View {
     }
   
 
-    private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
-        for column in columnGroup {
-            if case .array(var values) = columnValues[String(column.id)] ?? .array([]) {
-                if index < values.count {
-                    values.remove(at: index)
-                    columnValues[String(column.id)] = .array(values)
-                }
-            }
-        }
-        
-        let groupType = columnGroup.first?.groupingType ?? ""
-        if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
-            groupedRowsCount[groupType] = currentCount - 1
-        }
-        checkForChanges()
-    }
-  
-    // private func addRow(for columnGroup: [PodColumn]) {
-    //     let groupType = columnGroup.first?.groupingType ?? ""
-    //     let currentRowIndex = groupedRowsCount[groupType] ?? 1
-        
+    // private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
     //     for column in columnGroup {
-    //         let currentValue = columnValues[String(column.id)] ?? .array([])
-    //         var values: [ColumnValue] = []
-            
-    //         if case .array(let existingValues) = currentValue {
-    //             values = existingValues
-    //         }
-            
-    //         if column.type == "number" {
-    //             if case .number(1.0) = values.first {
-    //                 values.append(.number(Double(values.count + 1)))
-    //             } else {
-    //                 values.append(values.last ?? .null)
+    //         if case .array(var values) = columnValues[String(column.id)] ?? .array([]) {
+    //             if index < values.count {
+    //                 values.remove(at: index)
+    //                 columnValues[String(column.id)] = .array(values)
     //             }
-    //         } else {
-    //             values.append(values.last ?? .null)
     //         }
-            
-    //         columnValues[String(column.id)] = .array(values)
     //     }
         
-    //     groupedRowsCount[groupType] = currentRowIndex + 1
+    //     let groupType = columnGroup.first?.groupingType ?? ""
+    //     if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+    //         groupedRowsCount[groupType] = currentCount - 1
+    //     }
     //     checkForChanges()
     // }
+    private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
+    for column in columnGroup {
+        let columnId = String(column.id)
+        if case .array(var values) = columnValues[columnId] {
+            if index < values.count {
+                values.remove(at: index)
+                
+                // Renumber Sets after deletion
+                if column.name == "Set" {
+                    values = values.enumerated().map { idx, _ in 
+                        .number(Double(idx + 1))
+                    }
+                }
+                
+                var newColumnValues = columnValues
+                newColumnValues[columnId] = .array(values)
+                columnValues = newColumnValues
+            }
+        }
+    }
+    
+    let groupType = columnGroup.first?.groupingType ?? ""
+    if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+        var newGroupedRowsCounts = groupedRowsCount
+        newGroupedRowsCounts[groupType] = currentCount - 1
+        groupedRowsCount = newGroupedRowsCounts
+    }
+    
+    checkForChanges()
+}
+  
 
-    private func addRow(for columnGroup: [PodColumn]) {
+
+//     private func addRow(for columnGroup: [PodColumn]) {
+//     let groupType = columnGroup.first?.groupingType ?? ""
+//     let currentRowIndex = groupedRowsCount[groupType] ?? 1
+    
+//     for column in columnGroup {
+//         let colKey = String(column.id)
+//         var values: [ColumnValue] = []
+        
+//         if case .array(let existingValues) = columnValues[colKey] {
+//             values = existingValues
+//         }
+        
+//         if column.type == "number" {
+//             if values.isEmpty {
+//                 values = [.number(0)]
+//             }
+//             values.append(values.last ?? .number(0))
+//         } else {
+//             if values.isEmpty {
+//                 values = [.null]
+//             }
+//             values.append(values.last ?? .null)
+//         }
+        
+//         columnValues[colKey] = .array(values)
+//     }
+    
+//     groupedRowsCount[groupType] = currentRowIndex + 1
+//     checkForChanges()
+// }
+
+
+private func addRow(for columnGroup: [PodColumn]) {
     let groupType = columnGroup.first?.groupingType ?? ""
     let currentRowIndex = groupedRowsCount[groupType] ?? 1
     
     for column in columnGroup {
-        let colKey = String(column.id)
-        var values: [ColumnValue] = []
-        
-        if case .array(let existingValues) = columnValues[colKey] {
-            values = existingValues
-        }
-        
-        if column.type == "number" {
-            if values.isEmpty {
-                values = [.number(0)]
+        let columnId = String(column.id)
+        if case .array(var values) = columnValues[columnId] {
+            // Special handling for "Set" column
+            if column.name == "Set" {
+                values.append(.number(Double(values.count + 1)))
+            } else if column.type == "number" {
+                values.append(values.last ?? .number(0))
+            } else {
+                values.append(values.last ?? .null)
             }
-            values.append(values.last ?? .number(0))
+            
+            // Force a UI update by creating a new dictionary entry
+            var newColumnValues = columnValues
+            newColumnValues[columnId] = .array(values)
+            columnValues = newColumnValues
         } else {
-            if values.isEmpty {
-                values = [.null]
-            }
-            values.append(values.last ?? .null)
+            // If not array, initialize with the first value
+            let initialValue: ColumnValue = column.name == "Set" ? .number(1) : (column.type == "number" ? .number(0) : .null)
+            var newColumnValues = columnValues
+            newColumnValues[columnId] = .array([initialValue])
+            columnValues = newColumnValues
         }
-        
-        columnValues[colKey] = .array(values)
     }
     
-    groupedRowsCount[groupType] = currentRowIndex + 1
+    // Force UI update for row count
+    var newGroupedRowsCounts = groupedRowsCount
+    newGroupedRowsCounts[groupType] = currentRowIndex + 1
+    groupedRowsCount = newGroupedRowsCounts
+    
     checkForChanges()
 }
-
 
     
     
