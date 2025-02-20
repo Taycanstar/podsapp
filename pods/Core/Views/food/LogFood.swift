@@ -201,7 +201,7 @@ struct LogFood: View {
                 }
        
         .edgesIgnoringSafeArea(.horizontal)
-        .searchable(text: $searchText, prompt: selectedFoodTab.searchPrompt)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: selectedFoodTab.searchPrompt)
         .onChange(of: searchText) { _ in
             Task {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
