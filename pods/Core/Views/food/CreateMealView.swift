@@ -14,7 +14,7 @@ struct CreateMealView: View {
     @State private var instructions = ""
     @State private var showingShareOptions = false
     
-    let shareOptions = ["Everyone", "Friends", "You"]
+    let shareOptions = ["Everyone", "Friends", "Only You"]
     
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         // For now returning 0s since it's a new meal
