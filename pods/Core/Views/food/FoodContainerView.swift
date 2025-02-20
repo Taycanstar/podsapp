@@ -11,6 +11,7 @@ import SwiftUI
 enum FoodNavigationDestination: Hashable {
     case logFood
     case foodDetails(Food, Binding<String>) // Food and selected meal
+    case createMeal  // Add this case
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
         switch (lhs, rhs) {
@@ -31,6 +32,8 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(1)
             hasher.combine(food.id)
             hasher.combine(meal.wrappedValue)
+        case .createMeal:
+            hasher.combine(2)
         }
     }
 }
@@ -60,13 +63,16 @@ struct FoodContainerView: View {
     
     var body: some View {
         NavigationStack(path: $path) {
-            LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal)
+            LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
                 .navigationDestination(for: FoodNavigationDestination.self) { destination in
                     switch destination {
                     case .logFood:
-                        LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal)
+                        LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
                     case .foodDetails(let food, _):
                         FoodDetailsView(food: food, selectedMeal: $selectedMeal)
+                    case .createMeal:
+                        // Implementation of create meal view
+                         CreateMealView()
                     }
                 }
         }

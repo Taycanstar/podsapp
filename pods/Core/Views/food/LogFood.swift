@@ -15,6 +15,7 @@ struct LogFood: View {
     // We're handling per‑row checkmarks in the FoodRow subview.
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
+    @Binding var path: NavigationPath
 
     
     enum FoodTab: Hashable {
@@ -43,8 +44,9 @@ struct LogFood: View {
     
     let foodTabs: [FoodTab] = [.all, .meals, .recipes, .foods]
     
-    init(selectedTab: Binding<Int>, selectedMeal: Binding<String>) {
+    init(selectedTab: Binding<Int>, selectedMeal: Binding<String>, path: Binding<NavigationPath>) {
         _selectedTab = selectedTab
+         _path = path
         // Set default meal based on current hour
         let hour = Calendar.current.component(.hour, from: Date())
         let defaultMeal: String = {
@@ -58,6 +60,7 @@ struct LogFood: View {
             }
         }()
         _selectedMeal = selectedMeal // we use the passed‑in binding
+        
     }
     
     var body: some View {
@@ -127,6 +130,7 @@ struct LogFood: View {
                         VStack(spacing: 16) {
                             Button {
                                 print("Create meal tapped")
+                                path.append(FoodNavigationDestination.createMeal)
                             } label: {
                                 VStack(alignment: .leading, spacing: 16) {
                                     Image("burger")
