@@ -42,6 +42,9 @@ struct ContentView: View {
     
     @State private var isTabBarVisible: Bool = true
 
+    @StateObject private var versionManager = VersionManager.shared
+    @Environment(\.scenePhase) var scenePhase
+
     private func fetchInitialPods() {
         homeViewModel.fetchPodsForUser(email: viewModel.email) {
             print("Initial pods fetch completed")
@@ -57,12 +60,12 @@ struct ContentView: View {
                             switch selectedTab {
                             case 0:
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
-                                // DashboardView()
-                            PodsContainerView()
+                                DashboardView()
+                            // PodsContainerView()
 
-                        //    case 2:
+                           case 2:
                                
-                        //        PodsContainerView()
+                               PodsContainerView()
                            case 3:
                                FriendsView()
                             case 4:
@@ -84,6 +87,27 @@ struct ContentView: View {
                             selectedTab = 0
                         }
                     }
+      .disabled(versionManager.requiresUpdate)
+        .alert("Update Required", isPresented: $versionManager.requiresUpdate) {
+            Button("Update") {
+                if let url = URL(string: versionManager.storeUrl ?? "") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .tint(.accentColor)
+        } message: {
+            Text("An update to Pods is required to continue.")
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                Task {
+                    await versionManager.checkVersion()
+                }
+            }
+        }
+        .task {
+            await versionManager.checkVersion()
+        }
                     if isTabBarVisible {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
                             .ignoresSafeArea(.keyboard)
@@ -167,6 +191,7 @@ struct ContentView: View {
                        if isAuthenticated {
                            Task {
                                await subscriptionManager.updatePurchasedSubscriptions()
+                                // await versionManager.checkVersion()
                            }
                            
                            fetchSubscriptionInfo()

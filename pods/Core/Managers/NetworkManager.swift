@@ -23,11 +23,25 @@ enum NetworkError: Error {
         let currentPage: Int
     }
 
+struct AppVersionResponse: Codable {
+    let minimumVersion: String
+    let needsUpdate: Bool
+    let storeUrl: String
+    
+    enum CodingKeys: String, CodingKey {
+        case minimumVersion = "minimum_version"
+        case needsUpdate = "needs_update"
+        case storeUrl = "store_url"
+    }
+}
+
+
+
 
 class NetworkManager {
  
-//  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
+//   let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+ let baseUrl = "http://192.168.1.92:8000"
     // let baseUrl = "http://172.20.10.3:8000"
 
     
@@ -4736,82 +4750,6 @@ class NetworkManager {
     }
 
 
-    
-
-// func logFood(
-//     userEmail: String,
-//     food: Food,
-//     meal: String,
-//     servings: Int,
-//     date: Date,
-//     notes: String?,
-//     completion: @escaping (Result<LoggedFood, Error>) -> Void
-// ) {
-//     let urlString = "\(baseUrl)/log-food/"
-    
-//     guard let url = URL(string: urlString) else {
-//         completion(.failure(NetworkError.invalidURL))
-//         return
-//     }
-    
-//     // Convert foodNutrients to a serializable format
-//     let nutrients = food.foodNutrients.map { [
-//         "nutrientName": $0.nutrientName,
-//         "value": $0.value,
-//         "unitName": $0.unitName
-//     ] }
-    
-//     let parameters: [String: Any] = [
-//         "user_email": userEmail,
-//         "food": [
-//             "fdcId": food.id,
-//             "description": food.displayName,
-//             "brandOwner": food.brandText ?? "",
-//             "servingSize": food.servingSize ?? 0,
-//             "servingSizeUnit": food.servingSizeUnit ?? "",
-//             "householdServingFullText": food.servingSizeText,
-//             "foodNutrients": nutrients  // Use the converted nutrients
-//         ],
-//         "meal": meal,
-//         "servings": servings,
-//         "date": ISO8601DateFormatter().string(from: date),
-//         "notes": notes ?? ""
-//     ]
-    
-//     var request = URLRequest(url: url)
-//     request.httpMethod = "POST"
-//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    
-//     do {
-//         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-//     } catch {
-//         print("JSON Serialization Error: \(error)")  // Add debug print
-//         completion(.failure(NetworkError.encodingError))
-//         return
-//     }
-    
-//     URLSession.shared.dataTask(with: request) { data, response, error in
-//         if let error = error {
-//             completion(.failure(error))
-//             return
-//         }
-        
-//         guard let data = data else {
-//             completion(.failure(NetworkError.noData))
-//             return
-//         }
-        
-//         do {
-//             let decoder = JSONDecoder()
-//             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
-//             completion(.success(loggedFood))
-//         } catch {
-//             print("JSON Decoding Error: \(error)")  // Add debug print
-//             completion(.failure(error))
-//         }
-//     }.resume()
-// }
-
         func logFood(userEmail: String, food: Food, meal: String, servings: Int, date: Date, notes: String?, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     let urlString = "\(baseUrl)/log-food/"
     
@@ -4880,45 +4818,7 @@ class NetworkManager {
     }.resume()
 }
 
-    // func getFoodLogs(userEmail: String, completion: @escaping (Result<[LoggedFood], Error>) -> Void) {
-    //     guard let url = URL(string: "\(baseUrl)/get-food-logs/") else {
-    //         completion(.failure(NetworkError.invalidURL))
-    //         return
-    //     }
-        
-    //     var request = URLRequest(url: url)
-    //     request.httpMethod = "GET"
-    //     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-    //     // Add user email to query params
-    //     let queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
-    //     request.url?.append(queryItems: queryItems)
-        
-    //     URLSession.shared.dataTask(with: request) { data, response, error in
-    //         if let error = error {
-    //             completion(.failure(error))
-    //             return
-    //         }
-            
-    //         guard let data = data else {
-    //             completion(.failure(NetworkError.noData))
-    //             return
-    //         }
-            
-    //         do {
-    //             let decoder = JSONDecoder()
-    //             decoder.keyDecodingStrategy = .convertFromSnakeCase  // Add this line
-    //             let loggedFoods = try decoder.decode([LoggedFood].self, from: data)
-    //             completion(.success(loggedFoods))
-    //         } catch {
-    //             print("Decoding error: \(error)")
-    //             if let jsonString = String(data: data, encoding: .utf8) {
-    //                 print("Received JSON:", jsonString)
-    //             }
-    //             completion(.failure(error))
-    //         }
-    //     }.resume()
-    // }
+
 
     func getFoodLogs(userEmail: String, page: Int = 1, completion: @escaping (Result<FoodLogsResponse, Error>) -> Void) {
     guard var urlComponents = URLComponents(string: "\(baseUrl)/get-food-logs/") else {
@@ -4964,6 +4864,23 @@ class NetworkManager {
             completion(.failure(error))
         }
     }.resume()
+}
+
+func checkAppVersion() async throws -> AppVersionResponse {
+    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    
+    guard let url = URL(string: "\(baseUrl)/check-app-version?version=\(currentVersion)&platform=ios") else {
+        throw NetworkError.invalidURL
+    }
+    
+    let (data, response) = try await URLSession.shared.data(from: url)
+    
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw NetworkError.invalidResponse
+    }
+    
+    return try JSONDecoder().decode(AppVersionResponse.self, from: data)
 }
 
 
