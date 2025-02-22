@@ -74,6 +74,7 @@ struct FoodContainerView: View {
                     case .createMeal:
                         // Implementation of create meal view
                          CreateMealView()
+             
                     }
                 }
         }
