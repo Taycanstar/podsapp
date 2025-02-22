@@ -67,6 +67,9 @@ struct CreateMealView: View {
                                     )
                                 )
                                 .ignoresSafeArea(edges: .top)
+                                .onTapGesture {  // Add this modifier
+                                    showOptionsSheet = true
+                                }
                         } else {
                             ZStack {
                                 Color("iosnp")
