@@ -258,7 +258,7 @@ struct CreateMealView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            TextField("How to prepare...", text: $instructions, axis: .vertical)
+            TextField("Add instructions for making this meal", text: $instructions, axis: .vertical)
                 .textFieldStyle(.plain)
                 .padding()
                 .background(Color("iosnp"))
