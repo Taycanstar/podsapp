@@ -16,6 +16,9 @@ struct CreateMealView: View {
     @State private var showingShareOptions = false
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
+    @State private var showImagePicker = false
+    @State private var showOptionsSheet = false
+    @State private var sourceType: UIImagePickerController.SourceType = .camera
     
     let shareOptions = ["Everyone", "Friends", "Only You"]
     
@@ -28,7 +31,10 @@ struct CreateMealView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // Camera Icon Card
-                PhotosPicker(selection: $selectedItem, matching: .images) {
+                Button {
+                    // Show options sheet first instead of going directly to camera
+                    showOptionsSheet = true
+                } label: {
                     ZStack {
                         Color("iosnp")
                         if let selectedImage {
@@ -45,13 +51,20 @@ struct CreateMealView: View {
                     .cornerRadius(12)
                     .clipped()
                 }
-                .onChange(of: selectedItem) { oldValue, newValue in
-                    Task {
-                        if let data = try? await newValue?.loadTransferable(type: Data.self),
-                           let uiImage = UIImage(data: data) {
-                            selectedImage = Image(uiImage: uiImage)
-                        }
+                .fullScreenCover(isPresented: $showImagePicker) {
+                    ImagePicker(image: $selectedImage, sourceType: sourceType)
+                        .ignoresSafeArea() // Make picker full screen
+                }
+                .confirmationDialog("Choose Photo", isPresented: $showOptionsSheet) {
+                    Button("Take Photo") {
+                        sourceType = .camera
+                        showImagePicker = true
                     }
+                    Button("Choose from Library") {
+                        sourceType = .photoLibrary
+                        showImagePicker = true
+                    }
+                    Button("Cancel", role: .cancel) {}
                 }
                 
                 // Meal Details Card
@@ -204,6 +217,47 @@ struct CreateMealView: View {
                 }
                 .foregroundColor(.accentColor)
             }
+        }
+    }
+}
+
+
+// Add this helper view for UIImagePickerController
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: Image?
+    let sourceType: UIImagePickerController.SourceType
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        // Make it full screen
+        picker.modalPresentationStyle = .fullScreen
+        return picker
+    }
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePicker
+        
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.image = Image(uiImage: uiImage)
+            }
+            parent.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
         }
     }
 }
