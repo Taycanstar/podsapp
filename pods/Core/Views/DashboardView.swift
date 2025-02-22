@@ -17,10 +17,7 @@ struct DashboardView: View {
     
     var body: some View {
         Text("Dashboard")
-//            .task {
-//            // Load logged foods when view appears
-//            try? await foodManager.loadLoggedFoods(email: viewModel.email)
-//        }
+
             .onAppear {
                 isTabBarVisible.wrappedValue = true
                 podsViewModel.initialize(email: viewModel.email)

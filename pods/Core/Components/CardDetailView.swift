@@ -269,6 +269,7 @@ struct CardDetailView: View {
                         
                         Button("Done") {
                             focusedField = nil
+                            isItemNameFocused = false
                         }
                         .foregroundColor(.accentColor)
                         .fontWeight(.medium)
@@ -477,37 +478,6 @@ struct CardDetailView: View {
 }
   
 
-
-//     private func addRow(for columnGroup: [PodColumn]) {
-//     let groupType = columnGroup.first?.groupingType ?? ""
-//     let currentRowIndex = groupedRowsCount[groupType] ?? 1
-    
-//     for column in columnGroup {
-//         let colKey = String(column.id)
-//         var values: [ColumnValue] = []
-        
-//         if case .array(let existingValues) = columnValues[colKey] {
-//             values = existingValues
-//         }
-        
-//         if column.type == "number" {
-//             if values.isEmpty {
-//                 values = [.number(0)]
-//             }
-//             values.append(values.last ?? .number(0))
-//         } else {
-//             if values.isEmpty {
-//                 values = [.null]
-//             }
-//             values.append(values.last ?? .null)
-//         }
-        
-//         columnValues[colKey] = .array(values)
-//     }
-    
-//     groupedRowsCount[groupType] = currentRowIndex + 1
-//     checkForChanges()
-// }
 
 
 private func addRow(for columnGroup: [PodColumn]) {

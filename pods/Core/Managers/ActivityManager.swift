@@ -71,6 +71,13 @@ class ActivityManager: ObservableObject {
                 
                 switch result {
                 case .success(let (newActivities, hasMore)):
+                //    print("DEBUG: Received activities: \(newActivities.count)")  // Add logging here
+                // for activity in newActivities {
+                //     print("DEBUG: Activity \(activity.id) has \(activity.items.count) items with column values:")
+                //     for item in activity.items {
+                //         print("DEBUG: Item \(item.id) column values: \(item.columnValues)")
+                //     }
+                // }
                     if refresh {
                         self.activities = newActivities
                         self.currentPage = 2

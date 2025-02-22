@@ -9,19 +9,20 @@ struct FullActivitySummaryView: View {
     @State private var showDeleteAlert = false
     @State private var isDeleting = false
     @State private var showEditSheet = false
+        @State private var currentActivity: Activity? 
     
     // Add computed property to get fresh activity data
-    private var activity: Activity? {
+    // private var activity: Activity? {
         
-        activityManager.activities.first { $0.id == activityId }
-    }
+    //     activityManager.activities.first { $0.id == activityId }
+    // }
     
     var body: some View {
         ZStack {
             Color("iosbg")
                 .ignoresSafeArea()
             
-            if let activity = activity {  // Use optional binding
+            if let activity = currentActivity {  // Use optional binding
                 ScrollView {
                     VStack(spacing: 10) {
                         // MARK: - List of Items
@@ -102,9 +103,17 @@ struct FullActivitySummaryView: View {
                 }
             }
         }
+         .onAppear {
+            // Load activity once when view appears
+            currentActivity = activityManager.activities.first { $0.id == activityId }
+        }
+        .onChange(of: activityManager.activities) { _ in
+            // Update if activities change
+            currentActivity = activityManager.activities.first { $0.id == activityId }
+        }
         .alert("Delete Activity", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
-                if let activity = activity {
+                if let activity = currentActivity {
                     activityManager.deleteActivity(activity)
                 }
                 dismiss()
@@ -138,79 +147,172 @@ extension FullActivitySummaryView {
             }
         }
     }
+private func columnValuesGrid(for item: ActivityItem) -> some View {
+    print("DEBUG: Activity ID for item \(item.id): \(currentActivity?.id ?? -1)")
+    print("DEBUG: Columns source: \(columns)")
+    print("DEBUG: Column IDs in item: \(Array(item.columnValues.keys))")
+    print("DEBUG: Expected column IDs: \(columns.map { String($0.id) })")
+    print("DEBUG: Displaying column values for item \(item.id): \(item.columnValues)")
+    print("DEBUG: Available columns: \(columns.map { "\($0.id): \($0.name)" })")
 
-    private func columnValuesGrid(for item: ActivityItem) -> some View {
-        let groupedColumns = columns.filter { $0.groupingType == "grouped" }
-        let singleColumns = columns.filter { $0.groupingType == "singular" }
+    let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+    let singleColumns = columns.filter { $0.groupingType == "singular" }
+    
+    // Get sorted item column IDs to maintain consistent order
+    let itemColumnIds = Array(item.columnValues.keys).sorted()
 
+    print("DEBUG: Grouped columns: \(groupedColumns.map { $0.id })")
+    print("DEBUG: Single columns: \(singleColumns.map { $0.id })")
 
-
-        return VStack(alignment: .leading, spacing: 24) {
-            // MARK: - Grouped columns
-            if !groupedColumns.isEmpty {
-                VStack(spacing: 0) {
-                    // Headers
-                    HStack(spacing: 65) {
-                        ForEach(groupedColumns, id: \.id) { column in
-                            Text(column.name)
-                                .font(.system(size: 18))
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                    }
-                    
-                    // Data rows
-                    let minLength: Int = groupedColumns.compactMap { column in
-                        guard case .array(let values) = item.columnValues[String(column.id)] ?? .null
-                        else { return nil }
-                        return values.count
-                    }.min() ?? 0
-                    
-                    ForEach(0..<minLength, id: \.self) { rowIndex in
-                        HStack(spacing: 65) {
-                            ForEach(groupedColumns, id: \.id) { column in
-                                if case .array(let values) = item.columnValues[String(column.id)] ?? .null {
-                                    Text("\(values[rowIndex])")
-                                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
-                                        .frame(maxWidth: .infinity)
-                                        .multilineTextAlignment(.center)
-                                } else {
-                                    Text("-")
-                                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .frame(maxWidth: .infinity)
-                                }
-                            }
-                        }
+    return VStack(alignment: .leading, spacing: 24) {
+        // MARK: - Grouped columns
+        if !groupedColumns.isEmpty {
+            VStack(spacing: 0) {
+                // Headers
+                HStack(spacing: 65) {
+                    ForEach(groupedColumns.indices, id: \.self) { index in
+                        Text(groupedColumns[index].name)
+                            .font(.system(size: 18))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
-            }
-            
-            // MARK: - Single columns
-            ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
-                HStack(spacing: 20) {
-                    ForEach(0..<2) { columnIndex in
-                        let index = rowIndex * 2 + columnIndex
-                        if index < singleColumns.count {
-                            let column = singleColumns[index]
-                            if let value = item.columnValues[String(column.id)] {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(column.name)
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(valueString(for: value))
-                                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Data rows
+                let minLength: Int = itemColumnIds.compactMap { columnId in
+                    guard case .array(let values) = item.columnValues[columnId] ?? .null
+                    else { return nil }
+                    return values.count
+                }.min() ?? 0
+                
+                ForEach(0..<minLength, id: \.self) { rowIndex in
+                    HStack(spacing: 65) {
+                        ForEach(groupedColumns.indices, id: \.self) { columnIndex in
+                            if columnIndex < itemColumnIds.count,
+                               case .array(let values) = item.columnValues[itemColumnIds[columnIndex]] ?? .null {
+                                Text("\(values[rowIndex])")
+                                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                                    .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                    .frame(maxWidth: .infinity)
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                Text("-")
+                                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                                    .frame(maxWidth: .infinity)
                             }
                         }
                     }
                 }
             }
         }
+        
+        // MARK: - Single columns
+        ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
+            HStack(spacing: 20) {
+                ForEach(0..<2) { columnIndex in
+                    let index = rowIndex * 2 + columnIndex
+                    if index < singleColumns.count {
+                        let column = singleColumns[index]
+                        if itemColumnIds.indices.contains(index),
+                           let value = item.columnValues[itemColumnIds[index]] {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(column.name)
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.primary)
+                                
+                                Text(valueString(for: value))
+                                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                                    .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+    // private func columnValuesGrid(for item: ActivityItem) -> some View {
+    //         print("DEBUG: Activity ID for item \(item.id): \(currentActivity?.id ?? -1)")
+    // print("DEBUG: Columns source: \(columns)")
+    // print("DEBUG: Column IDs in item: \(Array(item.columnValues.keys))")
+    // print("DEBUG: Expected column IDs: \(columns.map { String($0.id) })")
+    //         print("DEBUG: Displaying column values for item \(item.id): \(item.columnValues)")
+    // print("DEBUG: Available columns: \(columns.map { "\($0.id): \($0.name)" })")
+    //     let groupedColumns = columns.filter { $0.groupingType == "grouped" }
+    //     let singleColumns = columns.filter { $0.groupingType == "singular" }
+
+    //         print("DEBUG: Grouped columns: \(groupedColumns.map { $0.id })")
+    // print("DEBUG: Single columns: \(singleColumns.map { $0.id })")
+
+
+
+    //     return VStack(alignment: .leading, spacing: 24) {
+    //         // MARK: - Grouped columns
+    //         if !groupedColumns.isEmpty {
+    //             VStack(spacing: 0) {
+    //                 // Headers
+    //                 HStack(spacing: 65) {
+    //                     ForEach(groupedColumns, id: \.id) { column in
+    //                         Text(column.name)
+    //                             .font(.system(size: 18))
+    //                             .foregroundColor(.primary)
+    //                             .frame(maxWidth: .infinity, alignment: .center)
+    //                     }
+    //                 }
+                    
+    //                 // Data rows
+    //                 let minLength: Int = groupedColumns.compactMap { column in
+    //                     guard case .array(let values) = item.columnValues[String(column.id)] ?? .null
+    //                     else { return nil }
+    //                     return values.count
+    //                 }.min() ?? 0
+                    
+    //                 ForEach(0..<minLength, id: \.self) { rowIndex in
+    //                     HStack(spacing: 65) {
+    //                         ForEach(groupedColumns, id: \.id) { column in
+    //                             if case .array(let values) = item.columnValues[String(column.id)] ?? .null {
+    //                                 Text("\(values[rowIndex])")
+    //                                     .font(.system(size: 28, weight: .medium, design: .rounded))
+    //                                     .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+    //                                     .frame(maxWidth: .infinity)
+    //                                     .multilineTextAlignment(.center)
+    //                             } else {
+    //                                 Text("-")
+    //                                     .font(.system(size: 28, weight: .medium, design: .rounded))
+    //                                     .frame(maxWidth: .infinity)
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+            
+    //         // MARK: - Single columns
+    //         ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
+    //             HStack(spacing: 20) {
+    //                 ForEach(0..<2) { columnIndex in
+    //                     let index = rowIndex * 2 + columnIndex
+    //                     if index < singleColumns.count {
+    //                         let column = singleColumns[index]
+    //                         if let value = item.columnValues[String(column.id)] {
+    //                             VStack(alignment: .leading, spacing: 4) {
+    //                                 Text(column.name)
+    //                                     .font(.system(size: 18))
+    //                                     .foregroundColor(.primary)
+                                    
+    //                                 Text(valueString(for: value))
+    //                                     .font(.system(size: 28, weight: .medium, design: .rounded))
+    //                                     .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+    //                             }
+    //                             .frame(maxWidth: .infinity, alignment: .leading)
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     private func valueString(for value: ColumnValue) -> String {
         switch value {

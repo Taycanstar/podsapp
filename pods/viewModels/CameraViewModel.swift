@@ -612,6 +612,12 @@ extension Activity {
     }
 }
 
+extension Activity: Equatable {
+    static func == (lhs: Activity, rhs: Activity) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
 extension ActivityItem {
     init(
         id: Int,
