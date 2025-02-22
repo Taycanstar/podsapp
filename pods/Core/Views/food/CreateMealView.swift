@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct CreateMealView: View {
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +14,8 @@ struct CreateMealView: View {
     @State private var shareWith = "Everyone"
     @State private var instructions = ""
     @State private var showingShareOptions = false
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var selectedImage: Image? = nil
     
     let shareOptions = ["Everyone", "Friends", "Only You"]
     
@@ -25,17 +28,33 @@ struct CreateMealView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // Camera Icon Card
-                ZStack {
-                    Color("iosnp")
-                    Image(systemName: "camera.circle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.accentColor)
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    ZStack {
+                        Color("iosnp")
+                        if let selectedImage {
+                            selectedImage
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(systemName: "camera.circle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    .frame(width: 100, height: 100)
+                    .cornerRadius(12)
+                    .clipped()
                 }
-                .frame(width: 100, height: 100)
-                .cornerRadius(12)
+                .onChange(of: selectedItem) { oldValue, newValue in
+                    Task {
+                        if let data = try? await newValue?.loadTransferable(type: Data.self),
+                           let uiImage = UIImage(data: data) {
+                            selectedImage = Image(uiImage: uiImage)
+                        }
+                    }
+                }
                 
-               // Meal Details Card
-
+                // Meal Details Card
                 VStack(spacing: 16) {
                     TextField("Title", text: $mealName)
                         .textFieldStyle(.plain)  // Remove the border style
