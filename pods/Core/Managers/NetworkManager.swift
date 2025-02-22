@@ -9,6 +9,10 @@ enum NetworkError: Error {
     case serverError(String)
     case unknownError
     case noData
+        case configurationError
+    case imageProcessingError
+    case uploadError
+    case cleanupError
 } 
 
  struct GracieResponse: Codable {
@@ -32,6 +36,13 @@ struct AppVersionResponse: Codable {
         case minimumVersion = "minimum_version"
         case needsUpdate = "needs_update"
         case storeUrl = "store_url"
+    }
+}
+extension Date {
+    var iso8601: String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: self)
     }
 }
 
@@ -639,7 +650,7 @@ class NetworkManager {
     }
 
 
-    func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
+     func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
         
         let region = RegionManager.shared.region
                 
@@ -691,6 +702,103 @@ class NetworkManager {
               }
           }.resume()
       }
+
+            func uploadMealImage(
+        _ image: UIImage,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+            completion(.failure(NetworkError.configurationError))
+            return
+        }
+        
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            completion(.failure(NetworkError.imageProcessingError))
+            return
+        }
+        
+        let blobName = UUID().uuidString + ".jpg"
+        
+        // The actual call to upload file
+        self.uploadFileToAzureBlob(
+            containerName: containerName,
+            blobName: blobName,
+            fileData: imageData,
+            contentType: "image/jpeg"
+        ) { success, urlString in
+            if success, let urlString = urlString,
+               let url = URL(string: urlString) {
+                completion(.success(url))
+            } else {
+                // Distinguish various errors if you like
+                if !success {
+                    completion(.failure(NetworkError.uploadError))
+                } else if urlString != nil {
+                    completion(.failure(NetworkError.invalidURL))
+                } else {
+                    completion(.failure(NetworkError.unknownError))
+                }
+            }
+        }
+    }
+
+    func cleanupOrphanedImages(olderThan hours: Int = 24, completion: @escaping (Bool) -> Void) {
+    let cutoffDate = Calendar.current.date(byAdding: .hour, value: -hours, to: Date())!
+    
+    // Get list of orphaned images from your Django API
+    guard let url = URL(string: "\(baseUrl)/orphaned-images?before=\(cutoffDate.iso8601)") else {
+        completion(false)
+        return
+    }
+    
+    URLSession.shared.dataTask(with: url) { data, response, error in
+        guard let data = data,
+              let blobNames = try? JSONDecoder().decode([String].self, from: data) 
+        else {
+            completion(false)
+            return
+        }
+        
+        let deleteGroup = DispatchGroup()
+        var deleteErrors = [Error]()
+        
+        blobNames.forEach { blobName in
+            deleteGroup.enter()
+            self.deleteAzureBlob(blobName: blobName) { success in
+                if !success {
+                    deleteErrors.append(NetworkError.cleanupError)
+                }
+                deleteGroup.leave()
+            }
+        }
+        
+        deleteGroup.notify(queue: .main) {
+            completion(deleteErrors.isEmpty)
+        }
+    }.resume()
+}
+
+private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> Void) {
+    guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+        completion(false)
+        return
+    }
+    
+    let region = RegionManager.shared.region
+    guard let credentials = getStorageAccountCredentials(for: region) else {
+        completion(false)
+        return
+    }
+    
+    let endpoint = "https://\(credentials.accountName).blob.core.windows.net/\(containerName)/\(blobName)?\(credentials.sasToken)"
+    
+    var request = URLRequest(url: URL(string: endpoint)!)
+    request.httpMethod = "DELETE"
+    
+    URLSession.shared.dataTask(with: request) { _, response, error in
+        completion((response as? HTTPURLResponse)?.statusCode == 202)
+    }.resume()
+}
 
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping (Result<[Pod], Error>) -> Void) {
         var urlString = "\(baseUrl)/get-user-pods2/\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
@@ -864,71 +972,6 @@ class NetworkManager {
     }
 
 
-//    func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
-//         let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
-//         
-//         guard let url = URL(string: urlString) else {
-//             completion(.failure(NetworkError.invalidURL))
-//             return
-//         }
-//         
-//         var request = URLRequest(url: url)
-//         request.httpMethod = "GET"
-//         
-//         URLSession.shared.dataTask(with: request) { data, response, error in
-//             if let error = error {
-//                 completion(.failure(error))
-//                 return
-//             }
-//             
-//             guard let data = data else {
-//                 completion(.failure(NetworkError.noData))
-//                 return
-//             }
-//         
-//               
-//             do {
-//                 let decoder = JSONDecoder()
-//                 
-//                 // Create a date formatter for the 'created_at' field
-//                 let createdAtFormatter = DateFormatter()
-//                 createdAtFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-//                 
-//                 // Create an ISO8601DateFormatter for the 'lastVisited' field
-//                 let iso8601Formatter = ISO8601DateFormatter()
-//                 iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-//                 
-//                 decoder.dateDecodingStrategy = .custom { decoder in
-//                     let container = try decoder.singleValueContainer()
-//                     let dateString = try container.decode(String.self)
-//                     
-//                     // Try parsing with 'created_at' format first
-//                     if let date = createdAtFormatter.date(from: dateString) {
-//                         return date
-//                     }
-//                     
-//                     // If that fails, try ISO8601 format (for 'lastVisited')
-//                     if let date = iso8601Formatter.date(from: dateString) {
-//                         return date
-//                     }
-//                     
-//                     // If both fail, throw an error
-//                     throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
-//                 }
-//                 
-//                 let podJSON = try decoder.decode(PodJSON.self, from: data)
-//                 let pod = Pod(from: podJSON)
-//    
-//                 completion(.success(pod))
-//             } catch {
-//                 print("Decoding error: \(error)")
-//                 if let dataString = String(data: data, encoding: .utf8) {
-//                     print("Received data: \(dataString)")
-//                 }
-//                 completion(.failure(error))
-//             }
-//         }.resume()
-//     }
     func fetchFullPodDetails(email: String, podId: Int, completion: @escaping (Result<Pod, Error>) -> Void) {
         let urlString = "\(baseUrl)/get-full-pod-details/\(email)/\(podId)"
         
