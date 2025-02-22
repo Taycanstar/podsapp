@@ -110,6 +110,7 @@ struct CreateMealView: View {
             }
             .ignoresSafeArea(edges: .top)
         }
+          .background(Color("iosbg"))
         // Transparent nav bar so we see banner behind it
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.clear, for: .navigationBar)
@@ -191,12 +192,15 @@ struct CreateMealView: View {
             // Title
             TextField("Title", text: $mealName)
                 .textFieldStyle(.plain)
-                .padding(.vertical, 8)
+                // .padding(.vertical, 8)
+
+                  Divider()
             
             // Share-with row
             HStack {
                 Text("Share with")
                     .foregroundColor(.primary)
+                    
                 Spacer()
                 Menu {
                     ForEach(shareOptions, id: \.self) { option in
@@ -217,6 +221,7 @@ struct CreateMealView: View {
                     .cornerRadius(8)
                 }
             }
+                 Divider()
             
             // Macros
             macroCircleAndStats
