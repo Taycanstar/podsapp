@@ -10,6 +10,8 @@ struct FoodSearchResponse: Codable {
     let foods: [Food]
 }
 
+
+
 struct Food: Codable, Identifiable, Hashable {
     let fdcId: Int
     let description: String
@@ -137,3 +139,9 @@ extension LoggedFoodItem {
     }
 }
 
+
+
+enum LogFoodMode {
+    case logFood       // Normal logging mode from TabBar
+    case addToMeal     // Adding to meal from CreateMealView
+}

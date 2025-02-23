@@ -17,6 +17,12 @@ struct LogFood: View {
     @State private var errorMessage = ""
     @Binding var path: NavigationPath
 
+    var mode: LogFoodMode = .logFood 
+    @Binding var selectedFoods: [Food]  
+
+    
+   
+
     
     enum FoodTab: Hashable {
         case all, meals, recipes, foods
@@ -44,23 +50,16 @@ struct LogFood: View {
     
     let foodTabs: [FoodTab] = [.all, .meals, .recipes, .foods]
     
-    init(selectedTab: Binding<Int>, selectedMeal: Binding<String>, path: Binding<NavigationPath>) {
+    init(selectedTab: Binding<Int>, 
+         selectedMeal: Binding<String>, 
+         path: Binding<NavigationPath>,
+         mode: LogFoodMode = .logFood,
+         selectedFoods: Binding<[Food]>) {
         _selectedTab = selectedTab
-         _path = path
-        // Set default meal based on current hour
-        let hour = Calendar.current.component(.hour, from: Date())
-        let defaultMeal: String = {
-            switch hour {
-            case 4...11:
-                return "Breakfast"
-            case 12...16:
-                return "Lunch"
-            default:
-                return "Dinner"
-            }
-        }()
-        _selectedMeal = selectedMeal // we use the passed‑in binding
-        
+        _path = path
+        _selectedMeal = selectedMeal
+        self.mode = mode
+        _selectedFoods = selectedFoods
     }
     
     var body: some View {
@@ -104,7 +103,7 @@ struct LogFood: View {
                                  .listRowSeparator(.hidden) 
                             
         ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
-                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal)
+                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
                             .onAppear {
                           
                                 foodManager.loadMoreIfNeeded(food: loggedFood)
@@ -114,7 +113,7 @@ struct LogFood: View {
                                 
                             } else {
                                 ForEach(searchResults) { food in
-                                    FoodRow(food: food, selectedMeal: $selectedMeal)
+                                    FoodRow(food: food, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
                                 }
                             }
                         }
@@ -261,6 +260,7 @@ struct LogFood: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 }
+        .navigationBarBackButtonHidden(mode == .addToMeal)
     }
                 
     // MARK: - Search
@@ -293,6 +293,11 @@ struct FoodRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
+
+    // Add these properties
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath 
     
     var body: some View {
         ZStack {
@@ -324,17 +329,30 @@ struct FoodRow: View {
                 
                 Button {
                     HapticFeedback.generate()
-                    logFood()
+                    // logFood()
+                    handleFoodTap()
                 } label: {
-                    if foodManager.lastLoggedFoodId  == food.fdcId {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.green)
-                            .transition(.opacity)
+                    if mode == .addToMeal {
+                        if selectedFoods.contains(where: { $0.id == food.id }) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                        }
                     } else {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.accentColor)
+                        if foodManager.lastLoggedFoodId == food.fdcId {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.green)
+                                .transition(.opacity)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                        }
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -347,6 +365,17 @@ struct FoodRow: View {
             Text(errorMessage)
         }
     }
+
+                    private func handleFoodTap() {
+                    HapticFeedback.generate()
+                    switch mode {
+                    case .logFood:
+                        logFood()
+                    case .addToMeal:
+                        selectedFoods.append(food)  
+                        path.removeLast() 
+                    }
+                }
     
     private func logFood() {
         foodManager.logFood(
@@ -368,7 +397,6 @@ struct FoodRow: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation { 
                         checkmarkVisible = false
-                        
                          }
                 }
             case .failure(let error):
@@ -388,14 +416,21 @@ struct HistoryRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var errorMessage: String = ""
     @State private var showErrorAlert: Bool = false
+    let mode: LogFoodMode  
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
     
     
     var body: some View {
+        // FoodRow(
+        //     food: loggedFood.food.asFood,
+        //     selectedMeal: selectedMeal)
         FoodRow(
             food: loggedFood.food.asFood,
-            selectedMeal: selectedMeal)
-        
-
+            selectedMeal: selectedMeal,
+            mode: mode,              // Pass through from LogFood
+            selectedFoods: $selectedFoods,
+            path: $path)
     }
 }
 

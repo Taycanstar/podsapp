@@ -8,10 +8,6 @@
 import SwiftUI
 import PhotosUI
 
-
-import SwiftUI
-import PhotosUI
-
 // Add this enum at the top of CreateMealView
 enum Field: Hashable {
     case mealName
@@ -44,6 +40,9 @@ struct CreateMealView: View {
 
     // Add this state variable with your other @State properties
     @FocusState private var focusedField: Field?
+
+    @Binding var path: NavigationPath
+    @Binding var selectedFoods: [Food]
 
     // Example share options
     let shareOptions = ["Everyone", "Friends", "Only You"]
@@ -200,6 +199,20 @@ struct CreateMealView: View {
         }
     }
     
+    private var selectedFoodsSection: some View {
+    ForEach(selectedFoods) { food in
+        HStack {
+            Text(food.displayName)
+                .font(.headline)
+            Spacer()
+            if let calories = food.calories {
+                Text("\(Int(calories)) cal")
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
     // MARK: - Subviews
     private var mealDetailsSection: some View {
         VStack(spacing: 16) {
@@ -252,8 +265,14 @@ struct CreateMealView: View {
             Text("Meal Items")
                 .font(.title2)
                 .fontWeight(.bold)
+
+             if !selectedFoods.isEmpty {
+            selectedFoodsSection
+        }
             
             Button {
+                // path.append(.logFood(mode: .addToMeal, selectedFoods: selectedFoods))
+                path.append(FoodNavigationDestination.addMealItems)
                 print("tapped items")
             } label: {
                 Text("Add item to meal")

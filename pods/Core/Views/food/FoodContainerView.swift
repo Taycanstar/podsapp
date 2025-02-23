@@ -11,7 +11,8 @@ import SwiftUI
 enum FoodNavigationDestination: Hashable {
     case logFood
     case foodDetails(Food, Binding<String>) // Food and selected meal
-    case createMeal  // Add this case
+    case createMeal 
+    case addMealItems
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
         switch (lhs, rhs) {
@@ -19,6 +20,8 @@ enum FoodNavigationDestination: Hashable {
             return true
         case let (.foodDetails(food1, meal1), .foodDetails(food2, meal2)):
             return food1.id == food2.id && meal1.wrappedValue == meal2.wrappedValue
+        case (.addMealItems, .addMealItems):
+            return true
         default:
             return false
         }
@@ -34,6 +37,8 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(meal.wrappedValue)
         case .createMeal:
             hasher.combine(2)
+        case .addMealItems:
+            hasher.combine(3)
         }
     }
 }
@@ -43,6 +48,7 @@ struct FoodContainerView: View {
     @State private var path = NavigationPath()
     @Binding var selectedTab: Int
     @State private var selectedMeal: String
+        @State private var selectedFoods: [Food] = []
     
     
     init(selectedTab: Binding<Int>) {
@@ -64,16 +70,40 @@ struct FoodContainerView: View {
     
     var body: some View {
         NavigationStack(path: $path) {
-            LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
+            // LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
+
+            LogFood(
+            selectedTab: $selectedTab,
+            selectedMeal: $selectedMeal,
+            path: $path,
+            mode: .logFood, 
+            selectedFoods: $selectedFoods
+        )
                 .navigationDestination(for: FoodNavigationDestination.self) { destination in
                     switch destination {
                     case .logFood:
-                        LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
+                        // LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
+                             LogFood(
+            selectedTab: $selectedTab,
+            selectedMeal: $selectedMeal,
+            path: $path,
+            mode: .logFood,
+            selectedFoods: $selectedFoods
+        )
                     case .foodDetails(let food, _):
                         FoodDetailsView(food: food, selectedMeal: $selectedMeal)
                     case .createMeal:
                         // Implementation of create meal view
-                         CreateMealView()
+                        //  CreateMealView()
+                        CreateMealView(path: $path, selectedFoods: $selectedFoods )
+                    case .addMealItems:
+                        LogFood(
+                            selectedTab: $selectedTab,
+                            selectedMeal: $selectedMeal,
+                            path: $path,
+                            mode: .addToMeal,
+                            selectedFoods: $selectedFoods
+                        )
              
                     }
                 }

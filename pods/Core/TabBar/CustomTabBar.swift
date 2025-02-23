@@ -26,8 +26,8 @@ struct CustomTabBar: View {
                    
                    Spacer() 
                     
-                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
-                        .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
+                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
+                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
                     
                     Spacer() 
 
