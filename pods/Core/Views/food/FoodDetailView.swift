@@ -273,7 +273,7 @@ struct MacroView: View {
                 .font(.body)
             Text(label)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
         }
     }
 }
