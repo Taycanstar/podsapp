@@ -18,6 +18,7 @@ struct Food: Codable, Identifiable, Hashable {
     let brandOwner: String?
     let brandName: String?
     let servingSize: Double?
+    let numberOfServings: Double?
     let servingSizeUnit: String?
     let householdServingFullText: String?
     let foodNutrients: [Nutrient]
@@ -93,6 +94,7 @@ struct LoggedFoodItem: Codable {
     let displayName: String
     let calories: Double
     let servingSizeText: String
+    let numberOfServings: Double
     let brandText: String?
 }
 
@@ -125,6 +127,7 @@ extension LoggedFoodItem {
             brandOwner: nil,
             brandName: brandText,
             servingSize: nil,
+            numberOfServings: numberOfServings,
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
             foodNutrients: [
@@ -135,6 +138,7 @@ extension LoggedFoodItem {
                 )
             ],
             foodMeasures: []
+            
         )
     }
 }
