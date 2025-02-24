@@ -49,6 +49,7 @@ struct CreateMealView: View {
     
     // Adjust how tall you want the banner/collapsing area to be
     let headerHeight: CGFloat = 400
+
     
     // For demonstration
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
@@ -199,20 +200,6 @@ struct CreateMealView: View {
         }
     }
     
-    private var selectedFoodsSection: some View {
-    ForEach(selectedFoods) { food in
-        HStack {
-            Text(food.displayName)
-                .font(.headline)
-            Spacer()
-            if let calories = food.calories {
-                Text("\(Int(calories)) cal")
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.horizontal)
-    }
-}
     // MARK: - Subviews
     private var mealDetailsSection: some View {
         VStack(spacing: 16) {
@@ -259,21 +246,55 @@ struct CreateMealView: View {
         .cornerRadius(12)
         .padding(.horizontal)
     }
-    
+
+
     private var mealItemsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Meal Items")
                 .font(.title2)
                 .fontWeight(.bold)
-
-             if !selectedFoods.isEmpty {
-            selectedFoodsSection
-        }
+            
+            if !selectedFoods.isEmpty {
+                List {
+                    // ForEach(selectedFoods) { food in
+                                    ForEach(Array(selectedFoods.enumerated()), id: \.element.id) { index, food in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(food.displayName)
+                                .font(.headline)
+                            
+                            HStack {
+                                Text(food.servingSizeText)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                
+                                if let calories = food.calories {
+                                    Text("•")
+                                        .foregroundColor(.gray)
+                                    Text("\(Int(calories))")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                  
+                        .listRowBackground(Color("iosnp"))
+                             .listRowSeparator(index == selectedFoods.count - 1 ? .hidden : .visible)
+                    }
+                    .onDelete { indexSet in
+                        selectedFoods.remove(atOffsets: indexSet)
+                    }
+                }
+                .listStyle(.plain)
+                .background(Color("iosnp"))
+                .cornerRadius(12)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(selectedFoods.count * 65))
+              
+              
+            }
             
             Button {
-                // path.append(.logFood(mode: .addToMeal, selectedFoods: selectedFoods))
                 path.append(FoodNavigationDestination.addMealItems)
-                print("tapped items")
             } label: {
                 Text("Add item to meal")
                     .foregroundColor(.accentColor)
