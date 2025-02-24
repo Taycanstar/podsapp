@@ -213,13 +213,16 @@ struct LogFood: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Cancel button
-            ToolbarItem(placement: .navigationBarLeading) {
+            if mode != .addToMeal {
+                ToolbarItem(placement: .navigationBarLeading) {
                 Button("Cancel") {
                     selectedTab = 0 // switch back to Dashboard
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
             }
+            }
+            
             // Meal picker menu
             ToolbarItem(placement: .principal) {
                 Menu {
@@ -263,7 +266,7 @@ struct LogFood: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 }
-        .navigationBarBackButtonHidden(mode == .addToMeal)
+        .navigationBarBackButtonHidden(mode != .addToMeal)
     }
                 
     // MARK: - Search
