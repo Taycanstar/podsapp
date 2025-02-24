@@ -43,6 +43,8 @@ struct CreateMealView: View {
 
     @Binding var path: NavigationPath
     @Binding var selectedFoods: [Food]
+    // Change from array to dictionary tracking
+
 
     // Example share options
     let shareOptions = ["Everyone", "Friends", "Only You"]
@@ -118,6 +120,9 @@ struct CreateMealView: View {
             }
             .ignoresSafeArea(edges: .top)
         }
+        .onAppear {
+    print("CreateMealView onAppear. Current selectedFoods = \(selectedFoods)")
+}
           .background(Color("iosbg"))
         // Transparent nav bar so we see banner behind it
         .navigationBarTitleDisplayMode(.inline)
@@ -256,29 +261,35 @@ struct CreateMealView: View {
             
             if !selectedFoods.isEmpty {
                 List {
-                    // ForEach(selectedFoods) { food in
+         
                                     ForEach(Array(selectedFoods.enumerated()), id: \.element.id) { index, food in
-                        // VStack(alignment: .leading, spacing: 4) {
+                        
                         HStack {
+                      
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(food.displayName)
-                            .font(.headline)
-                                Text(food.servingSizeText)
-                            
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .font(.headline)
+                                HStack {
+                                    Text(food.servingSizeText)
+                                    if let servings = food.numberOfServings, servings > 1 {
+                                        Text("×\(Int(servings))")
+                                    }
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                             }
                             Spacer()
                                 
                                 if let calories = food.calories {
                                 
-                                    Text("\(Int(calories))")
+                                    // Text("\(Int(calories))")
+                                     Text("\(Int(calories * (food.numberOfServings ?? 1)))")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }
                             
                         }
-                  
+                 
                         .listRowBackground(Color("iosnp"))
                              .listRowSeparator(index == selectedFoods.count - 1 ? .hidden : .visible)
                     }

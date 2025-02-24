@@ -383,17 +383,43 @@ struct FoodRow: View {
     case .logFood:
         logFood()
     case .addToMeal:
-        if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
-            // Increment existing servings
+        // if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+        //     // Increment existing servings
+        //     var updatedFood = selectedFoods[index]
+        //     updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
+        //     // selectedFoods[index] = updatedFood
+        //     var newArray = selectedFoods  // Make copy
+        // newArray[index] = updatedFood  // Modify copy
+        // selectedFoods = newArray 
+        // } else {
+        //     // Add new entry with initial serving
+        //     var newFood = food
+        //     newFood.numberOfServings = 1
+        //     selectedFoods.append(newFood)
+        // }
+        // foodManager.trackRecentlyAdded(foodId: food.fdcId)
+        // path.removeLast()
+              if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+            print("Found existing item \(food.fdcId), incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
+             print("Incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
             var updatedFood = selectedFoods[index]
             updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
-            selectedFoods[index] = updatedFood
+            
+            var newArray = selectedFoods
+            newArray[index] = updatedFood
+            selectedFoods = newArray
+             print("After assignment, selectedFoods[index] = \(selectedFoods[index])")
         } else {
-            // Add new entry with initial serving
+            print("New item \(food.fdcId), adding with 1 serving.")
+            
             var newFood = food
             newFood.numberOfServings = 1
             selectedFoods.append(newFood)
         }
+        print("Now selectedFoods = \(selectedFoods)")
+       
+
+        
         foodManager.trackRecentlyAdded(foodId: food.fdcId)
         path.removeLast()
     }

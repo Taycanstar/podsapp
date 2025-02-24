@@ -12,7 +12,7 @@ struct FoodSearchResponse: Codable {
 
 
 
-struct Food: Codable, Identifiable, Hashable {
+struct Food: Codable, Identifiable, Hashable{
     let fdcId: Int
     let description: String
     let brandOwner: String?
@@ -128,6 +128,7 @@ extension LoggedFoodItem {
             brandName: brandText,
             servingSize: nil,
             numberOfServings: numberOfServings,
+
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
             foodNutrients: [
