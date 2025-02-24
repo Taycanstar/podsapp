@@ -369,7 +369,9 @@ struct CreateMealView: View {
                         removeAllItems(withFdcId: foodToRemove.fdcId)
                     }
                 }
+
             }
+            
             .listStyle(.plain)
             .background(Color("iosnp"))
             .cornerRadius(12)
@@ -396,20 +398,25 @@ struct CreateMealView: View {
 
 /// Groups `selectedFoods` by `fdcId`, merges duplicates into one item each, summing up `numberOfServings`.
 private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
-    // Dictionary where key = fdcId, value = array of Foods with that ID
-    let grouped = Dictionary(grouping: allFoods, by: \.fdcId)
+    // Dictionary to store the combined foods
+    var grouped: [Int: Food] = [:]
     
-    // For each group, pick the first item to represent it, then sum up .numberOfServings
-    return grouped.values.map { items in
-        var combined = items[0]
-        let totalServings = items.reduce(0.0) {
-            $0 + ($1.numberOfServings ?? 1.0)
+    // Process foods in order
+    for food in allFoods {
+        if var existing = grouped[food.fdcId] {
+            // Update existing entry
+            existing.numberOfServings = (existing.numberOfServings ?? 1) + (food.numberOfServings ?? 1)
+            grouped[food.fdcId] = existing
+        } else {
+            // Add new entry
+            grouped[food.fdcId] = food
         }
-        combined.numberOfServings = totalServings
-        // You can also adjust `combined.householdServingFullText`
-        // or do other merges if needed.
-        return combined
     }
+    
+    // Return foods in original order (based on first appearance)
+    return allFoods.compactMap { food in
+        grouped.removeValue(forKey: food.fdcId)
+    }.filter { $0 != nil }
 }
 
 /// Removes all items from `selectedFoods` that have the same fdcId
