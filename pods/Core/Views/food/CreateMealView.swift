@@ -264,6 +264,7 @@ struct CreateMealView: View {
                                 Text(food.displayName)
                             .font(.headline)
                                 Text(food.servingSizeText)
+                            
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
