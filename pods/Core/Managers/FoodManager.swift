@@ -11,6 +11,8 @@ class FoodManager: ObservableObject {
     @Published var lastLoggedFoodId: Int? = nil
     @Published var showToast = false
 
+    @Published var recentlyAddedFoodIds: Set<Int> = []
+
     
     private let networkManager: NetworkManager
     private var userEmail: String?
@@ -20,12 +22,21 @@ class FoodManager: ObservableObject {
     init() {
         self.networkManager = NetworkManager()
     }
+
+    
     
     func initialize(userEmail: String) {
         print("FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
         resetAndFetchFoods()
     }
+
+    func trackRecentlyAdded(foodId: Int) {
+    recentlyAddedFoodIds.insert(foodId)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        self.recentlyAddedFoodIds.remove(foodId)
+    }
+}
     
     private func resetAndFetchFoods() {
         currentPage = 1

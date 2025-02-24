@@ -333,7 +333,8 @@ struct FoodRow: View {
                     handleFoodTap()
                 } label: {
                     if mode == .addToMeal {
-                        if selectedFoods.contains(where: { $0.id == food.id }) {
+                        // if selectedFoods.contains(where: { $0.id == food.id }) {
+                                if foodManager.recentlyAddedFoodIds.contains(food.fdcId) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.green)
@@ -366,16 +367,37 @@ struct FoodRow: View {
         }
     }
 
-                    private func handleFoodTap() {
-                    HapticFeedback.generate()
-                    switch mode {
-                    case .logFood:
-                        logFood()
-                    case .addToMeal:
-                        selectedFoods.append(food)  
-                        path.removeLast() 
-                    }
-                }
+                //     private func handleFoodTap() {
+                //     HapticFeedback.generate()
+                //     switch mode {
+                //     case .logFood:
+                //         logFood()
+                //     case .addToMeal:
+                //         selectedFoods.append(food)  
+                //         path.removeLast() 
+                //     }
+                // }
+                private func handleFoodTap() {
+    HapticFeedback.generate()
+    switch mode {
+    case .logFood:
+        logFood()
+    case .addToMeal:
+        if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+            // Increment existing servings
+            var updatedFood = selectedFoods[index]
+            updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
+            selectedFoods[index] = updatedFood
+        } else {
+            // Add new entry with initial serving
+            var newFood = food
+            newFood.numberOfServings = 1
+            selectedFoods.append(newFood)
+        }
+        foodManager.trackRecentlyAdded(foodId: food.fdcId)
+        path.removeLast()
+    }
+}
     
     private func logFood() {
         foodManager.logFood(
