@@ -48,7 +48,13 @@ struct FoodContainerView: View {
     @State private var path = NavigationPath()
     @Binding var selectedTab: Int
     @State private var selectedMeal: String
-        @State private var selectedFoods: [Food] = []
+        // @State private var selectedFoods: [Food] = []
+
+        @State private var selectedFoods: [Food] = [] {
+        didSet {
+            print("DEBUG [FoodContainerView] didSet selectedFoods => \(selectedFoods)")
+        }
+    }
     
     
     init(selectedTab: Binding<Int>) {

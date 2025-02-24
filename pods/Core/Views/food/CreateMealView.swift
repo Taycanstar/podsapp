@@ -123,6 +123,9 @@ struct CreateMealView: View {
         .onAppear {
     print("CreateMealView onAppear. Current selectedFoods = \(selectedFoods)")
 }
+.onChange(of: selectedFoods) { newValue in
+        print("DEBUG [CreateMealView] .onChange => \(newValue)")
+    }
           .background(Color("iosbg"))
         // Transparent nav bar so we see banner behind it
         .navigationBarTitleDisplayMode(.inline)
@@ -253,72 +256,169 @@ struct CreateMealView: View {
     }
 
 
-    private var mealItemsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Meal Items")
-                .font(.title2)
-                .fontWeight(.bold)
+    // private var mealItemsSection: some View {
+    //     VStack(alignment: .leading, spacing: 12) {
+    //         Text("Meal Items")
+    //             .font(.title2)
+    //             .fontWeight(.bold)
             
-            if !selectedFoods.isEmpty {
-                List {
+    //         if !selectedFoods.isEmpty {
+    //             List {
          
-                                    ForEach(Array(selectedFoods.enumerated()), id: \.element.id) { index, food in
+    //                                 ForEach(Array(selectedFoods.enumerated()), id: \.element.id) { index, food in
                         
-                        HStack {
+    //                     HStack {
                       
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(food.displayName)
-                                    .font(.headline)
-                                HStack {
-                                    Text(food.servingSizeText)
-                                    if let servings = food.numberOfServings, servings > 1 {
-                                        Text("×\(Int(servings))")
-                                    }
+    //                         VStack(alignment: .leading, spacing: 4) {
+    //                             Text(food.displayName)
+    //                                 .font(.headline)
+    //                             HStack {
+    //                                 Text(food.servingSizeText)
+    //                                 if let servings = food.numberOfServings, servings > 1 {
+    //                                     Text("×\(Int(servings))")
+    //                                 }
+    //                             }
+    //                             .font(.subheadline)
+    //                             .foregroundColor(.secondary)
+    //                         }
+    //                         Spacer()
+                                
+    //                             if let calories = food.calories {
+                                
+    //                                 // Text("\(Int(calories))")
+    //                                  Text("\(Int(calories * (food.numberOfServings ?? 1)))")
+    //                                     .font(.subheadline)
+    //                                     .foregroundColor(.secondary)
+    //                             }
+                            
+    //                     }
+                 
+    //                     .listRowBackground(Color("iosnp"))
+    //                          .listRowSeparator(index == selectedFoods.count - 1 ? .hidden : .visible)
+    //                 }
+    //                 .onDelete { indexSet in
+    //                     selectedFoods.remove(atOffsets: indexSet)
+    //                 }
+    //             }
+    //             .listStyle(.plain)
+    //             .background(Color("iosnp"))
+    //             .cornerRadius(12)
+    //             .scrollDisabled(true)
+    //             .frame(height: CGFloat(selectedFoods.count * 65))
+              
+              
+    //         }
+            
+    //         Button {
+    //             path.append(FoodNavigationDestination.addMealItems)
+    //         } label: {
+    //             Text("Add item to meal")
+    //                 .foregroundColor(.accentColor)
+    //                 .frame(maxWidth: .infinity, alignment: .leading)
+    //                 .padding()
+    //                 .background(Color("iosnp"))
+    //                 .cornerRadius(12)
+    //         }
+    //     }
+    //     .padding(.horizontal)
+    // }
+        private var mealItemsSection: some View {
+    VStack(alignment: .leading, spacing: 12) {
+        Text("Meal Items")
+            .font(.title2)
+            .fontWeight(.bold)
+        
+        // 1) Aggregate duplicates by fdcId
+        let aggregatedFoods = aggregateFoodsByFdcId(selectedFoods)
+        
+        if !aggregatedFoods.isEmpty {
+            List {
+                // 2) Use aggregatedFoods instead of selectedFoods
+                ForEach(Array(aggregatedFoods.enumerated()), id: \.element.id) { index, food in
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(food.displayName)
+                                .font(.headline)
+                            
+                            HStack {
+                                Text(food.servingSizeText)
+                                if let servings = food.numberOfServings,
+                                   servings > 1 {
+                                    Text("×\(Int(servings))")
                                 }
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        
+                        if let calories = food.calories {
+                            Text("\(Int(calories * (food.numberOfServings ?? 1)))")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                                
-                                if let calories = food.calories {
-                                
-                                    // Text("\(Int(calories))")
-                                     Text("\(Int(calories * (food.numberOfServings ?? 1)))")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                            
                         }
-                 
-                        .listRowBackground(Color("iosnp"))
-                             .listRowSeparator(index == selectedFoods.count - 1 ? .hidden : .visible)
                     }
-                    .onDelete { indexSet in
-                        selectedFoods.remove(atOffsets: indexSet)
+                    .listRowBackground(Color("iosnp"))
+                    .listRowSeparator(index == aggregatedFoods.count - 1 ? .hidden : .visible)
+                }
+                .onDelete { indexSet in
+                    // 3) Remove *all* items in selectedFoods that belong to the tapped row
+                    if let firstIdx = indexSet.first {
+                        let foodToRemove = aggregatedFoods[firstIdx]
+                        removeAllItems(withFdcId: foodToRemove.fdcId)
                     }
                 }
-                .listStyle(.plain)
+            }
+            .listStyle(.plain)
+            .background(Color("iosnp"))
+            .cornerRadius(12)
+            .scrollDisabled(true)
+            // If you want a frame, do it based on aggregatedFoods count:
+            .frame(height: CGFloat(aggregatedFoods.count * 65))
+        }
+        
+        Button {
+            path.append(FoodNavigationDestination.addMealItems)
+        } label: {
+            Text("Add item to meal")
+                .foregroundColor(.accentColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
                 .background(Color("iosnp"))
                 .cornerRadius(12)
-                .scrollDisabled(true)
-                .frame(height: CGFloat(selectedFoods.count * 65))
-              
-              
-            }
-            
-            Button {
-                path.append(FoodNavigationDestination.addMealItems)
-            } label: {
-                Text("Add item to meal")
-                    .foregroundColor(.accentColor)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color("iosnp"))
-                    .cornerRadius(12)
-            }
         }
-        .padding(.horizontal)
     }
+    .padding(.horizontal)
+}
+
+// MARK: - Aggregation
+
+/// Groups `selectedFoods` by `fdcId`, merges duplicates into one item each, summing up `numberOfServings`.
+private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
+    // Dictionary where key = fdcId, value = array of Foods with that ID
+    let grouped = Dictionary(grouping: allFoods, by: \.fdcId)
+    
+    // For each group, pick the first item to represent it, then sum up .numberOfServings
+    return grouped.values.map { items in
+        var combined = items[0]
+        let totalServings = items.reduce(0.0) {
+            $0 + ($1.numberOfServings ?? 1.0)
+        }
+        combined.numberOfServings = totalServings
+        // You can also adjust `combined.householdServingFullText`
+        // or do other merges if needed.
+        return combined
+    }
+}
+
+/// Removes all items from `selectedFoods` that have the same fdcId
+/// as the aggregated item the user swiped to delete.
+private func removeAllItems(withFdcId fdcId: Int) {
+    selectedFoods.removeAll { $0.fdcId == fdcId }
+}
+
+
     
     private var directionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {

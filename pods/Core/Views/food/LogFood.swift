@@ -207,6 +207,9 @@ struct LogFood: View {
                 await searchFoods()
             }
         }
+        .onChange(of: selectedFoods) { newValue in
+        print("DEBUG [LogFood] .onChange => \(newValue)")
+    }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Cancel button
@@ -367,63 +370,80 @@ struct FoodRow: View {
         }
     }
 
-                //     private func handleFoodTap() {
-                //     HapticFeedback.generate()
-                //     switch mode {
-                //     case .logFood:
-                //         logFood()
-                //     case .addToMeal:
-                //         selectedFoods.append(food)  
-                //         path.removeLast() 
-                //     }
-                // }
-                private func handleFoodTap() {
+    
+//                 private func handleFoodTap() {
+//     HapticFeedback.generate()
+//     switch mode {
+//     case .logFood:
+//         logFood()
+//     case .addToMeal:
+ 
+//               if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+//             print("Found existing item \(food.fdcId), incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
+//              print("Incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
+//             var updatedFood = selectedFoods[index]
+//             updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
+            
+//             var newArray = selectedFoods
+//             newArray[index] = updatedFood
+//             selectedFoods = newArray
+//              print("After assignment, selectedFoods[index] = \(selectedFoods[index])")
+//         } else {
+//             print("New item \(food.fdcId), adding with 1 serving.")
+            
+//             var newFood = food
+//             newFood.numberOfServings = 1
+//             selectedFoods.append(newFood)
+//         }
+//         print("Now selectedFoods = \(selectedFoods)")
+       
+
+        
+//         foodManager.trackRecentlyAdded(foodId: food.fdcId)
+//         path.removeLast()
+//     }
+// }
+private func handleFoodTap() {
     HapticFeedback.generate()
     switch mode {
     case .logFood:
         logFood()
-    case .addToMeal:
-        // if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
-        //     // Increment existing servings
-        //     var updatedFood = selectedFoods[index]
-        //     updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
-        //     // selectedFoods[index] = updatedFood
-        //     var newArray = selectedFoods  // Make copy
-        // newArray[index] = updatedFood  // Modify copy
-        // selectedFoods = newArray 
-        // } else {
-        //     // Add new entry with initial serving
-        //     var newFood = food
-        //     newFood.numberOfServings = 1
-        //     selectedFoods.append(newFood)
-        // }
-        // foodManager.trackRecentlyAdded(foodId: food.fdcId)
-        // path.removeLast()
-              if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
-            print("Found existing item \(food.fdcId), incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
-             print("Incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
-            var updatedFood = selectedFoods[index]
-            updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
-            
-            var newArray = selectedFoods
-            newArray[index] = updatedFood
-            selectedFoods = newArray
-             print("After assignment, selectedFoods[index] = \(selectedFoods[index])")
-        } else {
-            print("New item \(food.fdcId), adding with 1 serving.")
-            
-            var newFood = food
-            newFood.numberOfServings = 1
-            selectedFoods.append(newFood)
-        }
-        print("Now selectedFoods = \(selectedFoods)")
-       
-
         
-        foodManager.trackRecentlyAdded(foodId: food.fdcId)
-        path.removeLast()
+    case .addToMeal:
+        print("Adding new item \(food.fdcId) even if it already exists.")
+    var newFood = food
+    // If you want each new item to start at 1 serving, do:
+    newFood.numberOfServings = 1
+    // If you want to pass some custom text, do it here:
+    // newFood = updatedFoodSettingOlivia(newFood)
+
+    selectedFoods.append(newFood)
+    
+    // track, then pop back
+    foodManager.trackRecentlyAdded(foodId: food.fdcId)
+    path.removeLast()
     }
 }
+
+/// Helper to forcibly set `householdServingFullText` to "Olivia"
+private func updatedFoodSettingOlivia(_ f: Food) -> Food {
+    var copy = f
+    copy = Food(
+        fdcId: copy.fdcId,
+        description: copy.description,
+        brandOwner: copy.brandOwner,
+        brandName: copy.brandName,
+        servingSize: copy.servingSize,
+        numberOfServings: copy.numberOfServings,
+        servingSizeUnit: copy.servingSizeUnit,
+        // This is the key: forcibly change the text
+        householdServingFullText: "Olivia",
+        foodNutrients: copy.foodNutrients,
+        foodMeasures: copy.foodMeasures
+    )
+    return copy
+}
+
     
     private func logFood() {
         foodManager.logFood(
@@ -470,11 +490,9 @@ struct HistoryRow: View {
     
     
     var body: some View {
-        // FoodRow(
-        //     food: loggedFood.food.asFood,
-        //     selectedMeal: selectedMeal)
         FoodRow(
             food: loggedFood.food.asFood,
+          
             selectedMeal: selectedMeal,
             mode: mode,              // Pass through from LogFood
             selectedFoods: $selectedFoods,
