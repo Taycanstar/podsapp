@@ -374,38 +374,6 @@ struct FoodRow: View {
     }
 
     
-//                 private func handleFoodTap() {
-//     HapticFeedback.generate()
-//     switch mode {
-//     case .logFood:
-//         logFood()
-//     case .addToMeal:
- 
-//               if let index = selectedFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
-//             print("Found existing item \(food.fdcId), incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
-//              print("Incrementing from \(selectedFoods[index].numberOfServings ?? 1).")
-//             var updatedFood = selectedFoods[index]
-//             updatedFood.numberOfServings = (updatedFood.numberOfServings ?? 1) + 1
-            
-//             var newArray = selectedFoods
-//             newArray[index] = updatedFood
-//             selectedFoods = newArray
-//              print("After assignment, selectedFoods[index] = \(selectedFoods[index])")
-//         } else {
-//             print("New item \(food.fdcId), adding with 1 serving.")
-            
-//             var newFood = food
-//             newFood.numberOfServings = 1
-//             selectedFoods.append(newFood)
-//         }
-//         print("Now selectedFoods = \(selectedFoods)")
-       
-
-        
-//         foodManager.trackRecentlyAdded(foodId: food.fdcId)
-//         path.removeLast()
-//     }
-// }
 private func handleFoodTap() {
     HapticFeedback.generate()
     switch mode {
@@ -413,7 +381,7 @@ private func handleFoodTap() {
         logFood()
         
     case .addToMeal:
-        print("Adding new item \(food.fdcId) even if it already exists.")
+       
     var newFood = food
     // If you want each new item to start at 1 serving, do:
     newFood.numberOfServings = 1
@@ -428,24 +396,6 @@ private func handleFoodTap() {
     }
 }
 
-/// Helper to forcibly set `householdServingFullText` to "Olivia"
-private func updatedFoodSettingOlivia(_ f: Food) -> Food {
-    var copy = f
-    copy = Food(
-        fdcId: copy.fdcId,
-        description: copy.description,
-        brandOwner: copy.brandOwner,
-        brandName: copy.brandName,
-        servingSize: copy.servingSize,
-        numberOfServings: copy.numberOfServings,
-        servingSizeUnit: copy.servingSizeUnit,
-        // This is the key: forcibly change the text
-        householdServingFullText: "Olivia",
-        foodNutrients: copy.foodNutrients,
-        foodMeasures: copy.foodMeasures
-    )
-    return copy
-}
 
     
     private func logFood() {

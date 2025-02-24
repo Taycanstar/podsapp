@@ -29,6 +29,17 @@ struct Food: Codable, Identifiable, Hashable{
     var calories: Double? {
         foodNutrients.first { $0.nutrientName == "Energy" }?.value
     }
+    var protein: Double? {
+        foodNutrients.first { $0.nutrientName == "Protein" }?.value
+    }
+    
+    var carbs: Double? {
+        foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value
+    }
+    
+    var fat: Double? {
+        foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value
+    }
     
     var displayName: String {
         description.capitalized
@@ -96,6 +107,9 @@ struct LoggedFoodItem: Codable {
     let servingSizeText: String
     var numberOfServings: Double
     let brandText: String?
+    let protein: Double
+    let carbs: Double
+    let fat: Double
 }
 
 struct LoggedFood: Codable, Identifiable {
@@ -122,13 +136,12 @@ struct FoodLogsResponse: Codable {
 extension LoggedFoodItem {
     var asFood: Food {
         Food(
-            fdcId: self.fdcId,  // Use the actual USDA/external id here instead of 0.
+            fdcId: self.fdcId,
             description: displayName,
             brandOwner: nil,
             brandName: brandText,
             servingSize: nil,
             numberOfServings: numberOfServings,
-
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
             foodNutrients: [
@@ -136,10 +149,24 @@ extension LoggedFoodItem {
                     nutrientName: "Energy",
                     value: calories,
                     unitName: "kcal"
+                ),
+                Nutrient(
+                    nutrientName: "Protein",
+                    value: protein,
+                    unitName: "g"
+                ),
+                Nutrient(
+                    nutrientName: "Carbohydrate, by difference",
+                    value: carbs,
+                    unitName: "g"
+                ),
+                Nutrient(
+                    nutrientName: "Total lipid (fat)",
+                    value: fat,
+                    unitName: "g"
                 )
             ],
             foodMeasures: []
-            
         )
     }
 }

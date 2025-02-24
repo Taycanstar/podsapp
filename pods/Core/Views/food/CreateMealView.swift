@@ -120,12 +120,6 @@ struct CreateMealView: View {
             }
             .ignoresSafeArea(edges: .top)
         }
-        .onAppear {
-    print("CreateMealView onAppear. Current selectedFoods = \(selectedFoods)")
-}
-.onChange(of: selectedFoods) { newValue in
-        print("DEBUG [CreateMealView] .onChange => \(newValue)")
-    }
           .background(Color("iosbg"))
         // Transparent nav bar so we see banner behind it
         .navigationBarTitleDisplayMode(.inline)
@@ -525,10 +519,13 @@ private struct MacroTotals {
     }
 }
 
+
 private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
     var totals = MacroTotals()
     
     for food in foods {
+            print("Food: \(food.description)")
+    print("Nutrients: \(food.foodNutrients.map { "\($0.nutrientName): \($0.value)" }.joined(separator: ", "))")
         let servings = food.numberOfServings ?? 1
         
         // Sum up calories
@@ -537,21 +534,18 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         }
         
         // Sum up macros
-        for nutrient in food.foodNutrients {
-            let value = nutrient.value * servings
-            switch nutrient.nutrientName {
-            case "Protein":
-                totals.protein += value
-            case "Carbohydrate, by difference":
-                totals.carbs += value
-            case "Total lipid (fat)":
-                totals.fat += value
-            default:
-                break
-            }
+        if let protein = food.protein {
+            totals.protein += protein * servings
+        }
+        if let carbs = food.carbs {
+            totals.carbs += carbs * servings
+        }
+        if let fat = food.fat {
+            totals.fat += fat * servings
         }
     }
     
+    print("Final totals - Protein: \(totals.protein), Carbs: \(totals.carbs), Fat: \(totals.fat)")
     return totals
 }
 }
