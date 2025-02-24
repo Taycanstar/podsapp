@@ -258,23 +258,24 @@ struct CreateMealView: View {
                 List {
                     // ForEach(selectedFoods) { food in
                                     ForEach(Array(selectedFoods.enumerated()), id: \.element.id) { index, food in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(food.displayName)
-                                .font(.headline)
-                            
-                            HStack {
+                        // VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(food.displayName)
+                            .font(.headline)
                                 Text(food.servingSizeText)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
                                 
                                 if let calories = food.calories {
-                                    Text("•")
-                                        .foregroundColor(.gray)
+                                
                                     Text("\(Int(calories))")
                                         .font(.subheadline)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                 }
-                            }
+                            
                         }
                   
                         .listRowBackground(Color("iosnp"))
