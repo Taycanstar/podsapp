@@ -18,6 +18,12 @@ class FoodManager: ObservableObject {
     private var userEmail: String?
     private var currentPage = 1
     private let pageSize = 20
+
+    // Add these properties
+@Published var meals: [Meal] = []
+@Published var isLoadingMeals = false
+private var currentMealPage = 1
+private var hasMoreMeals = true
     
     init() {
         self.networkManager = NetworkManager()
@@ -99,43 +105,6 @@ private func uniqueLogs(from logs: [LoggedFood]) -> [LoggedFood] {
     return unique
 }
 
-
-// func loadMoreFoods(refresh: Bool = false) {
-//     guard let email = userEmail else { return }
-//     guard !isLoading else { return }
-    
-//     let pageToLoad = refresh ? 1 : currentPage
-//     isLoading = true
-//     error = nil
-
-//     networkManager.getFoodLogs(userEmail: email, page: pageToLoad) { [weak self] result in
-//         DispatchQueue.main.async {
-//             guard let self = self else { return }
-//             self.isLoading = false
-//             switch result {
-//             case .success(let response):
-//                 if refresh {
-//                     // Clean up the response so that if any duplicates somehow arrive, they’re removed.
-//                     let cleanedLogs = self.removeDuplicates(from: response.foodLogs)
-//                     // Sort logs descending so that the newest log (highest foodLogId) is at the top.
-//                     self.loggedFoods = cleanedLogs.sorted { $0.foodLogId > $1.foodLogId }
-//                     self.currentPage = 2
-//                 } else {
-//                     let newLogs = self.removeDuplicates(from: response.foodLogs)
-//                     self.loggedFoods.append(contentsOf: newLogs)
-//                     // Remove duplicates if any already existed before.
-//                     self.loggedFoods = self.removeDuplicates(from: self.loggedFoods)
-//                     self.currentPage += 1
-//                 }
-//                 self.hasMore = response.hasMore
-//                 self.cacheFoods(response, forPage: pageToLoad)
-//             case .failure(let error):
-//                 self.error = error
-//                 self.hasMore = false
-//             }
-//         }
-//     }
-// }
 func loadMoreFoods(refresh: Bool = false) {
     guard let email = userEmail else { return }
     guard !isLoading else { return }
@@ -276,4 +245,43 @@ func loadMoreFoods(refresh: Bool = false) {
         }
         loadMoreFoods()
     }
+
+    func createMeal(
+    title: String,
+    description: String?,
+    directions: String?,
+    privacy: String,
+    servings: Int,
+    foods: [Food]
+) {
+    guard let email = userEmail else { return }
+    
+    networkManager.createMeal(
+        userEmail: email,
+        title: title,
+        description: description,
+        directions: directions,
+        privacy: privacy,
+        servings: servings,
+        foods: foods
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let meal):
+                self?.meals.insert(meal, at: 0)
+                // Cache the new meal
+                self?.cacheMeals()
+            case .failure(let error):
+                print("Error creating meal: \(error)")
+            }
+        }
+    }
+}
+
+private func cacheMeals() {
+    guard let email = userEmail else { return }
+    if let encoded = try? JSONEncoder().encode(meals) {
+        UserDefaults.standard.set(encoded, forKey: "meals_\(email)")
+    }
+}
 }

@@ -107,9 +107,9 @@ struct LoggedFoodItem: Codable {
     let servingSizeText: String
     var numberOfServings: Double
     let brandText: String?
-    let protein: Double
-    let carbs: Double
-    let fat: Double
+    let protein: Double?  // Make optional
+    let carbs: Double?    // Make optional
+    let fat: Double? 
 }
 
 struct LoggedFood: Codable, Identifiable {
@@ -152,17 +152,17 @@ extension LoggedFoodItem {
                 ),
                 Nutrient(
                     nutrientName: "Protein",
-                    value: protein,
+                    value: protein ?? 0,
                     unitName: "g"
                 ),
                 Nutrient(
                     nutrientName: "Carbohydrate, by difference",
-                    value: carbs,
+                    value: carbs ?? 0,
                     unitName: "g"
                 ),
                 Nutrient(
                     nutrientName: "Total lipid (fat)",
-                    value: fat,
+                    value: fat ?? 0,
                     unitName: "g"
                 )
             ],
@@ -174,6 +174,28 @@ extension LoggedFoodItem {
 
 
 enum LogFoodMode {
-    case logFood       // Normal logging mode from TabBar
-    case addToMeal     // Adding to meal from CreateMealView
+    case logFood       
+    case addToMeal     
+}
+
+struct Meal: Codable, Identifiable {
+    let id: Int
+    let title: String
+    let description: String?
+    let directions: String?
+    let privacy: String
+    let servings: Int
+    let createdAt: Date
+    let foods: [Food]
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case description
+        case directions
+        case privacy
+        case servings
+        case createdAt = "created_at"
+        case foods = "meal_items"
+    }
 }

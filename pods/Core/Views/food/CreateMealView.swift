@@ -8,7 +8,7 @@
 import SwiftUI
 import PhotosUI
 
-// Add this enum at the top of CreateMealView
+
 enum Field: Hashable {
     case mealName
     case instructions
@@ -43,7 +43,13 @@ struct CreateMealView: View {
 
     @Binding var path: NavigationPath
     @Binding var selectedFoods: [Food]
-    // Change from array to dictionary tracking
+    @EnvironmentObject var foodManager: FoodManager
+
+    // Add these states to track saving
+    @State private var isSaving = false
+    @State private var showSaveError = false
+    @State private var errorMessage = ""
+
 
 
     // Example share options
@@ -53,11 +59,7 @@ struct CreateMealView: View {
     let headerHeight: CGFloat = 400
 
     
-    // For demonstration
-    private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
-        (0, 0, 0)
-    }
-    
+
     var body: some View {
         GeometryReader { outerGeo in
             ScrollView(showsIndicators: false) {
@@ -133,6 +135,7 @@ struct CreateMealView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Create") {
                     // Handle create action
+                     saveNewMeal()
                 }
                 .foregroundColor(.primary)
                 .fontWeight(.semibold)
@@ -200,6 +203,59 @@ struct CreateMealView: View {
         } message: {
             Text(uploadError?.localizedDescription ?? "Unknown error")
         }
+
+        // Add error alert
+        .alert("Error Saving Meal", isPresented: $showSaveError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+
+    private func saveNewMeal() {
+        isSaving = true
+        
+        // First upload image if exists
+        if let uiImage = uiImage {
+            NetworkManager().uploadMealImage(uiImage) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let urlString):
+                        // Convert the string URL to a URL object
+                        if let url = URL(string: urlString) {
+                            self.imageURL = url
+                            self.createMeal()
+                        } else {
+                            // Handle invalid URL
+                            self.isSaving = false
+                            self.errorMessage = "Invalid image URL format"
+                            self.showSaveError = true
+                        }
+                    case .failure(let error):
+                        self.isSaving = false
+                        self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
+                        self.showSaveError = true
+                    }
+                }
+            }
+        } else {
+            createMeal()
+        }
+    }
+
+    private func createMeal() {
+        foodManager.createMeal(
+            title: mealName,
+            description: nil,
+            directions: instructions,
+            privacy: shareWith.lowercased(),
+            servings: 1,
+            foods: selectedFoods
+        )
+        
+        // Dismiss and go back to previous screen
+        dismiss()
+        path.removeLast()
     }
     
     // MARK: - Subviews
@@ -547,6 +603,16 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
     
     print("Final totals - Protein: \(totals.protein), Carbs: \(totals.carbs), Fat: \(totals.fat)")
     return totals
+}
+
+// Replace the hardcoded macroPercentages with this:
+private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
+    let totals = calculateTotalMacros(selectedFoods)
+    return (
+        protein: totals.proteinPercentage,
+        carbs: totals.carbsPercentage,
+        fat: totals.fatPercentage
+    )
 }
 }
 

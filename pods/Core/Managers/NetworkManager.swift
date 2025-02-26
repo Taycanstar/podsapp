@@ -13,6 +13,8 @@ enum NetworkError: Error {
     case imageProcessingError
     case uploadError
     case cleanupError
+    case configError
+    case badURL
 } 
 
  struct GracieResponse: Codable {
@@ -52,8 +54,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -703,44 +705,70 @@ class NetworkManager {
           }.resume()
       }
 
-            func uploadMealImage(
-        _ image: UIImage,
-        completion: @escaping (Result<URL, Error>) -> Void
-    ) {
-        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-            completion(.failure(NetworkError.configurationError))
-            return
-        }
-        
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            completion(.failure(NetworkError.imageProcessingError))
-            return
-        }
-        
-        let blobName = UUID().uuidString + ".jpg"
-        
-        // The actual call to upload file
-        self.uploadFileToAzureBlob(
-            containerName: containerName,
-            blobName: blobName,
-            fileData: imageData,
-            contentType: "image/jpeg"
-        ) { success, urlString in
-            if success, let urlString = urlString,
-               let url = URL(string: urlString) {
-                completion(.success(url))
-            } else {
-                // Distinguish various errors if you like
-                if !success {
-                    completion(.failure(NetworkError.uploadError))
-                } else if urlString != nil {
-                    completion(.failure(NetworkError.invalidURL))
-                } else {
-                    completion(.failure(NetworkError.unknownError))
-                }
-            }
-        }
+            func uploadMealImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+    // Generate a UUID for the image filename
+    let imageId = UUID().uuidString
+    let filename = "\(imageId).jpg"
+    
+    // Get the storage URL with SAS token
+    guard let baseStorageUrl = ConfigurationManager.shared.getValue(forKey: "AZURE_STORAGE_URL") else {
+        completion(.failure(NetworkError.configError))
+        return
     }
+    
+    guard let sasToken = ConfigurationManager.shared.getValue(forKey: "AZURE_SAS_TOKEN") else {
+        completion(.failure(NetworkError.configError))
+        return
+    }
+    
+    let storageUrl = "\(baseStorageUrl)/videos/\(filename)?\(sasToken)"
+    
+    guard let url = URL(string: storageUrl) else {
+        completion(.failure(NetworkError.badURL))
+        return
+    }
+    
+    print("Attempting to upload to: \(url.absoluteString)")
+    
+    // Convert image to data
+    guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+        completion(.failure(NetworkError.encodingError))
+        return
+    }
+    
+    // Create request
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+    request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
+    request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+    
+    // Upload task
+    URLSession.shared.uploadTask(with: request, from: imageData) { data, response, error in
+        // This is the issue - we're not dispatching to main thread
+        if let error = error {
+            print("Image upload error: \(error)")
+            completion(.failure(error))
+            return
+        }
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("Response status code: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 201 {
+                // Success - 201 Created
+                let imageUrl = "\(baseStorageUrl)/videos/\(filename)"
+                print("Upload successful to Azure Blob Storage: \(imageUrl)")
+                completion(.success(imageUrl))
+            } else {
+                print("Upload failed with status code: \(httpResponse.statusCode)")
+                 completion(.failure(NetworkError.encodingError))
+            }
+        } else {
+            completion(.failure(NetworkError.invalidResponse))
+        }
+    }.resume()
+}
 
     func cleanupOrphanedImages(olderThan hours: Int = 24, completion: @escaping (Bool) -> Void) {
     let cutoffDate = Calendar.current.date(byAdding: .hour, value: -hours, to: Date())!
@@ -4924,6 +4952,73 @@ func checkAppVersion() async throws -> AppVersionResponse {
     }
     
     return try JSONDecoder().decode(AppVersionResponse.self, from: data)
+}
+
+func createMeal(
+    userEmail: String,
+    title: String,
+    description: String?,
+    directions: String?,
+    privacy: String,
+    servings: Int,
+    foods: [Food],
+    completion: @escaping (Result<Meal, Error>) -> Void
+) {
+    let urlString = "\(baseUrl)/create-meal/"
+    
+    guard let url = URL(string: urlString) else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    let mealItems = foods.map { food in
+        [
+            "food_id": food.fdcId,
+            "servings": food.numberOfServings ?? 1
+        ]
+    }
+    
+    let parameters: [String: Any] = [
+        "user_email": userEmail,
+        "title": title,
+        "description": description ?? "",
+        "directions": directions ?? "",
+        "privacy": privacy,
+        "servings": servings,
+        "meal_items": mealItems
+    ]
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        completion(.failure(NetworkError.encodingError))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let meal = try decoder.decode(Meal.self, from: data)
+            completion(.success(meal))
+        } catch {
+            completion(.failure(error))
+        }
+    }.resume()
 }
 
 

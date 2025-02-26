@@ -158,35 +158,35 @@ struct LogFood: View {
                             }
                             // .padding(.vertical, 16)
                             
-                            Button {
-                                print("Copy previous meal tapped")
-                            } label: {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Image("sushi")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 85, height: 85)
+                            // Button {
+                            //     print("Copy previous meal tapped")
+                            // } label: {
+                            //     VStack(alignment: .leading, spacing: 16) {
+                            //         Image("sushi")
+                            //             .resizable()
+                            //             .scaledToFit()
+                            //             .frame(width: 85, height: 85)
                                     
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Copy Previous Meal")
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.primary)
+                            //         VStack(alignment: .leading, spacing: 4) {
+                            //             Text("Copy Previous Meal")
+                            //                 .font(.title)
+                            //                 .fontWeight(.bold)
+                            //                 .foregroundColor(.primary)
                                         
-                                        Text("Copy the meal you previously create to log your go-to meals faster.")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                            .multilineTextAlignment(.leading)
+                            //             Text("Copy the meal you previously create to log your go-to meals faster.")
+                            //                 .font(.subheadline)
+                            //                 .foregroundColor(.gray)
+                            //                 .multilineTextAlignment(.leading)
                                             
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading) 
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color("ioscard"))
-                                .cornerRadius(12)
-                            }
+                            //         }
+                            //         .frame(maxWidth: .infinity, alignment: .leading) 
+                            //     }
+                            //     .padding(.vertical, 12)
+                            //     .padding(.horizontal, 16)
+                            //     .frame(maxWidth: .infinity, alignment: .leading)
+                            //     .background(Color("ioscard"))
+                            //     .cornerRadius(12)
+                            // }
                         }
                         .padding()
                         case .recipes:
