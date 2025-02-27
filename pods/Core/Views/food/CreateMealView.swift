@@ -50,6 +50,9 @@ struct CreateMealView: View {
     @State private var showSaveError = false
     @State private var errorMessage = ""
 
+private var isCreateButtonDisabled: Bool {
+    return mealName.isEmpty
+}
 
 
     // Example share options
@@ -58,7 +61,15 @@ struct CreateMealView: View {
     // Adjust how tall you want the banner/collapsing area to be
     let headerHeight: CGFloat = 400
 
-    
+    // Replace the hardcoded macroPercentages with this:
+private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
+    let totals = calculateTotalMacros(selectedFoods)
+    return (
+        protein: totals.proteinPercentage,
+        carbs: totals.carbsPercentage,
+        fat: totals.fatPercentage
+    )
+}
 
     var body: some View {
         GeometryReader { outerGeo in
@@ -137,6 +148,7 @@ struct CreateMealView: View {
                     // Handle create action
                      saveNewMeal()
                 }
+                .disabled(isCreateButtonDisabled)
                 .foregroundColor(.primary)
                 .fontWeight(.semibold)
             }
@@ -250,7 +262,8 @@ struct CreateMealView: View {
             directions: instructions,
             privacy: shareWith.lowercased(),
             servings: 1,
-            foods: selectedFoods
+            foods: selectedFoods,
+            image: imageURL?.absoluteString 
         )
         
         // Dismiss and go back to previous screen
@@ -426,70 +439,10 @@ private func removeAllItems(withFdcId fdcId: Int) {
         .padding(.horizontal)
         .padding(.bottom)
     }
-    
-    // private var macroCircleAndStats: some View {
-    //     HStack(spacing: 40) {
-    //         ZStack {
-    //             Circle()
-    //                 .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-    //                 .frame(width: 80, height: 80)
-                
-    //             Circle()
-    //                 .trim(from: 0, to: CGFloat(macroPercentages.carbs) / 100)
-    //                 .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-    //                 .frame(width: 80, height: 80)
-    //                 .rotationEffect(.degrees(-90))
-                
-    //             Circle()
-    //                 .trim(from: CGFloat(macroPercentages.carbs) / 100,
-    //                       to: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100)
-    //                 .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-    //                 .frame(width: 80, height: 80)
-    //                 .rotationEffect(.degrees(-90))
-                
-    //             Circle()
-    //                 .trim(from: CGFloat(macroPercentages.carbs + macroPercentages.fat) / 100,
-    //                       to: CGFloat(macroPercentages.carbs + macroPercentages.fat + macroPercentages.protein) / 100)
-    //                 .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-    //                 .frame(width: 80, height: 80)
-    //                 .rotationEffect(.degrees(-90))
-                
-    //             VStack(spacing: 0) {
-    //                 Text("0").font(.system(size: 20, weight: .bold))
-    //                 Text("Cal").font(.system(size: 14))
-    //             }
-    //         }
-            
-    //         Spacer()
-            
-    //         // Carbs
-    //         MacroView(
-    //             value: 0,
-    //             percentage: macroPercentages.carbs,
-    //             label: "Carbs",
-    //             percentageColor: Color("teal")
-    //         )
-            
-    //         // Fat
-    //         MacroView(
-    //             value: 0,
-    //             percentage: macroPercentages.fat,
-    //             label: "Fat",
-    //             percentageColor: Color("pinkRed")
-    //         )
-            
-    //         // Protein
-    //         MacroView(
-    //             value: 0,
-    //             percentage: macroPercentages.protein,
-    //             label: "Protein",
-    //             percentageColor: .purple
-    //         )
-    //     }
-    // }
 
     private var macroCircleAndStats: some View {
-    let totals = calculateTotalMacros(aggregateFoodsByFdcId(selectedFoods))
+    // Get the totals
+    let totals = calculateTotalMacros(selectedFoods)
     
     return HStack(spacing: 40) {
         ZStack {
@@ -497,6 +450,7 @@ private func removeAllItems(withFdcId fdcId: Int) {
                 .stroke(Color.gray.opacity(0.2), lineWidth: 8)
                 .frame(width: 80, height: 80)
             
+            // Draw the circle segments with actual percentages
             Circle()
                 .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
                 .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
@@ -513,7 +467,7 @@ private func removeAllItems(withFdcId fdcId: Int) {
             Circle()
                 .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
                       to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
-                .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                .stroke(Color.purple, style: StrokeStyle(lineWidth: 8, lineCap: .butt))
                 .frame(width: 80, height: 80)
                 .rotationEffect(.degrees(-90))
             
@@ -546,10 +500,73 @@ private func removeAllItems(withFdcId fdcId: Int) {
             value: totals.protein,
             percentage: totals.proteinPercentage,
             label: "Protein",
-            percentageColor: .purple
+            percentageColor: Color.purple
         )
     }
 }
+
+//     private var macroCircleAndStats: some View {
+//     let totals = calculateTotalMacros(aggregateFoodsByFdcId(selectedFoods))
+    
+//     return HStack(spacing: 40) {
+//         ZStack {
+//             Circle()
+//                 .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+//                 .frame(width: 80, height: 80)
+            
+//             Circle()
+//                 .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
+//                 .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+//                 .frame(width: 80, height: 80)
+//                 .rotationEffect(.degrees(-90))
+            
+//             Circle()
+//                 .trim(from: CGFloat(totals.carbsPercentage) / 100,
+//                       to: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100)
+//                 .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+//                 .frame(width: 80, height: 80)
+//                 .rotationEffect(.degrees(-90))
+            
+//             Circle()
+//                 .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
+//                       to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
+//                 .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+//                 .frame(width: 80, height: 80)
+//                 .rotationEffect(.degrees(-90))
+            
+//             VStack(spacing: 0) {
+//                 Text("\(Int(totals.calories))").font(.system(size: 20, weight: .bold))
+//                 Text("Cal").font(.system(size: 14))
+//             }
+//         }
+        
+//         Spacer()
+        
+//         // Carbs
+//         MacroView(
+//             value: totals.carbs,
+//             percentage: totals.carbsPercentage,
+//             label: "Carbs",
+//             percentageColor: Color("teal")
+//         )
+        
+//         // Fat
+//         MacroView(
+//             value: totals.fat,
+//             percentage: totals.fatPercentage,
+//             label: "Fat",
+//             percentageColor: Color("pinkRed")
+//         )
+        
+//         // Protein
+//         MacroView(
+//             value: totals.protein,
+//             percentage: totals.proteinPercentage,
+//             label: "Protein",
+//             percentageColor: .purple
+//         )
+//     }
+// }
 
 private struct MacroTotals {
     var calories: Double = 0
@@ -578,42 +595,41 @@ private struct MacroTotals {
 
 private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
     var totals = MacroTotals()
-    
     for food in foods {
-            print("Food: \(food.description)")
-    print("Nutrients: \(food.foodNutrients.map { "\($0.nutrientName): \($0.value)" }.joined(separator: ", "))")
-        let servings = food.numberOfServings ?? 1
+        let servings = food.numberOfServings ?? 1      
+        // Dump first few nutrients to see what we have
+        if !food.foodNutrients.isEmpty {
+            let nutrientNames = food.foodNutrients.prefix(5).map { "\($0.nutrientName): \($0.value)\($0.unitName)" }
+            
+        }
         
         // Sum up calories
         if let calories = food.calories {
             totals.calories += calories * servings
         }
         
-        // Sum up macros
-        if let protein = food.protein {
-            totals.protein += protein * servings
-        }
-        if let carbs = food.carbs {
-            totals.carbs += carbs * servings
-        }
-        if let fat = food.fat {
-            totals.fat += fat * servings
+        // Get protein, carbs, and fat from foodNutrients array
+        for nutrient in food.foodNutrients {
+            let value = nutrient.value * servings
+            
+            if nutrient.nutrientName == "Protein" {
+                totals.protein += value
+            } else if nutrient.nutrientName == "Carbohydrate, by difference" {
+                
+                totals.carbs += value
+            } else if nutrient.nutrientName == "Total lipid (fat)" {
+                totals.fat += value
+            }
         }
     }
     
-    print("Final totals - Protein: \(totals.protein), Carbs: \(totals.carbs), Fat: \(totals.fat)")
+    print("⚠️ MACRO DEBUG: Final totals - calories: \(totals.calories), protein: \(totals.protein), carbs: \(totals.carbs), fat: \(totals.fat)")
+    print("⚠️ MACRO DEBUG: Percentages - protein: \(totals.proteinPercentage)%, carbs: \(totals.carbsPercentage)%, fat: \(totals.fatPercentage)%")
+    
     return totals
 }
 
-// Replace the hardcoded macroPercentages with this:
-private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
-    let totals = calculateTotalMacros(selectedFoods)
-    return (
-        protein: totals.proteinPercentage,
-        carbs: totals.carbsPercentage,
-        fat: totals.fatPercentage
-    )
-}
+
 }
 
 

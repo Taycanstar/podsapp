@@ -30,15 +30,20 @@ struct Food: Codable, Identifiable, Hashable{
         foodNutrients.first { $0.nutrientName == "Energy" }?.value
     }
     var protein: Double? {
-        foodNutrients.first { $0.nutrientName == "Protein" }?.value
-    }
-    
+    foodNutrients.first { $0.nutrientName.lowercased() == "protein" }?.value
+}
+
     var carbs: Double? {
-        foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }?.value
+        foodNutrients.first { 
+            $0.nutrientName.lowercased().contains("carbohydrate") 
+        }?.value
     }
-    
+
     var fat: Double? {
-        foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }?.value
+        foodNutrients.first { 
+            $0.nutrientName.lowercased().contains("fat") || 
+            $0.nutrientName.lowercased().contains("lipid")
+        }?.value
     }
     
     var displayName: String {
@@ -178,6 +183,7 @@ enum LogFoodMode {
     case addToMeal     
 }
 
+
 struct Meal: Codable, Identifiable {
     let id: Int
     let title: String
@@ -187,6 +193,7 @@ struct Meal: Codable, Identifiable {
     let servings: Int
     let createdAt: Date
     let foods: [Food]
+    let image: String?  // Renamed from photoUrl to image
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -197,5 +204,6 @@ struct Meal: Codable, Identifiable {
         case servings
         case createdAt = "created_at"
         case foods = "meal_items"
+        case image = "image"  // Updated to match backend field name
     }
 }

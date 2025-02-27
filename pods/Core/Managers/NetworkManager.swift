@@ -4962,31 +4962,50 @@ func createMeal(
     privacy: String,
     servings: Int,
     foods: [Food],
+    image: String? = nil,
     completion: @escaping (Result<Meal, Error>) -> Void
 ) {
     let urlString = "\(baseUrl)/create-meal/"
-    
     guard let url = URL(string: urlString) else {
         completion(.failure(NetworkError.invalidURL))
         return
     }
     
-    let mealItems = foods.map { food in
-        [
-            "food_id": food.fdcId,
-            "servings": food.numberOfServings ?? 1
+    // Convert each food to a complete representation with all nutrients
+    let foodData = foods.map { food -> [String: Any] in
+        let nutrients = food.foodNutrients.map { [
+            "nutrient_name": $0.nutrientName,
+            "value": $0.value,
+            "unit_name": $0.unitName
+        ] }
+        
+        return [
+            "external_id": food.id,
+            "name": food.displayName,
+            "brand": food.brandText ?? "",
+            "serving_size": food.servingSize ?? 0,
+            "serving_unit": food.servingSizeUnit ?? "",
+            "serving_text": food.servingSizeText ?? "",
+            "number_of_servings": food.numberOfServings ?? 1,
+            "nutrients": nutrients
         ]
     }
     
-    let parameters: [String: Any] = [
+    // Create base parameters
+    var parameters: [String: Any] = [
         "user_email": userEmail,
         "title": title,
         "description": description ?? "",
         "directions": directions ?? "",
         "privacy": privacy,
         "servings": servings,
-        "meal_items": mealItems
+        "food_items": foodData  // Send complete food data
     ]
+    
+    // Add image parameter if exists
+    if let image = image {
+        parameters["image"] = image
+    }
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -4995,12 +5014,14 @@ func createMeal(
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
     } catch {
+        print("JSON Serialization Error: \(error)")
         completion(.failure(NetworkError.encodingError))
         return
     }
     
     URLSession.shared.dataTask(with: request) { data, response, error in
         if let error = error {
+            print("Network Error: \(error)")
             completion(.failure(error))
             return
         }
@@ -5010,18 +5031,28 @@ func createMeal(
             return
         }
         
+        // Print raw response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Create Meal Response: \(responseString)")
+        }
+        
         do {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
+            
+            // Create a custom date formatter for the server's date format
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+            decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            
             let meal = try decoder.decode(Meal.self, from: data)
             completion(.success(meal))
         } catch {
+            print("Decoding error: \(error)")
             completion(.failure(error))
         }
     }.resume()
 }
-
-
    
 }
 

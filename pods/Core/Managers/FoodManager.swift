@@ -245,14 +245,14 @@ func loadMoreFoods(refresh: Bool = false) {
         }
         loadMoreFoods()
     }
-
-    func createMeal(
+func createMeal(
     title: String,
     description: String?,
     directions: String?,
     privacy: String,
     servings: Int,
-    foods: [Food]
+    foods: [Food],
+    image: String? = nil  // Added image parameter with default nil
 ) {
     guard let email = userEmail else { return }
     
@@ -263,7 +263,8 @@ func loadMoreFoods(refresh: Bool = false) {
         directions: directions,
         privacy: privacy,
         servings: servings,
-        foods: foods
+        foods: foods,
+        image: image  // Pass the image parameter
     ) { [weak self] result in
         DispatchQueue.main.async {
             switch result {
