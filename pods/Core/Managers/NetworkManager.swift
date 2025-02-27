@@ -15,6 +15,7 @@ enum NetworkError: Error {
     case cleanupError
     case configError
     case badURL
+    case uploadFailed
 } 
 
  struct GracieResponse: Codable {
@@ -710,25 +711,15 @@ class NetworkManager {
     let imageId = UUID().uuidString
     let filename = "\(imageId).jpg"
     
-    // Get the storage URL with SAS token
-    guard let baseStorageUrl = ConfigurationManager.shared.getValue(forKey: "AZURE_STORAGE_URL") else {
+    // Get the current region
+    let region = RegionManager.shared.region
+    
+    // Use the same container name as other functions
+    guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+        print("Missing configuration values for container")
         completion(.failure(NetworkError.configError))
         return
     }
-    
-    guard let sasToken = ConfigurationManager.shared.getValue(forKey: "AZURE_SAS_TOKEN") else {
-        completion(.failure(NetworkError.configError))
-        return
-    }
-    
-    let storageUrl = "\(baseStorageUrl)/videos/\(filename)?\(sasToken)"
-    
-    guard let url = URL(string: storageUrl) else {
-        completion(.failure(NetworkError.badURL))
-        return
-    }
-    
-    print("Attempting to upload to: \(url.absoluteString)")
     
     // Convert image to data
     guard let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -736,38 +727,21 @@ class NetworkManager {
         return
     }
     
-    // Create request
-    var request = URLRequest(url: url)
-    request.httpMethod = "PUT"
-    request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-    request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
-    request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
-    
-    // Upload task
-    URLSession.shared.uploadTask(with: request, from: imageData) { data, response, error in
-        // This is the issue - we're not dispatching to main thread
-        if let error = error {
-            print("Image upload error: \(error)")
-            completion(.failure(error))
-            return
-        }
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("Response status code: \(httpResponse.statusCode)")
-            
-            if httpResponse.statusCode == 201 {
-                // Success - 201 Created
-                let imageUrl = "\(baseStorageUrl)/videos/\(filename)"
-                print("Upload successful to Azure Blob Storage: \(imageUrl)")
-                completion(.success(imageUrl))
-            } else {
-                print("Upload failed with status code: \(httpResponse.statusCode)")
-                 completion(.failure(NetworkError.encodingError))
-            }
+    // Use the existing, proven upload function
+    uploadFileToAzureBlob(
+        containerName: containerName,
+        blobName: filename,
+        fileData: imageData,
+        contentType: "image/jpeg"
+    ) { success, imageUrlString in
+        if success, let imageUrl = imageUrlString {
+            print("Meal image uploaded successfully: \(imageUrl)")
+            completion(.success(imageUrl))
         } else {
-            completion(.failure(NetworkError.invalidResponse))
+            print("Failed to upload meal image")
+            completion(.failure(NetworkError.uploadFailed))
         }
-    }.resume()
+    }
 }
 
     func cleanupOrphanedImages(olderThan hours: Int = 24, completion: @escaping (Bool) -> Void) {

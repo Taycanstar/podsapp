@@ -140,7 +140,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("New Meal")
-                    .foregroundColor(.primary)
+                    .foregroundColor(selectedImage != nil ? .white : .primary)
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -149,13 +149,13 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                      saveNewMeal()
                 }
                 .disabled(isCreateButtonDisabled)
-                .foregroundColor(.primary)
+                .foregroundColor(selectedImage != nil ? .white : .primary)
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(.primary)
+                        .foregroundColor(selectedImage != nil ? .white : .primary)
                 }
             }
             ToolbarItemGroup(placement: .keyboard) {
