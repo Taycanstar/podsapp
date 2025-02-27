@@ -623,9 +623,6 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         }
     }
     
-    print("⚠️ MACRO DEBUG: Final totals - calories: \(totals.calories), protein: \(totals.protein), carbs: \(totals.carbs), fat: \(totals.fat)")
-    print("⚠️ MACRO DEBUG: Percentages - protein: \(totals.proteinPercentage)%, carbs: \(totals.carbsPercentage)%, fat: \(totals.fatPercentage)%")
-    
     return totals
 }
 
