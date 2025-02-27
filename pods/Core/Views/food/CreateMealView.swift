@@ -175,6 +175,9 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         sourceType: sourceType
     )
 }
+.onDisappear {
+            resetFields() // Reset fields when the view disappears
+        }
 .onChange(of: uiImage) { newUIImage in
     guard let picked = newUIImage else { return }
     // Use your existing `uploadMealImage(_:, completion:)`
@@ -223,6 +226,15 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             Text(errorMessage)
         }
     }
+
+    private func resetFields() {
+        mealName = ""
+        instructions = ""
+        selectedImage = nil
+        selectedFoods.removeAll() // Assuming selectedFoods is a mutable array
+        // Reset any other state variables as needed
+    }
+
 
     private func saveNewMeal() {
         isSaving = true
