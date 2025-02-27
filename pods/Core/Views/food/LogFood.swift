@@ -207,9 +207,7 @@ struct LogFood: View {
                 await searchFoods()
             }
         }
-        .onChange(of: selectedFoods) { newValue in
-        print("DEBUG [LogFood] .onChange => \(newValue)")
-    }
+      
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Cancel button

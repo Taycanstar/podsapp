@@ -184,6 +184,22 @@ enum LogFoodMode {
 }
 
 
+// Add this struct for meal food items
+struct MealFoodItem: Codable {
+    let foodId: Int
+    let externalId: String
+    let name: String
+    let servings: String
+    
+    enum CodingKeys: String, CodingKey {
+        case foodId = "food_id"
+        case externalId = "external_id" 
+        case name
+        case servings
+    }
+}
+
+// Then in your Meal struct
 struct Meal: Codable, Identifiable {
     let id: Int
     let title: String
@@ -192,8 +208,8 @@ struct Meal: Codable, Identifiable {
     let privacy: String
     let servings: Int
     let createdAt: Date
-    let foods: [Food]
-    let image: String?  // Renamed from photoUrl to image
+    let mealItems: [MealFoodItem]  // Changed from foods: [Food]
+    let image: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -203,7 +219,7 @@ struct Meal: Codable, Identifiable {
         case privacy
         case servings
         case createdAt = "created_at"
-        case foods = "meal_items"
-        case image = "image"  // Updated to match backend field name
+        case mealItems = "meal_items"
+        case image
     }
 }

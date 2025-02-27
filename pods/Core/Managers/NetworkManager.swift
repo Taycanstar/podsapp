@@ -5038,11 +5038,12 @@ func createMeal(
         
         do {
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            // REMOVED: Don't use convertFromSnakeCase when we have custom CodingKeys
+            // decoder.keyDecodingStrategy = .convertFromSnakeCase
             
-            // Create a custom date formatter for the server's date format
+            // Updated date formatter to handle timezone
             let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ" 
             decoder.dateDecodingStrategy = .formatted(dateFormatter)
             
             let meal = try decoder.decode(Meal.self, from: data)
@@ -5053,6 +5054,105 @@ func createMeal(
         }
     }.resume()
 }
+// func createMeal(
+//     userEmail: String,
+//     title: String,
+//     description: String?,
+//     directions: String?,
+//     privacy: String,
+//     servings: Int,
+//     foods: [Food],
+//     image: String? = nil,
+//     completion: @escaping (Result<Meal, Error>) -> Void
+// ) {
+//     let urlString = "\(baseUrl)/create-meal/"
+//     guard let url = URL(string: urlString) else {
+//         completion(.failure(NetworkError.invalidURL))
+//         return
+//     }
+    
+//     // Convert each food to a complete representation with all nutrients
+//     let foodData = foods.map { food -> [String: Any] in
+//         let nutrients = food.foodNutrients.map { [
+//             "nutrient_name": $0.nutrientName,
+//             "value": $0.value,
+//             "unit_name": $0.unitName
+//         ] }
+        
+//         return [
+//             "external_id": food.id,
+//             "name": food.displayName,
+//             "brand": food.brandText ?? "",
+//             "serving_size": food.servingSize ?? 0,
+//             "serving_unit": food.servingSizeUnit ?? "",
+//             "serving_text": food.servingSizeText ?? "",
+//             "number_of_servings": food.numberOfServings ?? 1,
+//             "nutrients": nutrients
+//         ]
+//     }
+    
+//     // Create base parameters
+//     var parameters: [String: Any] = [
+//         "user_email": userEmail,
+//         "title": title,
+//         "description": description ?? "",
+//         "directions": directions ?? "",
+//         "privacy": privacy,
+//         "servings": servings,
+//         "food_items": foodData  // Send complete food data
+//     ]
+    
+//     // Add image parameter if exists
+//     if let image = image {
+//         parameters["image"] = image
+//     }
+    
+//     var request = URLRequest(url: url)
+//     request.httpMethod = "POST"
+//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+//     do {
+//         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+//     } catch {
+//         print("JSON Serialization Error: \(error)")
+//         completion(.failure(NetworkError.encodingError))
+//         return
+//     }
+    
+//     URLSession.shared.dataTask(with: request) { data, response, error in
+//         if let error = error {
+//             print("Network Error: \(error)")
+//             completion(.failure(error))
+//             return
+//         }
+        
+//         guard let data = data else {
+//             completion(.failure(NetworkError.noData))
+//             return
+//         }
+        
+//         // Print raw response for debugging
+//         if let responseString = String(data: data, encoding: .utf8) {
+//             print("Create Meal Response: \(responseString)")
+//         }
+        
+//         do {
+//             let decoder = JSONDecoder()
+//             decoder.keyDecodingStrategy = .convertFromSnakeCase
+            
+//             // Create a custom date formatter for the server's date format
+//             let dateFormatter = DateFormatter()
+//             dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+//             decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            
+//             let meal = try decoder.decode(Meal.self, from: data)
+//             completion(.success(meal))
+//         } catch {
+//             print("Decoding error: \(error)")
+//             completion(.failure(error))
+//         }
+//     }.resume()
+// }
    
 }
 
