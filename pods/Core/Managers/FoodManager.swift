@@ -1,5 +1,3 @@
-
-
 import Foundation
 import SwiftUI
 
@@ -10,6 +8,7 @@ class FoodManager: ObservableObject {
     @Published var error: Error?
     @Published var lastLoggedFoodId: Int? = nil
     @Published var showToast = false
+    @Published var showMealToast = false
 
     @Published var recentlyAddedFoodIds: Set<Int> = []
 
@@ -269,10 +268,22 @@ func createMeal(
         DispatchQueue.main.async {
             switch result {
             case .success(let meal):
-            print("Meal created successfully")
+                print("Meal created successfully")
                 self?.meals.insert(meal, at: 0)
                 // Cache the new meal
                 self?.cacheMeals()
+
+                // Show toast notification
+                withAnimation {
+                    self?.showMealToast = true
+                }
+                
+                // Hide toast after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        self?.showMealToast = false
+                    }
+                }
             case .failure(let error):
                 print("Error creating meal: \(error)")
             }

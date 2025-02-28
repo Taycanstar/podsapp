@@ -146,6 +146,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Create") {
                     // Handle create action
+                    resetFields()
                      saveNewMeal()
                 }
                 .disabled(isCreateButtonDisabled)
@@ -153,7 +154,10 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    resetFields()
+                     dismiss()
+                      }) {
                     Image(systemName: "chevron.left")
                         .foregroundColor(selectedImage != nil ? .white : .primary)
                 }
@@ -175,9 +179,6 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         sourceType: sourceType
     )
 }
-.onDisappear {
-            resetFields() // Reset fields when the view disappears
-        }
 .onChange(of: uiImage) { newUIImage in
     guard let picked = newUIImage else { return }
     // Use your existing `uploadMealImage(_:, completion:)`
