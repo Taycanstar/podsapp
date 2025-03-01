@@ -273,7 +273,7 @@ struct LogFood: View {
                 }
             }
             .listStyle(.plain)
-            .frame(height: CGFloat(min(foodManager.meals.count * 70, 350)))
+      
         } else if foodManager.isLoadingMeals {
             ProgressView()
                 .padding()
