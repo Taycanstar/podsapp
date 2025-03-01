@@ -126,36 +126,36 @@ struct LogFood: View {
                         switch selectedFoodTab {
                         
                             case .meals:
-                        VStack(spacing: 16) {
-                            Button {
-                                print("Create meal tapped")
-                                path.append(FoodNavigationDestination.createMeal)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Image("burger")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 85, height: 85)
+                        // VStack(spacing: 16) {
+                        //     Button {
+                        //         print("Create meal tapped")
+                        //         path.append(FoodNavigationDestination.createMeal)
+                        //     } label: {
+                        //         VStack(alignment: .leading, spacing: 16) {
+                        //             Image("burger")
+                        //                 .resizable()
+                        //                 .scaledToFit()
+                        //                 .frame(width: 85, height: 85)
                                     
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Create a Meal")
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.primary)
+                        //             VStack(alignment: .leading, spacing: 4) {
+                        //                 Text("Create a Meal")
+                        //                     .font(.title)
+                        //                     .fontWeight(.bold)
+                        //                     .foregroundColor(.primary)
                                         
-                                        Text("Create and save your favorite meals to log quickly again and again.")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                            .multilineTextAlignment(.leading)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading) 
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color("ioscard"))
-                                .cornerRadius(12)
-                            }
+                        //                 Text("Create and save your favorite meals to log quickly again and again.")
+                        //                     .font(.subheadline)
+                        //                     .foregroundColor(.gray)
+                        //                     .multilineTextAlignment(.leading)
+                        //             }
+                        //             .frame(maxWidth: .infinity, alignment: .leading) 
+                        //         }
+                        //         .padding(.vertical, 12)
+                        //         .padding(.horizontal, 16)
+                        //         .frame(maxWidth: .infinity, alignment: .leading)
+                        //         .background(Color("ioscard"))
+                        //         .cornerRadius(12)
+                        //     }
                             // .padding(.vertical, 16)
                             
                             // Button {
@@ -187,8 +187,107 @@ struct LogFood: View {
                             //     .background(Color("ioscard"))
                             //     .cornerRadius(12)
                             // }
+                            
+                        // }
+                        // .padding()
+
+                       
+    VStack(spacing: 16) {
+        // Create Meal Card - Always visible at the top
+        Button {
+            print("Create meal tapped")
+            path.append(FoodNavigationDestination.createMeal)
+        } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                Image("burger")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 85, height: 85)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create a Meal")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Create and save your favorite meals to log quickly again and again.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading) 
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color("ioscard"))
+            .cornerRadius(12)
+
+                // Button {
+                            //     print("Copy previous meal tapped")
+                            // } label: {
+                            //     VStack(alignment: .leading, spacing: 16) {
+                            //         Image("sushi")
+                            //             .resizable()
+                            //             .scaledToFit()
+                            //             .frame(width: 85, height: 85)
+                                    
+                            //         VStack(alignment: .leading, spacing: 4) {
+                            //             Text("Copy Previous Meal")
+                            //                 .font(.title)
+                            //                 .fontWeight(.bold)
+                            //                 .foregroundColor(.primary)
+                                        
+                            //             Text("Copy the meal you previously create to log your go-to meals faster.")
+                            //                 .font(.subheadline)
+                            //                 .foregroundColor(.gray)
+                            //                 .multilineTextAlignment(.leading)
+                                            
+                            //         }
+                            //         .frame(maxWidth: .infinity, alignment: .leading) 
+                            //     }
+                            //     .padding(.vertical, 12)
+                            //     .padding(.horizontal, 16)
+                            //     .frame(maxWidth: .infinity, alignment: .leading)
+                            //     .background(Color("ioscard"))
+                            //     .cornerRadius(12)
+                            // }
+        }
+        
+        // Meal History Section
+        if !foodManager.meals.isEmpty {
+            Text("History")
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+            
+            List {
+                ForEach(foodManager.meals) { meal in
+                    MealRow(meal: meal)
+                        .onAppear {
+                            foodManager.loadMoreMealsIfNeeded(meal: meal)
                         }
-                        .padding()
+                }
+            }
+            .listStyle(.plain)
+            .frame(height: CGFloat(min(foodManager.meals.count * 70, 350)))
+        } else if foodManager.isLoadingMeals {
+            ProgressView()
+                .padding()
+        } else {
+            Text("No meal history yet")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .padding()
+        }
+    }
+    .padding()
+    .onAppear {
+        if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
+            foodManager.refreshMeals()
+        }
+    }
                         case .recipes:
                             Text("Recipes content")
                         default:
@@ -466,6 +565,70 @@ struct HistoryRow: View {
             mode: mode,              // Pass through from LogFood
             selectedFoods: $selectedFoods,
             path: $path)
+    }
+}
+
+struct MealRow: View {
+    @EnvironmentObject var foodManager: FoodManager
+    let meal: Meal
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 4) {
+                    // Use the actual total calories from the meal
+                    Text("\(Int(meal.totalCalories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    Text("•")
+                        .foregroundColor(.gray)
+                    
+                    Text("\(meal.mealItems.count) \(meal.mealItems.count == 1 ? "item" : "items")")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    if let description = meal.description, !description.isEmpty {
+                        Text("•")
+                            .foregroundColor(.gray)
+                        
+                        Text(description)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // If meal has an image, display it
+            if let imageUrl = meal.image, !imageUrl.isEmpty {
+                AsyncImage(url: URL(string: imageUrl)) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 50, height: 50)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 50, height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    case .failure:
+                        Image(systemName: "photo")
+                            .frame(width: 50, height: 50)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 

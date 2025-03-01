@@ -34,6 +34,7 @@ private var hasMoreMeals = true
         print("FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
         resetAndFetchFoods()
+           resetAndFetchMeals() // Add this line
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -51,14 +52,6 @@ private var hasMoreMeals = true
         loadMoreFoods(refresh: true)
     }
     
-    // private func loadCachedFoods() {
-    //     guard let userEmail = userEmail else { return }
-    //     if let cached = UserDefaults.standard.data(forKey: "logged_foods_\(userEmail)_page_1"),
-    //        let decodedResponse = try? JSONDecoder().decode(FoodLogsResponse.self, from: cached) {
-    //         self.loggedFoods = decodedResponse.foodLogs
-    //         self.hasMore = decodedResponse.hasMore
-    //     }
-    // }
     private func loadCachedFoods() {
     guard let userEmail = userEmail else { return }
     if let cached = UserDefaults.standard.data(forKey: "logged_foods_\(userEmail)_page_1"),
@@ -271,7 +264,7 @@ func createMeal(
                 print("Meal created successfully")
                 self?.meals.insert(meal, at: 0)
                 // Cache the new meal
-                self?.cacheMeals()
+                self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
 
                 // Show toast notification
                 withAnimation {
@@ -291,10 +284,101 @@ func createMeal(
     }
 }
 
-private func cacheMeals() {
-    guard let email = userEmail else { return }
-    if let encoded = try? JSONEncoder().encode(meals) {
-        UserDefaults.standard.set(encoded, forKey: "meals_\(email)")
+// private func cacheMeals() {
+//     guard let email = userEmail else { return }
+//     if let encoded = try? JSONEncoder().encode(meals) {
+//         UserDefaults.standard.set(encoded, forKey: "meals_\(email)")
+//     }
+// }
+
+private func clearMealCache() {
+    guard let userEmail = userEmail else { return }
+    
+    // Clear all pages of meal cache
+    for page in 1...10 { // Assuming we won't have more than 10 pages
+        UserDefaults.standard.removeObject(forKey: "meals_\(userEmail)_page_\(page)")
+    }
+    
+    print("All meal caches cleared")
+}
+
+private func resetAndFetchMeals() {
+    currentMealPage = 1
+    hasMoreMeals = true
+    meals.removeAll()
+    
+    // Clear all meal caches
+    clearMealCache()
+    
+    loadCachedMeals()
+    loadMoreMeals(refresh: true)
+}
+
+// Load cached meals
+private func loadCachedMeals() {
+    guard let userEmail = userEmail else { return }
+    if let cached = UserDefaults.standard.data(forKey: "meals_\(userEmail)_page_1"),
+       let decodedResponse = try? JSONDecoder().decode(MealsResponse.self, from: cached) {
+        self.meals = decodedResponse.meals
+        self.hasMoreMeals = decodedResponse.hasMore
     }
 }
+
+// Cache meals
+private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
+    guard let userEmail = userEmail else { return }
+    if let encoded = try? JSONEncoder().encode(response) {
+        UserDefaults.standard.set(encoded, forKey: "meals_\(userEmail)_page_\(page)")
+    }
+}
+
+// Load more meals
+func loadMoreMeals(refresh: Bool = false) {
+    guard let email = userEmail else { return }
+    guard !isLoadingMeals else { return }
+    
+    let pageToLoad = refresh ? 1 : currentMealPage
+    isLoadingMeals = true
+    error = nil
+
+    networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            self.isLoadingMeals = false
+            switch result {
+            case .success(let response):
+                if refresh {
+                    self.meals = response.meals
+                    self.currentMealPage = 2
+                } else {
+                    self.meals.append(contentsOf: response.meals)
+                    self.currentMealPage += 1
+                }
+                self.hasMoreMeals = response.hasMore
+                self.cacheMeals(response, forPage: pageToLoad)
+            case .failure(let error):
+                self.error = error
+                self.hasMoreMeals = false
+            }
+        }
+    }
+}
+
+// Load more meals if needed
+func loadMoreMealsIfNeeded(meal: Meal) {
+    guard let index = meals.firstIndex(where: { $0.id == meal.id }),
+          index == meals.count - 5,
+          hasMoreMeals else {
+        return
+    }
+    loadMoreMeals()
+}
+
+// Refresh meals
+func refreshMeals() {
+    print("🔄 Starting meal refresh...")
+    clearMealCache()
+    loadMoreMeals(refresh: true)
+}
+
 }

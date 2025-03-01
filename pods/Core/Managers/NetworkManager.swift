@@ -5012,13 +5012,48 @@ func createMeal(
         
         do {
             let decoder = JSONDecoder()
-            // REMOVED: Don't use convertFromSnakeCase when we have custom CodingKeys
-            // decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             
-            // Updated date formatter to handle timezone
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ" 
-            decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            // Enhanced ISO8601 date decoding with better fallback
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                // Create a formatter that can handle the specific format with timezone
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                
+                // Try without fractional seconds
+                formatter.formatOptions = [.withInternetDateTime]
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                
+                // Try with DateFormatter as a last resort
+                let backupFormatter = DateFormatter()
+                backupFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+                if let date = backupFormatter.date(from: dateString) {
+                    return date
+                }
+                
+                // One more attempt with a simpler format
+                backupFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+                if let date = backupFormatter.date(from: dateString) {
+                    return date
+                }
+                
+                print("Failed to parse date: \(dateString), using current date")
+                return Date()
+            }
+            
+            // Add debug print to see the JSON response
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("JSON response: \(jsonString)")
+            }
             
             let meal = try decoder.decode(Meal.self, from: data)
             completion(.success(meal))
@@ -5028,105 +5063,75 @@ func createMeal(
         }
     }.resume()
 }
-// func createMeal(
-//     userEmail: String,
-//     title: String,
-//     description: String?,
-//     directions: String?,
-//     privacy: String,
-//     servings: Int,
-//     foods: [Food],
-//     image: String? = nil,
-//     completion: @escaping (Result<Meal, Error>) -> Void
-// ) {
-//     let urlString = "\(baseUrl)/create-meal/"
-//     guard let url = URL(string: urlString) else {
-//         completion(.failure(NetworkError.invalidURL))
-//         return
-//     }
+func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<MealsResponse, Error>) -> Void) {
+    guard var urlComponents = URLComponents(string: "\(baseUrl)/get-meals/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
     
-//     // Convert each food to a complete representation with all nutrients
-//     let foodData = foods.map { food -> [String: Any] in
-//         let nutrients = food.foodNutrients.map { [
-//             "nutrient_name": $0.nutrientName,
-//             "value": $0.value,
-//             "unit_name": $0.unitName
-//         ] }
+    urlComponents.queryItems = [
+        URLQueryItem(name: "user_email", value: userEmail),
+        URLQueryItem(name: "page", value: String(page))
+    ]
+    
+    guard let url = urlComponents.url else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
         
-//         return [
-//             "external_id": food.id,
-//             "name": food.displayName,
-//             "brand": food.brandText ?? "",
-//             "serving_size": food.servingSize ?? 0,
-//             "serving_unit": food.servingSizeUnit ?? "",
-//             "serving_text": food.servingSizeText ?? "",
-//             "number_of_servings": food.numberOfServings ?? 1,
-//             "nutrients": nutrients
-//         ]
-//     }
-    
-//     // Create base parameters
-//     var parameters: [String: Any] = [
-//         "user_email": userEmail,
-//         "title": title,
-//         "description": description ?? "",
-//         "directions": directions ?? "",
-//         "privacy": privacy,
-//         "servings": servings,
-//         "food_items": foodData  // Send complete food data
-//     ]
-    
-//     // Add image parameter if exists
-//     if let image = image {
-//         parameters["image"] = image
-//     }
-    
-//     var request = URLRequest(url: url)
-//     request.httpMethod = "POST"
-//     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    
-//     do {
-//         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-//     } catch {
-//         print("JSON Serialization Error: \(error)")
-//         completion(.failure(NetworkError.encodingError))
-//         return
-//     }
-    
-//     URLSession.shared.dataTask(with: request) { data, response, error in
-//         if let error = error {
-//             print("Network Error: \(error)")
-//             completion(.failure(error))
-//             return
-//         }
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
         
-//         guard let data = data else {
-//             completion(.failure(NetworkError.noData))
-//             return
-//         }
-        
-//         // Print raw response for debugging
-//         if let responseString = String(data: data, encoding: .utf8) {
-//             print("Create Meal Response: \(responseString)")
-//         }
-        
-//         do {
-//             let decoder = JSONDecoder()
-//             decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             
-//             // Create a custom date formatter for the server's date format
-//             let dateFormatter = DateFormatter()
-//             dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-//             decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            // Custom date decoder for the specific format from the server
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             
-//             let meal = try decoder.decode(Meal.self, from: data)
-//             completion(.success(meal))
-//         } catch {
-//             print("Decoding error: \(error)")
-//             completion(.failure(error))
-//         }
-//     }.resume()
-// }
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Cannot decode date string \(dateString)"
+                )
+            }
+            
+            // Debug print for troubleshooting
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("JSON response: \(jsonString)")
+            }
+            
+            let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
+            completion(.success(mealsResponse))
+        } catch {
+            print("Decoding error: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Received JSON:", jsonString)
+            }
+            completion(.failure(error))
+        }
+    }.resume()
+}
    
 }
 

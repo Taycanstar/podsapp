@@ -190,13 +190,10 @@ struct MealFoodItem: Codable {
     let externalId: String
     let name: String
     let servings: String
-    
-    enum CodingKeys: String, CodingKey {
-        case foodId = "food_id"
-        case externalId = "external_id" 
-        case name
-        case servings
-    }
+    let calories: Double
+    let protein: Double
+    let carbs: Double
+    let fat: Double
 }
 
 // Then in your Meal struct
@@ -210,16 +207,29 @@ struct Meal: Codable, Identifiable {
     let createdAt: Date
     let mealItems: [MealFoodItem]  // Changed from foods: [Food]
     let image: String?
+    let totalCalories: Double?  // Made optional
+    let totalProtein: Double?   // Made optional
+    let totalCarbs: Double?     // Made optional
+    let totalFat: Double?       // Made optional
     
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case description
-        case directions
-        case privacy
-        case servings
-        case createdAt = "created_at"
-        case mealItems = "meal_items"
-        case image
+    // Add computed properties to provide default values when the fields are nil
+    var calories: Double { totalCalories ?? 0 }
+    var protein: Double { totalProtein ?? 0 }
+    var carbs: Double { totalCarbs ?? 0 }
+    var fat: Double { totalFat ?? 0 }
+}
+
+struct MealsResponse: Codable {
+    let meals: [Meal]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+    
+    // Keep this initializer for creating a MealsResponse from existing data
+    init(meals: [Meal], hasMore: Bool, totalPages: Int, currentPage: Int) {
+        self.meals = meals
+        self.hasMore = hasMore
+        self.totalPages = totalPages
+        self.currentPage = currentPage
     }
 }
