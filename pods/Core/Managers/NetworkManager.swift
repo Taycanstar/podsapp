@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -671,7 +671,7 @@ class NetworkManager {
               return
           }
 
-          print("Attempting to upload to: \(url)")
+        //   print("Attempting to upload to: \(url)")
           var request = URLRequest(url: url)
           request.httpMethod = "PUT"
           request.setValue(contentType, forHTTPHeaderField: "Content-Type")
@@ -4939,6 +4939,9 @@ func createMeal(
     image: String? = nil,
     completion: @escaping (Result<Meal, Error>) -> Void
 ) {
+    // Add stronger debug logging for the title
+    print("DEBUG: NetworkManager.createMeal - sending title: '\(title)'")
+    
     let urlString = "\(baseUrl)/create-meal/"
     guard let url = URL(string: urlString) else {
         completion(.failure(NetworkError.invalidURL))
@@ -4980,6 +4983,8 @@ func createMeal(
     if let image = image {
         parameters["image"] = image
     }
+    // Add debug print for parameters
+    print("DEBUG: createMeal parameters: \(parameters)")
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -5120,8 +5125,21 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("JSON response: \(jsonString)")
             }
+
+            // Add this to check for total_calories specifically
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let meals = jsonObj["meals"] as? [[String: Any]] {
+                for (index, meal) in meals.enumerated() {
+                    print("DEBUG: Meal \(index) - title: \(meal["title"] ?? "unknown"), total_calories: \(meal["total_calories"] ?? "missing")")
+                }
+            }
             
+            print("DEBUG: About to decode MealsResponse with keyDecodingStrategy: \(decoder.keyDecodingStrategy)")
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
+            print("DEBUG: Successfully decoded \(mealsResponse.meals.count) meals")
+            for (index, meal) in mealsResponse.meals.enumerated() {
+                print("DEBUG: Decoded meal \(index) - id: \(meal.id), title: \(meal.title), totalCalories: \(String(describing: meal.totalCalories)), calories: \(meal.calories)")
+            }
             completion(.success(mealsResponse))
         } catch {
             print("Decoding error: \(error)")

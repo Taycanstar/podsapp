@@ -146,8 +146,9 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Create") {
                     // Handle create action
-                    resetFields()
+                    
                      saveNewMeal()
+                     
                 }
                 .disabled(isCreateButtonDisabled)
                 .foregroundColor(selectedImage != nil ? .white : .primary)
@@ -250,6 +251,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                         if let url = URL(string: urlString) {
                             self.imageURL = url
                             self.createMeal()
+                            self.resetFields()
                         } else {
                             // Handle invalid URL
                             self.isSaving = false
@@ -265,10 +267,17 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             }
         } else {
             createMeal()
+            resetFields()
         }
     }
 
     private func createMeal() {
+        print("DEBUG: Creating meal with title: '\(mealName)'")
+        print("DEBUG: Creating meal with \(selectedFoods.count) food items")
+    for (index, food) in selectedFoods.enumerated() {
+        print("DEBUG: Food \(index): \(food.displayName), calories: \(food.calories ?? 0)")
+    }
+
         foodManager.createMeal(
             title: mealName,
             description: nil,

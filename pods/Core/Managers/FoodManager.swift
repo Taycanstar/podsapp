@@ -262,10 +262,16 @@ func createMeal(
             switch result {
             case .success(let meal):
                 print("Meal created successfully")
+                print("DEBUG: Meal created successfully - id: \(meal.id), title: \(meal.title)")
+                print("DEBUG: Created meal nutritional data - totalCalories: \(String(describing: meal.totalCalories)), calories: \(meal.calories)")
                 self?.meals.insert(meal, at: 0)
+                // Add this debug print
+            print("DEBUG: After inserting new meal, first meal is now - id: \(self?.meals.first?.id ?? -1), totalCalories: \(String(describing: self?.meals.first?.totalCalories)), calories: \(self?.meals.first?.calories ?? -1)")
                 // Cache the new meal
                 self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
 
+                // Add this debug print
+            print("DEBUG: Cached meals after creation")
                 // Show toast notification
                 withAnimation {
                     self?.showMealToast = true
@@ -294,12 +300,17 @@ func createMeal(
 private func clearMealCache() {
     guard let userEmail = userEmail else { return }
     
+    print("DEBUG: Clearing meal cache for user \(userEmail)")
+    
     // Clear all pages of meal cache
     for page in 1...10 { // Assuming we won't have more than 10 pages
-        UserDefaults.standard.removeObject(forKey: "meals_\(userEmail)_page_\(page)")
+        let cacheKey = "meals_\(userEmail)_page_\(page)"
+        let hadCache = UserDefaults.standard.object(forKey: cacheKey) != nil
+        UserDefaults.standard.removeObject(forKey: cacheKey)
+        print("DEBUG: Cleared cache for \(cacheKey) - had previous data: \(hadCache)")
     }
     
-    print("All meal caches cleared")
+    print("DEBUG: All meal caches cleared")
 }
 
 private func resetAndFetchMeals() {
@@ -347,6 +358,11 @@ func loadMoreMeals(refresh: Bool = false) {
             self.isLoadingMeals = false
             switch result {
             case .success(let response):
+            // Add this debug print
+            print("DEBUG: getMeals success - received \(response.meals.count) meals")
+            for (index, meal) in response.meals.enumerated() {
+                print("DEBUG: Response meal \(index) - id: \(meal.id), title: \(meal.title), totalCalories: \(String(describing: meal.totalCalories)), calories: \(meal.calories)")
+            }
                 if refresh {
                     self.meals = response.meals
                     self.currentMealPage = 2
@@ -354,6 +370,11 @@ func loadMoreMeals(refresh: Bool = false) {
                     self.meals.append(contentsOf: response.meals)
                     self.currentMealPage += 1
                 }
+                // Add this debug print after updating self.meals
+            print("DEBUG: Updated self.meals - now contains \(self.meals.count) meals")
+            for (index, meal) in self.meals.prefix(3).enumerated() {
+                print("DEBUG: Updated meal \(index) - id: \(meal.id), title: \(meal.title), totalCalories: \(String(describing: meal.totalCalories)), calories: \(meal.calories)")
+            }
                 self.hasMoreMeals = response.hasMore
                 self.cacheMeals(response, forPage: pageToLoad)
             case .failure(let error):
@@ -375,10 +396,32 @@ func loadMoreMealsIfNeeded(meal: Meal) {
 }
 
 // Refresh meals
+// func refreshMeals() {
+//     print("🔄 Starting meal refresh...")
+//     clearMealCache()
+//     loadMoreMeals(refresh: true)
+// }
+
 func refreshMeals() {
     print("🔄 Starting meal refresh...")
+    
+    // Clear the meal cache
     clearMealCache()
+    
+    // Reset state
+    currentMealPage = 1
+    hasMoreMeals = true
+    
+    // Force UI update before fetching new data
+    objectWillChange.send()
+    
+    // Fetch fresh data
     loadMoreMeals(refresh: true)
+    
+    // Force another UI update after a short delay
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        self.objectWillChange.send()
+    }
 }
 
 }

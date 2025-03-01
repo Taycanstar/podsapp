@@ -253,6 +253,7 @@ struct LogFood: View {
                             //     .cornerRadius(12)
                             // }
         }
+        .padding(.horizontal)
         
         // Meal History Section
         if !foodManager.meals.isEmpty {
@@ -261,6 +262,7 @@ struct LogFood: View {
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
+                .padding(.horizontal)
             
             List {
                 ForEach(foodManager.meals) { meal in
@@ -282,7 +284,7 @@ struct LogFood: View {
                 .padding()
         }
     }
-    .padding()
+    // .padding()
     .onAppear {
         if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
             foodManager.refreshMeals()
@@ -345,40 +347,10 @@ struct LogFood: View {
         }
 
                     if foodManager.showToast {
-                    Text("Food logged successfully")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(.label))  // Adapt to color scheme
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            Material.ultraThin,  // Apply the glass effect
-                            in: RoundedRectangle(cornerRadius: 12)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color(.label).opacity(0.7), lineWidth: 1)  // Add a border for contrast
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 65)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                  BottomPopup(message: "Food logged")
                 }
                        if foodManager.showMealToast {
-                    Text("Meal created")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(.label))  // Adapt to color scheme
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            Material.ultraThin,  // Apply the glass effect
-                            in: RoundedRectangle(cornerRadius: 12)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color(.label).opacity(0.7), lineWidth: 1)  // Add a border for contrast
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 65)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    BottomPopup(message: "Meal created")
                 }
                 }
         .navigationBarBackButtonHidden(mode != .addToMeal)
@@ -573,22 +545,46 @@ struct MealRow: View {
     let meal: Meal
     
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        
+        HStack(alignment: .center, spacing: 16) {
+              // If meal has an image, display it
+            if let imageUrl = meal.image, !imageUrl.isEmpty {
+                AsyncImage(url: URL(string: imageUrl)) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 50, height: 50)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 50, height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    case .failure:
+                        Image(systemName: "fork.knife.circle")
+                            .font(.system(size: 40))
+                            .frame(width: 50, height: 50)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            } else {
+                // Display fork.knife.circle icon when there's no image
+                Image(systemName: "fork.knife.circle")
+                    .font(.system(size: 40))
+                    .frame(width: 50, height: 50)
+            }
+     
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+               
                     .font(.headline)
                     .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
-                    // Use the actual total calories from the meal
-                    Text("\(Int(meal.totalCalories)) cal")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                    
-                    Text("•")
-                        .foregroundColor(.gray)
-                    
-                    Text("\(meal.mealItems.count) \(meal.mealItems.count == 1 ? "item" : "items")")
+                    // Use the computed property instead of the optional totalCalories
+                    Text("\(Int(meal.calories)) cal")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                     
@@ -603,32 +599,12 @@ struct MealRow: View {
                     }
                 }
             }
-            
-            Spacer()
-            
-            // If meal has an image, display it
-            if let imageUrl = meal.image, !imageUrl.isEmpty {
-                AsyncImage(url: URL(string: imageUrl)) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 50, height: 50)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 50, height: 50)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    case .failure:
-                        Image(systemName: "photo")
-                            .frame(width: 50, height: 50)
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-            }
+                               Spacer()
         }
-        .padding(.vertical, 8)
+        .onAppear{
+            print("DEBUG: MealRow - meal id: \(meal.id), title: '\(meal.title)', isEmpty: \(meal.title.isEmpty)")
+        }
+        // .padding(.vertical, 8)
     }
 }
 
