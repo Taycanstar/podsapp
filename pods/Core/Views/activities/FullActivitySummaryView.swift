@@ -148,12 +148,7 @@ extension FullActivitySummaryView {
         }
     }
 private func columnValuesGrid(for item: ActivityItem) -> some View {
-    print("DEBUG: Activity ID for item \(item.id): \(currentActivity?.id ?? -1)")
-    print("DEBUG: Columns source: \(columns)")
-    print("DEBUG: Column IDs in item: \(Array(item.columnValues.keys))")
-    print("DEBUG: Expected column IDs: \(columns.map { String($0.id) })")
-    print("DEBUG: Displaying column values for item \(item.id): \(item.columnValues)")
-    print("DEBUG: Available columns: \(columns.map { "\($0.id): \($0.name)" })")
+
 
     let groupedColumns = columns.filter { $0.groupingType == "grouped" }
     let singleColumns = columns.filter { $0.groupingType == "singular" }
@@ -161,8 +156,6 @@ private func columnValuesGrid(for item: ActivityItem) -> some View {
     // Get sorted item column IDs to maintain consistent order
     let itemColumnIds = Array(item.columnValues.keys).sorted()
 
-    print("DEBUG: Grouped columns: \(groupedColumns.map { $0.id })")
-    print("DEBUG: Single columns: \(singleColumns.map { $0.id })")
 
     return VStack(alignment: .leading, spacing: 24) {
         // MARK: - Grouped columns

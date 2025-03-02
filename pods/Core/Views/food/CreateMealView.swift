@@ -272,11 +272,6 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
     }
 
     private func createMeal() {
-        print("DEBUG: Creating meal with title: '\(mealName)'")
-        print("DEBUG: Creating meal with \(selectedFoods.count) food items")
-    for (index, food) in selectedFoods.enumerated() {
-        print("DEBUG: Food \(index): \(food.displayName), calories: \(food.calories ?? 0)")
-    }
 
         foodManager.createMeal(
             title: mealName,

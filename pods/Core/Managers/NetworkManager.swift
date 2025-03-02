@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -1028,9 +1028,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 // Convert the PodJSON into your Pod model.
                 let pod = Pod(from: podJSON)
                 
-                // Debug: Print the count of decoded pod items.
-                print("Decoded pod items count: \(pod.items.count)")
-                
+          
                 completion(.success(pod))
             } catch {
                 print("Decoding error: \(error)")
@@ -4939,9 +4937,6 @@ func createMeal(
     image: String? = nil,
     completion: @escaping (Result<Meal, Error>) -> Void
 ) {
-    // Add stronger debug logging for the title
-    print("DEBUG: NetworkManager.createMeal - sending title: '\(title)'")
-    
     let urlString = "\(baseUrl)/create-meal/"
     guard let url = URL(string: urlString) else {
         completion(.failure(NetworkError.invalidURL))
@@ -4983,8 +4978,7 @@ func createMeal(
     if let image = image {
         parameters["image"] = image
     }
-    // Add debug print for parameters
-    print("DEBUG: createMeal parameters: \(parameters)")
+
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -5133,13 +5127,9 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
                     print("DEBUG: Meal \(index) - title: \(meal["title"] ?? "unknown"), total_calories: \(meal["total_calories"] ?? "missing")")
                 }
             }
-            
-            print("DEBUG: About to decode MealsResponse with keyDecodingStrategy: \(decoder.keyDecodingStrategy)")
+      
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
-            print("DEBUG: Successfully decoded \(mealsResponse.meals.count) meals")
-            for (index, meal) in mealsResponse.meals.enumerated() {
-                print("DEBUG: Decoded meal \(index) - id: \(meal.id), title: \(meal.title), totalCalories: \(String(describing: meal.totalCalories)), calories: \(meal.calories)")
-            }
+           
             completion(.success(mealsResponse))
         } catch {
             print("Decoding error: \(error)")
