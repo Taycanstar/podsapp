@@ -522,69 +522,6 @@ private func removeAllItems(withFdcId fdcId: Int) {
     }
 }
 
-//     private var macroCircleAndStats: some View {
-//     let totals = calculateTotalMacros(aggregateFoodsByFdcId(selectedFoods))
-    
-//     return HStack(spacing: 40) {
-//         ZStack {
-//             Circle()
-//                 .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-//                 .frame(width: 80, height: 80)
-            
-//             Circle()
-//                 .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
-//                 .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-//                 .frame(width: 80, height: 80)
-//                 .rotationEffect(.degrees(-90))
-            
-//             Circle()
-//                 .trim(from: CGFloat(totals.carbsPercentage) / 100,
-//                       to: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100)
-//                 .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-//                 .frame(width: 80, height: 80)
-//                 .rotationEffect(.degrees(-90))
-            
-//             Circle()
-//                 .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
-//                       to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
-//                 .stroke(Color("purple"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-//                 .frame(width: 80, height: 80)
-//                 .rotationEffect(.degrees(-90))
-            
-//             VStack(spacing: 0) {
-//                 Text("\(Int(totals.calories))").font(.system(size: 20, weight: .bold))
-//                 Text("Cal").font(.system(size: 14))
-//             }
-//         }
-        
-//         Spacer()
-        
-//         // Carbs
-//         MacroView(
-//             value: totals.carbs,
-//             percentage: totals.carbsPercentage,
-//             label: "Carbs",
-//             percentageColor: Color("teal")
-//         )
-        
-//         // Fat
-//         MacroView(
-//             value: totals.fat,
-//             percentage: totals.fatPercentage,
-//             label: "Fat",
-//             percentageColor: Color("pinkRed")
-//         )
-        
-//         // Protein
-//         MacroView(
-//             value: totals.protein,
-//             percentage: totals.proteinPercentage,
-//             label: "Protein",
-//             percentageColor: .purple
-//         )
-//     }
-// }
-
 private struct MacroTotals {
     var calories: Double = 0
     var protein: Double = 0
