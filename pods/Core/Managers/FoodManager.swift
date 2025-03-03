@@ -306,7 +306,12 @@ private func resetAndFetchMeals() {
     clearMealCache()
     
     loadCachedMeals()
-    loadMoreMeals(refresh: true)
+    // loadMoreMeals(refresh: true)
+    loadMoreMeals(refresh: true) { [weak self] success in
+        if success {
+            self?.prefetchMealImages()
+        }
+    }
 }
 
 // Load cached meals
@@ -328,9 +333,47 @@ private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
 }
 
 // Load more meals
-func loadMoreMeals(refresh: Bool = false) {
-    guard let email = userEmail else { return }
-    guard !isLoadingMeals else { return }
+// func loadMoreMeals(refresh: Bool = false) {
+//     guard let email = userEmail else { return }
+//     guard !isLoadingMeals else { return }
+    
+//     let pageToLoad = refresh ? 1 : currentMealPage
+//     isLoadingMeals = true
+//     error = nil
+
+//     networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
+//         DispatchQueue.main.async {
+//             guard let self = self else { return }
+//             self.isLoadingMeals = false
+//             switch result {
+//             case .success(let response):
+//                 if refresh {
+//                     self.meals = response.meals
+//                     self.currentMealPage = 2
+//                 } else {
+//                     self.meals.append(contentsOf: response.meals)
+//                     self.currentMealPage += 1
+//                 }
+//                 // Add this debug print after updating self.meals
+//                 self.hasMoreMeals = response.hasMore
+//                 self.cacheMeals(response, forPage: pageToLoad)
+//             case .failure(let error):
+//                 self.error = error
+//                 self.hasMoreMeals = false
+//             }
+//         }
+//     }
+// }
+// Update loadMoreMeals to include a completion handler
+func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    guard let email = userEmail else { 
+        completion?(false)
+        return 
+    }
+    guard !isLoadingMeals else { 
+        completion?(false)
+        return 
+    }
     
     let pageToLoad = refresh ? 1 : currentMealPage
     isLoadingMeals = true
@@ -338,7 +381,10 @@ func loadMoreMeals(refresh: Bool = false) {
 
     networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
-            guard let self = self else { return }
+            guard let self = self else { 
+                completion?(false)
+                return 
+            }
             self.isLoadingMeals = false
             switch result {
             case .success(let response):
@@ -349,12 +395,13 @@ func loadMoreMeals(refresh: Bool = false) {
                     self.meals.append(contentsOf: response.meals)
                     self.currentMealPage += 1
                 }
-                // Add this debug print after updating self.meals
                 self.hasMoreMeals = response.hasMore
                 self.cacheMeals(response, forPage: pageToLoad)
+                completion?(true)
             case .failure(let error):
                 self.error = error
                 self.hasMoreMeals = false
+                completion?(false)
             }
         }
     }
@@ -454,6 +501,18 @@ func logMeal(
                 self.error = error
                 completion?(.failure(error))
             }
+        }
+    }
+}
+
+func prefetchMealImages() {
+    for meal in meals {
+        if let imageUrlString = meal.image, let imageUrl = URL(string: imageUrlString) {
+            // Create a URLSession task to prefetch the image
+            let task = URLSession.shared.dataTask(with: imageUrl) { _, _, _ in
+                // Image is now cached by the system
+            }
+            task.resume()
         }
     }
 }

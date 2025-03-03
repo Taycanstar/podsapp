@@ -178,9 +178,9 @@ struct LogFood: View {
                 
                 ForEach(foodManager.meals) { meal in
                     MealRow(meal: meal, selectedMeal: $selectedMeal)
-                        .onAppear {
-                            foodManager.loadMoreMealsIfNeeded(meal: meal)
-                        }
+                        // .onAppear {
+                        //     foodManager.loadMoreMealsIfNeeded(meal: meal)
+                        // }
                         // Remove extra list row insets
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     
@@ -220,7 +220,6 @@ struct LogFood: View {
                     
                     Spacer()
                 }
-       
         .edgesIgnoringSafeArea(.horizontal)
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: selectedFoodTab.searchPrompt)
         .onChange(of: searchText) { _ in
@@ -229,7 +228,17 @@ struct LogFood: View {
                 await searchFoods()
             }
         }
-      
+      // In LogFood.swift, remove the current onAppear and replace with this:
+.onAppear {
+    // Force an immediate refresh if we don't have meals yet
+    if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
+        foodManager.refreshMeals()
+    }
+    // Otherwise, just prefetch the images for any meals we already have
+    else {
+        foodManager.prefetchMealImages()
+    }
+}
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Cancel button
