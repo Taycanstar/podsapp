@@ -174,9 +174,10 @@ struct LogFood: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 
                 ForEach(foodManager.meals) { meal in
-                    MealRow(meal: meal)
+                    MealRow(meal: meal, selectedMeal: $selectedMeal)
                         .onAppear {
                             foodManager.loadMoreMealsIfNeeded(meal: meal)
                         }
@@ -210,84 +211,6 @@ struct LogFood: View {
             foodManager.refreshMeals()
         }
     }
-// case .meals:
-
-    // List {
-    //                     VStack(spacing: 4) {
-                            
-    //                         // Create Meal Card
-    //                         Button {
-    //                             print("Create meal tapped")
-    //                             path.append(FoodNavigationDestination.createMeal)
-    //                         } label: {
-    //                             VStack(alignment: .leading, spacing: 16) {
-    //                                 Image("burger")
-    //                                     .resizable()
-    //                                     .scaledToFit()
-    //                                     .frame(width: 85, height: 85)
-                                    
-    //                                 VStack(alignment: .leading, spacing: 4) {
-    //                                     Text("Create a Meal")
-    //                                         .font(.title)
-    //                                         .fontWeight(.bold)
-    //                                         .foregroundColor(.primary)
-                                        
-    //                                     Text("Create and save your favorite meals to log quickly again and again.")
-    //                                         .font(.subheadline)
-    //                                         .foregroundColor(.gray)
-    //                                         .multilineTextAlignment(.leading)
-    //                                 }
-    //                                 .frame(maxWidth: .infinity, alignment: .leading)
-    //                             }
-    //                             .padding(.vertical, 12)
-    //                             .padding(.horizontal, 16)
-    //                             .frame(maxWidth: .infinity, alignment: .leading)
-    //                             .background(Color("ioscard"))
-    //                             .cornerRadius(12)
-    //                         }
-    //                         .padding(.horizontal)
-    //                         .padding(.top)
-                            
-    //                         // Meal History Section
-    //                         if !foodManager.meals.isEmpty {
-    //                             Text("History")
-    //                                 .font(.title2)
-    //                                 .fontWeight(.bold)
-    //                                 .frame(maxWidth: .infinity, alignment: .leading)
-    //                                 .padding(.vertical, 8)
-    //                                 .padding(.horizontal, 16)
-                                
-    //                             ForEach(foodManager.meals) { meal in
-    //                                 MealRow(meal: meal)
-    //                                     .onAppear {
-    //                                         foodManager.loadMoreMealsIfNeeded(meal: meal)
-    //                                     }
-    //                                     // Remove extra list row insets
-    //                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    
-    //                                 // Divider aligned with text
-    //                                 Divider()
-    //                                     .padding(.leading, 66) // 50 (image) + 16 (HStack spacing)
-    //                                     .padding(.vertical, 0)
-    //                             }
-    //                         } else if foodManager.isLoadingMeals {
-    //                             ProgressView()
-    //                                 .padding()
-    //                         } else {
-    //                             Text("No meal history yet")
-    //                                 .font(.subheadline)
-    //                                 .foregroundColor(.gray)
-    //                                 .padding()
-    //                         }
-    //                     }
-    //                     // Also remove insets around the whole VStack
-    //                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-    //                 }
-    //                 .listStyle(.plain)
-    //                 .safeAreaInset(edge: .bottom) {
-    //                     Color.clear.frame(height: 70)
-    //                 }
-    //                 .onAppear {
                         case .recipes:
                             Text("Recipes content")
                         default:
@@ -349,6 +272,9 @@ struct LogFood: View {
                 }
                        if foodManager.showMealToast {
                     BottomPopup(message: "Meal created")
+                }
+                if foodManager.showMealLoggedToast {
+                    BottomPopup(message: "Meal logged")
                 }
                 }
         .navigationBarBackButtonHidden(mode != .addToMeal)
@@ -543,6 +469,7 @@ struct HistoryRow: View {
 struct MealRow: View {
     @EnvironmentObject var foodManager: FoodManager
     let meal: Meal
+    @Binding var selectedMeal: String
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -589,9 +516,30 @@ struct MealRow: View {
                 }
             }
             Spacer()
+                    Button {
+                    HapticFeedback.generate()
+                    // Log food/meal
+                    foodManager.logMeal(meal: meal, mealTime: selectedMeal)
+                } label: {
+                   
+                      if foodManager.lastLoggedMealId == meal.id {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.green)
+                        .transition(.opacity)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.accentColor)
+                }
+                   
+                    
+                }
+                .buttonStyle(PlainButtonStyle())
+
         }
-        .padding(.leading, 16)
+        .padding(.horizontal, 16)
         .padding(.vertical, 0)
-        // .padding(.vertical, 6) // A little vertical padding like Apple Music rows
+
     }
 }

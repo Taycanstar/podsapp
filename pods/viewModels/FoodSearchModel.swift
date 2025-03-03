@@ -233,3 +233,23 @@ struct MealsResponse: Codable {
         self.currentPage = currentPage
     }
 }
+
+struct LoggedMeal: Codable, Identifiable {
+    let status: String
+    let mealLogId: Int
+    let calories: Double
+    let message: String
+    let meal: MealSummary
+    let mealTime: String
+    
+    var id: Int { mealLogId }
+}
+
+struct MealSummary: Codable {
+    let mealId: Int
+    let title: String
+    let description: String?
+    let image: String?
+    let calories: Double
+    let servings: Int
+}

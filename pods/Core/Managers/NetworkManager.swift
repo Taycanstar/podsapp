@@ -5140,6 +5140,62 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
         }
     }.resume()
 }
+
+func logMeal(
+    userEmail: String,
+    mealId: Int,
+    mealTime: String,
+    date: Date,
+    notes: String?,
+    completion: @escaping (Result<LoggedMeal, Error>) -> Void
+) {
+    let dateFormatter = ISO8601DateFormatter()
+    let dateString = dateFormatter.string(from: date)
+    
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "meal_id": mealId,
+        "meal_time": mealTime,
+        "date": dateString
+    ]
+    
+    if let notes = notes {
+        parameters["notes"] = notes
+    }
+    
+    let url = URL(string: "\(baseUrl)/log-meal/")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        completion(.failure(error))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            let loggedMeal = try decoder.decode(LoggedMeal.self, from: data)
+            completion(.success(loggedMeal))
+        } catch let decodingError {
+            print("Decoding error: \(decodingError)")
+            completion(.failure(decodingError))
+        }
+    }.resume()
+}
    
 }
 

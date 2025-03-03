@@ -9,10 +9,10 @@ class FoodManager: ObservableObject {
     @Published var lastLoggedFoodId: Int? = nil
     @Published var showToast = false
     @Published var showMealToast = false
-
+    @Published var showMealLoggedToast = false
     @Published var recentlyAddedFoodIds: Set<Int> = []
 
-    
+    @Published var lastLoggedMealId: Int? = nil
     private let networkManager: NetworkManager
     private var userEmail: String?
     private var currentPage = 1
@@ -396,6 +396,65 @@ func refreshMeals() {
     // Force another UI update after a short delay
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
         self.objectWillChange.send()
+    }
+}
+
+func logMeal(
+    meal: Meal,
+    mealTime: String,
+    date: Date = Date(),
+    notes: String? = nil,
+    completion: ((Result<LoggedMeal, Error>) -> Void)? = nil
+) {
+    guard let email = userEmail else { return }
+    
+    // Show loading state
+    isLoading = true
+    
+    networkManager.logMeal(
+        userEmail: email,
+        mealId: meal.id,
+        mealTime: mealTime,
+        date: date,
+        notes: notes
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            switch result {
+            case .success(let loggedMeal):
+                print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
+                
+                // Mark this meal as recently logged
+                self.lastLoggedMealId = meal.id
+                
+                // Refresh the food list to show newly logged items
+                self.refresh()
+                
+                // Show toast notification
+                withAnimation {
+                    self.showMealLoggedToast = true
+                }
+                
+                // Clear the flag after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        self.lastLoggedMealId = nil
+                        self.showMealLoggedToast = false
+                        // Reset toast message
+                       
+                    }
+                }
+                
+                completion?(.success(loggedMeal))
+                
+            case .failure(let error):
+                print("❌ Failed to log meal: \(error)")
+                self.error = error
+                completion?(.failure(error))
+            }
+        }
     }
 }
 
