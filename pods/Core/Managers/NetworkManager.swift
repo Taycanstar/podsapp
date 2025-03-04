@@ -4793,7 +4793,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
     }
 
 
-        func logFood(userEmail: String, food: Food, meal: String, servings: Int, date: Date, notes: String?, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+        func logFood(userEmail: String, food: Food, mealType: String, servings: Int, date: Date, notes: String? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     let urlString = "\(baseUrl)/log-food/"
     
     guard let url = URL(string: urlString) else {
@@ -4819,7 +4819,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             "householdServingFullText": food.servingSizeText,
             "foodNutrients": nutrients
         ],
-        "meal": meal,
+        "meal_type": mealType,  // Changed from 'meal' to 'meal_type'
         "servings": servings,
         "date": ISO8601DateFormatter().string(from: date),
         "notes": notes ?? ""
@@ -4898,6 +4898,52 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let response = try decoder.decode(FoodLogsResponse.self, from: data)
+            completion(.success(response))
+        } catch {
+            print("Decoding error: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Received JSON:", jsonString)
+            }
+            completion(.failure(error))
+        }
+    }.resume()
+}
+
+func getCombinedLogs(userEmail: String, page: Int, completion: @escaping (Result<CombinedLogsResponse, Error>) -> Void) {
+    guard var urlComponents = URLComponents(string: "\(baseUrl)/get-combined-logs/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    urlComponents.queryItems = [
+        URLQueryItem(name: "user_email", value: userEmail),
+        URLQueryItem(name: "page", value: String(page))
+    ]
+    
+    guard let url = urlComponents.url else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let response = try decoder.decode(CombinedLogsResponse.self, from: data)
             completion(.success(response))
         } catch {
             print("Decoding error: \(error)")

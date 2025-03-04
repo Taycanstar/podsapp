@@ -102,11 +102,20 @@ struct LogFood: View {
                                 .padding(.top, 8)
                                  .listRowSeparator(.hidden) 
                             
-        ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
-                        HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
+        // ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
+        ForEach(foodManager.combinedLogs, id: \.id) { log in
+                        // HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
+                           HistoryRow(
+                                    log: log,
+                                    selectedMeal: $selectedMeal,
+                                    mode: mode,
+                                    selectedFoods: $selectedFoods,
+                                    path: $path
+                                )
                             .onAppear {
                           
-                                foodManager.loadMoreIfNeeded(food: loggedFood)
+                                // foodManager.loadMoreIfNeeded(food: loggedFood)
+                                foodManager.loadMoreIfNeeded(log: log)
                             }
                     }
                                 }
@@ -238,6 +247,9 @@ struct LogFood: View {
     else {
         foodManager.prefetchMealImages()
     }
+    
+    // Always refresh combined logs when the view appears
+    foodManager.refresh()
 }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -349,7 +361,7 @@ struct FoodRow: View {
                         }
                     }
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                 }
                 
                 Spacer()
@@ -450,31 +462,79 @@ private func handleFoodTap() {
     }
 }
 
+
 struct HistoryRow: View {
-    @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var viewModel: OnboardingViewModel
-    let loggedFood: LoggedFood
-    let selectedMeal: Binding<String>
-    @State private var checkmarkVisible: Bool = false
-    @State private var errorMessage: String = ""
-    @State private var showErrorAlert: Bool = false
-    let mode: LogFoodMode  
+    let log: CombinedLog
+    @Binding var selectedMeal: String
+    let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
-    
     var body: some View {
-        FoodRow(
-            food: loggedFood.food.asFood,
-          
-            selectedMeal: selectedMeal,
-            mode: mode,              // Pass through from LogFood
-            selectedFoods: $selectedFoods,
-            path: $path)
+        switch log.type {
+        case .food:
+            if let food = log.food {
+                FoodRow(
+                    food: food.asFood, // Make sure LoggedFoodItem has an asFood property
+                    selectedMeal: $selectedMeal,
+                    mode: mode,
+                    selectedFoods: $selectedFoods,
+                    path: $path
+                )
+            }
+        case .meal:
+            if let meal = log.meal {
+                MealHistoryRow(
+                    meal: meal,
+                    selectedMeal: $selectedMeal
+                )
+            }
+        }
     }
 }
 
-
+struct MealHistoryRow: View {
+    @EnvironmentObject var foodManager: FoodManager
+    let meal: MealSummary  // Changed from Meal to MealSummary since that's what we get from the log
+    @Binding var selectedMeal: String
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+        
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 4) {
+                    Text("\(Int(meal.calories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Button {
+                HapticFeedback.generate()
+                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, createdAt: Date(), mealItems: [], image: meal.image, totalCalories: meal.calories, totalProtein: nil, totalCarbs: nil, totalFat: nil), mealTime: selectedMeal)
+            } label: {
+                if foodManager.lastLoggedMealId == meal.mealId {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.green)
+                        .transition(.opacity)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 0)
+        .padding(.vertical, 0)
+    }
+}
 struct MealRow: View {
     @EnvironmentObject var foodManager: FoodManager
     let meal: Meal

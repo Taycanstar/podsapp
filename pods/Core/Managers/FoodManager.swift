@@ -19,10 +19,11 @@ class FoodManager: ObservableObject {
     private let pageSize = 20
 
     // Add these properties
-@Published var meals: [Meal] = []
-@Published var isLoadingMeals = false
-private var currentMealPage = 1
-private var hasMoreMeals = true
+    @Published var meals: [Meal] = []
+    @Published var isLoadingMeals = false
+    private var currentMealPage = 1
+    private var hasMoreMeals = true
+    @Published var combinedLogs: [CombinedLog] = []
     
     init() {
         self.networkManager = NetworkManager()
@@ -35,6 +36,7 @@ private var hasMoreMeals = true
         self.userEmail = userEmail
         resetAndFetchFoods()
            resetAndFetchMeals() // Add this line
+           resetAndFetchLogs()
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -51,6 +53,14 @@ private var hasMoreMeals = true
         loadCachedFoods()
         loadMoreFoods(refresh: true)
     }
+
+    private func resetAndFetchLogs() {
+    currentPage = 1
+    hasMore = true
+    combinedLogs.removeAll()
+    loadCachedLogs()
+    loadMoreLogs(refresh: true)
+}
     
     private func loadCachedFoods() {
     guard let userEmail = userEmail else { return }
@@ -68,6 +78,22 @@ private var hasMoreMeals = true
             UserDefaults.standard.set(encoded, forKey: "logged_foods_\(userEmail)_page_\(page)")
         }
     }
+
+    private func cacheLogs(_ response: CombinedLogsResponse, forPage page: Int) {
+    guard let userEmail = userEmail else { return }
+    if let encoded = try? JSONEncoder().encode(response) {
+        UserDefaults.standard.set(encoded, forKey: "combined_logs_\(userEmail)_page_\(page)")
+    }
+}
+
+private func loadCachedLogs() {
+    guard let userEmail = userEmail else { return }
+    if let cached = UserDefaults.standard.data(forKey: "combined_logs_\(userEmail)_page_1"),
+       let decodedResponse = try? JSONDecoder().decode(CombinedLogsResponse.self, from: cached) {
+        self.combinedLogs = decodedResponse.logs
+        self.hasMore = decodedResponse.hasMore
+    }
+}
     
 
 private func removeDuplicates(from logs: [LoggedFood]) -> [LoggedFood] {
@@ -132,11 +158,43 @@ func loadMoreFoods(refresh: Bool = false) {
     }
 }
 
+private func loadMoreLogs(refresh: Bool = false) {
+    guard let email = userEmail else { return }
+    guard !isLoading else { return }
+    
+    let pageToLoad = refresh ? 1 : currentPage
+    isLoading = true
+    error = nil
+
+    networkManager.getCombinedLogs(userEmail: email, page: pageToLoad) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            switch result {
+            case .success(let response):
+                if refresh {
+                    self.combinedLogs = response.logs
+                    self.currentPage = 2
+                } else {
+                    self.combinedLogs.append(contentsOf: response.logs)
+                    self.currentPage += 1
+                }
+                self.hasMore = response.hasMore
+                self.cacheLogs(response, forPage: pageToLoad)
+            case .failure(let error):
+                self.error = error
+                self.hasMore = false
+            }
+        }
+    }
+}
+
     
     // New refresh function replaces any old refreshLoggedFoods implementation
     func refresh() {
         print("🔄 Starting refresh...")
-        loadMoreFoods(refresh: true)
+        resetAndFetchLogs()
     }
     
 
@@ -155,7 +213,7 @@ func loadMoreFoods(refresh: Bool = false) {
     networkManager.logFood(
         userEmail: email,
         food: food,
-        meal: meal,
+        mealType: meal,
         servings: servings,
         date: date,
         notes: notes
@@ -174,24 +232,21 @@ func loadMoreFoods(refresh: Bool = false) {
                 if let existingIndex = self.loggedFoods.firstIndex(where: {
                     $0.food.fdcId == food.fdcId
                 }) {
-                    // self.loggedFoods.remove(at: existingIndex)
                     self.loggedFoods.removeAll(where: { $0.food.fdcId == food.fdcId })
-
                 }
                 
                 // Insert the newly logged food at the top.
                 self.loggedFoods.insert(loggedFood, at: 0)
 
                 // Mark this food as recently logged.
-                    self.lastLoggedFoodId = food.fdcId
-
-                    
-                    // Clear the flag after 2 seconds.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation {
-                            self.lastLoggedFoodId = nil
-                        }
+                self.lastLoggedFoodId = food.fdcId
+                
+                // Clear the flag after 2 seconds.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        self.lastLoggedFoodId = nil
                     }
+                }
                 
                 // Update the cached first page with the new ordering.
                 let firstPageFoods = Array(self.loggedFoods.prefix(self.pageSize))
@@ -203,6 +258,9 @@ func loadMoreFoods(refresh: Bool = false) {
                 )
                 self.cacheFoods(response, forPage: 1)
                 print("💾 Cached first page with IDs: \(firstPageFoods.map { $0.foodLogId })")
+                
+                // Refresh combined logs
+                self.resetAndFetchLogs()
                 
                 withAnimation {
                     self.showToast = true
@@ -234,6 +292,15 @@ func loadMoreFoods(refresh: Bool = false) {
         }
         loadMoreFoods()
     }
+    // Update the existing function to handle CombinedLog
+func loadMoreIfNeeded(log: CombinedLog) {
+    guard let index = combinedLogs.firstIndex(where: { $0.id == log.id }),
+          index == combinedLogs.count - 5,
+          hasMore else {
+        return
+    }
+    loadMoreLogs()
+}
 func createMeal(
     title: String,
     description: String?,
@@ -278,13 +345,6 @@ func createMeal(
         }
     }
 }
-
-// private func cacheMeals() {
-//     guard let email = userEmail else { return }
-//     if let encoded = try? JSONEncoder().encode(meals) {
-//         UserDefaults.standard.set(encoded, forKey: "meals_\(email)")
-//     }
-// }
 
 private func clearMealCache() {
     guard let userEmail = userEmail else { return }
@@ -476,8 +536,8 @@ func logMeal(
                 // Mark this meal as recently logged
                 self.lastLoggedMealId = meal.id
                 
-                // Refresh the food list to show newly logged items
-                self.refresh()
+                // Refresh the combined logs
+                self.resetAndFetchLogs()
                 
                 // Show toast notification
                 withAnimation {
@@ -489,8 +549,6 @@ func logMeal(
                     withAnimation {
                         self.lastLoggedMealId = nil
                         self.showMealLoggedToast = false
-                        // Reset toast message
-                       
                     }
                 }
                 

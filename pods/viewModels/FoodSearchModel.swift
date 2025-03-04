@@ -123,9 +123,14 @@ struct LoggedFood: Codable, Identifiable {
     let calories: Double
     let message: String
     let food: LoggedFoodItem  // Changed from Food to LoggedFoodItem
-    let meal: String
+    let mealType: String      // Changed from 'meal' to 'mealType'
     
     var id: Int { foodLogId }
+    
+    enum CodingKeys: String, CodingKey {
+        case status, foodLogId, calories, message, food
+        case mealType = "meal_type" // Map from backend field
+    }
 }
 
 
@@ -252,4 +257,76 @@ struct MealSummary: Codable {
     let image: String?
     let calories: Double
     let servings: Int
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case mealId = "id"
+        case title
+        case description
+        case image
+        case calories
+        case servings
+        case protein
+        case carbs
+        case fat
+    }
+}
+
+// In FoodSearchModel.swift
+enum LogType: String, Codable {
+    case food
+    case meal
+}
+
+struct CombinedLog: Codable, Identifiable {
+    let type: LogType
+    let status: String
+    let calories: Double
+    let message: String
+    
+    // Food-specific properties
+    let foodLogId: Int?
+    let food: LoggedFoodItem?
+    let mealType: String?     // Changed from 'meal' to 'mealType'
+    
+    // Meal-specific properties
+    let mealLogId: Int?
+    let meal: MealSummary?
+    let mealTime: String?
+    
+    var id: Int {
+        switch type {
+        case .food: return foodLogId ?? 0
+        case .meal: return mealLogId ?? 0
+        }
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case type, status, calories, message, foodLogId, food
+        case mealType = "meal_type"  // Map to backend field
+        case mealLogId, meal, mealTime = "meal_time"
+    }
+}
+
+struct CombinedLogsResponse: Codable {
+    let logs: [CombinedLog]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+}
+
+
+protocol MealDisplayable {
+    var id: Int { get }
+    var title: String { get }
+    var image: String? { get }
+    var calories: Double { get }
+}
+
+
+
+extension MealSummary: MealDisplayable {
+    var id: Int { mealId }  // Map mealId to id for the protocol
 }
