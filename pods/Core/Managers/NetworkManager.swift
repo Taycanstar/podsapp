@@ -4808,6 +4808,14 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         "unitName": $0.unitName
     ] }
     
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - logFood:")
+    print("- userEmail: \(userEmail)")
+    print("- food ID: \(food.id), name: \(food.displayName)")
+    print("- mealType: \(mealType)")
+    print("- servings: \(servings)")
+    print("- date: \(ISO8601DateFormatter().string(from: date))")
+    
     let parameters: [String: Any] = [
         "user_email": userEmail,
         "food": [
@@ -4825,6 +4833,12 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         "notes": notes ?? ""
     ]
     
+    // Print what we're about to send as JSON
+    if let jsonData = try? JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted),
+       let jsonStr = String(data: jsonData, encoding: .utf8) {
+        print("📤 Request JSON: \(jsonStr)")
+    }
+    
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -4838,25 +4852,88 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
     }
     
     URLSession.shared.dataTask(with: request) { data, response, error in
-        if let error = error {
-            print("Network Error: \(error)")
-            completion(.failure(error))
+        guard let data = data, error == nil else {
+            DispatchQueue.main.async {
+                let errorMessage = error?.localizedDescription ?? "Unknown error"
+                print("❌ Network error: \(errorMessage)")
+                completion(.failure(error ?? NetworkError.unknownError))
+            }
             return
         }
         
-        guard let data = data else {
-            completion(.failure(NetworkError.noData))
-            return
+        if let httpResponse = response as? HTTPURLResponse {
+            print("🔄 HTTP Status Code: \(httpResponse.statusCode)")
+            
+            // Print headers for debugging
+            print("📋 Response Headers:")
+            for (key, value) in httpResponse.allHeaderFields {
+                print("\(key): \(value)")
+            }
         }
         
+        // Print the raw JSON response to see exactly what we're getting
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📥 Raw JSON Response: \(jsonString)")
+        }
+        
+        // Use a dictionary to inspect the fields before decoding into a model
+        if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            print("🔍 JSON Keys in response:")
+            for (key, value) in jsonObj {
+                print("- \(key): \(type(of: value))")
+                
+                // For nested objects, print their keys too
+                if let nestedDict = value as? [String: Any] {
+                    print("  🔍 Nested keys in \(key):")
+                    for (nestedKey, nestedValue) in nestedDict {
+                        print("  - \(nestedKey): \(type(of: nestedValue))")
+                    }
+                }
+            }
+            
+            // Specifically check for meal_type
+            if let mealType = jsonObj["meal_type"] as? String {
+                print("✅ Found meal_type in response: \(mealType)")
+            } else {
+                print("❌ meal_type NOT found in response JSON")
+            }
+        }
+        
+        // Now try to decode
         do {
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
-            completion(.success(loggedFood))
+            
+            // Successfully decoded - print some values for confirmation
+            print("✅ Successfully decoded LoggedFood:")
+            print("- foodLogId: \(loggedFood.foodLogId)")
+            print("- mealType: \(loggedFood.mealType)")
+            
+            DispatchQueue.main.async {
+                completion(.success(loggedFood))
+            }
         } catch {
-            print("Decoding Error: \(error)")
-            completion(.failure(error))
+            // Detailed error for debugging
+            print("❌ Decoding Error: \(error)")
+            
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("🔑 Missing key: \(key), path: \(context.codingPath.map { $0.stringValue })")
+                case .typeMismatch(let type, let context):
+                    print("📝 Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("🚫 Value not found: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .dataCorrupted(let context):
+                    print("📄 Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("❓ Unknown decoding error")
+                }
+            }
+            
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
         }
     }.resume()
 }
@@ -5169,9 +5246,9 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
             // Add this to check for total_calories specifically
             if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let meals = jsonObj["meals"] as? [[String: Any]] {
-                for (index, meal) in meals.enumerated() {
-                    print("DEBUG: Meal \(index) - title: \(meal["title"] ?? "unknown"), total_calories: \(meal["total_calories"] ?? "missing")")
-                }
+                // for (index, meal) in meals.enumerated() {
+                //     print("DEBUG: Meal \(index) - title: \(meal["title"] ?? "unknown"), total_calories: \(meal["total_calories"] ?? "missing")")
+                // }
             }
       
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)

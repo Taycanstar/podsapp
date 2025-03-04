@@ -176,7 +176,7 @@ private func loadMoreLogs(refresh: Bool = false) {
                 if refresh {
                     // Apply deduplication when refreshing
                     self.combinedLogs = self.uniqueCombinedLogs(from: response.logs)
-                    print("📊 Loaded \(response.logs.count) logs, deduplicated to \(self.combinedLogs.count)")
+                    
                     self.currentPage = 2
                 } else {
                     // Apply deduplication when loading more
@@ -186,6 +186,18 @@ private func loadMoreLogs(refresh: Bool = false) {
                 }
                 self.hasMore = response.hasMore
                 self.cacheLogs(response, forPage: pageToLoad)
+                //  if refresh {
+                //         // **No more dedup** 
+                //         self.combinedLogs = response.logs
+                //         print("📊 Loaded \(response.logs.count) logs (no dedup).")
+                //         self.currentPage = 2
+                //     } else {
+                //         // Just append new logs – no dedup
+                //         self.combinedLogs += response.logs
+                //         self.currentPage += 1
+                //     }
+                //     self.hasMore = response.hasMore
+                //     self.cacheLogs(response, forPage: pageToLoad)
             case .failure(let error):
                 self.error = error
                 self.hasMore = false
@@ -604,39 +616,82 @@ func prefetchMealImages() {
 }
 
 // Add this function after uniqueLogs
-private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
-    // Keep track of meal titles we've seen
-    var seenMealTitles = Set<String>()
-    // Keep track of food IDs we've seen
-    var seenFoodIds = Set<Int>()
-    // Result array
-    var uniqueLogs: [CombinedLog] = []
+// private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
+//     // Keep track of meal titles we've seen
+//     var seenMealTitles = Set<String>()
+//     // Keep track of food IDs we've seen
+//     var seenFoodIds = Set<Int>()
+//     // Result array
+//     var uniqueLogs: [CombinedLog] = []
     
-    // Go through logs in order (most recent first)
-    for log in logs {
+//     // Go through logs in order (most recent first)
+//     for log in logs {
+//         switch log.type {
+//         case .meal:
+//             if let meal = log.meal {
+//                 // Only keep the first occurrence of a meal with this title
+//                 if !seenMealTitles.contains(meal.title) {
+//                     uniqueLogs.append(log)
+//                     seenMealTitles.insert(meal.title)
+//                 } else {
+//                     print("🧹 Filtering out duplicate meal: \(meal.title)")
+//                 }
+//             }
+//         case .food:
+//             if let food = log.food {
+//                 // Only keep the first occurrence of a food with this ID
+//                 if !seenFoodIds.contains(food.fdcId) {
+//                     uniqueLogs.append(log)
+//                     seenFoodIds.insert(food.fdcId)
+//                 }
+//             }
+//         }
+//     }
+    
+//     return uniqueLogs
+// }
+
+private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
+    // 1) Sort descending by each log’s numeric ID
+    //    (If you prefer the “timestamp” field, use that, or do `log.id > log.id`)
+    let sortedLogs = logs.sorted { $0.id > $1.id }
+    
+    var seenMealTitles = Set<String>()
+    var seenFoodFdcIds = Set<Int>()
+    var result: [CombinedLog] = []
+    
+    // 2) For each log from newest to oldest...
+    for log in sortedLogs {
         switch log.type {
         case .meal:
             if let meal = log.meal {
-                // Only keep the first occurrence of a meal with this title
+                // If we haven't seen this meal.title yet, keep it
                 if !seenMealTitles.contains(meal.title) {
-                    uniqueLogs.append(log)
                     seenMealTitles.insert(meal.title)
-                } else {
-                    print("🧹 Filtering out duplicate meal: \(meal.title)")
+                    result.append(log)
                 }
+                // else skip it: older duplicate
             }
+            
         case .food:
             if let food = log.food {
-                // Only keep the first occurrence of a food with this ID
-                if !seenFoodIds.contains(food.fdcId) {
-                    uniqueLogs.append(log)
-                    seenFoodIds.insert(food.fdcId)
+                // If we haven't seen this USDA fdcId yet, keep it
+                if !seenFoodFdcIds.contains(food.fdcId) {
+                    seenFoodFdcIds.insert(food.fdcId)
+                    result.append(log)
                 }
+                // else skip it: older duplicate
             }
         }
     }
     
-    return uniqueLogs
+    // 3) Now `result` has the newest item for each meal title or fdcId,
+    //    but the newest is at the *front* of `result`.
+    //    If you want to show newest *first*, you're done.
+    //    If you want oldest first, do: `return result.reversed()`
+    
+    return result
 }
+
 
 }
