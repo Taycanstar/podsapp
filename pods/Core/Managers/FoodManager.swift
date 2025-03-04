@@ -174,10 +174,14 @@ private func loadMoreLogs(refresh: Bool = false) {
             switch result {
             case .success(let response):
                 if refresh {
-                    self.combinedLogs = response.logs
+                    // Apply deduplication when refreshing
+                    self.combinedLogs = self.uniqueCombinedLogs(from: response.logs)
+                    print("📊 Loaded \(response.logs.count) logs, deduplicated to \(self.combinedLogs.count)")
                     self.currentPage = 2
                 } else {
-                    self.combinedLogs.append(contentsOf: response.logs)
+                    // Apply deduplication when loading more
+                    let newLogs = self.combinedLogs + response.logs
+                    self.combinedLogs = self.uniqueCombinedLogs(from: newLogs)
                     self.currentPage += 1
                 }
                 self.hasMore = response.hasMore
@@ -194,6 +198,13 @@ private func loadMoreLogs(refresh: Bool = false) {
     // New refresh function replaces any old refreshLoggedFoods implementation
     func refresh() {
         print("🔄 Starting refresh...")
+        
+        // Clear all combined logs cache
+        guard let userEmail = userEmail else { return }
+        for page in 1...10 { // Clear multiple pages of cache
+            UserDefaults.standard.removeObject(forKey: "combined_logs_\(userEmail)_page_\(page)")
+        }
+        
         resetAndFetchLogs()
     }
     
@@ -518,6 +529,15 @@ func logMeal(
     // Show loading state
     isLoading = true
     
+    // Debug print
+    print("🍽️ Logging meal with title: \(meal.title)")
+    
+    // First, clear the combined logs cache
+    guard let userEmail = userEmail else { return }
+    for page in 1...10 { // Clear multiple pages of cache
+        UserDefaults.standard.removeObject(forKey: "combined_logs_\(userEmail)_page_\(page)")
+    }
+    
     networkManager.logMeal(
         userEmail: email,
         mealId: meal.id,
@@ -533,11 +553,19 @@ func logMeal(
             case .success(let loggedMeal):
                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
                 
-                // Mark this meal as recently logged
+                // Mark this meal as recently logged (for the checkmark UI)
                 self.lastLoggedMealId = meal.id
                 
-                // Refresh the combined logs
-                self.resetAndFetchLogs()
+                // Remove any existing logs with the same meal title
+                self.combinedLogs.removeAll { log in
+                    if case .meal = log.type, let mealData = log.meal {
+                        return mealData.title == meal.title
+                    }
+                    return false
+                }
+                
+                // Refresh logs from server with forced cache clearing
+                self.refresh()
                 
                 // Show toast notification
                 withAnimation {
@@ -573,6 +601,42 @@ func prefetchMealImages() {
             task.resume()
         }
     }
+}
+
+// Add this function after uniqueLogs
+private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
+    // Keep track of meal titles we've seen
+    var seenMealTitles = Set<String>()
+    // Keep track of food IDs we've seen
+    var seenFoodIds = Set<Int>()
+    // Result array
+    var uniqueLogs: [CombinedLog] = []
+    
+    // Go through logs in order (most recent first)
+    for log in logs {
+        switch log.type {
+        case .meal:
+            if let meal = log.meal {
+                // Only keep the first occurrence of a meal with this title
+                if !seenMealTitles.contains(meal.title) {
+                    uniqueLogs.append(log)
+                    seenMealTitles.insert(meal.title)
+                } else {
+                    print("🧹 Filtering out duplicate meal: \(meal.title)")
+                }
+            }
+        case .food:
+            if let food = log.food {
+                // Only keep the first occurrence of a food with this ID
+                if !seenFoodIds.contains(food.fdcId) {
+                    uniqueLogs.append(log)
+                    seenFoodIds.insert(food.fdcId)
+                }
+            }
+        }
+    }
+    
+    return uniqueLogs
 }
 
 }
