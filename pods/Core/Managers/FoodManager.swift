@@ -25,6 +25,8 @@ class FoodManager: ObservableObject {
     private var hasMoreMeals = true
     @Published var combinedLogs: [CombinedLog] = []
     
+    private var lastRefreshTime: Date?
+    
     init() {
         self.networkManager = NetworkManager()
     }
@@ -55,12 +57,31 @@ class FoodManager: ObservableObject {
     }
 
     private func resetAndFetchLogs() {
-    currentPage = 1
-    hasMore = true
-    combinedLogs.removeAll()
-    loadCachedLogs()
-    loadMoreLogs(refresh: true)
-}
+        // Reset state
+        currentPage = 1
+        hasMore = true
+        
+        // Store existing logs to allow smooth transitions
+        let oldLogs = combinedLogs
+        
+        // Clear logs with animation if we had previous logs
+        if !oldLogs.isEmpty {
+            withAnimation(.easeOut(duration: 0.2)) {
+                combinedLogs = []
+            }
+        } else {
+            combinedLogs = []
+        }
+        
+        // Try loading from cache first
+        let cacheLoaded = loadCachedLogs()
+        
+        // Then fetch from server with animation
+        loadMoreLogs(refresh: true)
+        
+        // Update refresh timestamp
+        lastRefreshTime = Date()
+    }
     
     private func loadCachedFoods() {
     guard let userEmail = userEmail else { return }
@@ -86,13 +107,20 @@ class FoodManager: ObservableObject {
     }
 }
 
-private func loadCachedLogs() {
-    guard let userEmail = userEmail else { return }
+private func loadCachedLogs() -> Bool {
+    guard let userEmail = userEmail else { return false }
+    
     if let cached = UserDefaults.standard.data(forKey: "combined_logs_\(userEmail)_page_1"),
        let decodedResponse = try? JSONDecoder().decode(CombinedLogsResponse.self, from: cached) {
-        self.combinedLogs = decodedResponse.logs
+        
+        withAnimation(.easeOut(duration: 0.3)) {
+            self.combinedLogs = decodedResponse.logs
+        }
         self.hasMore = decodedResponse.hasMore
+        return true
     }
+    
+    return false
 }
     
 
@@ -174,30 +202,41 @@ private func loadMoreLogs(refresh: Bool = false) {
             switch result {
             case .success(let response):
                 if refresh {
-                    // Apply deduplication when refreshing
-                    self.combinedLogs = self.uniqueCombinedLogs(from: response.logs)
-                    
+                    // When refreshing, replace all logs with the new ones
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        self.combinedLogs = response.logs
+                    }
                     self.currentPage = 2
                 } else {
-                    // Apply deduplication when loading more
-                    let newLogs = self.combinedLogs + response.logs
-                    self.combinedLogs = self.uniqueCombinedLogs(from: newLogs)
+                    // For pagination, append new logs at the end
+                    let startCount = self.combinedLogs.count
+                    let newLogs = response.logs.filter { newLog in
+                        // Only add logs that don't exist yet (by ID)
+                        !self.combinedLogs.contains { existingLog in
+                            switch (existingLog.type, newLog.type) {
+                            case (.food, .food):
+                                return existingLog.foodLogId == newLog.foodLogId
+                            case (.meal, .meal):
+                                return existingLog.mealLogId == newLog.mealLogId
+                            default:
+                                return false
+                            }
+                        }
+                    }
+                    
+                    if !newLogs.isEmpty {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            self.combinedLogs.append(contentsOf: newLogs)
+                        }
+                        print("📈 Added \(newLogs.count) new logs (from page \(pageToLoad))")
+                    }
+                    
                     self.currentPage += 1
                 }
+                
                 self.hasMore = response.hasMore
                 self.cacheLogs(response, forPage: pageToLoad)
-                //  if refresh {
-                //         // **No more dedup** 
-                //         self.combinedLogs = response.logs
-                //         print("📊 Loaded \(response.logs.count) logs (no dedup).")
-                //         self.currentPage = 2
-                //     } else {
-                //         // Just append new logs – no dedup
-                //         self.combinedLogs += response.logs
-                //         self.currentPage += 1
-                //     }
-                //     self.hasMore = response.hasMore
-                //     self.cacheLogs(response, forPage: pageToLoad)
+                
             case .failure(let error):
                 self.error = error
                 self.hasMore = false
@@ -211,13 +250,31 @@ private func loadMoreLogs(refresh: Bool = false) {
     func refresh() {
         print("🔄 Starting refresh...")
         
-        // Clear all combined logs cache
-        guard let userEmail = userEmail else { return }
-        for page in 1...10 { // Clear multiple pages of cache
-            UserDefaults.standard.removeObject(forKey: "combined_logs_\(userEmail)_page_\(page)")
+        // Don't interrupt any active logging operations
+        guard !isLoading else {
+            print("⏸️ Skipping refresh - another operation is in progress")
+            return
         }
         
-        resetAndFetchLogs()
+        // Check if we actually need to fetch (don't reload if we already have recent data)
+        let shouldFetchNew = combinedLogs.isEmpty || 
+                             Date().timeIntervalSince(lastRefreshTime ?? .distantPast) > 60
+        
+        if shouldFetchNew {
+            // We'll actually fetch new data from the server
+            print("🔄 Fetching fresh logs from server")
+            
+            // Start from page 1
+            currentPage = 1
+            
+            // Fetch logs without clearing existing ones first (they'll be replaced once we get response)
+            loadMoreLogs(refresh: true)
+            
+            // Update refresh timestamp
+            lastRefreshTime = Date()
+        } else {
+            print("⏭️ Using cached logs - no need to refresh yet")
+        }
     }
     
 
@@ -232,6 +289,14 @@ private func loadMoreLogs(refresh: Bool = false) {
 ) {
     print("⏳ Starting logFood operation...")
     isLoading = true
+    
+    // First, mark this as the last logged food ID to immediately update UI
+    self.lastLoggedFoodId = food.fdcId
+    
+    // Check if this food already exists in our combinedLogs
+    let existingIndex = self.combinedLogs.firstIndex(where: { 
+        ($0.type == .food && $0.food?.fdcId == food.fdcId)
+    })
     
     networkManager.logFood(
         userEmail: email,
@@ -248,62 +313,87 @@ private func loadMoreLogs(refresh: Bool = false) {
             switch result {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
-                print("📊 Logged foods count before insert: \(self.loggedFoods.count)")
-                print("🔍 First few IDs before insert: \(self.loggedFoods.prefix(3).map { $0.foodLogId })")
                 
-                // Remove an existing log for the same food (using the unique USDA id)
-                if let existingIndex = self.loggedFoods.firstIndex(where: {
-                    $0.food.fdcId == food.fdcId
-                }) {
-                    self.loggedFoods.removeAll(where: { $0.food.fdcId == food.fdcId })
+                // If the food already exists in our list, just update and move it to the top
+                if let index = existingIndex {
+                    // Remove it from its current position
+                    let updatedLog = self.combinedLogs.remove(at: index)
+                    // Insert at the top
+                    withAnimation(.spring()) {
+                        self.combinedLogs.insert(updatedLog, at: 0)
+                    }
+                } else {
+                    // Create a new CombinedLog from the logged food
+                    let newCombinedLog = CombinedLog(
+                        type: .food,
+                        status: "success",
+                        calories: Double(loggedFood.food.calories),
+                        message: "\(loggedFood.food.displayName) - \(loggedFood.mealType)",
+                        foodLogId: loggedFood.foodLogId,
+                        food: loggedFood.food,
+                        mealType: loggedFood.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil
+                    )
+                    
+                    // Insert at the top with animation
+                    withAnimation(.spring()) {
+                        self.combinedLogs.insert(newCombinedLog, at: 0)
+                    }
                 }
                 
-                // Insert the newly logged food at the top.
-                self.loggedFoods.insert(loggedFood, at: 0)
-
-                // Mark this food as recently logged.
-                self.lastLoggedFoodId = food.fdcId
+                // Show toast notification
+                withAnimation {
+                    self.showToast = true
+                }
                 
-                // Clear the flag after 2 seconds.
+                // Clear the toast after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        self.showToast = false
+                    }
+                }
+                
+                // Clear the lastLoggedFoodId after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation {
                         self.lastLoggedFoodId = nil
                     }
                 }
                 
-                // Update the cached first page with the new ordering.
-                let firstPageFoods = Array(self.loggedFoods.prefix(self.pageSize))
-                let response = FoodLogsResponse(
-                    foodLogs: firstPageFoods,
-                    hasMore: self.loggedFoods.count > self.pageSize,
-                    totalPages: (self.loggedFoods.count + self.pageSize - 1) / self.pageSize,
-                    currentPage: 1
-                )
-                self.cacheFoods(response, forPage: 1)
-                print("💾 Cached first page with IDs: \(firstPageFoods.map { $0.foodLogId })")
-                
-                // Refresh combined logs
-                self.resetAndFetchLogs()
-                
-                withAnimation {
-                    self.showToast = true
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation {
-                        self.showToast = false
-                    }
-                }
+                // Update the cache with our new array
+                self.updateCombinedLogsCache()
                 
                 completion(.success(loggedFood))
                 
             case .failure(let error):
                 print("❌ Failed to log food: \(error)")
                 self.error = error
+                
+                // Clear the lastLoggedFoodId immediately on error
+                self.lastLoggedFoodId = nil
+                
                 completion(.failure(error))
             }
         }
     }
+}
+
+// Helper method to update the cache with the current combinedLogs array
+private func updateCombinedLogsCache() {
+    guard let userEmail = userEmail else { return }
+    
+    // Create a response object with our current logs
+    let response = CombinedLogsResponse(
+        logs: Array(combinedLogs.prefix(pageSize)),
+        hasMore: combinedLogs.count > pageSize,
+        totalPages: (combinedLogs.count + pageSize - 1) / pageSize,
+        currentPage: 1
+    )
+    
+    // Cache the first page
+    cacheLogs(response, forPage: 1)
 }
 
     
@@ -541,14 +631,16 @@ func logMeal(
     // Show loading state
     isLoading = true
     
+    // Immediately mark as recently logged for UI feedback
+    self.lastLoggedMealId = meal.id
+    
+    // Check if this meal already exists in our combinedLogs
+    let existingIndex = self.combinedLogs.firstIndex(where: { 
+        ($0.type == .meal && $0.meal?.mealId == meal.id)
+    })
+    
     // Debug print
     print("🍽️ Logging meal with title: \(meal.title)")
-    
-    // Clear all combined logs cache to ensure fresh data
-    guard let userEmail = userEmail else { return }
-    for page in 1...10 { // Clear multiple pages of cache
-        UserDefaults.standard.removeObject(forKey: "combined_logs_\(userEmail)_page_\(page)")
-    }
     
     networkManager.logMeal(
         userEmail: email,
@@ -565,18 +657,41 @@ func logMeal(
             case .success(let loggedMeal):
                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
                 
-                // Mark this meal as recently logged (for the checkmark UI)
-                self.lastLoggedMealId = meal.id
-                
-                // Refresh logs from server to get the updated data
-                self.refresh()
+                // If the meal already exists in our list, just move it to the top
+                if let index = existingIndex {
+                    // Remove it from its current position
+                    let updatedLog = self.combinedLogs.remove(at: index)
+                    // Insert at the top
+                    withAnimation(.spring()) {
+                        self.combinedLogs.insert(updatedLog, at: 0)
+                    }
+                } else {
+                    // Create a new CombinedLog from the logged meal
+                    let newCombinedLog = CombinedLog(
+                        type: .meal,
+                        status: "success",
+                        calories: loggedMeal.calories,
+                        message: "\(loggedMeal.meal.title) - \(loggedMeal.mealTime)",
+                        foodLogId: nil,
+                        food: nil,
+                        mealType: nil,
+                        mealLogId: loggedMeal.mealLogId,
+                        meal: loggedMeal.meal,
+                        mealTime: loggedMeal.mealTime
+                    )
+                    
+                    // Insert at the top with animation
+                    withAnimation(.spring()) {
+                        self.combinedLogs.insert(newCombinedLog, at: 0)
+                    }
+                }
                 
                 // Show toast notification
                 withAnimation {
                     self.showMealLoggedToast = true
                 }
                 
-                // Clear the flag after 2 seconds
+                // Clear the flag and toast after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation {
                         self.lastLoggedMealId = nil
@@ -584,11 +699,18 @@ func logMeal(
                     }
                 }
                 
+                // Update the cache with our new array
+                self.updateCombinedLogsCache()
+                
                 completion?(.success(loggedMeal))
                 
             case .failure(let error):
                 print("❌ Failed to log meal: \(error)")
                 self.error = error
+                
+                // Clear the lastLoggedMealId immediately on error
+                self.lastLoggedMealId = nil
+                
                 completion?(.failure(error))
             }
         }
@@ -607,72 +729,34 @@ func prefetchMealImages() {
     }
 }
 
-// Add this function after uniqueLogs
-// private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
-//     // Keep track of meal titles we've seen
-//     var seenMealTitles = Set<String>()
-//     // Keep track of food IDs we've seen
-//     var seenFoodIds = Set<Int>()
-//     // Result array
-//     var uniqueLogs: [CombinedLog] = []
-    
-//     // Go through logs in order (most recent first)
-//     for log in logs {
-//         switch log.type {
-//         case .meal:
-//             if let meal = log.meal {
-//                 // Only keep the first occurrence of a meal with this title
-//                 if !seenMealTitles.contains(meal.title) {
-//                     uniqueLogs.append(log)
-//                     seenMealTitles.insert(meal.title)
-//                 } else {
-//                     print("🧹 Filtering out duplicate meal: \(meal.title)")
-//                 }
-//             }
-//         case .food:
-//             if let food = log.food {
-//                 // Only keep the first occurrence of a food with this ID
-//                 if !seenFoodIds.contains(food.fdcId) {
-//                     uniqueLogs.append(log)
-//                     seenFoodIds.insert(food.fdcId)
-//                 }
-//             }
-//         }
-//     }
-    
-//     return uniqueLogs
-// }
-
+// Simple helper to ensure no duplicate log IDs
 private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
-    // The backend now handles deduplication via get_or_create, but we'll still do some 
-    // simple filtering here as a safety measure
-    var seenMealIds = Set<Int>()
-    var seenFoodIds = Set<Int>()
-    var result: [CombinedLog] = []
+    var seenFoodLogIds = Set<Int>()
+    var seenMealLogIds = Set<Int>()
+    var uniqueLogs: [CombinedLog] = []
     
     for log in logs {
+        var isUnique = false
+        
         switch log.type {
-        case .meal:
-            if let meal = log.meal, let mealLogId = log.mealLogId {
-                // Only keep each mealLogId once (there should be no duplicates now)
-                if !seenMealIds.contains(mealLogId) {
-                    seenMealIds.insert(mealLogId)
-                    result.append(log)
-                }
-            }
-            
         case .food:
-            if let food = log.food, let foodLogId = log.foodLogId {
-                // Only keep each foodLogId once (there should be no duplicates now)
-                if !seenFoodIds.contains(foodLogId) {
-                    seenFoodIds.insert(foodLogId)
-                    result.append(log)
-                }
+            if let foodLogId = log.foodLogId, !seenFoodLogIds.contains(foodLogId) {
+                seenFoodLogIds.insert(foodLogId)
+                isUnique = true
             }
+        case .meal:
+            if let mealLogId = log.mealLogId, !seenMealLogIds.contains(mealLogId) {
+                seenMealLogIds.insert(mealLogId)
+                isUnique = true
+            }
+        }
+        
+        if isUnique {
+            uniqueLogs.append(log)
         }
     }
     
-    return result
+    return uniqueLogs
 }
 
 
