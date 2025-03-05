@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -5275,6 +5275,14 @@ func logMeal(
     let dateFormatter = ISO8601DateFormatter()
     let dateString = dateFormatter.string(from: date)
     
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - logMeal:")
+    print("- userEmail: \(userEmail)")
+    print("- mealId: \(mealId)")
+    print("- mealTime: \(mealTime)")
+    print("- date: \(dateString)")
+    print("- notes: \(notes ?? "none")")
+    
     var parameters: [String: Any] = [
         "user_email": userEmail,
         "meal_id": mealId,
@@ -5284,6 +5292,12 @@ func logMeal(
     
     if let notes = notes {
         parameters["notes"] = notes
+    }
+    
+    // Print what we're about to send as JSON
+    if let jsonData = try? JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted),
+       let jsonStr = String(data: jsonData, encoding: .utf8) {
+        print("📤 Request JSON: \(jsonStr)")
     }
     
     let url = URL(string: "\(baseUrl)/log-meal/")!
@@ -5309,12 +5323,110 @@ func logMeal(
             return
         }
         
+        // DEBUG - Print raw response JSON
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📥 Response JSON for logMeal: \(jsonString)")
+            
+            // Check if response contains "status" key
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("🔍 JSON Keys in response:")
+                for (key, value) in jsonObj {
+                    print("- \(key): \(type(of: value))")
+                }
+                
+                if jsonObj["status"] != nil {
+                    print("✅ Found 'status' key in response")
+                } else {
+                    print("❌ 'status' key is MISSING in response!")
+                }
+            }
+        }
+        
         do {
             let decoder = JSONDecoder()
             let loggedMeal = try decoder.decode(LoggedMeal.self, from: data)
+            print("✅ Successfully decoded LoggedMeal with ID: \(loggedMeal.mealLogId)")
             completion(.success(loggedMeal))
         } catch let decodingError {
-            print("Decoding error: \(decodingError)")
+            print("❌ Decoding error: \(decodingError)")
+            
+            // More detailed error analysis
+            if let decodingError = decodingError as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
+                    print("  codingPath: \(context.codingPath)")
+                case .valueNotFound(let type, let context):
+                    print("❌ Value of type \(type) not found: \(context.debugDescription)")
+                    print("  codingPath: \(context.codingPath)")
+                case .typeMismatch(let type, let context):
+                    print("❌ Type mismatch for type \(type): \(context.debugDescription)")
+                    print("  codingPath: \(context.codingPath)")
+                case .dataCorrupted(let context):
+                    print("❌ Data corrupted: \(context.debugDescription)")
+                    print("  codingPath: \(context.codingPath)")
+                @unknown default:
+                    print("❌ Unknown decoding error")
+                }
+            }
+            
+            // Try to decode the error message if available
+            if let errorObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorObj["error"] as? String {
+                print("Server error: \(errorMessage)")
+            }
+            
+            // If we have data, let's manually recreate the LoggedMeal object as a workaround
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("🔧 Attempting manual workaround...")
+                
+                if let mealLogId = jsonObj["mealLogId"] as? Int,
+                   let calories = jsonObj["calories"] as? Double,
+                   let mealData = jsonObj["meal"] as? [String: Any],
+                   let mealTime = jsonObj["mealTime"] as? String {
+                    
+                    print("✅ Found key fields in JSON response")
+                    
+                    // Try to create a LoggedMeal with default values for missing fields
+                    let status = jsonObj["status"] as? String ?? "success" // Provide default
+                    let message = jsonObj["message"] as? String ?? "Meal logged successfully" // Provide default
+                    
+                    // Attempt to reconstruct the meal summary
+                    if let mealId = mealData["id"] as? Int,
+                       let title = mealData["title"] as? String,
+                       let calories = mealData["calories"] as? Double {
+                        
+                        let mealSummary = MealSummary(
+                            mealId: mealId,
+                            title: title,
+                            description: mealData["description"] as? String,
+                            image: mealData["image"] as? String,
+                            calories: calories,
+                            servings: mealData["servings"] as? Int ?? 1,
+                            protein: nil,
+                            carbs: nil,
+                            fat: nil
+                        )
+                        
+                        // Create a manually constructed LoggedMeal
+                        let loggedMeal = LoggedMeal(
+                            status: status,
+                            mealLogId: mealLogId,
+                            calories: calories,
+                            message: message,
+                            meal: mealSummary,
+                            mealTime: mealTime
+                        )
+                        
+                        print("✅ Successfully created LoggedMeal manually with ID: \(loggedMeal.mealLogId)")
+                        completion(.success(loggedMeal))
+                        return
+                    }
+                }
+                
+                print("❌ Failed to manually create LoggedMeal")
+            }
+            
             completion(.failure(decodingError))
         }
     }.resume()

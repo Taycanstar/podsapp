@@ -544,7 +544,7 @@ func logMeal(
     // Debug print
     print("🍽️ Logging meal with title: \(meal.title)")
     
-    // First, clear the combined logs cache
+    // Clear all combined logs cache to ensure fresh data
     guard let userEmail = userEmail else { return }
     for page in 1...10 { // Clear multiple pages of cache
         UserDefaults.standard.removeObject(forKey: "combined_logs_\(userEmail)_page_\(page)")
@@ -568,15 +568,7 @@ func logMeal(
                 // Mark this meal as recently logged (for the checkmark UI)
                 self.lastLoggedMealId = meal.id
                 
-                // Remove any existing logs with the same meal title
-                self.combinedLogs.removeAll { log in
-                    if case .meal = log.type, let mealData = log.meal {
-                        return mealData.title == meal.title
-                    }
-                    return false
-                }
-                
-                // Refresh logs from server with forced cache clearing
+                // Refresh logs from server to get the updated data
                 self.refresh()
                 
                 // Show toast notification
@@ -652,43 +644,33 @@ func prefetchMealImages() {
 // }
 
 private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
-    // 1) Sort descending by each log’s numeric ID
-    //    (If you prefer the “timestamp” field, use that, or do `log.id > log.id`)
-    let sortedLogs = logs.sorted { $0.id > $1.id }
-    
-    var seenMealTitles = Set<String>()
-    var seenFoodFdcIds = Set<Int>()
+    // The backend now handles deduplication via get_or_create, but we'll still do some 
+    // simple filtering here as a safety measure
+    var seenMealIds = Set<Int>()
+    var seenFoodIds = Set<Int>()
     var result: [CombinedLog] = []
     
-    // 2) For each log from newest to oldest...
-    for log in sortedLogs {
+    for log in logs {
         switch log.type {
         case .meal:
-            if let meal = log.meal {
-                // If we haven't seen this meal.title yet, keep it
-                if !seenMealTitles.contains(meal.title) {
-                    seenMealTitles.insert(meal.title)
+            if let meal = log.meal, let mealLogId = log.mealLogId {
+                // Only keep each mealLogId once (there should be no duplicates now)
+                if !seenMealIds.contains(mealLogId) {
+                    seenMealIds.insert(mealLogId)
                     result.append(log)
                 }
-                // else skip it: older duplicate
             }
             
         case .food:
-            if let food = log.food {
-                // If we haven't seen this USDA fdcId yet, keep it
-                if !seenFoodFdcIds.contains(food.fdcId) {
-                    seenFoodFdcIds.insert(food.fdcId)
+            if let food = log.food, let foodLogId = log.foodLogId {
+                // Only keep each foodLogId once (there should be no duplicates now)
+                if !seenFoodIds.contains(foodLogId) {
+                    seenFoodIds.insert(foodLogId)
                     result.append(log)
                 }
-                // else skip it: older duplicate
             }
         }
     }
-    
-    // 3) Now `result` has the newest item for each meal title or fdcId,
-    //    but the newest is at the *front* of `result`.
-    //    If you want to show newest *first*, you're done.
-    //    If you want oldest first, do: `return result.reversed()`
     
     return result
 }
