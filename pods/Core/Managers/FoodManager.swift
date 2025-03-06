@@ -4,6 +4,10 @@ import SwiftUI
 class FoodManager: ObservableObject {
     @Published var loggedFoods: [LoggedFood] = []
     @Published var isLoading = false
+    @Published var isLoadingLogs = false
+    @Published var isLoadingFood = false
+    @Published var isLoadingMeals = false
+    @Published var isLoadingMeal = false
     @Published var hasMore = true
     @Published var error: Error?
     @Published var lastLoggedFoodId: Int? = nil
@@ -20,7 +24,7 @@ class FoodManager: ObservableObject {
 
     // Add these properties
     @Published var meals: [Meal] = []
-    @Published var isLoadingMeals = false
+    @Published var isLoadingMealPage = false
     private var currentMealPage = 1
     private var hasMoreMeals = true
     @Published var combinedLogs: [CombinedLog] = []
@@ -34,11 +38,14 @@ class FoodManager: ObservableObject {
     
     
     func initialize(userEmail: String) {
-        print("FoodManager: Initializing with email \(userEmail)")
+        print("🏁 FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
+        
+        print("📋 FoodManager: Starting initialization sequence")
         resetAndFetchFoods()
-           resetAndFetchMeals() 
-           resetAndFetchLogs()
+        resetAndFetchMeals() 
+        resetAndFetchLogs()
+        print("✅ FoodManager: Initialization sequence completed")
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -49,11 +56,30 @@ class FoodManager: ObservableObject {
 }
     
     private func resetAndFetchFoods() {
+        print("🍔 FoodManager: Reset and fetch foods called")
         currentPage = 1
         hasMore = true
-        loggedFoods.removeAll()
+        
+        // Store existing foods to allow smooth transitions
+        let oldFoods = loggedFoods
+        
+        // Clear foods with animation if we had previous logs
+        if !oldFoods.isEmpty {
+            withAnimation(.easeOut(duration: 0.2)) {
+                loggedFoods = []
+            }
+        } else {
+            loggedFoods = []
+        }
+        
+        // Try loading from cache first
         loadCachedFoods()
+        
+        // Then fetch from server with animation
         loadMoreFoods(refresh: true)
+        
+        // Update refresh timestamp
+        lastRefreshTime = Date()
     }
 
     private func resetAndFetchLogs() {
@@ -154,16 +180,16 @@ private func uniqueLogs(from logs: [LoggedFood]) -> [LoggedFood] {
 
 func loadMoreFoods(refresh: Bool = false) {
     guard let email = userEmail else { return }
-    guard !isLoading else { return }
+    guard !isLoadingFood else { return }
     
     let pageToLoad = refresh ? 1 : currentPage
-    isLoading = true
+    isLoadingFood = true
     error = nil
 
     networkManager.getFoodLogs(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
-            self.isLoading = false
+            self.isLoadingFood = false
             switch result {
             case .success(let response):
                 if refresh {
@@ -192,20 +218,20 @@ private func loadMoreLogs(refresh: Bool = false) {
         print("❌ FoodManager.loadMoreLogs() - No user email available")
         return
     }
-    guard !isLoading else {
+    guard !isLoadingLogs else {
         print("⏸️ FoodManager.loadMoreLogs() - Already loading, skipping request")
         return
     }
     
     let pageToLoad = refresh ? 1 : currentPage
     print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email)")
-    isLoading = true
+    isLoadingLogs = true
     error = nil
 
     networkManager.getCombinedLogs(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
-            self.isLoading = false
+            self.isLoadingLogs = false
          
             switch result {
             case .success(let response):
@@ -260,8 +286,8 @@ private func loadMoreLogs(refresh: Bool = false) {
     func refresh() {
         print("🔄 FoodManager.refresh() called")
         
-        // Don't interrupt any active logging operations
-        guard !isLoading else {
+        // Don't interrupt any active loading operations
+        if isLoadingLogs || isLoadingFood || isLoadingMeals || isLoadingMeal {
             print("⏸️ FoodManager.refresh() - Skipping refresh - another operation is in progress")
             return
         }
@@ -290,7 +316,7 @@ private func loadMoreLogs(refresh: Bool = false) {
     completion: @escaping (Result<LoggedFood, Error>) -> Void
 ) {
     print("⏳ Starting logFood operation...")
-    isLoading = true
+    isLoadingFood = true
     
     // First, mark this as the last logged food ID to immediately update UI
     self.lastLoggedFoodId = food.fdcId
@@ -310,7 +336,7 @@ private func loadMoreLogs(refresh: Bool = false) {
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
-            self.isLoading = false
+            self.isLoadingFood = false
             
             switch result {
             case .success(let loggedFood):
@@ -475,20 +501,40 @@ private func clearMealCache() {
 }
 
 private func resetAndFetchMeals() {
+    print("🍲 FoodManager: Reset and fetch meals called")
     currentMealPage = 1
     hasMoreMeals = true
-    meals.removeAll()
+    
+    // Store existing meals to allow smooth transitions
+    let oldMeals = meals
+    
+    // Clear meals with animation if we had previous meals
+    if !oldMeals.isEmpty {
+        withAnimation(.easeOut(duration: 0.2)) {
+            meals = []
+        }
+    } else {
+        meals = []
+    }
     
     // Clear all meal caches
     clearMealCache()
     
+    // Try loading from cache first
     loadCachedMeals()
-    // loadMoreMeals(refresh: true)
+    
+    // Then fetch from server with animation
     loadMoreMeals(refresh: true) { [weak self] success in
         if success {
+            print("✅ FoodManager: Successfully loaded meals from server")
             self?.prefetchMealImages()
+        } else {
+            print("❌ FoodManager: Failed to load meals from server")
         }
     }
+    
+    // Update refresh timestamp
+    lastRefreshTime = Date()
 }
 
 // Load cached meals
@@ -633,7 +679,7 @@ func logMeal(
     guard let email = userEmail else { return }
     
     // Show loading state
-    isLoading = true
+    isLoadingMeal = true
     
     // Immediately mark as recently logged for UI feedback
     self.lastLoggedMealId = meal.id
@@ -655,7 +701,7 @@ func logMeal(
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
-            self.isLoading = false
+            self.isLoadingMeal = false
             
             switch result {
             case .success(let loggedMeal):
