@@ -4902,12 +4902,16 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         // Now try to decode
         do {
             let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
+            // let loggedFood = try decoder.decode(LoggedFood.self, from: data)
             
             // Successfully decoded - print some values for confirmation
             print("✅ Successfully decoded LoggedFood:")
             print("- foodLogId: \(loggedFood.foodLogId)")
             print("- mealType: \(loggedFood.mealType)")
+
+            
             
             DispatchQueue.main.async {
                 completion(.success(loggedFood))
@@ -5129,7 +5133,7 @@ func createMeal(
         
         // Print raw response for debugging
         if let responseString = String(data: data, encoding: .utf8) {
-            print("Create Meal Response: \(responseString)")
+            // print("Create Meal Response: \(responseString)")
         }
         
         do {

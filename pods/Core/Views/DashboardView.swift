@@ -21,8 +21,14 @@ struct DashboardView: View {
             .onAppear {
                 isTabBarVisible.wrappedValue = true
                 podsViewModel.initialize(email: viewModel.email)
+                print("🏠 DashboardView onAppear - initializing FoodManager")
                 foodManager.initialize(userEmail: viewModel.email)
                 
+                // Add a slight delay to ensure initialization completes first
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    print("🔄 DashboardView explicitly refreshing logs")
+                    foodManager.refresh()
+                }
             }
     }
 }

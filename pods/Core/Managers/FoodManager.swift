@@ -37,7 +37,7 @@ class FoodManager: ObservableObject {
         print("FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
         resetAndFetchFoods()
-           resetAndFetchMeals() // Add this line
+           resetAndFetchMeals() 
            resetAndFetchLogs()
     }
 
@@ -57,6 +57,7 @@ class FoodManager: ObservableObject {
     }
 
     private func resetAndFetchLogs() {
+         print("📊 FoodManager: Reset and fetch logs called")
         // Reset state
         currentPage = 1
         hasMore = true
@@ -187,10 +188,17 @@ func loadMoreFoods(refresh: Bool = false) {
 }
 
 private func loadMoreLogs(refresh: Bool = false) {
-    guard let email = userEmail else { return }
-    guard !isLoading else { return }
+    guard let email = userEmail else {
+        print("❌ FoodManager.loadMoreLogs() - No user email available")
+        return
+    }
+    guard !isLoading else {
+        print("⏸️ FoodManager.loadMoreLogs() - Already loading, skipping request")
+        return
+    }
     
     let pageToLoad = refresh ? 1 : currentPage
+    print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email)")
     isLoading = true
     error = nil
 
@@ -198,9 +206,10 @@ private func loadMoreLogs(refresh: Bool = false) {
         DispatchQueue.main.async {
             guard let self = self else { return }
             self.isLoading = false
-            
+         
             switch result {
             case .success(let response):
+                print("📊 FoodManager: Successfully received combined logs with \(response.logs.count) logs")
                 if refresh {
                     // When refreshing, replace all logs with the new ones
                     withAnimation(.easeOut(duration: 0.3)) {
@@ -238,6 +247,7 @@ private func loadMoreLogs(refresh: Bool = false) {
                 self.cacheLogs(response, forPage: pageToLoad)
                 
             case .failure(let error):
+                print("❌ FoodManager.loadMoreLogs() - Error: \(error)")
                 self.error = error
                 self.hasMore = false
             }
@@ -246,35 +256,27 @@ private func loadMoreLogs(refresh: Bool = false) {
 }
 
     
-    // New refresh function replaces any old refreshLoggedFoods implementation
+    // New refresh function that ensures logs are loaded
     func refresh() {
-        print("🔄 Starting refresh...")
+        print("🔄 FoodManager.refresh() called")
         
         // Don't interrupt any active logging operations
         guard !isLoading else {
-            print("⏸️ Skipping refresh - another operation is in progress")
+            print("⏸️ FoodManager.refresh() - Skipping refresh - another operation is in progress")
             return
         }
         
-        // Check if we actually need to fetch (don't reload if we already have recent data)
-        let shouldFetchNew = combinedLogs.isEmpty || 
-                             Date().timeIntervalSince(lastRefreshTime ?? .distantPast) > 60
+        // Always fetch when explicitly asked
+        print("🔄 FoodManager.refresh() - Fetching fresh logs from server")
         
-        if shouldFetchNew {
-            // We'll actually fetch new data from the server
-            print("🔄 Fetching fresh logs from server")
-            
-            // Start from page 1
-            currentPage = 1
-            
-            // Fetch logs without clearing existing ones first (they'll be replaced once we get response)
-            loadMoreLogs(refresh: true)
-            
-            // Update refresh timestamp
-            lastRefreshTime = Date()
-        } else {
-            print("⏭️ Using cached logs - no need to refresh yet")
-        }
+        // Start from page 1
+        currentPage = 1
+        
+        // Fetch logs without clearing existing ones first (they'll be replaced once we get response)
+        loadMoreLogs(refresh: true)
+        
+        // Update refresh timestamp
+        lastRefreshTime = Date()
     }
     
 
@@ -452,6 +454,8 @@ func createMeal(
                         self?.showMealToast = false
                     }
                 }
+
+                print("Meal created: \(meal)")
             case .failure(let error):
                 print("Error creating meal: \(error)")
             }

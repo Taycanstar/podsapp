@@ -127,14 +127,14 @@ struct LoggedFood: Codable, Identifiable {
     
     var id: Int { foodLogId }
     
-    enum CodingKeys: String, CodingKey {
-        case status
-        case foodLogId = "food_log_id"  // Map camelCase to snake_case
-        case calories
-        case message
-        case food
-        case mealType = "meal_type" // Map from backend field
-    }
+    // enum CodingKeys: String, CodingKey {
+    //     case status
+    //     case foodLogId = "food_log_id"  // Map camelCase to snake_case
+    //     case calories
+    //     case message
+    //     case food
+    //     case mealType = "meal_type" // Map from backend field
+    // }
 }
 
 
