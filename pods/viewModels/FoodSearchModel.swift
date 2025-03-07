@@ -265,6 +265,24 @@ struct MealSummary: Codable {
     let carbs: Double?
     let fat: Double?
     
+    // Computed property to ensure we display a reasonable calorie count
+    // This is a safety measure in case the server returns 0 calories
+    var displayCalories: Double {
+        if calories > 0 {
+            return calories
+        }
+        
+        // Fallback: estimate based on macros if available
+        if let protein = protein, let carbs = carbs, let fat = fat,
+           (protein + carbs + fat) > 0 {
+            // Rough estimate: protein and carbs = 4 cal/g, fat = 9 cal/g
+            return (protein * 4) + (carbs * 4) + (fat * 9)
+        }
+        
+        // If all else fails, return the original value
+        return calories
+    }
+    
     enum CodingKeys: String, CodingKey {
         case mealId = "id"
         case title

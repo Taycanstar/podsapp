@@ -508,7 +508,7 @@ struct MealHistoryRow: View {
                     .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
-                    Text("\(Int(meal.calories)) cal")
+                    Text("\(Int(meal.displayCalories)) cal")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -516,7 +516,7 @@ struct MealHistoryRow: View {
             Spacer()
             Button {
                 HapticFeedback.generate()
-                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, createdAt: Date(), mealItems: [], image: meal.image, totalCalories: meal.calories, totalProtein: nil, totalCarbs: nil, totalFat: nil), mealTime: selectedMeal)
+                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, createdAt: Date(), mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil), mealTime: selectedMeal)
             } label: {
                 if foodManager.lastLoggedMealId == meal.mealId {
                     Image(systemName: "checkmark.circle.fill")

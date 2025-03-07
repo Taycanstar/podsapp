@@ -449,9 +449,22 @@ func createMeal(
     privacy: String,
     servings: Int,
     foods: [Food],
-    image: String? = nil  // Added image parameter with default nil
+    image: String? = nil,
+    totalCalories: Double? = nil,
+    totalProtein: Double? = nil,
+    totalCarbs: Double? = nil,
+    totalFat: Double? = nil
 ) {
     guard let email = userEmail else { return }
+    
+    // Use provided totals or calculate if not provided
+    let calculatedCalories = totalCalories ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.calories ?? 0) * servings)
+    }
+    
+    print("📊 Creating meal with title: \(title), calories: \(calculatedCalories), food items: \(foods.count)")
+    print("- Using provided macro totals: Calories=\(totalCalories != nil ? "Yes" : "No"), Protein=\(totalProtein != nil ? "Yes" : "No"), Carbs=\(totalCarbs != nil ? "Yes" : "No"), Fat=\(totalFat != nil ? "Yes" : "No")")
     
     networkManager.createMeal(
         userEmail: email,
@@ -461,14 +474,22 @@ func createMeal(
         privacy: privacy,
         servings: servings,
         foods: foods,
-        image: image  // Pass the image parameter
+        image: image,
+        totalCalories: calculatedCalories,
+        totalProtein: totalProtein,
+        totalCarbs: totalCarbs,
+        totalFat: totalFat
     ) { [weak self] result in
         DispatchQueue.main.async {
             switch result {
             case .success(let meal):
+                print("✅ Meal created successfully: \(meal.title)")
+                print("📊 Returned meal calories: \(meal.calories)")
+                print("📊 Meal has \(meal.mealItems.count) food items")
+                
                 self?.meals.insert(meal, at: 0)
-
                 self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                
                 // Show toast notification
                 withAnimation {
                     self?.showMealToast = true
@@ -480,10 +501,8 @@ func createMeal(
                         self?.showMealToast = false
                     }
                 }
-
-                print("Meal created: \(meal)")
             case .failure(let error):
-                print("Error creating meal: \(error)")
+                print("❌ Error creating meal: \(error)")
             }
         }
     }
@@ -611,6 +630,21 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
             self.isLoadingMeals = false
             switch result {
             case .success(let response):
+                print("📥 Received \(response.meals.count) meals from server")
+                
+                // Log details for each meal
+                for (index, meal) in response.meals.prefix(5).enumerated() {
+                    print("📊 Meal #\(index+1): \(meal.title)")
+                    print("  - Calories: \(meal.calories) (from totalCalories: \(String(describing: meal.totalCalories)))")
+                    print("  - Protein: \(meal.protein)g, Carbs: \(meal.carbs)g, Fat: \(meal.fat)g")
+                    print("  - Has \(meal.mealItems.count) food items")
+                    
+                    // Log the first couple of food items
+                    for (itemIndex, item) in meal.mealItems.prefix(2).enumerated() {
+                        print("    - Item #\(itemIndex+1): \(item.name), Calories: \(item.calories), Protein: \(item.protein)g, Carbs: \(item.carbs)g, Fat: \(item.fat)g")
+                    }
+                }
+                
                 if refresh {
                     self.meals = response.meals
                     self.currentMealPage = 2

@@ -5062,6 +5062,10 @@ func createMeal(
     servings: Int,
     foods: [Food],
     image: String? = nil,
+    totalCalories: Double? = nil,
+    totalProtein: Double? = nil,
+    totalCarbs: Double? = nil,
+    totalFat: Double? = nil,
     completion: @escaping (Result<Meal, Error>) -> Void
 ) {
     let urlString = "\(baseUrl)/create-meal/"
@@ -5078,6 +5082,29 @@ func createMeal(
             "unit_name": $0.unitName
         ] }
         
+        // Calculate macros for this particular food
+        let servings = food.numberOfServings ?? 1
+        let calories = (food.calories ?? 0) * servings
+        
+        // Extract macros
+        var protein: Double = 0
+        var carbs: Double = 0
+        var fat: Double = 0
+        
+        for nutrient in food.foodNutrients {
+            let value = nutrient.value * servings
+            if nutrient.nutrientName == "Protein" {
+                protein = value
+            } else if nutrient.nutrientName.lowercased().contains("carbohydrate") {
+                carbs = value
+            } else if nutrient.nutrientName.lowercased().contains("fat") || 
+                      nutrient.nutrientName.lowercased().contains("lipid") {
+                fat = value
+            }
+        }
+        
+        print("🍽️ Food item: \(food.displayName), calories: \(calories), servings: \(servings)")
+        
         return [
             "external_id": food.id,
             "name": food.displayName,
@@ -5085,8 +5112,12 @@ func createMeal(
             "serving_size": food.servingSize ?? 0,
             "serving_unit": food.servingSizeUnit ?? "",
             "serving_text": food.servingSizeText ?? "",
-            "number_of_servings": food.numberOfServings ?? 1,
-            "nutrients": nutrients
+            "number_of_servings": servings,
+            "nutrients": nutrients,
+            "calories": calories,
+            "protein": protein,
+            "carbs": carbs,
+            "fat": fat
         ]
     }
     
@@ -5105,7 +5136,26 @@ func createMeal(
     if let image = image {
         parameters["image"] = image
     }
-
+    
+    // Add macro parameters if provided
+    if let totalCalories = totalCalories {
+        parameters["total_calories"] = totalCalories
+    }
+    
+    if let totalProtein = totalProtein {
+        parameters["total_protein"] = totalProtein
+    }
+    
+    if let totalCarbs = totalCarbs {
+        parameters["total_carbs"] = totalCarbs
+    }
+    
+    if let totalFat = totalFat {
+        parameters["total_fat"] = totalFat
+    }
+    
+    // Print the parameters we're sending
+    print("📤 Creating meal with parameters: \(parameters)")
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -5113,6 +5163,12 @@ func createMeal(
     
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        
+        // Print formatted JSON for better debugging
+        if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+            print("📤 CREATE MEAL REQUEST JSON:")
+            print(jsonString)
+        }
     } catch {
         print("JSON Serialization Error: \(error)")
         completion(.failure(NetworkError.encodingError))
@@ -5134,6 +5190,12 @@ func createMeal(
         // Print raw response for debugging
         if let responseString = String(data: data, encoding: .utf8) {
             // print("Create Meal Response: \(responseString)")
+        }
+        
+        // Print raw response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📥 CREATE MEAL RESPONSE:")
+            print(responseString)
         }
         
         do {
@@ -5205,22 +5267,59 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
         return
     }
     
+    print("🔍 Requesting meals from: \(url)")
+    
     var request = URLRequest(url: url)
     request.httpMethod = "GET"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     
     URLSession.shared.dataTask(with: request) { data, response, error in
         if let error = error {
+            print("❌ Network error when fetching meals: \(error)")
             completion(.failure(error))
             return
         }
         
         guard let data = data else {
+            print("❌ No data received when fetching meals")
             completion(.failure(NetworkError.noData))
             return
         }
         
+        // Log raw response for deeper analysis
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📥 Raw getMeals response: \(responseString)")
+        }
+        
         do {
+            // First, parse as dictionary to inspect structure
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let meals = jsonObj["meals"] as? [[String: Any]] {
+                
+                print("🍽️ Found \(meals.count) meals in response")
+                
+                // Analyze the first few meals to see structure
+                for (index, meal) in meals.prefix(2).enumerated() {
+                    print("🍽️ Meal #\(index) structure:")
+                    print("  - title: \(meal["title"] ?? "missing")")
+                    print("  - id: \(meal["id"] ?? "missing")")
+                    print("  - total_calories: \(meal["total_calories"] ?? "missing")")
+                    print("  - calories: \(meal["calories"] ?? "missing")") // Some APIs might use this name
+                    
+                    // Check for meal items
+                    if let mealItems = meal["meal_items"] as? [[String: Any]] {
+                        print("  - contains \(mealItems.count) meal items")
+                        if let firstItem = mealItems.first {
+                            print("    - first item: \(firstItem["name"] ?? "unknown"), calories: \(firstItem["calories"] ?? "unknown")")
+                        }
+                    } else if let mealItems = meal["mealItems"] as? [[String: Any]] {
+                        print("  - contains \(mealItems.count) meal items (camelCase key)")
+                    } else {
+                        print("  - no meal items found, keys present: \(meal.keys.joined(separator: ", "))")
+                    }
+                }
+            }
+            
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             
@@ -5242,26 +5341,32 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
                 )
             }
             
-            // Debug print for troubleshooting
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("JSON response: \(jsonString)")
-            }
-
-            // Add this to check for total_calories specifically
-            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let meals = jsonObj["meals"] as? [[String: Any]] {
-                // for (index, meal) in meals.enumerated() {
-                //     print("DEBUG: Meal \(index) - title: \(meal["title"] ?? "unknown"), total_calories: \(meal["total_calories"] ?? "missing")")
-                // }
-            }
-      
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
-           
+            
+            // Verify decoded data
+            print("✅ Successfully decoded \(mealsResponse.meals.count) meals")
+            for (index, meal) in mealsResponse.meals.prefix(2).enumerated() {
+                print("📊 Decoded Meal #\(index): \(meal.title)")
+                print("  - calories: \(meal.calories) (from totalCalories: \(String(describing: meal.totalCalories)))")
+                print("  - meal items: \(meal.mealItems.count)")
+            }
+            
             completion(.success(mealsResponse))
         } catch {
-            print("Decoding error: \(error)")
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("Received JSON:", jsonString)
+            print("❌ Decoding error when fetching meals: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("  Missing key: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue })") 
+                case .typeMismatch(let type, let context):
+                    print("  Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("  Value missing: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .dataCorrupted(let context):
+                    print("  Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("  Unknown decoding error")
+                }
             }
             completion(.failure(error))
         }

@@ -272,6 +272,14 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
     }
 
     private func createMeal() {
+        // Calculate macro totals from the current food items
+        let totals = calculateTotalMacros(selectedFoods)
+        
+        print("📊 CreateMealView - Calculated totals before sending to FoodManager:")
+        print("- Calories: \(totals.calories)")
+        print("- Protein: \(totals.protein)g")
+        print("- Carbs: \(totals.carbs)g")
+        print("- Fat: \(totals.fat)g")
 
         foodManager.createMeal(
             title: mealName,
@@ -280,14 +288,18 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             privacy: shareWith.lowercased(),
             servings: 1,
             foods: selectedFoods,
-            image: imageURL?.absoluteString 
+            image: imageURL?.absoluteString,
+            totalCalories: totals.calories,
+            totalProtein: totals.protein,
+            totalCarbs: totals.carbs,
+            totalFat: totals.fat
         )
         
         // Dismiss and go back to previous screen
         dismiss()
         path.removeLast()
     }
-    
+
     // MARK: - Subviews
     private var mealDetailsSection: some View {
         VStack(spacing: 16) {
