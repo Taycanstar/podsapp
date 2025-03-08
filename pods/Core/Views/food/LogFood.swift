@@ -484,12 +484,86 @@ struct HistoryRow: View {
             }
         case .meal:
             if let meal = log.meal {
-                MealHistoryRow(
+                // Use the new combined log row that shows displayCalories
+                CombinedLogMealRow(
+                    log: log,
                     meal: meal,
                     selectedMeal: $selectedMeal
                 )
             }
         }
+    }
+}
+
+// New row that shows displayCalories from the combined log
+struct CombinedLogMealRow: View {
+    @EnvironmentObject var foodManager: FoodManager
+    let log: CombinedLog
+    let meal: MealSummary
+    @Binding var selectedMeal: String
+    
+    var body: some View {
+        let rawCalories = log.calories
+        let displayCals = log.displayCalories
+        let mealDisplayCals = meal.displayCalories
+        
+        // Print debugging info when this view is created
+        let _ = {
+            print("📊 CombinedLogMealRow for '\(meal.title)':")
+            print("- Raw log calories: \(rawCalories)")
+            print("- Log displayCalories: \(displayCals)")
+            print("- Meal displayCalories: \(mealDisplayCals)")
+            return 0
+        }()
+        
+        return HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 4) {
+                    // Use the displayCalories from the log directly
+                    Text("\(Int(log.displayCalories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Button {
+                HapticFeedback.generate()
+                // Pass the displayCalories as the totalCalories
+                foodManager.logMeal(meal: Meal(
+                    id: meal.mealId,
+                    title: meal.title,
+                    description: meal.description,
+                    directions: nil,
+                    privacy: "private",
+                    servings: meal.servings,
+                    createdAt: Date(),
+                    mealItems: [],
+                    image: meal.image,
+                    totalCalories: log.displayCalories,
+                    totalProtein: nil,
+                    totalCarbs: nil,
+                    totalFat: nil
+                ), mealTime: selectedMeal)
+            } label: {
+                if foodManager.lastLoggedMealId == meal.mealId {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.green)
+                        .transition(.opacity)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 0)
+        .padding(.vertical, 0)
     }
 }
 

@@ -754,7 +754,7 @@ func logMeal(
                     let newCombinedLog = CombinedLog(
                         type: .meal,
                         status: "success",
-                        calories: loggedMeal.calories,
+                        calories: loggedMeal.calories > 0 ? loggedMeal.calories : meal.calories,
                         message: "\(loggedMeal.meal.title) - \(loggedMeal.mealTime)",
                         foodLogId: nil,
                         food: nil,

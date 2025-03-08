@@ -318,6 +318,25 @@ struct CombinedLog: Codable, Identifiable {
     let meal: MealSummary?
     let mealTime: String?
     
+    // Add a computed property to handle zero calories
+    var displayCalories: Double {
+        if calories > 0 {
+            return calories
+        }
+        
+        // If calories is zero but we have a meal with displayCalories, use that
+        if let meal = meal, type == .meal {
+            return meal.displayCalories
+        }
+        
+        // If it's a food item, try to calculate from the food
+        if let food = food, type == .food {
+            return food.calories * (food.numberOfServings)
+        }
+        
+        return calories // fallback to original value
+    }
+    
     var id: Int {
         switch type {
         case .food: return foodLogId ?? 0
