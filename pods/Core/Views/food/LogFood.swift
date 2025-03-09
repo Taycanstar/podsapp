@@ -584,9 +584,9 @@ struct CombinedLogMealRow: View {
                         mealItems: [],
                         image: meal.image,
                         totalCalories: log.displayCalories,
-                        totalProtein: nil,
-                        totalCarbs: nil,
-                        totalFat: nil
+                        totalProtein: meal.protein,
+                        totalCarbs: meal.carbs,
+                        totalFat: meal.fat
                     ), mealTime: selectedMeal)
                 
                 case .addToMeal:
@@ -748,6 +748,31 @@ struct MealRow: View {
     let meal: Meal
     @Binding var selectedMeal: String
     
+    // Computed property to calculate calories from meal items if needed
+    private var displayCalories: Double {
+        if meal.calories > 0 {
+            return meal.calories
+        }
+        
+        // If meal.calories is 0 but we have meal items, calculate from items
+        if !meal.mealItems.isEmpty {
+            let totalItemCalories = meal.mealItems.reduce(0) { sum, item in
+                sum + item.calories
+            }
+            if totalItemCalories > 0 {
+                return totalItemCalories
+            }
+        }
+        
+        // Fallback to calculating from macros
+        if (meal.protein + meal.carbs + meal.fat) > 0 {
+            // Rough estimate: protein and carbs = 4 cal/g, fat = 9 cal/g
+            return (meal.protein * 4) + (meal.carbs * 4) + (meal.fat * 9)
+        }
+        
+        return meal.calories // fallback to original value
+    }
+    
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             // If meal has an image, display it
@@ -785,7 +810,7 @@ struct MealRow: View {
                     .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
-                    Text("\(Int(meal.calories)) cal")
+                    Text("\(Int(displayCalories)) cal")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -817,6 +842,13 @@ struct MealRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 0)
-
+        // Add debug print to help diagnose
+        .onAppear {
+            print("🍽️ MealRow for '\(meal.title)':")
+            print("- Raw meal.calories: \(meal.calories)")
+            print("- Calculated displayCalories: \(displayCalories)")
+            print("- Has \(meal.mealItems.count) meal items")
+            print("- Meal macros - Protein: \(meal.protein)g, Carbs: \(meal.carbs)g, Fat: \(meal.fat)g")
+        }
     }
 }

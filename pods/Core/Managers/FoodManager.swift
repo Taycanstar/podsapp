@@ -449,11 +449,11 @@ func createMeal(
     privacy: String,
     servings: Int,
     foods: [Food],
-    image: String? = nil,
-    totalCalories: Double? = nil,
-    totalProtein: Double? = nil,
-    totalCarbs: Double? = nil,
-    totalFat: Double? = nil
+    image: String?,
+    totalCalories: Double?,
+    totalProtein: Double?,
+    totalCarbs: Double?,
+    totalFat: Double?
 ) {
     guard let email = userEmail else { return }
     
@@ -463,7 +463,28 @@ func createMeal(
         return sum + ((food.calories ?? 0) * servings)
     }
     
+    // Calculate macros if not provided
+    let calculatedProtein = totalProtein ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.protein ?? 0) * servings)
+    }
     
+    let calculatedCarbs = totalCarbs ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.carbs ?? 0) * servings)
+    }
+    
+    let calculatedFat = totalFat ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.fat ?? 0) * servings)
+    }
+    
+    // Always log the calculated values for debugging
+    print("🔢 Creating meal with calculated totals:")
+    print("- Calories: \(calculatedCalories)")
+    print("- Protein: \(calculatedProtein)g")
+    print("- Carbs: \(calculatedCarbs)g")
+    print("- Fat: \(calculatedFat)g")
     
     networkManager.createMeal(
         userEmail: email,
@@ -475,9 +496,9 @@ func createMeal(
         foods: foods,
         image: image,
         totalCalories: calculatedCalories,
-        totalProtein: totalProtein,
-        totalCarbs: totalCarbs,
-        totalFat: totalFat
+        totalProtein: calculatedProtein,
+        totalCarbs: calculatedCarbs,
+        totalFat: calculatedFat
     ) { [weak self] result in
         DispatchQueue.main.async {
             switch result {

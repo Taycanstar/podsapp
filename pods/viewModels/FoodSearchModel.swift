@@ -223,7 +223,34 @@ struct Meal: Codable, Identifiable {
     let totalFat: Double?       // Made optional
     
     // Add computed properties to provide default values when the fields are nil
-    var calories: Double { totalCalories ?? 0 }
+    var calories: Double {
+        // If totalCalories has a valid value > 0, use it
+        if let total = totalCalories, total > 0 {
+            return total
+        }
+        
+        // If we have meal items, sum their calories
+        if !mealItems.isEmpty {
+            let itemCalories = mealItems.reduce(0) { sum, item in
+                sum + item.calories
+            }
+            if itemCalories > 0 {
+                return itemCalories
+            }
+        }
+        
+        // If we have macros, calculate from them
+        let calculatedProtein = protein
+        let calculatedCarbs = carbs
+        let calculatedFat = fat
+        
+        if (calculatedProtein + calculatedCarbs + calculatedFat) > 0 {
+            // Rough estimate: protein and carbs = 4 cal/g, fat = 9 cal/g
+            return (calculatedProtein * 4) + (calculatedCarbs * 4) + (calculatedFat * 9)
+        }
+        
+        return totalCalories ?? 0 // fallback to original value
+    }
     var protein: Double { totalProtein ?? 0 }
     var carbs: Double { totalCarbs ?? 0 }
     var fat: Double { totalFat ?? 0 }
