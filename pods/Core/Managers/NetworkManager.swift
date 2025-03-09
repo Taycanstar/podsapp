@@ -5343,12 +5343,11 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
             
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
             
-            // Verify decoded data
-            print("✅ Successfully decoded \(mealsResponse.meals.count) meals")
+       
             for (index, meal) in mealsResponse.meals.prefix(2).enumerated() {
-                print("📊 Decoded Meal #\(index): \(meal.title)")
-                print("  - calories: \(meal.calories) (from totalCalories: \(String(describing: meal.totalCalories)))")
-                print("  - meal items: \(meal.mealItems.count)")
+                // print("📊 Decoded Meal #\(index): \(meal.title)")
+                // print("  - calories: \(meal.calories) (from totalCalories: \(String(describing: meal.totalCalories)))")
+                // print("  - meal items: \(meal.mealItems.count)")
             }
             
             completion(.success(mealsResponse))

@@ -45,7 +45,7 @@ class FoodManager: ObservableObject {
         resetAndFetchFoods()
         resetAndFetchMeals() 
         resetAndFetchLogs()
-        print("✅ FoodManager: Initialization sequence completed")
+       
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -479,12 +479,7 @@ func createMeal(
         return sum + ((food.fat ?? 0) * servings)
     }
     
-    // Always log the calculated values for debugging
-    print("🔢 Creating meal with calculated totals:")
-    print("- Calories: \(calculatedCalories)")
-    print("- Protein: \(calculatedProtein)g")
-    print("- Carbs: \(calculatedCarbs)g")
-    print("- Fat: \(calculatedFat)g")
+
     
     networkManager.createMeal(
         userEmail: email,

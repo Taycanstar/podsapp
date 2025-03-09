@@ -186,7 +186,7 @@ struct LogFood: View {
                     .padding(.top, 16)
                 
                 ForEach(foodManager.meals) { meal in
-                    MealRow(meal: meal, selectedMeal: $selectedMeal)
+                    MealRow(meal: meal, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
                         // .onAppear {
                         //     foodManager.loadMoreMealsIfNeeded(meal: meal)
                         // }
@@ -429,11 +429,7 @@ private func handleFoodTap() {
         foodNutrients: food.foodNutrients,
         foodMeasures: food.foodMeasures
     )
-    
-    // Debug print
-    print("✅ Adding food directly: \(newFood.displayName)")
-    print("  - householdServingFullText: \(newFood.householdServingFullText ?? "nil")")
-    print("  - servingSizeText: \(newFood.servingSizeText)")
+
 
     selectedFoods.append(newFood)
     
@@ -680,11 +676,6 @@ struct CombinedLogMealRow: View {
                     foodMeasures: []
                 )
                 
-                // Debug log the created food
-                print("✅ Created food: \(food.displayName)")
-                print("  - householdServingFullText: \(food.householdServingFullText ?? "nil")")
-                print("  - servingSizeText: \(food.servingSizeText)")
-                print("  - numberOfServings: \(food.numberOfServings ?? 1)")
                 
                 // Add to selection
                 selectedFoods.append(food)
@@ -748,6 +739,24 @@ struct MealRow: View {
     let meal: Meal
     @Binding var selectedMeal: String
     
+    // Add these properties to match CombinedLogMealRow
+    var mode: LogFoodMode = .logFood  // Default to logFood mode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    
+    // Make these optional bindings with default values
+    init(meal: Meal, 
+         selectedMeal: Binding<String>, 
+         mode: LogFoodMode = .logFood, 
+         selectedFoods: Binding<[Food]> = .constant([]), 
+         path: Binding<NavigationPath> = .constant(NavigationPath())) {
+        self.meal = meal
+        self._selectedMeal = selectedMeal
+        self.mode = mode
+        self._selectedFoods = selectedFoods
+        self._path = path
+    }
+    
     // Computed property to calculate calories from meal items if needed
     private var displayCalories: Double {
         if meal.calories > 0 {
@@ -806,39 +815,49 @@ struct MealRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
                     .font(.system(size: 16))
-                    
                     .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
                     Text("\(Int(displayCalories)) cal")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
-                    
                 }
             }
             Spacer()
-                    Button {
-                    HapticFeedback.generate()
-                    // Log food/meal
+            Button {
+                HapticFeedback.generate()
+                
+                // Switch behavior based on mode
+                switch mode {
+                case .logFood:
+                    // Original behavior - log the meal
                     foodManager.logMeal(meal: meal, mealTime: selectedMeal)
-                } label: {
-                   
-                      if foodManager.lastLoggedMealId == meal.id {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                        .transition(.opacity)
-                } else {
+                
+                case .addToMeal:
+                    // New behavior - add meal items to selection
+                    addMealItemsToSelection()
+                }
+            } label: {
+                if mode == .addToMeal {
+                    // For add to meal mode
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.accentColor)
+                } else {
+                    // For log food mode
+                    if foodManager.lastLoggedMealId == meal.id {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                    }
                 }
-                   
-                    
-                }
-                .buttonStyle(PlainButtonStyle())
-
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 0)
@@ -849,6 +868,79 @@ struct MealRow: View {
             print("- Calculated displayCalories: \(displayCalories)")
             print("- Has \(meal.mealItems.count) meal items")
             print("- Meal macros - Protein: \(meal.protein)g, Carbs: \(meal.carbs)g, Fat: \(meal.fat)g")
+            print("- Current mode: \(mode == .logFood ? "logFood" : "addToMeal")")
         }
+    }
+    
+    // Add this method to handle adding meal items to selection
+    private func addMealItemsToSelection() {
+        print("✅ Adding items from meal: \(meal.title) with \(meal.mealItems.count) items")
+        
+        // DUMP ENTIRE MEAL ITEMS ARRAY FOR INSPECTION
+        print("📋 COMPLETE MEAL ITEMS DATA:")
+        for (index, item) in meal.mealItems.enumerated() {
+            print("  ITEM #\(index+1): \(item.name)")
+            print("    - food_id: \(item.foodId)")
+            print("    - external_id: \(item.externalId)")
+            print("    - servings: \(item.servings)")
+            print("    - serving_text: \(item.servingText ?? "nil")")
+            print("    - calories: \(item.calories)")
+        }
+        
+        // Convert each MealFoodItem to Food and add to selectedFoods
+        for mealItem in meal.mealItems {
+            print("🔍 Processing meal item: \(mealItem.name)")
+            print("  - Servings: \(mealItem.servings)")
+            print("  - Raw serving_text from meal item: \(mealItem.servingText ?? "nil")")
+            
+            // Try to extract numeric value from servings string
+            let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
+            
+            // Get the proper serving text - use the serving_text if available
+            let servingText: String
+            if let text = mealItem.servingText, !text.isEmpty {
+                servingText = text
+            } else {
+                // Get the unit of measurement, if any
+                if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
+                   !unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    servingText = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+                } else {
+                    servingText = "serving"
+                }
+            }
+            print("  - Final servingText to be used: \(servingText)")
+            
+            // Create a Food object from the MealFoodItem
+            let food = Food(
+                fdcId: Int(mealItem.externalId) ?? mealItem.foodId,
+                description: mealItem.name,
+                brandOwner: nil,
+                brandName: nil,
+                servingSize: 1.0,
+                numberOfServings: servingsValue,
+                servingSizeUnit: servingText,
+                householdServingFullText: servingText,
+                foodNutrients: [
+                    Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+                    Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+                    Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+                    Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+                ],
+                foodMeasures: []
+            )
+            
+            // Debug log the created food
+            print("✅ Created food: \(food.displayName)")
+            print("  - householdServingFullText: \(food.householdServingFullText ?? "nil")")
+            print("  - servingSizeText: \(food.servingSizeText)")
+            print("  - numberOfServings: \(food.numberOfServings ?? 1)")
+            
+            // Add to selection
+            selectedFoods.append(food)
+        }
+        
+        // Navigate back to the meal creation screen
+        path.removeLast()
     }
 }

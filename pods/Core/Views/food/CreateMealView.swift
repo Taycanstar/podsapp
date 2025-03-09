@@ -440,15 +440,12 @@ private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
     
     // Process foods in order
     for food in allFoods {
-        print("📦 Processing food: \(food.displayName)")
-        print("  - Serving size text: \(food.servingSizeText)")
-        print("  - Household serving full text: \(food.householdServingFullText ?? "nil")")
-        print("  - Number of servings: \(food.numberOfServings ?? 1)")
+
         
         if var existing = grouped[food.fdcId] {
             // Update existing entry
             let newServings = (existing.numberOfServings ?? 1) + (food.numberOfServings ?? 1)
-            print("📊 Combining with existing food. New servings: \(newServings)")
+
             
             // Create a mutable copy of the existing food to update
             existing.numberOfServings = newServings
@@ -456,13 +453,12 @@ private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
             // Preserve the household serving full text from the original food
             // This ensures we don't lose the proper serving text when combining
             
-            print("🔄 Original serving text: \(existing.householdServingFullText ?? "nil")")
-            print("🔄 Updated servings to: \(existing.numberOfServings ?? 1)")
+       
             
             grouped[food.fdcId] = existing
         } else {
             // Add new entry
-            print("➕ Adding new entry for \(food.displayName)")
+          
             grouped[food.fdcId] = food
         }
     }
