@@ -862,36 +862,19 @@ struct MealRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 0)
         // Add debug print to help diagnose
-        .onAppear {
-            print("🍽️ MealRow for '\(meal.title)':")
-            print("- Raw meal.calories: \(meal.calories)")
-            print("- Calculated displayCalories: \(displayCalories)")
-            print("- Has \(meal.mealItems.count) meal items")
-            print("- Meal macros - Protein: \(meal.protein)g, Carbs: \(meal.carbs)g, Fat: \(meal.fat)g")
-            print("- Current mode: \(mode == .logFood ? "logFood" : "addToMeal")")
-        }
+      
     }
     
     // Add this method to handle adding meal items to selection
     private func addMealItemsToSelection() {
-        print("✅ Adding items from meal: \(meal.title) with \(meal.mealItems.count) items")
-        
-        // DUMP ENTIRE MEAL ITEMS ARRAY FOR INSPECTION
-        print("📋 COMPLETE MEAL ITEMS DATA:")
+     
         for (index, item) in meal.mealItems.enumerated() {
-            print("  ITEM #\(index+1): \(item.name)")
-            print("    - food_id: \(item.foodId)")
-            print("    - external_id: \(item.externalId)")
-            print("    - servings: \(item.servings)")
-            print("    - serving_text: \(item.servingText ?? "nil")")
-            print("    - calories: \(item.calories)")
+  
         }
         
         // Convert each MealFoodItem to Food and add to selectedFoods
         for mealItem in meal.mealItems {
-            print("🔍 Processing meal item: \(mealItem.name)")
-            print("  - Servings: \(mealItem.servings)")
-            print("  - Raw serving_text from meal item: \(mealItem.servingText ?? "nil")")
+       
             
             // Try to extract numeric value from servings string
             let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
@@ -909,7 +892,7 @@ struct MealRow: View {
                     servingText = "serving"
                 }
             }
-            print("  - Final servingText to be used: \(servingText)")
+
             
             // Create a Food object from the MealFoodItem
             let food = Food(
@@ -930,11 +913,7 @@ struct MealRow: View {
                 foodMeasures: []
             )
             
-            // Debug log the created food
-            print("✅ Created food: \(food.displayName)")
-            print("  - householdServingFullText: \(food.householdServingFullText ?? "nil")")
-            print("  - servingSizeText: \(food.servingSizeText)")
-            print("  - numberOfServings: \(food.numberOfServings ?? 1)")
+         
             
             // Add to selection
             selectedFoods.append(food)

@@ -440,33 +440,55 @@ private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
     
     // Process foods in order
     for food in allFoods {
-
+        print("📦 Processing food: \(food.displayName)")
+        print("  - Serving size text: \(food.servingSizeText)")
+        print("  - Household serving full text: \(food.householdServingFullText ?? "nil")")
+        print("  - Number of servings: \(food.numberOfServings ?? 1)")
+        print("  - Calories: \(food.calories ?? 0)")
         
         if var existing = grouped[food.fdcId] {
-            // Update existing entry
-            let newServings = (existing.numberOfServings ?? 1) + (food.numberOfServings ?? 1)
-
+            // Update existing entry by adding servings
+            let existingServings = existing.numberOfServings ?? 1
+            let additionalServings = food.numberOfServings ?? 1
+            let newServings = existingServings + additionalServings
+            
+            print("📊 Combining with existing food.")
+            print("  - Existing servings: \(existingServings)")
+            print("  - Additional servings: \(additionalServings)")
+            print("  - New total servings: \(newServings)")
             
             // Create a mutable copy of the existing food to update
             existing.numberOfServings = newServings
             
-            // Preserve the household serving full text from the original food
-            // This ensures we don't lose the proper serving text when combining
-            
-       
+            // Calculate new calorie total for verification
+            let newCalories = (existing.calories ?? 0) * newServings
+            print("  - New total calories: \(newCalories)")
             
             grouped[food.fdcId] = existing
         } else {
             // Add new entry
-          
+            print("➕ Adding new entry for \(food.displayName)")
             grouped[food.fdcId] = food
         }
     }
     
-    // Return foods in original order (based on first appearance)
-    let result = allFoods.compactMap { food in
-        grouped.removeValue(forKey: food.fdcId)
-    }.filter { $0 != nil }
+    // Create an ordered array of unique foods
+    var result: [Food] = []
+    
+    // First, keep track of which fdcIds we've seen
+    var seenIds = Set<Int>()
+    
+    // Process foods in original order to maintain order
+    for food in allFoods {
+        if !seenIds.contains(food.fdcId), let groupedFood = grouped[food.fdcId] {
+            result.append(groupedFood)
+            seenIds.insert(food.fdcId)
+            grouped.removeValue(forKey: food.fdcId)
+        }
+    }
+    
+    // Add any remaining grouped foods (shouldn't be any, but just in case)
+    result.append(contentsOf: grouped.values)
     
     print("✅ Aggregated to \(result.count) unique foods")
     return result
@@ -475,7 +497,43 @@ private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
 /// Removes all items from `selectedFoods` that have the same fdcId
 /// as the aggregated item the user swiped to delete.
 private func removeAllItems(withFdcId fdcId: Int) {
+    // First, get count for debugging
+    let beforeCount = selectedFoods.count
+    let matchingFoods = selectedFoods.filter { $0.fdcId == fdcId }
+    
+    // Debug info about what's being removed
+    print("🗑️ Removing all items with fdcId: \(fdcId)")
+    print("- Found \(matchingFoods.count) matching foods to remove")
+    
+    if let firstFood = matchingFoods.first {
+        print("- Food being removed: \(firstFood.displayName)")
+        print("- Number of servings: \(firstFood.numberOfServings ?? 1)")
+        print("- Base calories: \(firstFood.calories ?? 0)")
+        
+        // Calculate what will be removed
+        let servings = firstFood.numberOfServings ?? 1
+        let calsToRemove = (firstFood.calories ?? 0) * servings
+        
+        let proteinNutrient = firstFood.foodNutrients.first { $0.nutrientName == "Protein" }
+        let carbsNutrient = firstFood.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }
+        let fatNutrient = firstFood.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }
+        
+        let proteinToRemove = (proteinNutrient?.value ?? 0) * servings
+        let carbsToRemove = (carbsNutrient?.value ?? 0) * servings
+        let fatToRemove = (fatNutrient?.value ?? 0) * servings
+        
+        print("- Total to be removed: \(calsToRemove) cal, \(proteinToRemove)g protein, \(carbsToRemove)g carbs, \(fatToRemove)g fat")
+    }
+    
+    // Remove the items
     selectedFoods.removeAll { $0.fdcId == fdcId }
+    
+    // Debug result of removal
+    let afterCount = selectedFoods.count
+    print("✅ Removed \(beforeCount - afterCount) foods. New count: \(afterCount)")
+    
+    // Force UI update
+    let _ = calculateTotalMacros(selectedFoods)
 }
 
 
@@ -500,6 +558,10 @@ private func removeAllItems(withFdcId fdcId: Int) {
     private var macroCircleAndStats: some View {
     // Get the totals
     let totals = calculateTotalMacros(selectedFoods)
+    
+    // Create a unique identifier string based on the selectedFoods
+    // This will cause the view to rebuild when selectedFoods changes
+    let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
     
     return HStack(spacing: 40) {
         ZStack {
@@ -560,6 +622,8 @@ private func removeAllItems(withFdcId fdcId: Int) {
             percentageColor: Color.purple
         )
     }
+    // Force redraw when foods change by using the foodsSignature as an id
+    .id(foodsSignature)
 }
 
 private struct MacroTotals {
@@ -589,33 +653,56 @@ private struct MacroTotals {
 
 private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
     var totals = MacroTotals()
-    for food in foods {
-        let servings = food.numberOfServings ?? 1      
-        // Dump first few nutrients to see what we have
-        if !food.foodNutrients.isEmpty {
-            let nutrientNames = food.foodNutrients.prefix(5).map { "\($0.nutrientName): \($0.value)\($0.unitName)" }
+    
+    // Debug info
+    print("🧮 Calculating totals for \(foods.count) foods")
+    
+    for (index, food) in foods.enumerated() {
+        let servings = food.numberOfServings ?? 1
+        
+        // Debug print for first few foods
+        if index < 3 {
+            print("📊 Food #\(index+1): \(food.displayName)")
+            print("  - Number of servings: \(servings)")
+            print("  - Base calories: \(food.calories ?? 0)")
+            print("  - Total calories contribution: \(food.calories ?? 0) × \(servings) = \((food.calories ?? 0) * servings)")
             
+            // Print nutrients
+            let proteinNutrient = food.foodNutrients.first { $0.nutrientName == "Protein" }
+            let carbsNutrient = food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }
+            let fatNutrient = food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }
+            
+            print("  - Protein: \(proteinNutrient?.value ?? 0)g × \(servings) = \((proteinNutrient?.value ?? 0) * servings)g")
+            print("  - Carbs: \(carbsNutrient?.value ?? 0)g × \(servings) = \((carbsNutrient?.value ?? 0) * servings)g")
+            print("  - Fat: \(fatNutrient?.value ?? 0)g × \(servings) = \((fatNutrient?.value ?? 0) * servings)g")
         }
         
-        // Sum up calories
+        // Sum up calories - safeguard against nil calories
         if let calories = food.calories {
             totals.calories += calories * servings
         }
         
         // Get protein, carbs, and fat from foodNutrients array
         for nutrient in food.foodNutrients {
+            // Apply the servings multiplier to get the total contribution
             let value = nutrient.value * servings
             
             if nutrient.nutrientName == "Protein" {
                 totals.protein += value
             } else if nutrient.nutrientName == "Carbohydrate, by difference" {
-                
                 totals.carbs += value
             } else if nutrient.nutrientName == "Total lipid (fat)" {
                 totals.fat += value
             }
         }
     }
+    
+    // Debug output of final calculations
+    print("🔢 Final calculated totals:")
+    print("- Calories: \(totals.calories)")
+    print("- Protein: \(totals.protein)g (\(Int(totals.proteinPercentage))%)")
+    print("- Carbs: \(totals.carbs)g (\(Int(totals.carbsPercentage))%)")
+    print("- Fat: \(totals.fat)g (\(Int(totals.fatPercentage))%)")
     
     return totals
 }
