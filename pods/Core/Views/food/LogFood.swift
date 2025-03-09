@@ -415,11 +415,25 @@ private func handleFoodTap() {
         
     case .addToMeal:
        
-    var newFood = food
-    // If you want each new item to start at 1 serving, do:
-    newFood.numberOfServings = 1
-    // If you want to pass some custom text, do it here:
-    // newFood = updatedFoodSettingOlivia(newFood)
+    // Create a new mutable Food object with the same properties
+    // NOTE: We can't directly modify 'food' because most of its properties are constants
+    let newFood = Food(
+        fdcId: food.fdcId,
+        description: food.description,
+        brandOwner: food.brandOwner,
+        brandName: food.brandName,
+        servingSize: food.servingSize,
+        numberOfServings: 1, // Always start with 1 serving
+        servingSizeUnit: food.servingSizeUnit,
+        householdServingFullText: food.householdServingFullText,
+        foodNutrients: food.foodNutrients,
+        foodMeasures: food.foodMeasures
+    )
+    
+    // Debug print
+    print("✅ Adding food directly: \(newFood.displayName)")
+    print("  - householdServingFullText: \(newFood.householdServingFullText ?? "nil")")
+    print("  - servingSizeText: \(newFood.servingSizeText)")
 
     selectedFoods.append(newFood)
     
@@ -611,18 +625,52 @@ struct CombinedLogMealRow: View {
         if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
             print("✅ Found meal in FoodManager: \(fullMeal.title) with \(fullMeal.mealItems.count) items")
             
+            // DUMP ENTIRE MEAL ITEMS ARRAY FOR INSPECTION
+            print("📋 COMPLETE MEAL ITEMS DATA:")
+            for (index, item) in fullMeal.mealItems.enumerated() {
+                print("  ITEM #\(index+1): \(item.name)")
+                print("    - food_id: \(item.foodId)")
+                print("    - external_id: \(item.externalId)")
+                print("    - servings: \(item.servings)")
+             
+                print("    - calories: \(item.calories)")
+            }
+            
             // Convert each MealFoodItem to Food and add to selectedFoods
             for mealItem in fullMeal.mealItems {
+                print("🔍 Processing meal item: \(mealItem.name)")
+                print("  - Servings: \(mealItem.servings)")
+                print("  - Raw serving_text from meal item: \(mealItem.servingText ?? "nil")")
+                
+                // Try to extract numeric value from servings string
+                let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
+                
+                // Get the proper serving text - use the serving_text if available
+                // If not available, create a more descriptive fallback
+                let servingText: String
+                if let text = mealItem.servingText, !text.isEmpty {
+                    servingText = text
+                } else {
+                    // Get the unit of measurement, if any
+                    if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
+                       !unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        servingText = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+                    } else {
+                        servingText = "serving"
+                    }
+                }
+                print("  - Final servingText to be used: \(servingText)")
+                
                 // Create a Food object from the MealFoodItem
                 let food = Food(
-                    fdcId: Int(mealItem.externalId) ?? mealItem.foodId, // Try to use externalId as integer, fallback to foodId
+                    fdcId: Int(mealItem.externalId) ?? mealItem.foodId,
                     description: mealItem.name,
                     brandOwner: nil,
                     brandName: nil,
-                    servingSize: nil,
-                    numberOfServings: Double(mealItem.servings) ?? 1, // Parse servings or default to 1
-                    servingSizeUnit: nil,
-                    householdServingFullText: mealItem.servings,
+                    servingSize: 1.0,  // Setting an explicit servingSize
+                    numberOfServings: servingsValue,
+                    servingSizeUnit: servingText,  // Using the servingText as the unit
+                    householdServingFullText: servingText, // Use the proper serving text
                     foodNutrients: [
                         Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
                         Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
@@ -632,9 +680,14 @@ struct CombinedLogMealRow: View {
                     foodMeasures: []
                 )
                 
+                // Debug log the created food
+                print("✅ Created food: \(food.displayName)")
+                print("  - householdServingFullText: \(food.householdServingFullText ?? "nil")")
+                print("  - servingSizeText: \(food.servingSizeText)")
+                print("  - numberOfServings: \(food.numberOfServings ?? 1)")
+                
                 // Add to selection
                 selectedFoods.append(food)
-                print("Added food: \(food.displayName) with calories: \(food.calories ?? 0)")
             }
             
             // Navigate back to the meal creation screen

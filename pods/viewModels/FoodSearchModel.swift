@@ -199,6 +199,7 @@ struct MealFoodItem: Codable {
     let externalId: String
     let name: String
     let servings: String
+    let servingText: String?  // Reverted back to snake_case to match the JSON from the server
     let calories: Double
     let protein: Double
     let carbs: Double

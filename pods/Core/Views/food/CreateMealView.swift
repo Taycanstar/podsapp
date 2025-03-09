@@ -361,6 +361,15 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                 // 2) Use aggregatedFoods instead of selectedFoods
                 ForEach(Array(aggregatedFoods.enumerated()), id: \.element.id) { index, food in
                     
+                    // Debug information
+                    let _ = {
+                        print("🍽️ Displaying food #\(index+1): \(food.displayName)")
+                        print("  - householdServingFullText: \(food.householdServingFullText ?? "nil")")
+                        print("  - servingSizeText: \(food.servingSizeText)")
+                        print("  - numberOfServings: \(food.numberOfServings ?? 1)")
+                        return 0
+                    }()
+                    
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(food.displayName)
@@ -426,22 +435,45 @@ private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
     // Dictionary to store the combined foods
     var grouped: [Int: Food] = [:]
     
+    // Debug log
+    print("🔍 Aggregating \(allFoods.count) foods")
+    
     // Process foods in order
     for food in allFoods {
+        print("📦 Processing food: \(food.displayName)")
+        print("  - Serving size text: \(food.servingSizeText)")
+        print("  - Household serving full text: \(food.householdServingFullText ?? "nil")")
+        print("  - Number of servings: \(food.numberOfServings ?? 1)")
+        
         if var existing = grouped[food.fdcId] {
             // Update existing entry
-            existing.numberOfServings = (existing.numberOfServings ?? 1) + (food.numberOfServings ?? 1)
+            let newServings = (existing.numberOfServings ?? 1) + (food.numberOfServings ?? 1)
+            print("📊 Combining with existing food. New servings: \(newServings)")
+            
+            // Create a mutable copy of the existing food to update
+            existing.numberOfServings = newServings
+            
+            // Preserve the household serving full text from the original food
+            // This ensures we don't lose the proper serving text when combining
+            
+            print("🔄 Original serving text: \(existing.householdServingFullText ?? "nil")")
+            print("🔄 Updated servings to: \(existing.numberOfServings ?? 1)")
+            
             grouped[food.fdcId] = existing
         } else {
             // Add new entry
+            print("➕ Adding new entry for \(food.displayName)")
             grouped[food.fdcId] = food
         }
     }
     
     // Return foods in original order (based on first appearance)
-    return allFoods.compactMap { food in
+    let result = allFoods.compactMap { food in
         grouped.removeValue(forKey: food.fdcId)
     }.filter { $0 != nil }
+    
+    print("✅ Aggregated to \(result.count) unique foods")
+    return result
 }
 
 /// Removes all items from `selectedFoods` that have the same fdcId

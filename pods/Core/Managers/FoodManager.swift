@@ -567,6 +567,21 @@ private func loadCachedMeals() {
 
 // Cache meals
 private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
+    print("💾 Caching \(response.meals.count) meals for page \(page)")
+    
+    for (index, meal) in response.meals.prefix(3).enumerated() {
+        print("📝 Meal #\(index+1): \(meal.title) with \(meal.mealItems.count) items")
+        
+        // Debug first few items
+        for (itemIndex, item) in meal.mealItems.prefix(3).enumerated() {
+            print("   Item #\(itemIndex+1): \(item.name)")
+            print("     - servings: \(item.servings)")
+           
+            print("     - calories: \(item.calories)")
+        }
+    }
+    
+    // Encode to JSON
     guard let userEmail = userEmail else { return }
     if let encoded = try? JSONEncoder().encode(response) {
         UserDefaults.standard.set(encoded, forKey: "meals_\(userEmail)_page_\(page)")
@@ -640,7 +655,10 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
                     
                     // Log the first couple of food items
                     for (itemIndex, item) in meal.mealItems.prefix(2).enumerated() {
-                        print("    - Item #\(itemIndex+1): \(item.name), Calories: \(item.calories), Protein: \(item.protein)g, Carbs: \(item.carbs)g, Fat: \(item.fat)g")
+                        print("    - Item #\(itemIndex+1): \(item.name)")
+                        print("      * Calories: \(item.calories), Protein: \(item.protein)g, Carbs: \(item.carbs)g, Fat: \(item.fat)g")
+                        print("      * Servings: \(item.servings)")
+                        print("      * Serving text: \(item.servingText ?? "NIL")")
                     }
                 }
                 
