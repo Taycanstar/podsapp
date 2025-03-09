@@ -83,7 +83,7 @@ class FoodManager: ObservableObject {
     }
 
     private func resetAndFetchLogs() {
-         print("📊 FoodManager: Reset and fetch logs called")
+         
         // Reset state
         currentPage = 1
         hasMore = true
@@ -235,7 +235,7 @@ private func loadMoreLogs(refresh: Bool = false) {
          
             switch result {
             case .success(let response):
-                print("📊 FoodManager: Successfully received combined logs with \(response.logs.count) logs")
+                
                 if refresh {
                     // When refreshing, replace all logs with the new ones
                     withAnimation(.easeOut(duration: 0.3)) {
@@ -463,8 +463,7 @@ func createMeal(
         return sum + ((food.calories ?? 0) * servings)
     }
     
-    print("📊 Creating meal with title: \(title), calories: \(calculatedCalories), food items: \(foods.count)")
-    print("- Using provided macro totals: Calories=\(totalCalories != nil ? "Yes" : "No"), Protein=\(totalProtein != nil ? "Yes" : "No"), Carbs=\(totalCarbs != nil ? "Yes" : "No"), Fat=\(totalFat != nil ? "Yes" : "No")")
+    
     
     networkManager.createMeal(
         userEmail: email,

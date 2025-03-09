@@ -484,11 +484,14 @@ struct HistoryRow: View {
             }
         case .meal:
             if let meal = log.meal {
-                // Use the new combined log row that shows displayCalories
+                // Pass all parameters to CombinedLogMealRow
                 CombinedLogMealRow(
                     log: log,
                     meal: meal,
-                    selectedMeal: $selectedMeal
+                    selectedMeal: $selectedMeal,
+                    mode: mode,
+                    selectedFoods: $selectedFoods,
+                    path: $path
                 )
             }
         }
@@ -501,6 +504,25 @@ struct CombinedLogMealRow: View {
     let log: CombinedLog
     let meal: MealSummary
     @Binding var selectedMeal: String
+    
+    // Add these properties to match FoodRow
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    
+    init(log: CombinedLog, 
+         meal: MealSummary, 
+         selectedMeal: Binding<String>, 
+         mode: LogFoodMode = .logFood, 
+         selectedFoods: Binding<[Food]> = .constant([]), 
+         path: Binding<NavigationPath> = .constant(NavigationPath())) {
+        self.log = log
+        self.meal = meal
+        self._selectedMeal = selectedMeal
+        self.mode = mode
+        self._selectedFoods = selectedFoods
+        self._path = path
+    }
     
     var body: some View {
         let rawCalories = log.calories
@@ -532,38 +554,97 @@ struct CombinedLogMealRow: View {
             Spacer()
             Button {
                 HapticFeedback.generate()
-                // Pass the displayCalories as the totalCalories
-                foodManager.logMeal(meal: Meal(
-                    id: meal.mealId,
-                    title: meal.title,
-                    description: meal.description,
-                    directions: nil,
-                    privacy: "private",
-                    servings: meal.servings,
-                    createdAt: Date(),
-                    mealItems: [],
-                    image: meal.image,
-                    totalCalories: log.displayCalories,
-                    totalProtein: nil,
-                    totalCarbs: nil,
-                    totalFat: nil
-                ), mealTime: selectedMeal)
+                
+                switch mode {
+                case .logFood:
+                    // Original behavior - log the meal
+                    // Pass the displayCalories as the totalCalories
+                    foodManager.logMeal(meal: Meal(
+                        id: meal.mealId,
+                        title: meal.title,
+                        description: meal.description,
+                        directions: nil,
+                        privacy: "private",
+                        servings: meal.servings,
+                        createdAt: Date(),
+                        mealItems: [],
+                        image: meal.image,
+                        totalCalories: log.displayCalories,
+                        totalProtein: nil,
+                        totalCarbs: nil,
+                        totalFat: nil
+                    ), mealTime: selectedMeal)
+                
+                case .addToMeal:
+                    // New behavior - add all food items from the meal to selectedFoods
+                    addMealItemsToSelection()
+                }
             } label: {
-                if foodManager.lastLoggedMealId == meal.mealId {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                        .transition(.opacity)
-                } else {
+                if mode == .addToMeal {
+                    // Similar to FoodRow's addToMeal mode
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.accentColor)
+                } else {
+                    // Original behavior for logFood mode
+                    if foodManager.lastLoggedMealId == meal.mealId {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                    }
                 }
             }
             .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, 0)
         .padding(.vertical, 0)
+    }
+    
+    // New method to add meal items to selection using already loaded meals
+    private func addMealItemsToSelection() {
+        // Find the full meal from FoodManager.meals
+        if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
+            print("✅ Found meal in FoodManager: \(fullMeal.title) with \(fullMeal.mealItems.count) items")
+            
+            // Convert each MealFoodItem to Food and add to selectedFoods
+            for mealItem in fullMeal.mealItems {
+                // Create a Food object from the MealFoodItem
+                let food = Food(
+                    fdcId: Int(mealItem.externalId) ?? mealItem.foodId, // Try to use externalId as integer, fallback to foodId
+                    description: mealItem.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: nil,
+                    numberOfServings: Double(mealItem.servings) ?? 1, // Parse servings or default to 1
+                    servingSizeUnit: nil,
+                    householdServingFullText: mealItem.servings,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                
+                // Add to selection
+                selectedFoods.append(food)
+                print("Added food: \(food.displayName) with calories: \(food.calories ?? 0)")
+            }
+            
+            // Navigate back to the meal creation screen
+            path.removeLast()
+        } else {
+            print("❌ Could not find meal with ID \(meal.mealId) in FoodManager.meals")
+            
+            // If we couldn't find the meal, still navigate back
+            path.removeLast()
+        }
     }
 }
 
