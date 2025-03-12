@@ -71,6 +71,11 @@ struct EditMealView: View {
         )
     }
     
+    // Add a computed property to determine if we should show white text
+    private var hasImage: Bool {
+        return selectedImage != nil || (meal.image != nil && !meal.image!.isEmpty)
+    }
+    
     // MARK: - Initializer
     init(meal: Meal, path: Binding<NavigationPath>) {
         self.meal = meal
@@ -220,7 +225,7 @@ struct EditMealView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("Edit Meal")
-                    .foregroundColor(selectedImage != nil ? .white : .primary)
+                    .foregroundColor(hasImage ? .white : .primary)
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -228,7 +233,7 @@ struct EditMealView: View {
                     saveUpdatedMeal()
                 }
                 .disabled(isDoneButtonDisabled)
-                .foregroundColor(selectedImage != nil ? .white : .primary)
+                .foregroundColor(hasImage ? .white : .primary)
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
@@ -236,7 +241,7 @@ struct EditMealView: View {
                     dismiss()
                 }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(selectedImage != nil ? .white : .primary)
+                        .foregroundColor(hasImage ? .white : .primary)
                 }
             }
             ToolbarItemGroup(placement: .keyboard) {
