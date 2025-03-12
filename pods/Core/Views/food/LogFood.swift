@@ -576,13 +576,13 @@ struct CombinedLogMealRow: View {
                         directions: nil,
                         privacy: "private",
                         servings: meal.servings,
-                        createdAt: Date(),
                         mealItems: [],
                         image: meal.image,
                         totalCalories: log.displayCalories,
                         totalProtein: meal.protein,
                         totalCarbs: meal.carbs,
-                        totalFat: meal.fat
+                        totalFat: meal.fat,
+                        scheduledAt: nil
                     ), mealTime: selectedMeal)
                 
                 case .addToMeal:
@@ -715,7 +715,7 @@ struct MealHistoryRow: View {
             Spacer()
             Button {
                 HapticFeedback.generate()
-                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, createdAt: Date(), mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil), mealTime: selectedMeal)
+                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil, scheduledAt: meal.scheduledAt), mealTime: selectedMeal)
             } label: {
                 if foodManager.lastLoggedMealId == meal.mealId {
                     Image(systemName: "checkmark.circle.fill")

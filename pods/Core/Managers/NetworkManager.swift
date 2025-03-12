@@ -4704,11 +4704,14 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             case 200:
                 do {
                     let decoder = JSONDecoder()
-                    let logJSON = try decoder.decode(PodItemActivityLogJSON.self, from: data)
-                    let activityLog = try PodItemActivityLog(from: logJSON)
-                    completion(.success(activityLog))
+                    decoder.dateDecodingStrategy = .iso8601
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    
+//                    // Try to decode the activity log directly
+//                    let activityLog = try decoder.decode(PodItemActivityLog.self, from: data)
+//                    completion(.success(activityLog))
                 } catch {
-                    print("JSON parsing error: \(error.localizedDescription)")
+                    print("Decoding error: \(error)")
                     if let dataString = String(data: data, encoding: .utf8) {
                         print("Received data:", dataString)
                     }
@@ -5024,6 +5027,8 @@ func getCombinedLogs(userEmail: String, page: Int, completion: @escaping (Result
         do {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
+            
             let response = try decoder.decode(CombinedLogsResponse.self, from: data)
             completion(.success(response))
         } catch {
@@ -5202,40 +5207,38 @@ func createMeal(
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             
-            // Enhanced ISO8601 date decoding with better fallback
+            // Custom date decoder for the specific format from the server
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
             decoder.dateDecodingStrategy = .custom { decoder in
                 let container = try decoder.singleValueContainer()
                 let dateString = try container.decode(String.self)
-                
-                // Create a formatter that can handle the specific format with timezone
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 
                 if let date = formatter.date(from: dateString) {
                     return date
                 }
                 
-                // Try without fractional seconds
+                // Try another format without fractional seconds
                 formatter.formatOptions = [.withInternetDateTime]
                 if let date = formatter.date(from: dateString) {
                     return date
                 }
                 
-                // Try with DateFormatter as a last resort
-                let backupFormatter = DateFormatter()
-                backupFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
-                if let date = backupFormatter.date(from: dateString) {
+                // Final fallback
+                let fallbackFormatter = DateFormatter()
+                fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+                fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+                fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                
+                if let date = fallbackFormatter.date(from: dateString) {
                     return date
                 }
                 
-                // One more attempt with a simpler format
-                backupFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
-                if let date = backupFormatter.date(from: dateString) {
-                    return date
-                }
-                
-                print("Failed to parse date: \(dateString), using current date")
-                return Date()
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Cannot decode date string \(dateString)"
+                )
             }
             
             // Add debug print to see the JSON response
@@ -5305,6 +5308,8 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
                     print("  - id: \(meal["id"] ?? "missing")")
                     print("  - total_calories: \(meal["total_calories"] ?? "missing")")
                     print("  - calories: \(meal["calories"] ?? "missing")") // Some APIs might use this name
+                    print("  - created_at: \(meal["created_at"] ?? "MISSING!!!")")
+                    print("  - All meal keys: \(meal.keys.joined(separator: ", "))")
                     
                     // Check for meal items
                     if let mealItems = meal["meal_items"] as? [[String: Any]] {
@@ -5322,24 +5327,7 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
             
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            
-            // Custom date decoder for the specific format from the server
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            
-            decoder.dateDecodingStrategy = .custom { decoder in
-                let container = try decoder.singleValueContainer()
-                let dateString = try container.decode(String.self)
-                
-                if let date = formatter.date(from: dateString) {
-                    return date
-                }
-                
-                throw DecodingError.dataCorruptedError(
-                    in: container,
-                    debugDescription: "Cannot decode date string \(dateString)"
-                )
-            }
+            decoder.dateDecodingStrategy = .iso8601
             
             let mealsResponse = try decoder.decode(MealsResponse.self, from: data)
             
@@ -5452,6 +5440,8 @@ func logMeal(
         
         do {
             let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
             let loggedMeal = try decoder.decode(LoggedMeal.self, from: data)
             print("✅ Successfully decoded LoggedMeal with ID: \(loggedMeal.mealLogId)")
             completion(.success(loggedMeal))
@@ -5513,7 +5503,8 @@ func logMeal(
                             servings: mealData["servings"] as? Int ?? 1,
                             protein: nil,
                             carbs: nil,
-                            fat: nil
+                            fat: nil,
+                            scheduledAt: nil
                         )
                         
                         // Create a manually constructed LoggedMeal
@@ -5523,7 +5514,8 @@ func logMeal(
                             calories: calories,
                             message: message,
                             meal: mealSummary,
-                            mealTime: mealTime
+                            mealTime: mealTime,
+                            scheduledAt: nil  // Add this parameter as nil since we don't have the data
                         )
                         
                         print("✅ Successfully created LoggedMeal manually with ID: \(loggedMeal.mealLogId)")
@@ -5539,6 +5531,125 @@ func logMeal(
         }
     }.resume()
 }
-   
+
+func updateMeal(
+    userEmail: String,
+    mealId: Int,
+    title: String,
+    description: String,
+    directions: String?,
+    privacy: String,
+    servings: Int,
+    image: String?,
+    totalCalories: Double,
+    totalProtein: Double,
+    totalCarbs: Double,
+    totalFat: Double,
+    scheduledAt: Date?,
+    completion: @escaping (Result<Meal, Error>) -> Void
+) {
+    guard let url = URL(string: "\(baseUrl)/update-meal/") else {
+        completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+        return
+    }
+    
+    // Convert the scheduledAt to ISO string if present
+    let dateFormatter = ISO8601DateFormatter()
+    let scheduledAtString = scheduledAt != nil ? dateFormatter.string(from: scheduledAt!) : nil
+    
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "meal_id": mealId,
+        "title": title,
+        "description": description,
+        "privacy": privacy,
+        "servings": servings,
+        "total_calories": totalCalories,
+        "total_protein": totalProtein,
+        "total_carbs": totalCarbs,
+        "total_fat": totalFat
+    ]
+    
+    if let directions = directions {
+        parameters["directions"] = directions
+    }
+    
+    if let image = image {
+        parameters["image"] = image
+    }
+    
+    if let scheduledAtString = scheduledAtString {
+        parameters["scheduled_at"] = scheduledAtString
+    }
+    
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - updateMeal:")
+    print("- userEmail: \(userEmail)")
+    print("- mealId: \(mealId)")
+    print("- title: \(title)")
+    print("- description: \(description)")
+    print("- directions: \(directions ?? "none")")
+    print("- privacy: \(privacy)")
+    print("- servings: \(servings)")
+    print("- image: \(image ?? "none")")
+    print("- totalCalories: \(totalCalories)")
+    print("- totalProtein: \(totalProtein)")
+    print("- totalCarbs: \(totalCarbs)")
+    print("- totalFat: \(totalFat)")
+    print("- scheduledAt: \(scheduledAtString ?? "none")")
+    
+    let jsonData = try! JSONSerialization.data(withJSONObject: parameters, options: [])
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.httpBody = jsonData
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    
+    let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "No data returned"])))
+            return
+        }
+        
+        // Print response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("⬇️ RECEIVED FROM SERVER - updateMeal response:")
+            print(responseString)
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            // Try to decode the meal directly
+            if let meal = try? decoder.decode(Meal.self, from: data) {
+                completion(.success(meal))
+                return
+            }
+            
+            // If the above fails, try to parse any error message
+            if let errorResponse = try? JSONDecoder().decode([String: String].self, from: data),
+               let errorMessage = errorResponse["error"] {
+                completion(.failure(NSError(domain: "ServerError", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                return
+            }
+            
+            // Fallback error
+            completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to decode response"])))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+    
+    task.resume()
+}
+
+
 }
 

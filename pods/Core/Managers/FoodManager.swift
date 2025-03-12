@@ -138,7 +138,12 @@ private func loadCachedLogs() -> Bool {
     guard let userEmail = userEmail else { return false }
     
     if let cached = UserDefaults.standard.data(forKey: "combined_logs_\(userEmail)_page_1"),
-       let decodedResponse = try? JSONDecoder().decode(CombinedLogsResponse.self, from: cached) {
+       let decodedResponse = try? {
+           let decoder = JSONDecoder()
+           decoder.keyDecodingStrategy = .convertFromSnakeCase
+           decoder.dateDecodingStrategy = .iso8601
+           return try decoder.decode(CombinedLogsResponse.self, from: cached)
+       }() {
         
         withAnimation(.easeOut(duration: 0.3)) {
             self.combinedLogs = decodedResponse.logs
@@ -362,7 +367,8 @@ private func loadMoreLogs(refresh: Bool = false) {
                         mealType: loggedFood.mealType,
                         mealLogId: nil,
                         meal: nil,
-                        mealTime: nil
+                        mealTime: nil,
+                        scheduledAt: nil
                     )
                     
                     // Insert at the top with animation
@@ -575,7 +581,12 @@ private func resetAndFetchMeals() {
 private func loadCachedMeals() {
     guard let userEmail = userEmail else { return }
     if let cached = UserDefaults.standard.data(forKey: "meals_\(userEmail)_page_1"),
-       let decodedResponse = try? JSONDecoder().decode(MealsResponse.self, from: cached) {
+       let decodedResponse = try? {
+           let decoder = JSONDecoder()
+           decoder.keyDecodingStrategy = .convertFromSnakeCase
+           decoder.dateDecodingStrategy = .iso8601
+           return try decoder.decode(MealsResponse.self, from: cached)
+       }() {
         self.meals = decodedResponse.meals
         self.hasMoreMeals = decodedResponse.hasMore
     }
@@ -794,7 +805,8 @@ func logMeal(
                         mealType: nil,
                         mealLogId: loggedMeal.mealLogId,
                         meal: loggedMeal.meal,
-                        mealTime: loggedMeal.mealTime
+                        mealTime: loggedMeal.mealTime,
+                        scheduledAt: loggedMeal.scheduledAt
                     )
                     
                     // Insert at the top with animation
@@ -876,5 +888,109 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
     return uniqueLogs
 }
 
+func updateMeal(
+    meal: Meal,
+    completion: ((Result<Meal, Error>) -> Void)? = nil
+) {
+    guard let email = userEmail else { 
+        completion?(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+        return 
+    }
+    
+    // Use provided totals or calculate from meal items
+    let calculatedCalories = meal.totalCalories ?? meal.mealItems.reduce(0) { sum, item in
+        return sum + item.calories
+    }
+    
+    let calculatedProtein = meal.totalProtein ?? meal.mealItems.reduce(0) { sum, item in
+        return sum + (item.protein)
+    }
+    
+    let calculatedCarbs = meal.totalCarbs ?? meal.mealItems.reduce(0) { sum, item in
+        return sum + (item.carbs)
+    }
+    
+    let calculatedFat = meal.totalFat ?? meal.mealItems.reduce(0) { sum, item in
+        return sum + (item.fat)
+    }
+    
+    networkManager.updateMeal(
+        userEmail: email,
+        mealId: meal.id,
+        title: meal.title,
+        description: meal.description ?? "",
+        directions: meal.directions,
+        privacy: meal.privacy,
+        servings: meal.servings,
+        image: meal.image,
+        totalCalories: calculatedCalories,
+        totalProtein: calculatedProtein,
+        totalCarbs: calculatedCarbs,
+        totalFat: calculatedFat,
+        scheduledAt: meal.scheduledAt
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let updatedMeal):
+                print("✅ Meal updated successfully: \(updatedMeal.title)")
+                
+                // Update the meals array if this meal exists in it
+                if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
+                    self?.meals[index] = updatedMeal
+                    self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                }
+                
+                // Update combined logs if this meal exists there
+                if let index = self?.combinedLogs.firstIndex(where: { 
+                    $0.type == .meal && $0.meal?.mealId == meal.id 
+                }), var log = self?.combinedLogs[index] {
+                    // Create a new meal summary from the updated meal
+                    // Note: This is a bit hacky since we can't directly modify the meal property
+                    // A better approach would be to make CombinedLog struct mutable
+                    if let newLogWithUpdatedMeal = try? self?.recreateLogWithUpdatedMeal(
+                        originalLog: log, 
+                        updatedMeal: MealSummary(
+                            mealId: updatedMeal.id,
+                            title: updatedMeal.title,
+                            description: updatedMeal.description,
+                            image: updatedMeal.image,
+                            calories: updatedMeal.calories,
+                            servings: updatedMeal.servings,
+                            protein: updatedMeal.totalProtein,
+                            carbs: updatedMeal.totalCarbs,
+                            fat: updatedMeal.totalFat,
+                            scheduledAt: updatedMeal.scheduledAt
+                        )
+                    ) {
+                        self?.combinedLogs[index] = newLogWithUpdatedMeal
+                    }
+                }
+                
+                completion?(.success(updatedMeal))
+                
+            case .failure(let error):
+                print("❌ Error updating meal: \(error)")
+                completion?(.failure(error))
+            }
+        }
+    }
+}
+
+// Helper method to recreate a CombinedLog with an updated meal
+private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: MealSummary) throws -> CombinedLog {
+    return CombinedLog(
+        type: originalLog.type,
+        status: originalLog.status,
+        calories: updatedMeal.displayCalories,
+        message: "\(updatedMeal.title) - \(originalLog.mealTime ?? "")",
+        foodLogId: originalLog.foodLogId,
+        food: originalLog.food,
+        mealType: originalLog.mealType,
+        mealLogId: originalLog.mealLogId,
+        meal: updatedMeal,
+        mealTime: originalLog.mealTime,
+        scheduledAt: updatedMeal.scheduledAt
+    )
+}
 
 }

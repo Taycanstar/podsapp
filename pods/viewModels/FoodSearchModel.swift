@@ -214,13 +214,14 @@ struct Meal: Codable, Identifiable {
     let directions: String?
     let privacy: String
     let servings: Int
-    let createdAt: Date
-    let mealItems: [MealFoodItem]  // Changed from foods: [Food]
+    // let createdAt: Date? = Date()  // Default to current date
+    let mealItems: [MealFoodItem]
     let image: String?
-    let totalCalories: Double?  // Made optional
-    let totalProtein: Double?   // Made optional
-    let totalCarbs: Double?     // Made optional
-    let totalFat: Double?       // Made optional
+    let totalCalories: Double?
+    let totalProtein: Double?
+    let totalCarbs: Double?
+    let totalFat: Double?
+    let scheduledAt: Date?
     
     // Add computed properties to provide default values when the fields are nil
     var calories: Double {
@@ -277,7 +278,8 @@ struct LoggedMeal: Codable, Identifiable {
     let calories: Double
     let message: String
     let meal: MealSummary
-    let mealTime: String
+    let mealTime: String      // Keep mealTime for the meal type (breakfast, lunch, dinner)
+    let scheduledAt: Date?    // Add scheduledAt for the precise time
     
     var id: Int { mealLogId }
 }
@@ -292,6 +294,7 @@ struct MealSummary: Codable {
     let protein: Double?
     let carbs: Double?
     let fat: Double?
+    let scheduledAt: Date?   // Optional precise time for the meal
     
     // Computed property to ensure we display a reasonable calorie count
     // This is a safety measure in case the server returns 0 calories
@@ -310,18 +313,6 @@ struct MealSummary: Codable {
         // If all else fails, return the original value
         return calories
     }
-    
-    enum CodingKeys: String, CodingKey {
-        case mealId = "id"
-        case title
-        case description
-        case image
-        case calories
-        case servings
-        case protein
-        case carbs
-        case fat
-    }
 }
 
 // In FoodSearchModel.swift
@@ -339,12 +330,13 @@ struct CombinedLog: Codable, Identifiable {
     // Food-specific properties
     let foodLogId: Int?
     let food: LoggedFoodItem?
-    let mealType: String?     // Changed from 'meal' to 'mealType'
+    let mealType: String?     // Breakfast, Lunch, Dinner, etc.
     
     // Meal-specific properties
     let mealLogId: Int?
     let meal: MealSummary?
-    let mealTime: String?
+    let mealTime: String?     // Keep mealTime for meal category
+    let scheduledAt: Date?    // Add scheduledAt for the precise time
     
     // Add a computed property to handle zero calories
     var displayCalories: Double {
@@ -370,12 +362,6 @@ struct CombinedLog: Codable, Identifiable {
         case .food: return foodLogId ?? 0
         case .meal: return mealLogId ?? 0
         }
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case type, status, calories, message, foodLogId, food
-        case mealType = "meal_type"  // Map to backend field
-        case mealLogId, meal, mealTime = "meal_time"
     }
 }
 
