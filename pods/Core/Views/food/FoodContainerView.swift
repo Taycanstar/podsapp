@@ -13,6 +13,7 @@ enum FoodNavigationDestination: Hashable {
     case foodDetails(Food, Binding<String>) // Food and selected meal
     case createMeal 
     case addMealItems
+    case editMeal(Meal)  // Added case for editing a meal
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
         switch (lhs, rhs) {
@@ -20,8 +21,12 @@ enum FoodNavigationDestination: Hashable {
             return true
         case let (.foodDetails(food1, meal1), .foodDetails(food2, meal2)):
             return food1.id == food2.id && meal1.wrappedValue == meal2.wrappedValue
+        case (.createMeal, .createMeal):
+            return true
         case (.addMealItems, .addMealItems):
             return true
+        case let (.editMeal(meal1), .editMeal(meal2)):
+            return meal1.id == meal2.id
         default:
             return false
         }
@@ -39,6 +44,9 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(2)
         case .addMealItems:
             hasher.combine(3)
+        case .editMeal(let meal):
+            hasher.combine(4)
+            hasher.combine(meal.id)
         }
     }
 }
@@ -110,7 +118,8 @@ struct FoodContainerView: View {
                             mode: .addToMeal,
                             selectedFoods: $selectedFoods
                         )
-             
+                    case .editMeal(let meal):
+                        EditMealView(meal: meal, path: $path)
                     }
                 }
         }
