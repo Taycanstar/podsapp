@@ -5650,6 +5650,181 @@ func updateMeal(
     task.resume()
 }
 
+func updateMealWithFoods(
+    userEmail: String,
+    mealId: Int,
+    title: String,
+    description: String,
+    directions: String?,
+    privacy: String,
+    servings: Int,
+    foods: [Food],
+    image: String?,
+    totalCalories: Double,
+    totalProtein: Double,
+    totalCarbs: Double,
+    totalFat: Double,
+    scheduledAt: Date?,
+    completion: @escaping (Result<Meal, Error>) -> Void
+) {
+    guard let url = URL(string: "\(baseUrl)/update-meal/") else {
+        completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+        return
+    }
+    
+    // Convert each food to a complete representation with all nutrients (like in createMeal)
+    let foodData = foods.map { food -> [String: Any] in
+        let nutrients = food.foodNutrients.map { [
+            "nutrient_name": $0.nutrientName,
+            "value": $0.value,
+            "unit_name": $0.unitName
+        ] }
+        
+        // Calculate macros for this particular food
+        let servings = food.numberOfServings ?? 1
+        let calories = (food.calories ?? 0) * servings
+        
+        // Extract macros
+        var protein: Double = 0
+        var carbs: Double = 0
+        var fat: Double = 0
+        
+        for nutrient in food.foodNutrients {
+            let value = nutrient.value * servings
+            if nutrient.nutrientName == "Protein" {
+                protein = value
+            } else if nutrient.nutrientName.lowercased().contains("carbohydrate") {
+                carbs = value
+            } else if nutrient.nutrientName.lowercased().contains("fat") || 
+                      nutrient.nutrientName.lowercased().contains("lipid") {
+                fat = value
+            }
+        }
+        
+        return [
+            "external_id": food.id,
+            "name": food.displayName,
+            "brand": food.brandText ?? "",
+            "serving_size": food.servingSize ?? 0,
+            "serving_unit": food.servingSizeUnit ?? "",
+            "serving_text": food.servingSizeText ?? "",
+            "number_of_servings": servings,
+            "nutrients": nutrients,
+            "calories": calories,
+            "protein": protein,
+            "carbs": carbs,
+            "fat": fat
+        ]
+    }
+    
+    // Convert the scheduledAt to ISO string if present
+    let dateFormatter = ISO8601DateFormatter()
+    let scheduledAtString = scheduledAt != nil ? dateFormatter.string(from: scheduledAt!) : nil
+    
+    // Create base parameters
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "meal_id": mealId,
+        "title": title,
+        "description": description,
+        "privacy": privacy,
+        "servings": servings,
+        "total_calories": totalCalories,
+        "total_protein": totalProtein,
+        "total_carbs": totalCarbs,
+        "total_fat": totalFat,
+        "food_items": foodData  // Send complete food data
+    ]
+    
+    // Add optional parameters
+    if let directions = directions {
+        parameters["directions"] = directions
+    }
+    
+    if let image = image {
+        parameters["image"] = image
+    }
+    
+    if let scheduledAtString = scheduledAtString {
+        parameters["scheduled_at"] = scheduledAtString
+    }
+    
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - updateMealWithFoods:")
+    print("- userEmail: \(userEmail)")
+    print("- mealId: \(mealId)")
+    print("- title: \(title)")
+    print("- description: \(description)")
+    print("- directions: \(directions ?? "none")")
+    print("- privacy: \(privacy)")
+    print("- servings: \(servings)")
+    print("- image: \(image ?? "none")")
+    print("- totalCalories: \(totalCalories)")
+    print("- totalProtein: \(totalProtein)")
+    print("- totalCarbs: \(totalCarbs)")
+    print("- totalFat: \(totalFat)")
+    print("- scheduledAt: \(scheduledAtString ?? "none")")
+    print("- food_items: \(foodData.count) items")
+    
+    // Attempt to print formatted JSON for better debugging
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: parameters, options: [.prettyPrinted])
+        if let jsonString = String(data: jsonData, encoding: .utf8) {
+            print("📤 UPDATE MEAL WITH FOODS REQUEST (sample):")
+            // Just print parts to avoid overwhelming the console
+            print(String(jsonString.prefix(500)) + "... (truncated)")
+        }
+    } catch {
+        print("JSON Debug Serialization Error: \(error)")
+    }
+    
+    // Create the actual request body
+    let jsonData = try! JSONSerialization.data(withJSONObject: parameters)
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.httpBody = jsonData
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+            return
+        }
+        
+        do {
+            // Print the raw response for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📥 Received response: \(jsonString.prefix(200))... (truncated)")
+            }
+            
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            
+            let meal = try decoder.decode(Meal.self, from: data)
+            completion(.success(meal))
+        } catch {
+            print("Decoding error: \(error)")
+            // Try to extract error message from response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMsg = json["error"] as? String {
+                completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])))
+            } else {
+                completion(.failure(error))
+            }
+        }
+    }.resume()
+}
 
 }
 

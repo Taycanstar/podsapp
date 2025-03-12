@@ -14,6 +14,7 @@ struct EditMealView: View {
     // MARK: - Properties
     let meal: Meal
     @Binding var path: NavigationPath
+    @Binding var selectedFoods: [Food]
     
     // MARK: - State
     @State private var mealName: String
@@ -42,9 +43,6 @@ struct EditMealView: View {
     @FocusState private var focusedField: Field?
     
     @EnvironmentObject var foodManager: FoodManager
-    
-    // Track selected foods (meal items)
-    @State private var selectedFoods: [Food] = []
     
     // Add these states to track saving
     @State private var isSaving = false
@@ -77,9 +75,10 @@ struct EditMealView: View {
     }
     
     // MARK: - Initializer
-    init(meal: Meal, path: Binding<NavigationPath>) {
+    init(meal: Meal, path: Binding<NavigationPath>, selectedFoods: Binding<[Food]>) {
         self.meal = meal
         self._path = path
+        self._selectedFoods = selectedFoods
         
         // Initialize state variables with meal data
         self._mealName = State(initialValue: meal.title)
@@ -88,35 +87,42 @@ struct EditMealView: View {
         self._servings = State(initialValue: meal.servings)
         self._scheduledDate = State(initialValue: meal.scheduledAt)
         
-        // Convert meal items to foods for editing
-        var initialFoods: [Food] = []
-        for item in meal.mealItems {
-            let food = Food(
-                fdcId: Int(item.externalId) ?? item.foodId,
-                description: item.name,
-                brandOwner: nil,
-                brandName: nil,
-                servingSize: 1.0,
-                numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
-                servingSizeUnit: item.servingText,
-                householdServingFullText: item.servingText,
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                ],
-                foodMeasures: []
-            )
-            initialFoods.append(food)
-        }
-        self._selectedFoods = State(initialValue: initialFoods)
-        
         // Set image URL if available
         if let imageStr = meal.image, !imageStr.isEmpty {
             self._imageURL = State(initialValue: URL(string: imageStr))
         } else {
             self._imageURL = State(initialValue: nil)
+        }
+        
+        // Initialize selectedFoods with meal items if it's empty
+        if selectedFoods.wrappedValue.isEmpty {
+            // Convert meal items to foods for editing
+            var initialFoods: [Food] = []
+            for item in meal.mealItems {
+                let food = Food(
+                    fdcId: Int(item.externalId) ?? item.foodId,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
+                    servingSizeUnit: item.servingText,
+                    householdServingFullText: item.servingText,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                initialFoods.append(food)
+            }
+            
+            // Set the foods to the binding
+            DispatchQueue.main.async {
+                selectedFoods.wrappedValue = initialFoods
+            }
         }
     }
     
@@ -360,7 +366,7 @@ struct EditMealView: View {
             directions: instructions,
             privacy: shareWith.lowercased(),
             servings: servings,
-            mealItems: meal.mealItems, // Keep original meal items
+            mealItems: meal.mealItems, // Original meal items - these will be replaced by selectedFoods
             image: imageURL?.absoluteString,
             totalCalories: totals.calories,
             totalProtein: totals.protein,
@@ -369,8 +375,8 @@ struct EditMealView: View {
             scheduledAt: scheduledDate
         )
         
-        // Update the meal through the food manager
-        foodManager.updateMeal(meal: updatedMeal) { result in
+        // Use the new updateMeal method that accepts foods parameter
+        foodManager.updateMeal(meal: updatedMeal, foods: selectedFoods) { result in
             DispatchQueue.main.async {
                 self.isSaving = false
                 switch result {
@@ -757,5 +763,5 @@ struct EditMealView: View {
 }
 
 #Preview {
-    EditMealView(meal: Meal(id: 1, title: "Sample Meal", description: "A sample meal description", directions: "Sample directions", privacy: "Everyone", servings: 2, mealItems: [], image: nil, totalCalories: 500, totalProtein: 20, totalCarbs: 50, totalFat: 10, scheduledAt: Date()), path: .constant(NavigationPath()))
+    EditMealView(meal: Meal(id: 1, title: "Sample Meal", description: "A sample meal description", directions: "Sample directions", privacy: "Everyone", servings: 2, mealItems: [], image: nil, totalCalories: 500, totalProtein: 20, totalCarbs: 50, totalFat: 10, scheduledAt: Date()), path: .constant(NavigationPath()), selectedFoods: .constant([Food(fdcId: 1, description: "Sample Food", brandOwner: nil, brandName: nil, servingSize: 1.0, numberOfServings: 1.0, servingSizeUnit: "g", householdServingFullText: "1g", foodNutrients: [], foodMeasures: []), Food(fdcId: 2, description: "Another Food", brandOwner: nil, brandName: nil, servingSize: 1.0, numberOfServings: 1.0, servingSizeUnit: "g", householdServingFullText: "1g", foodNutrients: [], foodMeasures: [])]))
 }

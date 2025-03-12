@@ -119,7 +119,7 @@ struct FoodContainerView: View {
                             selectedFoods: $selectedFoods
                         )
                     case .editMeal(let meal):
-                        EditMealView(meal: meal, path: $path)
+                        EditMealView(meal: meal, path: $path, selectedFoods: $selectedFoods)
                     }
                 }
         }

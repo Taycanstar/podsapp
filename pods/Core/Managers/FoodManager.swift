@@ -890,6 +890,7 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
 
 func updateMeal(
     meal: Meal,
+    foods: [Food] = [],
     completion: ((Result<Meal, Error>) -> Void)? = nil
 ) {
     guard let email = userEmail else { 
@@ -897,80 +898,170 @@ func updateMeal(
         return 
     }
     
-    // Use provided totals or calculate from meal items
-    let calculatedCalories = meal.totalCalories ?? meal.mealItems.reduce(0) { sum, item in
-        return sum + item.calories
-    }
+    // If foods array is not empty, use it to calculate macros
+    // Otherwise use the meal's existing values
+    let calculatedCalories: Double
+    let calculatedProtein: Double
+    let calculatedCarbs: Double
+    let calculatedFat: Double
     
-    let calculatedProtein = meal.totalProtein ?? meal.mealItems.reduce(0) { sum, item in
-        return sum + (item.protein)
-    }
-    
-    let calculatedCarbs = meal.totalCarbs ?? meal.mealItems.reduce(0) { sum, item in
-        return sum + (item.carbs)
-    }
-    
-    let calculatedFat = meal.totalFat ?? meal.mealItems.reduce(0) { sum, item in
-        return sum + (item.fat)
-    }
-    
-    networkManager.updateMeal(
-        userEmail: email,
-        mealId: meal.id,
-        title: meal.title,
-        description: meal.description ?? "",
-        directions: meal.directions,
-        privacy: meal.privacy,
-        servings: meal.servings,
-        image: meal.image,
-        totalCalories: calculatedCalories,
-        totalProtein: calculatedProtein,
-        totalCarbs: calculatedCarbs,
-        totalFat: calculatedFat,
-        scheduledAt: meal.scheduledAt
-    ) { [weak self] result in
-        DispatchQueue.main.async {
-            switch result {
-            case .success(let updatedMeal):
-                print("✅ Meal updated successfully: \(updatedMeal.title)")
-                
-                // Update the meals array if this meal exists in it
-                if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
-                    self?.meals[index] = updatedMeal
-                    self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
-                }
-                
-                // Update combined logs if this meal exists there
-                if let index = self?.combinedLogs.firstIndex(where: { 
-                    $0.type == .meal && $0.meal?.mealId == meal.id 
-                }), var log = self?.combinedLogs[index] {
-                    // Create a new meal summary from the updated meal
-                    // Note: This is a bit hacky since we can't directly modify the meal property
-                    // A better approach would be to make CombinedLog struct mutable
-                    if let newLogWithUpdatedMeal = try? self?.recreateLogWithUpdatedMeal(
-                        originalLog: log, 
-                        updatedMeal: MealSummary(
-                            mealId: updatedMeal.id,
-                            title: updatedMeal.title,
-                            description: updatedMeal.description,
-                            image: updatedMeal.image,
-                            calories: updatedMeal.calories,
-                            servings: updatedMeal.servings,
-                            protein: updatedMeal.totalProtein,
-                            carbs: updatedMeal.totalCarbs,
-                            fat: updatedMeal.totalFat,
-                            scheduledAt: updatedMeal.scheduledAt
-                        )
-                    ) {
-                        self?.combinedLogs[index] = newLogWithUpdatedMeal
+    if !foods.isEmpty {
+        // Calculate totals from foods (matching createMeal logic)
+        calculatedCalories = meal.totalCalories ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.calories ?? 0) * servings)
+        }
+        
+        calculatedProtein = meal.totalProtein ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.protein ?? 0) * servings)
+        }
+        
+        calculatedCarbs = meal.totalCarbs ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.carbs ?? 0) * servings)
+        }
+        
+        calculatedFat = meal.totalFat ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.fat ?? 0) * servings)
+        }
+        
+        // If we have foods, update the network manager with both meal details and food items
+        networkManager.updateMealWithFoods(
+            userEmail: email,
+            mealId: meal.id,
+            title: meal.title,
+            description: meal.description ?? "",
+            directions: meal.directions,
+            privacy: meal.privacy,
+            servings: meal.servings,
+            foods: foods,
+            image: meal.image,
+            totalCalories: calculatedCalories,
+            totalProtein: calculatedProtein,
+            totalCarbs: calculatedCarbs,
+            totalFat: calculatedFat,
+            scheduledAt: meal.scheduledAt
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedMeal):
+                    print("✅ Meal updated successfully: \(updatedMeal.title)")
+                    
+                    // Update the meals array if this meal exists in it
+                    if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
+                        self?.meals[index] = updatedMeal
+                        self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
                     }
+                    
+                    // Update combined logs if this meal exists there
+                    if let index = self?.combinedLogs.firstIndex(where: { 
+                        $0.type == .meal && $0.meal?.mealId == meal.id 
+                    }), var log = self?.combinedLogs[index] {
+                        // Create a new meal summary from the updated meal
+                        if let newLogWithUpdatedMeal = try? self?.recreateLogWithUpdatedMeal(
+                            originalLog: log, 
+                            updatedMeal: MealSummary(
+                                mealId: updatedMeal.id,
+                                title: updatedMeal.title,
+                                description: updatedMeal.description,
+                                image: updatedMeal.image,
+                                calories: updatedMeal.calories,
+                                servings: updatedMeal.servings,
+                                protein: updatedMeal.totalProtein,
+                                carbs: updatedMeal.totalCarbs,
+                                fat: updatedMeal.totalFat,
+                                scheduledAt: updatedMeal.scheduledAt
+                            )
+                        ) {
+                            self?.combinedLogs[index] = newLogWithUpdatedMeal
+                        }
+                    }
+                    
+                    completion?(.success(updatedMeal))
+                    
+                case .failure(let error):
+                    print("❌ Error updating meal: \(error)")
+                    completion?(.failure(error))
                 }
-                
-                completion?(.success(updatedMeal))
-                
-            case .failure(let error):
-                print("❌ Error updating meal: \(error)")
-                completion?(.failure(error))
+            }
+        }
+    } else {
+        // Use the original updateMeal if no food items are provided
+        // Use provided totals or calculate from meal items
+        calculatedCalories = meal.totalCalories ?? meal.mealItems.reduce(0) { sum, item in
+            return sum + item.calories
+        }
+        
+        calculatedProtein = meal.totalProtein ?? meal.mealItems.reduce(0) { sum, item in
+            return sum + (item.protein)
+        }
+        
+        calculatedCarbs = meal.totalCarbs ?? meal.mealItems.reduce(0) { sum, item in
+            return sum + (item.carbs)
+        }
+        
+        calculatedFat = meal.totalFat ?? meal.mealItems.reduce(0) { sum, item in
+            return sum + (item.fat)
+        }
+        
+        networkManager.updateMeal(
+            userEmail: email,
+            mealId: meal.id,
+            title: meal.title,
+            description: meal.description ?? "",
+            directions: meal.directions,
+            privacy: meal.privacy,
+            servings: meal.servings,
+            image: meal.image,
+            totalCalories: calculatedCalories,
+            totalProtein: calculatedProtein,
+            totalCarbs: calculatedCarbs,
+            totalFat: calculatedFat,
+            scheduledAt: meal.scheduledAt
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedMeal):
+                    print("✅ Meal updated successfully: \(updatedMeal.title)")
+                    
+                    // Update the meals array if this meal exists in it
+                    if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
+                        self?.meals[index] = updatedMeal
+                        self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                    }
+                    
+                    // Update combined logs if this meal exists there
+                    if let index = self?.combinedLogs.firstIndex(where: { 
+                        $0.type == .meal && $0.meal?.mealId == meal.id 
+                    }), var log = self?.combinedLogs[index] {
+                        // Create a new meal summary from the updated meal
+                        if let newLogWithUpdatedMeal = try? self?.recreateLogWithUpdatedMeal(
+                            originalLog: log, 
+                            updatedMeal: MealSummary(
+                                mealId: updatedMeal.id,
+                                title: updatedMeal.title,
+                                description: updatedMeal.description,
+                                image: updatedMeal.image,
+                                calories: updatedMeal.calories,
+                                servings: updatedMeal.servings,
+                                protein: updatedMeal.totalProtein,
+                                carbs: updatedMeal.totalCarbs,
+                                fat: updatedMeal.totalFat,
+                                scheduledAt: updatedMeal.scheduledAt
+                            )
+                        ) {
+                            self?.combinedLogs[index] = newLogWithUpdatedMeal
+                        }
+                    }
+                    
+                    completion?(.success(updatedMeal))
+                    
+                case .failure(let error):
+                    print("❌ Error updating meal: \(error)")
+                    completion?(.failure(error))
+                }
             }
         }
     }
