@@ -28,6 +28,8 @@ struct EditActivityView: View {
 
     init(log: PodItemActivityLog, columns: [PodColumn], onSave: @escaping (PodItemActivityLog) -> Void) {
         print("EditActivityView init - received log values:", log.columnValues)
+        print("EditActivityView init - columns:", columns.map { "\($0.id):\($0.name)" })
+        
         self.log = log
         self.columns = columns
         self.onSave = onSave
@@ -38,11 +40,44 @@ struct EditActivityView: View {
         // It's already ID-based, so just copy directly
         initialColumnValues = log.columnValues
         
-        // Set up grouped counts
+        // First pass: try exact matches for grouped columns
         for column in columns {
-            if column.groupingType == "grouped",
-               case .array(let values) = log.columnValues[String(column.id)] ?? .null {
-                initialGroupedRowsCount[column.groupingType ?? ""] = values.count
+            if column.groupingType == "grouped" {
+                let columnIdStr = String(column.id)
+                if case .array(let values) = log.columnValues[columnIdStr] ?? .null {
+                    initialGroupedRowsCount[column.groupingType ?? ""] = values.count
+                }
+            }
+        }
+        
+        // If we didn't find any grouped counts, look for any array values
+        if initialGroupedRowsCount.isEmpty {
+            // Find any keys with array values
+            let arrayKeys = log.columnValues.keys.filter { key in
+                if case .array = log.columnValues[key] {
+                    return true
+                }
+                return false
+            }
+            
+            if !arrayKeys.isEmpty {
+                // Get the max count from any array values
+                var maxArrayCount = 0
+                for key in arrayKeys {
+                    if case .array(let values) = log.columnValues[key] {
+                        maxArrayCount = max(maxArrayCount, values.count)
+                    }
+                }
+                
+                // Set the same count for all grouped columns
+                for column in columns where column.groupingType == "grouped" {
+                    initialGroupedRowsCount[column.groupingType ?? ""] = maxArrayCount
+                }
+            } else {
+                // Default to 1 row if we couldn't find any array values
+                for column in columns where column.groupingType == "grouped" {
+                    initialGroupedRowsCount[column.groupingType ?? ""] = 1
+                }
             }
         }
         
@@ -50,6 +85,9 @@ struct EditActivityView: View {
         _activityNote = State(initialValue: log.notes)
         _showNotesInput = State(initialValue: !log.notes.isEmpty)
         _groupedRowsCount = State(initialValue: initialGroupedRowsCount)
+        
+        print("EditActivityView init - initialized columnValues:", initialColumnValues.keys)
+        print("EditActivityView init - initialized groupedRowsCount:", initialGroupedRowsCount)
     }
     
     var body: some View {
@@ -198,54 +236,74 @@ struct EditActivityView: View {
         let currentRowIndex = groupedRowsCount[groupType] ?? 1
         
         for column in columnGroup {
-//            guard !skippedColumns.contains(column.id) else { continue }
+            let key = String(column.id)
             
-            if case .array(let existingValues) = columnValues[String(column.id)] {
+            // Try to find if this column already has values
+            if case .array(let existingValues) = columnValues[key] {
                 var values = existingValues
                 
                 // Determine the new value based on column type
                 let newValue: ColumnValue
-                if column.type == "number" {
-                    if case .number(1.0) = values.first {
-                        newValue = .number(Double(values.count + 1))
-                    } else {
-                        newValue = values.last ?? .null
-                    }
+                if column.type == "number",
+                   case .number(1.0) = values.first {
+                    newValue = .number(Double(values.count + 1))
                 } else {
                     newValue = values.last ?? .null
                 }
                 
                 values.append(newValue)
-                columnValues[String(column.id)] = .array(values)
+                columnValues[key] = .array(values)
             } else {
-                columnValues[String(column.id)] = .array([.null])
+                // If no existing value found, create a new array with a null value
+                columnValues[key] = .array([.null])
             }
         }
         
         groupedRowsCount[groupType] = currentRowIndex + 1
+        
+        // Debug what happened
+        print("Added row to columns: \(columnGroup.map { $0.id })")
+        print("Updated columnValues keys: \(columnValues.keys)")
     }
     
     private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
         for column in columnGroup {
-            if case .array(var values) = columnValues[String(column.id)] {
+            let key = String(column.id)
+            
+            // Only modify the column if it has an array value
+            if case .array(var values) = columnValues[key] {
                 if index < values.count {
                     values.remove(at: index)
-                    columnValues[String(column.id)] = .array(values)
+                    
+                    // If the array becomes empty, set it to at least have one null value
+                    if values.isEmpty {
+                        values = [.null]
+                    }
+                    
+                    columnValues[key] = .array(values)
                 }
             }
         }
         
         let groupType = columnGroup.first?.groupingType ?? ""
-        if let currentCount = groupedRowsCount[groupType], currentCount > 0 {
+        if let currentCount = groupedRowsCount[groupType], currentCount > 1 {
             groupedRowsCount[groupType] = currentCount - 1
+        } else {
+            // Ensure we always have at least one row
+            groupedRowsCount[groupType] = 1
         }
+        
+        // Debug what happened
+        print("Deleted row \(index) from columns: \(columnGroup.map { $0.id })")
+        print("Updated columnValues keys: \(columnValues.keys)")
     }
 
     private func updateActivity() {
         isSubmitting = true
         print("About to send to API - columnValues:", columnValues)
+        print("About to send to API - available keys:", columnValues.keys)
+        
         // Convert back to name-based values for the API
-   
         NetworkManager().updateActivityLog(
             logId: log.id,
             columnValues: columnValues,
@@ -256,10 +314,12 @@ struct EditActivityView: View {
                 switch result {
                 case .success(let updatedLog):
                     print("Received from API - updatedLog.columnValues:", updatedLog.columnValues)
-                                  onSave(updatedLog)
-                                  print("After onSave called - was this the last thing that happened?")
+                    print("Received from API - keys:", updatedLog.columnValues.keys)
+                    onSave(updatedLog)
+                    print("After onSave called - was this the last thing that happened?")
                     dismiss()
                 case .failure(let error):
+                    print("API error:", error.localizedDescription)
                     errorMessage = error.localizedDescription
                 }
             }

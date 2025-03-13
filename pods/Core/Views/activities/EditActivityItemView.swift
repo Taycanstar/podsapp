@@ -29,21 +29,57 @@ struct EditActivityItemView: View {
         self.columns = columns
         self.parentActivity = parentActivity
         
-        // Initialize state
+        // Initialize state with debugging
+        print("EditActivityItemView init - column values in item: \(item.columnValues.keys)")
+        print("EditActivityItemView init - columns: \(columns.map { "\($0.id):\($0.name)" })")
+        
         _columnValues = State(initialValue: item.columnValues)
         _notes = State(initialValue: parentActivity.notes ?? "")
         _showNotesInput = State(initialValue: (parentActivity.notes ?? "").isEmpty == false)
         
         // Initialize grouped rows counts
         var initialRowCounts: [String: Int] = [:]
+        
+        // First pass: try exact matches
         for column in columns where column.groupingType == "grouped" {
-            if let values = item.columnValues[String(column.id)],
+            let columnIdStr = String(column.id)
+            if let values = item.columnValues[columnIdStr],
                case .array(let array) = values {
                 initialRowCounts[column.groupingType ?? ""] = array.count
-            } else {
-                initialRowCounts[column.groupingType ?? ""] = 0
             }
         }
+        
+        // If we didn't find any matches, try to find array values in columnValues
+        if initialRowCounts.isEmpty {
+            // Find any keys with array values
+            let arrayKeys = item.columnValues.keys.filter { key in
+                if case .array = item.columnValues[key] {
+                    return true
+                }
+                return false
+            }
+            
+            if !arrayKeys.isEmpty {
+                // Get the max count from any array values
+                var maxArrayCount = 0
+                for key in arrayKeys {
+                    if case .array(let values) = item.columnValues[key] {
+                        maxArrayCount = max(maxArrayCount, values.count)
+                    }
+                }
+                
+                // Set the same count for all grouped columns
+                for column in columns where column.groupingType == "grouped" {
+                    initialRowCounts[column.groupingType ?? ""] = maxArrayCount
+                }
+            } else {
+                // Default to 1 row if we couldn't find any array values
+                for column in columns where column.groupingType == "grouped" {
+                    initialRowCounts[column.groupingType ?? ""] = 1
+                }
+            }
+        }
+        
         _groupedRowsCounts = State(initialValue: initialRowCounts)
     }
     
@@ -71,51 +107,10 @@ struct EditActivityItemView: View {
                             
                             if columnGroup.first?.groupingType == "singular" {
                                 ForEach(columnGroup, id: \.id) { column in
-                                    SingularColumnView(
-                                        column: column,
-                                        columnValues: $columnValues,
-                                        focusedField: _focusedField,
-                                        expandedColumn: $expandedColumn,
-                                        onValueChanged: { }
-                                    )
+                                    singularColumnView(for: column)
                                 }
                             } else {
-//                                GroupedColumnView(
-//                                    columnGroup: columnGroup,
-//                                    groupedRowsCount: groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1,
-//                                    onAddRow: {
-//                                        addRow(for: columnGroup)
-//                                    },
-//                                    onDeleteRow: { idx in
-//                                        deleteRow(at: idx, in: columnGroup)
-//                                    },
-//                                    columnValues: $columnValues,
-//                                    focusedField: _focusedField,
-//                                    expandedColumn: $expandedColumn,
-//                                    onValueChanged: { }
-//                                )
-                                // In the ForEach where GroupedColumnView is called, change to:
-                                GroupedColumnView(
-                                    columnGroup: columnGroup,
-                                    groupedRowsCount: Binding(
-                                        get: { groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1 },
-                                        set: { newValue in
-                                            groupedRowsCounts[columnGroup.first?.groupingType ?? ""] = newValue
-                                        }
-                                    ),
-                                    onAddRow: {
-                                        addRow(for: columnGroup)
-                                    },
-                                    onDeleteRow: { idx in
-                                        deleteRow(at: idx, in: columnGroup)
-                                    },
-                                    columnValues: $columnValues,
-                                    focusedField: _focusedField,
-                                    expandedColumn: $expandedColumn,
-                                    onValueChanged: { }
-                                )
-                              
-                                .padding(.horizontal)
+                                groupedColumnView(for: columnGroup)
                             }
                         }
                         
@@ -323,6 +318,8 @@ struct EditActivityItemView: View {
         
         for column in columnGroup {
             let key = String(column.id)
+            
+            // Try to find if this column already has values
             if case .array(let existingValues) = columnValues[key] {
                 var values = existingValues
                 
@@ -338,28 +335,48 @@ struct EditActivityItemView: View {
                 values.append(newValue)
                 columnValues[key] = .array(values)
             } else {
+                // If no existing value found, create a new array with a null value
                 columnValues[key] = .array([.null])
             }
         }
         
         groupedRowsCounts[groupType] = currentRowIndex + 1
+        
+        // Debug what happened
+        print("Added row to columns: \(columnGroup.map { $0.id })")
+        print("Updated columnValues keys: \(columnValues.keys)")
     }
     
     private func deleteRow(at index: Int, in columnGroup: [PodColumn]) {
         for column in columnGroup {
             let key = String(column.id)
+            
+            // Only modify the column if it has an array value
             if case .array(var values) = columnValues[key] {
                 if index < values.count {
                     values.remove(at: index)
+                    
+                    // If the array becomes empty, set it to at least have one null value
+                    if values.isEmpty {
+                        values = [.null]
+                    }
+                    
                     columnValues[key] = .array(values)
                 }
             }
         }
         
         let groupType = columnGroup.first?.groupingType ?? ""
-        if let currentCount = groupedRowsCounts[groupType], currentCount > 0 {
+        if let currentCount = groupedRowsCounts[groupType], currentCount > 1 {
             groupedRowsCounts[groupType] = currentCount - 1
+        } else {
+            // Ensure we always have at least one row
+            groupedRowsCounts[groupType] = 1
         }
+        
+        // Debug what happened
+        print("Deleted row \(index) from columns: \(columnGroup.map { $0.id })")
+        print("Updated columnValues keys: \(columnValues.keys)")
     }
     
     private func clearFocusedField() {
@@ -384,5 +401,46 @@ struct EditActivityItemView: View {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
                                       to: nil, from: nil, for: nil)
+    }
+    
+    // MARK: - Helper for flexible column value access
+    private func findColumnValue(for columnId: Int) -> ColumnValue? {
+        let columnIdStr = String(columnId)
+        return columnValues[columnIdStr]
+    }
+    
+    // MARK: - Column group components
+    private func singularColumnView(for column: PodColumn) -> some View {
+        SingularColumnView(
+            column: column,
+            columnValues: $columnValues,
+            focusedField: _focusedField,
+            expandedColumn: $expandedColumn,
+            onValueChanged: { }
+        )
+        .padding(.horizontal)
+    }
+    
+    private func groupedColumnView(for columnGroup: [PodColumn]) -> some View {
+        GroupedColumnView(
+            columnGroup: columnGroup,
+            groupedRowsCount: Binding(
+                get: { groupedRowsCounts[columnGroup.first?.groupingType ?? ""] ?? 1 },
+                set: { newValue in
+                    groupedRowsCounts[columnGroup.first?.groupingType ?? ""] = newValue
+                }
+            ),
+            onAddRow: {
+                addRow(for: columnGroup)
+            },
+            onDeleteRow: { idx in
+                deleteRow(at: idx, in: columnGroup)
+            },
+            columnValues: $columnValues,
+            focusedField: _focusedField,
+            expandedColumn: $expandedColumn,
+            onValueChanged: { }
+        )
+        .padding(.horizontal)
     }
 }
