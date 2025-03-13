@@ -890,19 +890,18 @@ struct MealRow: View {
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
+                .frame(width: 44, height: 44)  // Give the button a larger tap area
                 .zIndex(1)  // Keep button on top
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 0)
-            
-            // Transparent overlay for tap gesture
-            Rectangle()
-                .fill(Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    // Navigate to EditMealView when row is tapped
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Only navigate to EditMealView when in logFood mode
+                if mode == .logFood {
                     path.append(FoodNavigationDestination.editMeal(meal))
                 }
+            }
         }
       
     }
