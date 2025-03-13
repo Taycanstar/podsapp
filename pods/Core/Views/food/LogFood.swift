@@ -100,126 +100,126 @@ struct LogFood: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .padding(.top, 8)
-                                 .listRowSeparator(.hidden) 
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                             
-        // ForEach(foodManager.loggedFoods, id: \.id) { loggedFood in
-        ForEach(foodManager.combinedLogs, id: \.id) { log in
-                        // HistoryRow(loggedFood: loggedFood, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
-                           HistoryRow(
+                            ForEach(foodManager.combinedLogs, id: \.id) { log in
+                                HistoryRow(
                                     log: log,
                                     selectedMeal: $selectedMeal,
                                     mode: mode,
                                     selectedFoods: $selectedFoods,
                                     path: $path
                                 )
-                            .onAppear {
-                          
-                                // foodManager.loadMoreIfNeeded(food: loggedFood)
-                                foodManager.loadMoreIfNeeded(log: log)
-                            }
-                    }
+                                .onAppear {
+                                    foodManager.loadMoreIfNeeded(log: log)
                                 }
+                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                            }
+                        }
+                        .listSectionSeparator(.hidden)
                                 
-                            } else {
-                                ForEach(searchResults) { food in
-                                    FoodRow(food: food, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
-                                }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .safeAreaInset(edge: .bottom) {
-                            Color.clear.frame(height: 60)
-                        }
                     } else {
-                        // Content for other tabs
-                        switch selectedFoodTab {
-                        
-
-        case .meals:
-    List {
-        // ROW 1: "Create Meal" card (Button)
-        VStack(spacing: 4) {
-            Button {
-                print("Create meal tapped")
-                path.append(FoodNavigationDestination.createMeal)
-            } label: {
-                VStack(alignment: .leading, spacing: 16) {
-                    Image("burger")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 85, height: 85)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Create a Meal")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-                        
-                        Text("Create and save your favorite meals to log quickly again and again.")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.leading)
+                        ForEach(searchResults) { food in
+                            FoodRow(food: food, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color("ioscard"))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal)
-            .padding(.top)
-        }
-        // Remove list padding for this row
-        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-        
-        // ROW 2: Meal History Section, exactly your styling
-        VStack(spacing: 4) {
-            if !foodManager.meals.isEmpty {
-                Text("History")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                
-                ForEach(foodManager.meals) { meal in
-                    MealRow(meal: meal, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
-                        // .onAppear {
-                        //     foodManager.loadMoreMealsIfNeeded(meal: meal)
-                        // }
-                        // Remove extra list row insets
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    
-                    // Divider aligned with text
-                    Divider()
-                        .padding(.leading, 66) // 50 (image) + 16 (HStack spacing)
-                        .padding(.vertical, 0)
+                .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 60)
                 }
-            } else if foodManager.isLoadingMeals {
-                ProgressView()
-                    .padding()
             } else {
-                Text("No meal history yet")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .padding()
+                // Content for other tabs
+                switch selectedFoodTab {
+                
+
+    case .meals:
+List {
+    // ROW 1: "Create Meal" card (Button)
+    VStack(spacing: 4) {
+        Button {
+            print("Create meal tapped")
+            path.append(FoodNavigationDestination.createMeal)
+        } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                Image("burger")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 85, height: 85)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create a Meal")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Create and save your favorite meals to log quickly again and again.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color("ioscard"))
+            .cornerRadius(12)
         }
-        // Also remove insets around this second VStack
-        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .padding(.horizontal)
+        .padding(.top)
     }
-    .listStyle(.plain)
-    .safeAreaInset(edge: .bottom) {
-        Color.clear.frame(height: 70)
-    }
-    .onAppear {
-        if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
-            foodManager.refreshMeals()
+    // Remove list padding for this row
+    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+    
+    // ROW 2: Meal History Section, exactly your styling
+    VStack(spacing: 4) {
+        if !foodManager.meals.isEmpty {
+            Text("History")
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+            
+            ForEach(foodManager.meals) { meal in
+                MealRow(meal: meal, selectedMeal: $selectedMeal, mode: mode, selectedFoods: $selectedFoods, path: $path)
+                    // .onAppear {
+                    //     foodManager.loadMoreMealsIfNeeded(meal: meal)
+                    // }
+                    // Remove extra list row insets
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                
+                // Divider aligned with text
+                Divider()
+                    .padding(.leading, 66) // 50 (image) + 16 (HStack spacing)
+                    .padding(.vertical, 0)
+            }
+        } else if foodManager.isLoadingMeals {
+            ProgressView()
+                .padding()
+        } else {
+            Text("No meal history yet")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .padding()
         }
     }
+    // Also remove insets around this second VStack
+    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+}
+.listStyle(.plain)
+.safeAreaInset(edge: .bottom) {
+    Color.clear.frame(height: 70)
+}
+.onAppear {
+    if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
+        foodManager.refreshMeals()
+    }
+}
                         case .recipes:
                             Text("Recipes content")
                         default:
@@ -364,39 +364,48 @@ struct FoodRow: View {
                     .foregroundColor(.secondary)
                 }
                 
-                Spacer()
+                Spacer() // Push the button to the right edge
                 
-                Button {
-                    HapticFeedback.generate()
-                    // logFood()
-                    handleFoodTap()
-                } label: {
-                    if mode == .addToMeal {
-                        // if selectedFoods.contains(where: { $0.id == food.id }) {
-                                if foodManager.recentlyAddedFoodIds.contains(food.fdcId) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
+                // Fixed-width container for the button
+                HStack {
+                    Spacer() // Center the button within the container
+                    
+                    Button {
+                        HapticFeedback.generate()
+                        // logFood()
+                        handleFoodTap()
+                    } label: {
+                        if mode == .addToMeal {
+                            // if selectedFoods.contains(where: { $0.id == food.id }) {
+                                    if foodManager.recentlyAddedFoodIds.contains(food.fdcId) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                            }
                         } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                        }
-                    } else {
-                        if foodManager.lastLoggedFoodId == food.fdcId {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
-                                .transition(.opacity)
-                        } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
+                            if foodManager.lastLoggedFoodId == food.fdcId {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.green)
+                                    .transition(.opacity)
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                            }
                         }
                     }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(width: 44, height: 44) // Fixed size for the button
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .frame(width: 44) // Fixed width for the button container
             }
+            .padding(.horizontal, 16)
             .contentShape(Rectangle())
         }
         .alert("Something went wrong", isPresented: $showErrorAlert) {
@@ -541,7 +550,6 @@ struct CombinedLogMealRow: View {
         
         // Print debugging info when this view is created
         let _ = {
-
             return 0
         }()
         
@@ -560,8 +568,69 @@ struct CombinedLogMealRow: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                Spacer()
+                
+                Spacer() // Push the button to the right edge
+                
+                // Fixed-width container for the button - consistent with other rows
+                HStack {
+                    Spacer() // Center the button within the container
+                    
+                    Button {
+                        HapticFeedback.generate()
+                        
+                        switch mode {
+                        case .logFood:
+                            // Original behavior - log the meal
+                            // Pass the displayCalories as the totalCalories
+                            foodManager.logMeal(meal: Meal(
+                                id: meal.mealId,
+                                title: meal.title,
+                                description: meal.description,
+                                directions: nil,
+                                privacy: "private",
+                                servings: meal.servings,
+                                mealItems: [],
+                                image: meal.image,
+                                totalCalories: log.displayCalories,
+                                totalProtein: meal.protein,
+                                totalCarbs: meal.carbs,
+                                totalFat: meal.fat,
+                                scheduledAt: nil
+                            ), mealTime: selectedMeal)
+                        
+                        case .addToMeal:
+                            // New behavior - add all food items from the meal to selectedFoods
+                            addMealItemsToSelection()
+                        }
+                    } label: {
+                        if mode == .addToMeal {
+                            // Similar to FoodRow's addToMeal mode
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                        } else {
+                            // Original behavior for logFood mode
+                            if foodManager.lastLoggedMealId == meal.mealId {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.green)
+                                    .transition(.opacity)
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(width: 44, height: 44)  // Fixed size for the button
+                    .contentShape(Rectangle())
+                    .zIndex(1) // Keep button on top
+                }
+                .frame(width: 44) // Fixed width for the button container
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 0)
             .contentShape(Rectangle())
             .onTapGesture {
                 // Find the full meal from FoodManager.meals
@@ -588,62 +657,7 @@ struct CombinedLogMealRow: View {
                     path.append(FoodNavigationDestination.editMeal(minimalMeal))
                 }
             }
-            
-            // Plus button with its own tap area
-            Button {
-                HapticFeedback.generate()
-                
-                switch mode {
-                case .logFood:
-                    // Original behavior - log the meal
-                    // Pass the displayCalories as the totalCalories
-                    foodManager.logMeal(meal: Meal(
-                        id: meal.mealId,
-                        title: meal.title,
-                        description: meal.description,
-                        directions: nil,
-                        privacy: "private",
-                        servings: meal.servings,
-                        mealItems: [],
-                        image: meal.image,
-                        totalCalories: log.displayCalories,
-                        totalProtein: meal.protein,
-                        totalCarbs: meal.carbs,
-                        totalFat: meal.fat,
-                        scheduledAt: nil
-                    ), mealTime: selectedMeal)
-                
-                case .addToMeal:
-                    // New behavior - add all food items from the meal to selectedFoods
-                    addMealItemsToSelection()
-                }
-            } label: {
-                if mode == .addToMeal {
-                    // Similar to FoodRow's addToMeal mode
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.accentColor)
-                } else {
-                    // Original behavior for logFood mode
-                    if foodManager.lastLoggedMealId == meal.mealId {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.green)
-                            .transition(.opacity)
-                    } else {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.accentColor)
-                    }
-                }
-            }
-            .buttonStyle(PlainButtonStyle())
-            .frame(width: 44, height: 44)  // Give the button a larger tap area
-            .contentShape(Rectangle())
-            .zIndex(1) // Keep button on top
         }
-        .padding(.horizontal, 0)
-        .padding(.vertical, 0)
     }
     
     // New method to add meal items to selection using already loaded meals
@@ -730,8 +744,6 @@ struct MealHistoryRow: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-        
-            
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
                     .font(.system(size: 16))
@@ -743,28 +755,39 @@ struct MealHistoryRow: View {
                         .foregroundColor(.secondary)
                 }
             }
-            Spacer()
-            Button {
-                HapticFeedback.generate()
-                foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil, scheduledAt: meal.scheduledAt), mealTime: selectedMeal)
-            } label: {
-                if foodManager.lastLoggedMealId == meal.mealId {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                        .transition(.opacity)
-                } else {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.accentColor)
+            
+            Spacer() // Push the button to the right edge
+            
+            // Fixed-width container for the button
+            HStack {
+                Spacer() // Center the button within the container
+                
+                Button {
+                    HapticFeedback.generate()
+                    foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil, scheduledAt: meal.scheduledAt), mealTime: selectedMeal)
+                } label: {
+                    if foodManager.lastLoggedMealId == meal.mealId {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
+                .frame(width: 44, height: 44) // Fixed size for the button
+                .contentShape(Rectangle())
             }
-            .buttonStyle(PlainButtonStyle())
+            .frame(width: 44) // Fixed width for the button container
         }
-        .padding(.horizontal, 0)
+        .padding(.horizontal, 16)
         .padding(.vertical, 0)
     }
 }
+
 struct MealRow: View {
     @EnvironmentObject var foodManager: FoodManager
     let meal: Meal
@@ -855,42 +878,51 @@ struct MealRow: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                Spacer()
-                Button {
-                    HapticFeedback.generate()
+                
+                Spacer() // Push the button to the right edge
+                
+                // Fixed-width container for the button
+                HStack {
+                    Spacer() // Center the button within the container
                     
-                    // Switch behavior based on mode
-                    switch mode {
-                    case .logFood:
-                        // Original behavior - log the meal
-                        foodManager.logMeal(meal: meal, mealTime: selectedMeal)
-                    
-                    case .addToMeal:
-                        // New behavior - add meal items to selection
-                        addMealItemsToSelection()
-                    }
-                } label: {
-                    if mode == .addToMeal {
-                        // For add to meal mode
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.accentColor)
-                    } else {
-                        // For log food mode
-                        if foodManager.lastLoggedMealId == meal.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
-                                .transition(.opacity)
-                        } else {
+                    Button {
+                        HapticFeedback.generate()
+                        
+                        // Switch behavior based on mode
+                        switch mode {
+                        case .logFood:
+                            // Original behavior - log the meal
+                            foodManager.logMeal(meal: meal, mealTime: selectedMeal)
+                        
+                        case .addToMeal:
+                            // New behavior - add meal items to selection
+                            addMealItemsToSelection()
+                        }
+                    } label: {
+                        if mode == .addToMeal {
+                            // For add to meal mode
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.accentColor)
+                        } else {
+                            // For log food mode
+                            if foodManager.lastLoggedMealId == meal.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.green)
+                                    .transition(.opacity)
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                            }
                         }
                     }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(width: 44, height: 44)  // Fixed size for the button
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PlainButtonStyle())
-                .frame(width: 44, height: 44)  // Give the button a larger tap area
+                .frame(width: 44) // Fixed width for the button container
                 .zIndex(1)  // Keep button on top
             }
             .padding(.horizontal, 16)
@@ -903,7 +935,6 @@ struct MealRow: View {
                 }
             }
         }
-      
     }
     
     // Add this method to handle adding meal items to selection
