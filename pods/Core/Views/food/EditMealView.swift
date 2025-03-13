@@ -49,6 +49,9 @@ struct EditMealView: View {
     @State private var showSaveError = false
     @State private var errorMessage = ""
     
+    // Add a state for error handling
+    @State private var showingError = false
+    
     // MARK: - Computed Properties
     private var isDoneButtonDisabled: Bool {
         return mealName.isEmpty || !hasChanges
@@ -322,6 +325,15 @@ struct EditMealView: View {
         .onChange(of: mealTime) { _ in hasChanges = true }
         .onChange(of: scheduledDate) { _ in hasChanges = true }
         .onChange(of: selectedFoods) { _ in hasChanges = true }
+        
+        // Add this modifier to your view's body to show the error alert
+        .alert(isPresented: $showingError) {
+            Alert(
+                title: Text("Update Failed"),
+                message: Text(errorMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
     
     // MARK: - Methods
@@ -355,18 +367,20 @@ struct EditMealView: View {
     }
     
     private func updateMeal() {
+        print("📝 Updating meal with \(selectedFoods.count) foods")
+        
         // Calculate macro totals from the current food items
         let totals = calculateTotalMacros(selectedFoods)
         
-        // Create an updated meal object
+        // Create an updated meal with the current values
         let updatedMeal = Meal(
             id: meal.id,
             title: mealName,
             description: meal.description,
             directions: instructions,
             privacy: shareWith.lowercased(),
-            servings: servings,
-            mealItems: meal.mealItems, // Original meal items - these will be replaced by selectedFoods
+            servings: Int(servings),
+            mealItems: [],  // Original meal items (will be replaced by selectedFoods)
             image: imageURL?.absoluteString,
             totalCalories: totals.calories,
             totalProtein: totals.protein,
@@ -375,18 +389,24 @@ struct EditMealView: View {
             scheduledAt: scheduledDate
         )
         
-        // Use the new updateMeal method that accepts foods parameter
+        print("📊 Calculated totals - Cal: \(totals.calories), P: \(totals.protein), C: \(totals.carbs), F: \(totals.fat)")
+        
+        // Use the foods parameter to update the meal
         foodManager.updateMeal(meal: updatedMeal, foods: selectedFoods) { result in
             DispatchQueue.main.async {
                 self.isSaving = false
                 switch result {
-                case .success:
-                    // Navigate back to previous screen
-                    dismiss()
-                    path.removeLast()
+                case .success(let updatedMeal):
+                    print("✅ Meal update succeeded: \(updatedMeal.title)")
+                    // Only dismiss and navigate back on success
+                    self.dismiss()
+                    self.path.removeLast()
+                    
                 case .failure(let error):
-                    self.errorMessage = "Failed to update meal: \(error.localizedDescription)"
-                    self.showSaveError = true
+                    // On error, show an alert and don't dismiss
+                    print("❌ Meal update failed: \(error.localizedDescription)")
+                    self.errorMessage = error.localizedDescription
+                    self.showingError = true
                 }
             }
         }
@@ -394,7 +414,7 @@ struct EditMealView: View {
     
     // MARK: - Subviews
     private var mealDetailsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 6) {
             // Title
             TextField("Title", text: $mealName)
                 .focused($focusedField, equals: .mealName)
@@ -496,6 +516,7 @@ struct EditMealView: View {
             
             // Macros
             macroCircleAndStats
+            .padding(.top, 16)
         }
         .padding()
         .background(Color("iosnp"))

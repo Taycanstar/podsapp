@@ -541,14 +541,12 @@ struct CombinedLogMealRow: View {
         
         // Print debugging info when this view is created
         let _ = {
-            print("📊 CombinedLogMealRow for '\(meal.title)':")
-            print("- Raw log calories: \(rawCalories)")
-            print("- Log displayCalories: \(displayCals)")
-            print("- Meal displayCalories: \(mealDisplayCals)")
+
             return 0
         }()
         
-        return ZStack {
+        return ZStack(alignment: .trailing) {
+            // Main row content with tap gesture for navigation
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
@@ -563,89 +561,89 @@ struct CombinedLogMealRow: View {
                     }
                 }
                 Spacer()
-                Button {
-                    HapticFeedback.generate()
-                    
-                    switch mode {
-                    case .logFood:
-                        // Original behavior - log the meal
-                        // Pass the displayCalories as the totalCalories
-                        foodManager.logMeal(meal: Meal(
-                            id: meal.mealId,
-                            title: meal.title,
-                            description: meal.description,
-                            directions: nil,
-                            privacy: "private",
-                            servings: meal.servings,
-                            mealItems: [],
-                            image: meal.image,
-                            totalCalories: log.displayCalories,
-                            totalProtein: meal.protein,
-                            totalCarbs: meal.carbs,
-                            totalFat: meal.fat,
-                            scheduledAt: nil
-                        ), mealTime: selectedMeal)
-                    
-                    case .addToMeal:
-                        // New behavior - add all food items from the meal to selectedFoods
-                        addMealItemsToSelection()
-                    }
-                } label: {
-                    if mode == .addToMeal {
-                        // Similar to FoodRow's addToMeal mode
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Find the full meal from FoodManager.meals
+                if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
+                    // Navigate to EditMealView with the full meal
+                    path.append(FoodNavigationDestination.editMeal(fullMeal))
+                } else {
+                    // Create a minimal meal object to edit if we can't find the full meal
+                    let minimalMeal = Meal(
+                        id: meal.mealId,
+                        title: meal.title,
+                        description: meal.description,
+                        directions: nil,
+                        privacy: "private",
+                        servings: meal.servings,
+                        mealItems: [],
+                        image: meal.image,
+                        totalCalories: log.displayCalories,
+                        totalProtein: meal.protein,
+                        totalCarbs: meal.carbs,
+                        totalFat: meal.fat,
+                        scheduledAt: meal.scheduledAt
+                    )
+                    path.append(FoodNavigationDestination.editMeal(minimalMeal))
+                }
+            }
+            
+            // Plus button with its own tap area
+            Button {
+                HapticFeedback.generate()
+                
+                switch mode {
+                case .logFood:
+                    // Original behavior - log the meal
+                    // Pass the displayCalories as the totalCalories
+                    foodManager.logMeal(meal: Meal(
+                        id: meal.mealId,
+                        title: meal.title,
+                        description: meal.description,
+                        directions: nil,
+                        privacy: "private",
+                        servings: meal.servings,
+                        mealItems: [],
+                        image: meal.image,
+                        totalCalories: log.displayCalories,
+                        totalProtein: meal.protein,
+                        totalCarbs: meal.carbs,
+                        totalFat: meal.fat,
+                        scheduledAt: nil
+                    ), mealTime: selectedMeal)
+                
+                case .addToMeal:
+                    // New behavior - add all food items from the meal to selectedFoods
+                    addMealItemsToSelection()
+                }
+            } label: {
+                if mode == .addToMeal {
+                    // Similar to FoodRow's addToMeal mode
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.accentColor)
+                } else {
+                    // Original behavior for logFood mode
+                    if foodManager.lastLoggedMealId == meal.mealId {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                            .transition(.opacity)
+                    } else {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 24))
                             .foregroundColor(.accentColor)
-                    } else {
-                        // Original behavior for logFood mode
-                        if foodManager.lastLoggedMealId == meal.mealId {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
-                                .transition(.opacity)
-                        } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                        }
                     }
                 }
-                .buttonStyle(PlainButtonStyle())
-                .zIndex(1) // Keep button on top
             }
-            .padding(.horizontal, 0)
-            .padding(.vertical, 0)
-            
-            // Transparent overlay for tap gesture
-            Rectangle()
-                .fill(Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    // Find the full meal from FoodManager.meals
-                    if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
-                        // Navigate to EditMealView with the full meal
-                        path.append(FoodNavigationDestination.editMeal(fullMeal))
-                    } else {
-                        // Create a minimal meal object to edit if we can't find the full meal
-                        let minimalMeal = Meal(
-                            id: meal.mealId,
-                            title: meal.title,
-                            description: meal.description,
-                            directions: nil,
-                            privacy: "private",
-                            servings: meal.servings,
-                            mealItems: [],
-                            image: meal.image,
-                            totalCalories: log.displayCalories,
-                            totalProtein: meal.protein,
-                            totalCarbs: meal.carbs,
-                            totalFat: meal.fat,
-                            scheduledAt: meal.scheduledAt
-                        )
-                        path.append(FoodNavigationDestination.editMeal(minimalMeal))
-                    }
-                }
+            .buttonStyle(PlainButtonStyle())
+            .frame(width: 44, height: 44)  // Give the button a larger tap area
+            .contentShape(Rectangle())
+            .zIndex(1) // Keep button on top
         }
+        .padding(.horizontal, 0)
+        .padding(.vertical, 0)
     }
     
     // New method to add meal items to selection using already loaded meals

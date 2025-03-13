@@ -894,9 +894,12 @@ func updateMeal(
     completion: ((Result<Meal, Error>) -> Void)? = nil
 ) {
     guard let email = userEmail else { 
+        print("❌ updateMeal failed: User email not set")
         completion?(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
         return 
     }
+    
+    print("🔄 updateMeal called with meal ID: \(meal.id), title: \(meal.title), foods count: \(foods.count)")
     
     // If foods array is not empty, use it to calculate macros
     // Otherwise use the meal's existing values
@@ -927,7 +930,10 @@ func updateMeal(
             return sum + ((food.fat ?? 0) * servings)
         }
         
+        print("📊 Calculated macros from foods - Cal: \(calculatedCalories), P: \(calculatedProtein), C: \(calculatedCarbs), F: \(calculatedFat)")
+        
         // If we have foods, update the network manager with both meal details and food items
+        print("🔄 Calling updateMealWithFoods for meal ID: \(meal.id)")
         networkManager.updateMealWithFoods(
             userEmail: email,
             mealId: meal.id,
@@ -947,42 +953,57 @@ func updateMeal(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedMeal):
-                    print("✅ Meal updated successfully: \(updatedMeal.title)")
+                    print("✅ Meal updated successfully: \(updatedMeal.title) (ID: \(updatedMeal.id))")
                     
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
+                        print("📝 Updating meal in meals array at index: \(index)")
                         self?.meals[index] = updatedMeal
                         self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                    } else {
+                        print("ℹ️ Meal not found in meals array")
                     }
                     
                     // Update combined logs if this meal exists there
                     if let index = self?.combinedLogs.firstIndex(where: { 
                         $0.type == .meal && $0.meal?.mealId == meal.id 
-                    }), var log = self?.combinedLogs[index] {
-                        // Create a new meal summary from the updated meal
-                        if let newLogWithUpdatedMeal = try? self?.recreateLogWithUpdatedMeal(
-                            originalLog: log, 
-                            updatedMeal: MealSummary(
-                                mealId: updatedMeal.id,
-                                title: updatedMeal.title,
-                                description: updatedMeal.description,
-                                image: updatedMeal.image,
-                                calories: updatedMeal.calories,
-                                servings: updatedMeal.servings,
-                                protein: updatedMeal.totalProtein,
-                                carbs: updatedMeal.totalCarbs,
-                                fat: updatedMeal.totalFat,
-                                scheduledAt: updatedMeal.scheduledAt
-                            )
-                        ) {
-                            self?.combinedLogs[index] = newLogWithUpdatedMeal
+                    }) {
+                        print("📝 Updating meal in combined logs at index: \(index)")
+                        if var log = self?.combinedLogs[index] {
+                            // Create a new meal summary from the updated meal
+                            do {
+                                if let newLogWithUpdatedMeal = try self?.recreateLogWithUpdatedMeal(
+                                    originalLog: log, 
+                                    updatedMeal: MealSummary(
+                                        mealId: updatedMeal.id,
+                                        title: updatedMeal.title,
+                                        description: updatedMeal.description,
+                                        image: updatedMeal.image,
+                                        calories: updatedMeal.calories,
+                                        servings: updatedMeal.servings,
+                                        protein: updatedMeal.totalProtein,
+                                        carbs: updatedMeal.totalCarbs,
+                                        fat: updatedMeal.totalFat,
+                                        scheduledAt: updatedMeal.scheduledAt
+                                    )
+                                ) {
+                                    self?.combinedLogs[index] = newLogWithUpdatedMeal
+                                    print("✅ Successfully updated meal in combined logs")
+                                } else {
+                                    print("⚠️ Failed to create updated log entry")
+                                }
+                            } catch {
+                                print("❌ Error recreating log with updated meal: \(error)")
+                            }
                         }
+                    } else {
+                        print("ℹ️ Meal not found in combined logs")
                     }
                     
                     completion?(.success(updatedMeal))
                     
                 case .failure(let error):
-                    print("❌ Error updating meal: \(error)")
+                    print("❌ Error updating meal with foods: \(error.localizedDescription)")
                     completion?(.failure(error))
                 }
             }

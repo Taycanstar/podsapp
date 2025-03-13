@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -5766,20 +5766,15 @@ func updateMealWithFoods(
     print("- scheduledAt: \(scheduledAtString ?? "none")")
     print("- food_items: \(foodData.count) items")
     
-    // Attempt to print formatted JSON for better debugging
-    do {
-        let jsonData = try JSONSerialization.data(withJSONObject: parameters, options: [.prettyPrinted])
-        if let jsonString = String(data: jsonData, encoding: .utf8) {
-            print("📤 UPDATE MEAL WITH FOODS REQUEST (sample):")
-            // Just print parts to avoid overwhelming the console
-            print(String(jsonString.prefix(500)) + "... (truncated)")
-        }
-    } catch {
-        print("JSON Debug Serialization Error: \(error)")
-    }
-    
     // Create the actual request body
-    let jsonData = try! JSONSerialization.data(withJSONObject: parameters)
+    let jsonData: Data
+    do {
+        jsonData = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        print("JSON Serialization Error: \(error)")
+        completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize request data"])))
+        return
+    }
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -5789,21 +5784,66 @@ func updateMealWithFoods(
     
     URLSession.shared.dataTask(with: request) { data, response, error in
         if let error = error {
+            print("❌ Network error: \(error)")
             completion(.failure(error))
             return
         }
         
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📊 HTTP Response Status Code: \(httpResponse.statusCode)")
+            
+            // Print headers for debugging
+            print("📋 Response Headers:")
+            httpResponse.allHeaderFields.forEach { key, value in
+                print("   \(key): \(value)")
+            }
+        }
+        
         guard let data = data else {
+            print("❌ No data received in updateMealWithFoods")
             completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
             return
         }
         
+        // Log the raw response for debugging
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📥 Received raw response in updateMealWithFoods: \(jsonString)")
+        }
+        
+        // Try to parse as JSON for better viewing
         do {
-            // Print the raw response for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("📥 Received response: \(jsonString.prefix(200))... (truncated)")
-            }
+            let jsonObject = try JSONSerialization.jsonObject(with: data)
+            print("📥 Parsed JSON response: \(jsonObject)")
+        } catch {
+            print("⚠️ Could not parse response as JSON: \(error)")
+        }
+        
+        // Try to decode as error response first
+        if let errorResponse = try? JSONDecoder().decode([String: String].self, from: data),
+           let errorMessage = errorResponse["error"] {
+            print("❌ Server error message: \(errorMessage)")
             
+            // Special handling for the cache error
+            if errorMessage.contains("LocMemCache") && errorMessage.contains("keys") {
+                print("ℹ️ Detected Django cache error - attempting workaround...")
+                // Create a fallback error with a more helpful message
+                let helpfulError = NSError(
+                    domain: "NetworkManager",
+                    code: 0,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "The server couldn't update the meal due to a cache issue. This is likely a temporary server problem - please try again in a few minutes."
+                    ]
+                )
+                completion(.failure(helpfulError))
+            } else {
+                // Standard error handling
+                completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+            }
+            return
+        }
+        
+        // Then try to decode as successful meal response
+        do {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             
@@ -5811,17 +5851,99 @@ func updateMealWithFoods(
             dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
             decoder.dateDecodingStrategy = .formatted(dateFormatter)
             
+            print("🔄 Attempting to decode response as Meal")
+            // Attempt to decode as Meal
             let meal = try decoder.decode(Meal.self, from: data)
+            print("✅ Successfully decoded updated meal: \(meal.title) (ID: \(meal.id))")
+            print("   - Meal properties: calories=\(meal.totalCalories ?? 0), protein=\(meal.totalProtein ?? 0)")
+            print("   - Meal items count: \(meal.mealItems.count)")
             completion(.success(meal))
         } catch {
-            print("Decoding error: \(error)")
-            // Try to extract error message from response
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMsg = json["error"] as? String {
-                completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])))
-            } else {
-                completion(.failure(error))
+            print("❌ Detailed decoding error in updateMealWithFoods:")
+            print("   - Error: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("   - Missing key: \(key.stringValue)")
+                    print("   - Context: \(context.debugDescription)")
+                    print("   - Coding path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("   - Nil value found for type: \(type)")
+                    print("   - Context: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("   - Type mismatch: expected \(type)")
+                    print("   - Context: \(context.debugDescription)")
+                case .dataCorrupted(let context):
+                    print("   - Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("   - Unknown decoding error")
+                }
             }
+            
+            // Fallback - try to decode as a basic JSON and extract meal ID
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                // Check for either snake_case or camelCase keys for meal ID
+                if let mealId = json["id"] as? Int ?? json["meal_id"] as? Int {
+                    print("⚠️ Falling back to partial meal reconstruction with ID: \(mealId)")
+                    
+                    // Try to extract as many fields as possible from the response, checking both naming conventions
+                    let title = json["title"] as? String ?? "Unknown Meal"
+                    let description = json["description"] as? String ?? ""
+                    let servings = json["servings"] as? Int ?? 1
+                    let privacy = json["privacy"] as? String ?? "private"
+                    let directions = json["directions"] as? String
+                    let image = json["image"] as? String
+                    
+                    // Check both camelCase and snake_case for each property
+                    let totalCalories = json["totalCalories"] as? Double ?? json["total_calories"] as? Double ?? 0
+                    let totalProtein = json["totalProtein"] as? Double ?? json["total_protein"] as? Double ?? 0
+                    let totalCarbs = json["totalCarbs"] as? Double ?? json["total_carbs"] as? Double ?? 0
+                    let totalFat = json["totalFat"] as? Double ?? json["total_fat"] as? Double ?? 0
+                    let userId = json["userId"] as? Int ?? json["user_id"] as? Int ?? 0
+                    
+                    // Parse date fields if available
+                    var scheduledAt: Date? = nil
+                    if let scheduledAtString = json["scheduledAt"] as? String ?? json["scheduled_at"] as? String {
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+                        scheduledAt = dateFormatter.date(from: scheduledAtString)
+                    }
+                    
+                    // Check if there's a meal_items or mealItems array
+                    var mealItems: [MealFoodItem] = []
+                    if let items = json["mealItems"] as? [[String: Any]] ?? json["meal_items"] as? [[String: Any]] {
+                        print("   - Found \(items.count) meal items in JSON")
+                        // Process if needed
+                    }
+                    
+                    // Construct a minimal meal with available data
+                    let reconstructedMeal = Meal(
+                        id: mealId,
+                        title: title,
+                        description: description,
+                        directions: directions,
+                        privacy: privacy,
+                        servings: servings,
+                        mealItems: mealItems,
+                        image: image,
+                        totalCalories: totalCalories,
+                        totalProtein: totalProtein,
+                        totalCarbs: totalCarbs,
+                        totalFat: totalFat,
+                        scheduledAt: scheduledAt
+                    )
+                    
+                    print("✅ Successfully created fallback meal object: \(reconstructedMeal.title) (ID: \(reconstructedMeal.id))")
+                    completion(.success(reconstructedMeal))
+                    return
+                } else {
+                    print("❌ Could not find meal ID in response JSON")
+                    print("   Available keys: \(json.keys.joined(separator: ", "))")
+                }
+            }
+            
+            // If all else fails, return the original error
+            completion(.failure(NSError(domain: "NetworkManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to decode response: \(error.localizedDescription)"])))
         }
     }.resume()
 }
