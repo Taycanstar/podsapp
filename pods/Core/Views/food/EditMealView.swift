@@ -40,6 +40,10 @@ struct EditMealView: View {
     // Track if the meal has been modified
     @State private var hasChanges: Bool = false
     
+    // Add states for name validation
+    @State private var isNameTaken = false
+    @State private var showNameTakenAlert = false
+    
     @FocusState private var focusedField: Field?
     
     @EnvironmentObject var foodManager: FoodManager
@@ -75,6 +79,28 @@ struct EditMealView: View {
     // Add a computed property to determine if we should show white text
     private var hasImage: Bool {
         return selectedImage != nil || (meal.image != nil && !meal.image!.isEmpty)
+    }
+    
+    // Check if the meal name is already taken
+    private func isNameAlreadyTaken() -> Bool {
+        // Get all other meal names (excluding the current meal)
+        let otherMealNames = foodManager.meals
+            .filter { $0.id != meal.id }
+            .map { $0.title.lowercased() }
+        
+        // Check if the current name (trimmed and lowercased) exists in other meals
+        return otherMealNames.contains(mealName.trimmed().lowercased())
+    }
+    
+    // Validate name before saving
+    private func validateMealName() -> Bool {
+        // Check if name is already taken
+        if isNameAlreadyTaken() {
+            // Show the alert
+            showNameTakenAlert = true
+            return false
+        }
+        return true
     }
     
     // MARK: - Initializer
@@ -262,6 +288,13 @@ struct EditMealView: View {
         }
         .navigationBarBackButtonHidden(true)
         
+        // Add name taken alert
+        .alert("Name Taken", isPresented: $showNameTakenAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please choose a different name.")
+        }
+        
         // Full screen cover for ImagePicker
         .fullScreenCover(isPresented: $showImagePicker) {
             ImagePicker(
@@ -338,6 +371,11 @@ struct EditMealView: View {
     
     // MARK: - Methods
     private func saveUpdatedMeal() {
+        // First validate the meal name
+        guard validateMealName() else {
+            return
+        }
+        
         isSaving = true
         
         // First upload image if exists
@@ -785,4 +823,11 @@ struct EditMealView: View {
 
 #Preview {
     EditMealView(meal: Meal(id: 1, title: "Sample Meal", description: "A sample meal description", directions: "Sample directions", privacy: "Everyone", servings: 2, mealItems: [], image: nil, totalCalories: 500, totalProtein: 20, totalCarbs: 50, totalFat: 10, scheduledAt: Date()), path: .constant(NavigationPath()), selectedFoods: .constant([Food(fdcId: 1, description: "Sample Food", brandOwner: nil, brandName: nil, servingSize: 1.0, numberOfServings: 1.0, servingSizeUnit: "g", householdServingFullText: "1g", foodNutrients: [], foodMeasures: []), Food(fdcId: 2, description: "Another Food", brandOwner: nil, brandName: nil, servingSize: 1.0, numberOfServings: 1.0, servingSizeUnit: "g", householdServingFullText: "1g", foodNutrients: [], foodMeasures: [])]))
+}
+
+// String extension for name validation
+extension String {
+    func trimmed() -> String {
+        return self.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }

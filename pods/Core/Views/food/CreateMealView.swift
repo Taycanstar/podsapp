@@ -35,6 +35,9 @@ struct CreateMealView: View {
     @State private var isUploading = false
     @State private var uploadError: Error?
     @State private var showUploadError = false
+    
+    // Add states for name validation
+    @State private var showNameTakenAlert = false
 
     @State private var uiImage: UIImage? = nil
 
@@ -53,7 +56,6 @@ struct CreateMealView: View {
 private var isCreateButtonDisabled: Bool {
     return mealName.isEmpty
 }
-
 
     // Example share options
     let shareOptions = ["Everyone", "Friends", "Only You"]
@@ -227,6 +229,13 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         } message: {
             Text(errorMessage)
         }
+        
+        // Add name taken alert
+        .alert("Name Taken", isPresented: $showNameTakenAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please choose a different name.")
+        }
     }
 
     private func resetFields() {
@@ -237,8 +246,33 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         // Reset any other state variables as needed
     }
 
+    // Check if the meal name is already taken
+    private func isNameAlreadyTaken() -> Bool {
+        // Get all meal names
+        let existingMealNames = foodManager.meals
+            .map { $0.title.lowercased() }
+        
+        // Check if the current name (trimmed and lowercased) exists
+        return existingMealNames.contains(mealName.trimmed().lowercased())
+    }
+    
+    // Validate name before saving
+    private func validateMealName() -> Bool {
+        // Check if name is already taken
+        if isNameAlreadyTaken() {
+            // Show the alert
+            showNameTakenAlert = true
+            return false
+        }
+        return true
+    }
 
     private func saveNewMeal() {
+        // First validate the meal name
+        guard validateMealName() else {
+            return
+        }
+        
         isSaving = true
         
         // First upload image if exists
