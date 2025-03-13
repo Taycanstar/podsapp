@@ -119,59 +119,209 @@ struct ItemSummaryView: View {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
         
+        // Debug output to help identify issues
+        print("Column values in item: \(item.columnValues.keys)")
+        print("Grouped columns: \(groupedColumns.map { $0.id })")
+        print("Single columns: \(singleColumns.map { $0.id })")
+        
+        // Create a mapping between column IDs and their values for easier lookup
+        let columnValues = item.columnValues
+        
         return VStack(alignment: .leading, spacing: 24) {
-            // Grouped columns
+            // MARK: - Grouped columns
             if !groupedColumns.isEmpty {
-                VStack(spacing: 0) {
-                    // Headers
-                    HStack(spacing: 65) {
-                        ForEach(groupedColumns, id: \.id) { column in
-                            Text(column.name)
-                                .font(.system(size: 18))
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, alignment: .center)
+                // Check if any grouped column has values in this item
+                let hasGroupedValues = groupedColumns.contains { column in
+                    let columnId = String(column.id)
+                    if let value = columnValues[columnId], case .array(let arr) = value, !arr.isEmpty {
+                        return true
+                    }
+                    return false
+                }
+                
+                if hasGroupedValues || !columnValues.isEmpty {
+                    VStack(spacing: 0) {
+                        // Headers - using the order from the columns array
+                        HStack(spacing: 65) {
+                            ForEach(groupedColumns, id: \.id) { column in
+                                Text(column.name)
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        }
+                        
+                        // Find the column IDs that actually exist in the item's values
+                        let existingColumnKeys = groupedColumns.compactMap { column -> (Int, String)? in
+                            let columnIdStr = String(column.id)
+                            if columnValues[columnIdStr] != nil {
+                                return (column.id, columnIdStr)
+                            }
+                            return nil
+                        }
+                        
+                        if !existingColumnKeys.isEmpty {
+                            // Determine the maximum number of rows
+                            let maxRows = existingColumnKeys.compactMap { _, key in
+                                if case .array(let values) = columnValues[key] {
+                                    return values.count
+                                }
+                                return 0
+                            }.max() ?? 0
+                            
+                            // Display each row using the columns we found values for
+                            ForEach(0..<maxRows, id: \.self) { rowIndex in
+                                HStack(spacing: 65) {
+                                    ForEach(groupedColumns, id: \.id) { column in
+                                        let columnId = String(column.id)
+                                        
+                                        if case .array(let values) = columnValues[columnId],
+                                           rowIndex < values.count {
+                                            Text(valueString(values[rowIndex]))
+                                                .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                                .frame(maxWidth: .infinity)
+                                                .multilineTextAlignment(.center)
+                                        } else {
+                                            Text("-")
+                                                .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                                .frame(maxWidth: .infinity)
+                                                .multilineTextAlignment(.center)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // If we couldn't find any matching columns, try a different approach
+                            // Use the keys from the item's columnValues directly
+                            let keys = Array(columnValues.keys)
+                            
+                            // Find keys with array values
+                            let arrayValueKeys = keys.compactMap { key -> (String, [ColumnValue])? in
+                                if case .array(let values) = columnValues[key], !values.isEmpty {
+                                    return (key, values)
+                                }
+                                return nil
+                            }
+                            
+                            if !arrayValueKeys.isEmpty {
+                                let maxRows = arrayValueKeys.map { $0.1.count }.max() ?? 0
+                                
+                                ForEach(0..<maxRows, id: \.self) { rowIndex in
+                                    HStack(spacing: 65) {
+                                        ForEach(0..<arrayValueKeys.count, id: \.self) { keyIndex in
+                                            let (_, values) = arrayValueKeys[keyIndex]
+                                            
+                                            if rowIndex < values.count {
+                                                Text(valueString(values[rowIndex]))
+                                                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                    .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                                    .frame(maxWidth: .infinity)
+                                                    .multilineTextAlignment(.center)
+                                            } else {
+                                                Text("-")
+                                                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                    .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                                    .frame(maxWidth: .infinity)
+                                                    .multilineTextAlignment(.center)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("No values available")
+                                    .foregroundColor(.secondary)
+                                    .padding()
+                            }
                         }
                     }
-                    
-                    // Values
-                    if let firstColumn = groupedColumns.first,
-                       case .array(let values) = item.columnValues[String(firstColumn.id)] ?? .null {
-                        ForEach(0..<values.count, id: \.self) { index in
-                            HStack(spacing: 65) {
-                                ForEach(groupedColumns, id: \.id) { column in
-                                    if case .array(let values) = item.columnValues[String(column.id)] ?? .null,
-                                       index < values.count {
-                                        Text(valueString(values[index]))
-                                            .font(.system(size: 28, weight: .medium, design: .rounded))
-                                            .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
-                                            .frame(maxWidth: .infinity)
-                                            .multilineTextAlignment(.center)
+                } else {
+                    Text("No values available")
+                        .foregroundColor(.secondary)
+                        .padding()
+                }
+            }
+            
+            // MARK: - Single columns
+            let hasSingleValues = singleColumns.contains { column in
+                let columnId = String(column.id)
+                let value = columnValues[columnId]
+                if case .array = value {
+                    return false
+                }
+                if case .null = value {
+                    return false
+                }
+                return value != nil
+            }
+            
+            if hasSingleValues {
+                ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
+                    HStack(spacing: 20) {
+                        ForEach(0..<2) { columnIndex in
+                            let index = rowIndex * 2 + columnIndex
+                            if index < singleColumns.count {
+                                let column = singleColumns[index]
+                                let columnId = String(column.id)
+                                
+                                if let value = columnValues[columnId] {
+                                    if case .null = value {
+                                        // Skip null values
+                                    } else {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(column.name)
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.primary)
+                                            
+                                            Text(valueString(value))
+                                                .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            
-            // Single columns
-            ForEach(0..<(singleColumns.count + 1) / 2, id: \.self) { rowIndex in
-                HStack(spacing: 20) {
-                    ForEach(0..<2) { columnIndex in
-                        let index = rowIndex * 2 + columnIndex
-                        if index < singleColumns.count {
-                            let column = singleColumns[index]
-                            if let value = item.columnValues[String(column.id)] {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(column.name)
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(valueString(value))
-                                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                                        .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+            } else if !columnValues.isEmpty {
+                // Try to display single values based on keys in columnValues
+                let singleValueKeys = columnValues.keys.filter { key in
+                    if case .array = columnValues[key] {
+                        return false
+                    }
+                    if case .null = columnValues[key] {
+                        return false 
+                    }
+                    return true
+                }
+                
+                if !singleValueKeys.isEmpty {
+                    ForEach(0..<(singleValueKeys.count + 1) / 2, id: \.self) { rowIndex in
+                        HStack(spacing: 20) {
+                            ForEach(0..<2) { columnIndex in
+                                let index = rowIndex * 2 + columnIndex
+                                if index < singleValueKeys.count {
+                                    let key = singleValueKeys[index]
+                                    if let value = columnValues[key], case .null = value {
+                                        // Skip null values
+                                    } else if let value = columnValues[key] {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            // Try to find a matching column name
+                                            let columnName = columns.first { String($0.id) == key }?.name ?? key
+                                            
+                                            Text(columnName)
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.primary)
+                                            
+                                            Text(valueString(value))
+                                                .font(.system(size: 28, weight: .medium, design: .rounded))
+                                                .foregroundColor(Color(red: 0.61, green: 0.62, blue: 0.68))
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
                     }

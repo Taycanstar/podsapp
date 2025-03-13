@@ -602,17 +602,14 @@ private func loadCachedMeals() {
 
 // Cache meals
 private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
-    print("💾 Caching \(response.meals.count) meals for page \(page)")
+  
     
     for (index, meal) in response.meals.prefix(3).enumerated() {
-        print("📝 Meal #\(index+1): \(meal.title) with \(meal.mealItems.count) items")
+        
         
         // Debug first few items
         for (itemIndex, item) in meal.mealItems.prefix(3).enumerated() {
-            print("   Item #\(itemIndex+1): \(item.name)")
-            print("     - servings: \(item.servings)")
-           
-            print("     - calories: \(item.calories)")
+       
         }
     }
     
@@ -623,38 +620,6 @@ private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
     }
 }
 
-// Load more meals
-// func loadMoreMeals(refresh: Bool = false) {
-//     guard let email = userEmail else { return }
-//     guard !isLoadingMeals else { return }
-    
-//     let pageToLoad = refresh ? 1 : currentMealPage
-//     isLoadingMeals = true
-//     error = nil
-
-//     networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
-//         DispatchQueue.main.async {
-//             guard let self = self else { return }
-//             self.isLoadingMeals = false
-//             switch result {
-//             case .success(let response):
-//                 if refresh {
-//                     self.meals = response.meals
-//                     self.currentMealPage = 2
-//                 } else {
-//                     self.meals.append(contentsOf: response.meals)
-//                     self.currentMealPage += 1
-//                 }
-//                 // Add this debug print after updating self.meals
-//                 self.hasMoreMeals = response.hasMore
-//                 self.cacheMeals(response, forPage: pageToLoad)
-//             case .failure(let error):
-//                 self.error = error
-//                 self.hasMoreMeals = false
-//             }
-//         }
-//     }
-// }
 // Update loadMoreMeals to include a completion handler
 func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
     guard let email = userEmail else { 
@@ -679,21 +644,15 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
             self.isLoadingMeals = false
             switch result {
             case .success(let response):
-                print("📥 Received \(response.meals.count) meals from server")
+               
                 
                 // Log details for each meal
                 for (index, meal) in response.meals.prefix(5).enumerated() {
-                    print("📊 Meal #\(index+1): \(meal.title)")
-                    print("  - Calories: \(meal.calories) (from totalCalories: \(String(describing: meal.totalCalories)))")
-                    print("  - Protein: \(meal.protein)g, Carbs: \(meal.carbs)g, Fat: \(meal.fat)g")
-                    print("  - Has \(meal.mealItems.count) food items")
+                  
                     
                     // Log the first couple of food items
                     for (itemIndex, item) in meal.mealItems.prefix(2).enumerated() {
-                        print("    - Item #\(itemIndex+1): \(item.name)")
-                        print("      * Calories: \(item.calories), Protein: \(item.protein)g, Carbs: \(item.carbs)g, Fat: \(item.fat)g")
-                        print("      * Servings: \(item.servings)")
-                        print("      * Serving text: \(item.servingText ?? "NIL")")
+                    
                     }
                 }
                 
@@ -726,15 +685,7 @@ func loadMoreMealsIfNeeded(meal: Meal) {
     loadMoreMeals()
 }
 
-// Refresh meals
-// func refreshMeals() {
-//     print("🔄 Starting meal refresh...")
-//     clearMealCache()
-//     loadMoreMeals(refresh: true)
-// }
-
 func refreshMeals() {
-    print("🔄 Starting meal refresh...")
     
     // Clear the meal cache
     clearMealCache()
@@ -779,9 +730,7 @@ func logMeal(
     let existingIndex = self.combinedLogs.firstIndex(where: { 
         ($0.type == .meal && $0.meal?.mealId == meal.id)
     })
-    
-    // Debug print
-    print("🍽️ Logging meal with title: \(meal.title)")
+
     
     networkManager.logMeal(
         userEmail: email,
@@ -920,7 +869,6 @@ func updateMeal(
     completion: ((Result<Meal, Error>) -> Void)? = nil
 ) {
     guard let email = userEmail else { 
-        print("❌ updateMeal failed: User email not set")
         completion?(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
         return 
     }
@@ -956,10 +904,7 @@ func updateMeal(
             return sum + ((food.fat ?? 0) * servings)
         }
         
-        print("📊 Calculated macros from foods - Cal: \(calculatedCalories), P: \(calculatedProtein), C: \(calculatedCarbs), F: \(calculatedFat)")
-        
-        // If we have foods, update the network manager with both meal details and food items
-        print("🔄 Calling updateMealWithFoods for meal ID: \(meal.id)")
+    
         networkManager.updateMealWithFoods(
             userEmail: email,
             mealId: meal.id,
@@ -983,7 +928,7 @@ func updateMeal(
                     
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
-                        print("📝 Updating meal in meals array at index: \(index)")
+                       
                         self?.meals[index] = updatedMeal
                         self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
                     } else {
@@ -994,7 +939,7 @@ func updateMeal(
                     if let index = self?.combinedLogs.firstIndex(where: { 
                         $0.type == .meal && $0.meal?.mealId == meal.id 
                     }) {
-                        print("📝 Updating meal in combined logs at index: \(index)")
+                
                         if var log = self?.combinedLogs[index] {
                             // Create a new meal summary from the updated meal
                             do {

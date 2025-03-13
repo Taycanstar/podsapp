@@ -72,6 +72,7 @@ class ActivityManager: ObservableObject {
                 switch result {
                 case .success(let (newActivities, hasMore)):
       
+      
                     if refresh {
                         self.activities = newActivities
                         self.currentPage = 2

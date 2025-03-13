@@ -84,6 +84,12 @@ struct ActivityLogView: View {
                     .id(item.id)
                     .listRowInsets(EdgeInsets())
                     .onAppear {
+                        // Debug info to help diagnose column mismatch issues
+                        if let last = filteredItems.last, item.id == last.id {
+                            print("Debug - Item \(item.id) column values: \(item.columnValues.keys)")
+                            print("Debug - Passing columns to ItemSummaryView: \(columns.map { "\($0.id):\($0.name)" })")
+                        }
+                        
                         if let last = filteredItems.last,
                            item.id == last.id,
                            !activityManager.isLoading,
