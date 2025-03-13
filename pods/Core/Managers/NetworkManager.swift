@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -4881,7 +4881,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         
         // Use a dictionary to inspect the fields before decoding into a model
         if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            print("🔍 JSON Keys in response:")
+            
             for (key, value) in jsonObj {
                 print("- \(key): \(type(of: value))")
                 
@@ -5425,9 +5425,9 @@ func logMeal(
             
             // Check if response contains "status" key
             if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                print("🔍 JSON Keys in response:")
+               
                 for (key, value) in jsonObj {
-                    print("- \(key): \(type(of: value))")
+                   
                 }
                 
                 if jsonObj["status"] != nil {
