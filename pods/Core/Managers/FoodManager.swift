@@ -392,7 +392,10 @@ private func loadMoreLogs(refresh: Bool = false) {
                 // Clear the lastLoggedFoodId after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation {
-                        self.lastLoggedFoodId = nil
+                        // Only clear if it still matches the food we logged
+                        if self.lastLoggedFoodId == food.fdcId {
+                            self.lastLoggedFoodId = nil
+                        }
                     }
                 }
                 
@@ -406,7 +409,12 @@ private func loadMoreLogs(refresh: Bool = false) {
                 self.error = error
                 
                 // Clear the lastLoggedFoodId immediately on error
-                self.lastLoggedFoodId = nil
+                withAnimation {
+                    // Only clear if it still matches the food we tried to log
+                    if self.lastLoggedFoodId == food.fdcId {
+                        self.lastLoggedFoodId = nil
+                    }
+                }
                 
                 completion(.failure(error))
             }
@@ -747,14 +755,19 @@ func refreshMeals() {
     }
 }
 
+// Log a meal (from meal history)
 func logMeal(
     meal: Meal,
     mealTime: String,
     date: Date = Date(),
     notes: String? = nil,
-    completion: ((Result<LoggedMeal, Error>) -> Void)? = nil
+    completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
+    statusCompletion: ((Bool) -> Void)? = nil
 ) {
-    guard let email = userEmail else { return }
+    guard let email = userEmail else { 
+        statusCompletion?(false)
+        return 
+    }
     
     // Show loading state
     isLoadingMeal = true
@@ -778,7 +791,10 @@ func logMeal(
         notes: notes
     ) { [weak self] result in
         DispatchQueue.main.async {
-            guard let self = self else { return }
+            guard let self = self else { 
+                statusCompletion?(false)
+                return 
+            }
             self.isLoadingMeal = false
             
             switch result {
@@ -823,7 +839,10 @@ func logMeal(
                 // Clear the flag and toast after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation {
-                        self.lastLoggedMealId = nil
+                        // Only clear if it still matches the meal we logged
+                        if self.lastLoggedMealId == meal.id {
+                            self.lastLoggedMealId = nil
+                        }
                         self.showMealLoggedToast = false
                     }
                 }
@@ -831,6 +850,7 @@ func logMeal(
                 // Update the cache with our new array
                 self.updateCombinedLogsCache()
                 
+                statusCompletion?(true)
                 completion?(.success(loggedMeal))
                 
             case .failure(let error):
@@ -838,8 +858,14 @@ func logMeal(
                 self.error = error
                 
                 // Clear the lastLoggedMealId immediately on error
-                self.lastLoggedMealId = nil
+                withAnimation {
+                    // Only clear if it still matches the meal we tried to log
+                    if self.lastLoggedMealId == meal.id {
+                        self.lastLoggedMealId = nil
+                    }
+                }
                 
+                statusCompletion?(false)
                 completion?(.failure(error))
             }
         }

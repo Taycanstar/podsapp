@@ -331,6 +331,9 @@ struct FoodRow: View {
     @State private var checkmarkVisible: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
+    
+    // Add a specific state for logging errors
+    @State private var showLoggingErrorAlert: Bool = false
 
     // Add these properties
     let mode: LogFoodMode
@@ -413,6 +416,12 @@ struct FoodRow: View {
         } message: {
             Text(errorMessage)
         }
+        // Add a specific logging error alert
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
+        }
     }
 
     
@@ -451,6 +460,9 @@ private func handleFoodTap() {
 
     
     private func logFood() {
+        // Track the request is in progress locally to prevent multiple taps
+        let isRequestInProgress = true
+        
         foodManager.logFood(
             email: viewModel.email,
             food: food,
@@ -463,19 +475,32 @@ private func handleFoodTap() {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
                 withAnimation { 
-                   
                     checkmarkVisible = true 
-                    }
-                // foodManager.refresh()
+                }
+                
+                // Clear the checkmark after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation { 
                         checkmarkVisible = false
-                         }
+                    }
                 }
+                
             case .failure(let error):
                 print("Error logging food: \(error)")
-                errorMessage = "An error occurred while logging. Try again."
-                showErrorAlert = true
+                
+                // Make sure we immediately clear any green checkmark
+                withAnimation {
+                    // Ensure the food manager's lastLoggedFoodId is cleared
+                    if self.foodManager.lastLoggedFoodId == self.food.fdcId {
+                        self.foodManager.lastLoggedFoodId = nil
+                    }
+                    
+                    // Reset local checkmark state
+                    self.checkmarkVisible = false
+                }
+                
+                // Show the specific logging error alert
+                self.showLoggingErrorAlert = true
             }
         }
     }
@@ -529,6 +554,9 @@ struct CombinedLogMealRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add state for logging error alert
+    @State private var showLoggingErrorAlert: Bool = false
+    
     init(log: CombinedLog, 
          meal: MealSummary, 
          selectedMeal: Binding<String>, 
@@ -581,22 +609,37 @@ struct CombinedLogMealRow: View {
                         switch mode {
                         case .logFood:
                             // Original behavior - log the meal
-                            // Pass the displayCalories as the totalCalories
-                            foodManager.logMeal(meal: Meal(
-                                id: meal.mealId,
-                                title: meal.title,
-                                description: meal.description,
-                                directions: nil,
-                                privacy: "private",
-                                servings: meal.servings,
-                                mealItems: [],
-                                image: meal.image,
-                                totalCalories: log.displayCalories,
-                                totalProtein: meal.protein,
-                                totalCarbs: meal.carbs,
-                                totalFat: meal.fat,
-                                scheduledAt: nil
-                            ), mealTime: selectedMeal)
+                            foodManager.logMeal(
+                                meal: Meal(
+                                    id: meal.mealId,
+                                    title: meal.title,
+                                    description: meal.description,
+                                    directions: nil,
+                                    privacy: "private",
+                                    servings: meal.servings,
+                                    mealItems: [],
+                                    image: meal.image,
+                                    totalCalories: log.displayCalories,
+                                    totalProtein: meal.protein,
+                                    totalCarbs: meal.carbs,
+                                    totalFat: meal.fat,
+                                    scheduledAt: nil
+                                ), 
+                                mealTime: selectedMeal,
+                                statusCompletion: { success in
+                                    if !success {
+                                        // Ensure the food manager's lastLoggedMealId is cleared
+                                        withAnimation {
+                                            if self.foodManager.lastLoggedMealId == self.meal.mealId {
+                                                self.foodManager.lastLoggedMealId = nil
+                                            }
+                                        }
+                                        
+                                        // Show error alert
+                                        showLoggingErrorAlert = true
+                                    }
+                                }
+                            )
                         
                         case .addToMeal:
                             // New behavior - add all food items from the meal to selectedFoods
@@ -657,6 +700,12 @@ struct CombinedLogMealRow: View {
                     path.append(FoodNavigationDestination.editMeal(minimalMeal))
                 }
             }
+        }
+        // Add a specific logging error alert
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
         }
     }
     
@@ -742,6 +791,9 @@ struct MealHistoryRow: View {
     let meal: MealSummary  // Changed from Meal to MealSummary since that's what we get from the log
     @Binding var selectedMeal: String
     
+    // Add state for logging error alert
+    @State private var showLoggingErrorAlert: Bool = false
+    
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -764,7 +816,37 @@ struct MealHistoryRow: View {
                 
                 Button {
                     HapticFeedback.generate()
-                    foodManager.logMeal(meal: Meal(id: meal.mealId, title: meal.title, description: meal.description, directions: nil, privacy: "private", servings: meal.servings, mealItems: [], image: meal.image, totalCalories: meal.displayCalories, totalProtein: nil, totalCarbs: nil, totalFat: nil, scheduledAt: meal.scheduledAt), mealTime: selectedMeal)
+                    foodManager.logMeal(
+                        meal: Meal(
+                            id: meal.mealId, 
+                            title: meal.title, 
+                            description: meal.description, 
+                            directions: nil, 
+                            privacy: "private", 
+                            servings: meal.servings, 
+                            mealItems: [], 
+                            image: meal.image, 
+                            totalCalories: meal.displayCalories, 
+                            totalProtein: nil, 
+                            totalCarbs: nil, 
+                            totalFat: nil, 
+                            scheduledAt: meal.scheduledAt
+                        ), 
+                        mealTime: selectedMeal,
+                        statusCompletion: { success in
+                            if !success {
+                                // Ensure the food manager's lastLoggedMealId is cleared
+                                withAnimation {
+                                    if self.foodManager.lastLoggedMealId == self.meal.mealId {
+                                        self.foodManager.lastLoggedMealId = nil
+                                    }
+                                }
+                                
+                                // Show error alert
+                                showLoggingErrorAlert = true
+                            }
+                        }
+                    )
                 } label: {
                     if foodManager.lastLoggedMealId == meal.mealId {
                         Image(systemName: "checkmark.circle.fill")
@@ -785,6 +867,12 @@ struct MealHistoryRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 0)
+        // Add a specific logging error alert
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
+        }
     }
 }
 
@@ -797,6 +885,9 @@ struct MealRow: View {
     var mode: LogFoodMode = .logFood  // Default to logFood mode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
+    
+    // Add state for logging error alert
+    @State private var showLoggingErrorAlert: Bool = false
     
     // Make these optional bindings with default values
     init(meal: Meal, 
@@ -892,7 +983,23 @@ struct MealRow: View {
                         switch mode {
                         case .logFood:
                             // Original behavior - log the meal
-                            foodManager.logMeal(meal: meal, mealTime: selectedMeal)
+                            foodManager.logMeal(
+                                meal: meal, 
+                                mealTime: selectedMeal,
+                                statusCompletion: { success in
+                                    if !success {
+                                        // Ensure the food manager's lastLoggedMealId is cleared
+                                        withAnimation {
+                                            if self.foodManager.lastLoggedMealId == self.meal.id {
+                                                self.foodManager.lastLoggedMealId = nil
+                                            }
+                                        }
+                                        
+                                        // Show error alert
+                                        showLoggingErrorAlert = true
+                                    }
+                                }
+                            )
                         
                         case .addToMeal:
                             // New behavior - add meal items to selection
@@ -934,6 +1041,12 @@ struct MealRow: View {
                     path.append(FoodNavigationDestination.editMeal(meal))
                 }
             }
+        }
+        // Add a specific logging error alert
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
         }
     }
     
