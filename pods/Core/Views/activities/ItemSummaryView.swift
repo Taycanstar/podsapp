@@ -119,11 +119,6 @@ struct ItemSummaryView: View {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
         
-        // Debug output to help identify issues
-        print("Column values in item: \(item.columnValues.keys)")
-        print("Grouped columns: \(groupedColumns.map { $0.id })")
-        print("Single columns: \(singleColumns.map { $0.id })")
-        
         // Create a mapping between column IDs and their values for easier lookup
         let columnValues = item.columnValues
         

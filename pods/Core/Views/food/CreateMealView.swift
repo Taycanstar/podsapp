@@ -730,13 +730,7 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
             }
         }
     }
-    
-    // Debug output of final calculations
-    print("🔢 Final calculated totals:")
-    print("- Calories: \(totals.calories)")
-    print("- Protein: \(totals.protein)g (\(Int(totals.proteinPercentage))%)")
-    print("- Carbs: \(totals.carbs)g (\(Int(totals.carbsPercentage))%)")
-    print("- Fat: \(totals.fat)g (\(Int(totals.fatPercentage))%)")
+
     
     return totals
 }

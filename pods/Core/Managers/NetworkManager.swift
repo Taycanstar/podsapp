@@ -5363,7 +5363,7 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
         
         // Log raw response for deeper analysis
         if let responseString = String(data: data, encoding: .utf8) {
-            print("📥 Raw getMeals response: \(responseString)")
+          
         }
         
         do {
@@ -5371,17 +5371,11 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
             if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let meals = jsonObj["meals"] as? [[String: Any]] {
                 
-                print("🍽️ Found \(meals.count) meals in response")
+    
                 
                 // Analyze the first few meals to see structure
                 for (index, meal) in meals.prefix(2).enumerated() {
-                    print("🍽️ Meal #\(index) structure:")
-                    print("  - title: \(meal["title"] ?? "missing")")
-                    print("  - id: \(meal["id"] ?? "missing")")
-                    print("  - total_calories: \(meal["total_calories"] ?? "missing")")
-                    print("  - calories: \(meal["calories"] ?? "missing")") // Some APIs might use this name
-                    print("  - created_at: \(meal["created_at"] ?? "MISSING!!!")")
-                    print("  - All meal keys: \(meal.keys.joined(separator: ", "))")
+              
                     
                     // Check for meal items
                     if let mealItems = meal["meal_items"] as? [[String: Any]] {

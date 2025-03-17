@@ -326,15 +326,12 @@ extension FullActivitySummaryView {
         let groupedColumns = columns.filter { $0.groupingType == "grouped" }
         let singleColumns = columns.filter { $0.groupingType == "singular" }
         
-        // Debug output to help identify issues
-        print("FullActivitySummaryView - Column values in item: \(item.columnValues.keys)")
-        print("FullActivitySummaryView - Grouped columns: \(groupedColumns.map { $0.id })")
-        print("FullActivitySummaryView - Single columns: \(singleColumns.map { $0.id })")
+
         
         // CRITICAL DEBUG - Print the actual values about to be displayed
-        print("*** RENDERING VALUES - Item \(item.id) ***")
+  
         for (key, value) in item.columnValues {
-            print("*** RENDERING Column \(key) with value \(value)")
+           
         }
 
         // Create a mapping between column IDs and their values for easier lookup

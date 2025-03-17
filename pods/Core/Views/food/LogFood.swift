@@ -143,29 +143,46 @@ List {
             print("Create meal tapped")
             path.append(FoodNavigationDestination.createMeal)
         } label: {
-            VStack(alignment: .leading, spacing: 16) {
-                Image("burger")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 85, height: 85)
+            // VStack(alignment: .leading, spacing: 16) {
+            //     Image("burger")
+            //         .resizable()
+            //         .scaledToFit()
+            //         .frame(width: 85, height: 85)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Create a Meal")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+            //     VStack(alignment: .leading, spacing: 4) {
+            //         Text("Create a Meal")
+            //             .font(.title)
+            //             .fontWeight(.bold)
+            //             .foregroundColor(.primary)
                     
-                    Text("Create and save your favorite meals to log quickly again and again.")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.leading)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            //         Text("Create and save your favorite meals to log quickly again and again.")
+            //             .font(.subheadline)
+            //             .foregroundColor(.gray)
+            //             .multilineTextAlignment(.leading)
+            //     }
+            //     .frame(maxWidth: .infinity, alignment: .leading)
+            // }
+            // .padding(.vertical, 12)
+            // .padding(.horizontal, 16)
+            // .frame(maxWidth: .infinity, alignment: .leading)
+            // .background(Color("ioscard"))
+            // .cornerRadius(12)
+
+            HStack(spacing: 16) {
+                 Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                Text("Create Meal")
+                    .font(.system(size: 16))
+                    .foregroundColor(.accentColor)
+                  
+
+                Spacer()
             }
-            .padding(.vertical, 12)
             .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color("ioscard"))
+            .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
         }
         .padding(.horizontal)
@@ -173,6 +190,7 @@ List {
     }
     // Remove list padding for this row
     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+    .listRowSeparator(.hidden)
     
     // ROW 2: Meal History Section, exactly your styling
     VStack(spacing: 4) {
