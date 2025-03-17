@@ -23,8 +23,46 @@ class ActivityManager: ObservableObject {
     private let networkManager: NetworkManager
     private let pageSize = 50
     
+    static let shared = ActivityManager()
+    
     init() {
         self.networkManager = NetworkManager()
+    }
+    
+    /// Fetch a single activity from the backend and update our local activities array.
+    func fetchSingleActivity(activityId: Int, completion: @escaping (Result<Activity, Error>) -> Void) {
+        guard let userEmail = userEmail, let podId = podId else {
+            let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "ActivityManager not initialized"])
+            completion(.failure(error))
+            return
+        }
+        
+        print("Fetching single activity with ID: \(activityId)")
+        networkManager.fetchActivity(id: activityId, podId: podId, userEmail: userEmail) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let fetchedActivity):
+                    print("Successfully fetched activity: \(fetchedActivity.id)")
+                    // Merge into local array
+                    if let idx = self.activities.firstIndex(where: { $0.id == fetchedActivity.id }) {
+                        self.activities[idx] = fetchedActivity
+                        print("Updated existing activity in local array")
+                    } else {
+                        self.activities.append(fetchedActivity)
+                        print("Added new activity to local array")
+                    }
+                    
+                    // Notify SwiftUI views
+                    self.objectWillChange.send()
+                    
+                    completion(.success(fetchedActivity))
+                case .failure(let error):
+                    print("Failed to fetch activity: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
     }
     
     func initialize(podId: Int, userEmail: String) {
@@ -303,6 +341,15 @@ func createActivity(
                 
                 switch result {
                 case .success(let updatedActivity):
+                    // Debug the returned activity items
+                    print("ActivityManager - Updated activity received: \(updatedActivity.id)")
+                    for item in updatedActivity.items {
+                        print("ActivityManager - Item \(item.id) column values after update: \(item.columnValues.keys)")
+                        for (key, value) in item.columnValues {
+                            print("ActivityManager - Column \(key) value: \(value)")
+                        }
+                    }
+                    
                     // Update local array with fresh data from server
                     if let index = self.activities.firstIndex(where: { $0.id == updatedActivity.id }) {
                         self.activities[index] = updatedActivity

@@ -55,8 +55,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -3723,21 +3723,53 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         URLSession.shared.dataTask(with: request) { data, response, error in
             // Handle client-side errors
             if let error = error {
+                print("Network error in updateActivity: \(error)")
                 completion(.failure(error))
                 return
             }
             
             guard let data = data else {
+                print("No data received in updateActivity")
                 completion(.failure(NetworkError.noData))
                 return
+            }
+            
+            // Log the raw response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("Raw response from updateActivity: \(responseString)")
             }
             
             // 6) Decode the updated Activity
             do {
                 let decoder = JSONDecoder()
                 let updatedActivity = try decoder.decode(Activity.self, from: data)
+                print("Successfully decoded updated activity: \(updatedActivity.id)")
+                
+                // Debug column values for each item
+                for item in updatedActivity.items {
+                    print("NetworkManager - Item \(item.id) column values from JSON: \(item.columnValues.keys)")
+                }
+                
                 completion(.success(updatedActivity))
             } catch {
+                print("Decoding error in updateActivity: \(error)")
+                print("Decoding error details: \(error.localizedDescription)")
+                
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .keyNotFound(let key, let context):
+                        print("Missing key: \(key.stringValue) in \(context.codingPath)")
+                    case .typeMismatch(let type, let context):
+                        print("Type mismatch: expected \(type) in \(context.codingPath)")
+                    case .valueNotFound(let type, let context):
+                        print("Value not found: expected \(type) in \(context.codingPath)")
+                    case .dataCorrupted(let context):
+                        print("Data corrupted: \(context)")
+                    @unknown default:
+                        print("Unknown decoding error: \(decodingError)")
+                    }
+                }
+                
                 completion(.failure(error))
             }
         }.resume()
@@ -3774,6 +3806,46 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 }
             }
             task.resume()
+        }
+        
+        // Fetch a single activity by ID
+        func fetchActivity(id: Int, podId: Int, userEmail: String, completion: @escaping (Result<Activity, Error>) -> Void) {
+            let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let urlString = "\(baseUrl)/get-activity/\(podId)/\(id)/\(encodedEmail)/"
+            
+            print("Fetching activity with URL: \(urlString)")
+            
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                // Log the raw response for debugging
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Raw JSON from get_activity: \(jsonString)")
+                }
+                
+                do {
+                    let decoder = JSONDecoder()
+                    let activity = try decoder.decode(Activity.self, from: data)
+                    print("Successfully decoded activity from server: \(activity.id)")
+                    completion(.success(activity))
+                } catch let decodingError {
+                    print("Failed to decode activity: \(decodingError)")
+                    completion(.failure(decodingError))
+                }
+            }.resume()
         }
         
         func fetchUserActivityItems(podId: Int, userEmail: String, page: Int = 1, completion: @escaping (Result<(items: [ActivityItem], hasMore: Bool), Error>) -> Void) {

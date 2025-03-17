@@ -8,14 +8,11 @@ struct FullActivitySummaryView: View {
     @State private var showDeleteAlert = false
     @State private var isDeleting = false
     @State private var showEditSheet = false
-        @State private var currentActivity: Activity? 
+    @State private var currentActivity: Activity?
+    // Add a refresh ID to force view updates
+    @State private var refreshID = UUID()
     
-    // Add computed property to get fresh activity data
-    // private var activity: Activity? {
-        
-    //     activityManager.activities.first { $0.id == activityId }
-    // }
-    
+
     var body: some View {
         ZStack {
             Color("iosbg")
@@ -64,10 +61,20 @@ struct FullActivitySummaryView: View {
                         }
                     }
                     .padding(.vertical, 10)
+                    // Add the refreshID to force view updates
+                    .id(refreshID)
                 }
                 .navigationTitle(formattedDate(activity.loggedAt))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    // ToolbarItem(placement: .navigationBarLeading) {
+                    //     Button("Force Refresh") {
+                    //         // Force a completely new activity fetch and UI rebuild
+                    //         currentActivity = nil
+                    //         fetchRemoteActivity()
+                    //     }
+                    // }
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Menu {
                             Button {
@@ -99,16 +106,50 @@ struct FullActivitySummaryView: View {
                         activity: activity,
                         columns: columns
                     )
+                    .onDisappear {
+                        // Force a fresh data fetch when edit sheet is dismissed
+                        fetchRemoteActivity()
+                    }
                 }
+            } else {
+                // Show loading indicator if activity not loaded yet
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .padding()
             }
         }
-         .onAppear {
-            // Load activity once when view appears
-            currentActivity = activityManager.activities.first { $0.id == activityId }
+        .onAppear {
+            // Always fetch fresh data from the server when view appears
+            fetchRemoteActivity()
         }
         .onChange(of: activityManager.activities) { _ in
-            // Update if activities change
-            currentActivity = activityManager.activities.first { $0.id == activityId }
+            // Update from local state whenever activities change
+            print("ONCHANGE - ActivityManager.activities changed")
+            if let updatedActivity = activityManager.activities.first(where: { $0.id == activityId }) {
+                // Create a completely fresh copy by going through JSON
+                do {
+                    let jsonData = try JSONEncoder().encode(updatedActivity)
+                    let freshCopy = try JSONDecoder().decode(Activity.self, from: jsonData)
+                    print("ONCHANGE - Created fresh copy of activity \(freshCopy.id)")
+                    
+                    // Update on main thread
+                    DispatchQueue.main.async {
+                        self.currentActivity = freshCopy
+                        self.refreshID = UUID() // Force UI refresh
+                        print("ONCHANGE - Updated currentActivity from activityManager: \(freshCopy.id)")
+                    }
+                } catch {
+                    print("ONCHANGE - Error creating fresh copy: \(error)")
+                    // Fall back to direct assignment if JSON conversion fails
+                    DispatchQueue.main.async {
+                        self.currentActivity = updatedActivity
+                        self.refreshID = UUID() // Force UI refresh
+                        print("ONCHANGE - Updated currentActivity from activityManager (direct assignment): \(updatedActivity.id)")
+                    }
+                }
+            } else if currentActivity == nil {
+                loadActivity()
+            }
         }
         .alert("Delete Activity", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -120,6 +161,78 @@ struct FullActivitySummaryView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this activity?")
+        }
+    }
+    
+    // New method to explicitly fetch from the backend
+    private func fetchRemoteActivity() {
+        print("FETCH REMOTE ACTIVITY - Starting fresh fetch for activity ID: \(activityId)")
+        
+        // First set to nil to force complete UI refresh
+        self.currentActivity = nil
+        
+        activityManager.fetchSingleActivity(activityId: activityId) { result in
+            switch result {
+            case .success(let updatedActivity):
+                // We now have the latest version of this activity
+                print("FETCH REMOTE ACTIVITY - Successfully fetched fresh data for \(updatedActivity.id)")
+                
+                // Generate new UUID first
+                self.refreshID = UUID()
+                
+                // CRITICAL: Create a completely fresh Activity object with a direct assignment
+                // This ensures no chance of reference issues
+                DispatchQueue.main.async {
+                    self.currentActivity = updatedActivity
+                    
+                    // Debug column values for each item
+                    for item in updatedActivity.items {
+                        print("DEBUG - Item \(item.id) column values after refresh: \(item.columnValues.keys)")
+                        for (key, value) in item.columnValues {
+                            print("DEBUG - Column \(key) value: \(value)")
+                        }
+                    }
+                }
+                
+            case .failure(let error):
+                print("Failed to fetch activity from server: \(error)")
+                // Fall back to local state
+                loadActivity()
+            }
+        }
+    }
+    
+    // Create a dedicated function to load activity data from local state
+    private func loadActivity() {
+        print("LOAD ACTIVITY - Loading from local activities array")
+        if let freshActivity = activityManager.activities.first(where: { $0.id == activityId }) {
+            // Create a completely fresh copy by going through JSON
+            do {
+                let jsonData = try JSONEncoder().encode(freshActivity)
+                let freshCopy = try JSONDecoder().decode(Activity.self, from: jsonData)
+                print("LOAD ACTIVITY - Created fresh copy of activity \(freshCopy.id)")
+                
+                // Update on main thread
+                DispatchQueue.main.async {
+                    self.currentActivity = freshCopy
+                    self.refreshID = UUID() // Force UI refresh
+                }
+            } catch {
+                print("LOAD ACTIVITY - Error creating fresh copy: \(error)")
+                // Fall back to direct assignment if JSON conversion fails
+                DispatchQueue.main.async {
+                    self.currentActivity = freshActivity
+                    self.refreshID = UUID() // Force UI refresh
+                }
+            }
+        } else {
+            // If not found in current activities, try to fetch it
+            print("Activity \(activityId) not found in current activities, refreshing...")
+            Task {
+                await MainActor.run {
+                    activityManager.loadMoreActivities(refresh: true)
+                }
+            }
         }
     }
 }
@@ -155,6 +268,12 @@ extension FullActivitySummaryView {
         print("FullActivitySummaryView - Column values in item: \(item.columnValues.keys)")
         print("FullActivitySummaryView - Grouped columns: \(groupedColumns.map { $0.id })")
         print("FullActivitySummaryView - Single columns: \(singleColumns.map { $0.id })")
+        
+        // CRITICAL DEBUG - Print the actual values about to be displayed
+        print("*** RENDERING VALUES - Item \(item.id) ***")
+        for (key, value) in item.columnValues {
+            print("*** RENDERING Column \(key) with value \(value)")
+        }
 
         // Create a mapping between column IDs and their values for easier lookup
         let columnValues = item.columnValues

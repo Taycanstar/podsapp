@@ -165,6 +165,16 @@ struct EditActivityItemView: View {
                             saveChanges()
                         }
                         .disabled(isSubmitting)
+                        .opacity(isSubmitting ? 0.6 : 1)
+                        .overlay(
+                            Group {
+                                if isSubmitting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                                        .scaleEffect(0.8)
+                                }
+                            }
+                        )
                     }
                     
                     ToolbarItemGroup(placement: .keyboard) {
@@ -222,54 +232,11 @@ struct EditActivityItemView: View {
             }
         }
         
-        // Create local updated activity for optimistic update
-        var updatedActivity = parentActivity
-        if parentActivity.isSingleItem {
-            updatedActivity.notes = notes
-        }
+        // DO NOT perform optimistic updates
+        // DO NOT dismiss the view prematurely
         
-        // Update specific item's values
-        updatedActivity.items = updatedActivity.items.map { activityItem in
-            var updatedItem = activityItem
-            if activityItem.id == item.id {
-                updatedItem.columnValues = columnValues
-            }
-            return updatedItem
-        }
-        
-        // Optimistically update UI
-        if let idx = activityManager.activities.firstIndex(where: { $0.id == parentActivity.id }) {
-            activityManager.activities[idx] = updatedActivity
-        }
-        
-        // Dismiss immediately for responsive UI
-        dismiss()
-        
-        // Make network request
-//        activityManager.updateActivity(
-//            activityId: parentActivity.id,
-//            notes: parentActivity.isSingleItem ? (notes.isEmpty ? nil : notes) : parentActivity.notes,
-//            items: itemsToUpdate
-//        ) { result in
-//            DispatchQueue.main.async {
-//                self.isSubmitting = false
-//                
-//                switch result {
-//                case .success:
-//                    print("Successfully updated item")
-//                    // Force a refresh of activities
-//                    Task {
-//                        await MainActor.run {
-//                            activityManager.loadMoreActivities(refresh: true)
-//                        }
-//                    }
-//                    
-//                case .failure(let error):
-//                    print("Failed to update item:", error)
-//                    // Optionally handle error state
-//                }
-//            }
-//        }
+        // Make network request first
+        print("Sending activity update to server: \(itemsToUpdate)")
         activityManager.updateActivity(
             activityId: parentActivity.id,
             notes: parentActivity.isSingleItem ? (notes.isEmpty ? nil : notes) : parentActivity.notes,
@@ -280,15 +247,28 @@ struct EditActivityItemView: View {
                 
                 switch result {
                 case .success(let updatedActivity):
-                    print("Successfully updated item")
-                    // No need for refresh, we already have fresh data
+                    print("Received updated activity from server: \(updatedActivity.id)")
+                    
+                    // Update the ActivityManager with the server response
+                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.parentActivity.id }) {
+                        self.activityManager.activities[idx] = updatedActivity
+                        
+                        // Force a UI refresh
+                        self.activityManager.objectWillChange.send()
+                        
+                        // Log the updated values for verification
+                        if let updatedItem = updatedActivity.items.first(where: { $0.id == self.item.id }) {
+                            print("Updated column values from server: \(updatedItem.columnValues)")
+                        }
+                    }
+                    
+                    // Only dismiss after successful update
+                    self.dismiss()
                     
                 case .failure(let error):
-                    print("Failed to update item:", error)
-                    // Optionally revert optimistic update
-                    if let idx = self.activityManager.activities.firstIndex(where: { $0.id == self.parentActivity.id }) {
-                        self.activityManager.activities[idx] = self.parentActivity
-                    }
+                    print("Failed to update item: \(error)")
+                    // Show an error alert to the user
+                    // For now, just log the error
                 }
             }
         }
