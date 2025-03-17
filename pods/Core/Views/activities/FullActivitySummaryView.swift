@@ -119,8 +119,11 @@ struct FullActivitySummaryView: View {
             }
         }
         .onAppear {
-            // Always fetch fresh data from the server when view appears
-            fetchRemoteActivity()
+            // Try to immediately load cached data first
+            loadActivity()
+            
+            // Then fetch fresh data in the background
+            fetchRemoteActivity(skipSettingNil: true)
         }
         .onChange(of: activityManager.activities) { _ in
             // Update from local state whenever activities change
@@ -165,11 +168,12 @@ struct FullActivitySummaryView: View {
     }
     
     // New method to explicitly fetch from the backend
-    private func fetchRemoteActivity() {
+    private func fetchRemoteActivity(skipSettingNil: Bool = false) {
         print("FETCH REMOTE ACTIVITY - Starting fresh fetch for activity ID: \(activityId)")
         
-        // First set to nil to force complete UI refresh
-        self.currentActivity = nil
+        if !skipSettingNil {
+            self.currentActivity = nil
+        }
         
         activityManager.fetchSingleActivity(activityId: activityId) { result in
             switch result {
@@ -183,7 +187,19 @@ struct FullActivitySummaryView: View {
                 // CRITICAL: Create a completely fresh Activity object with a direct assignment
                 // This ensures no chance of reference issues
                 DispatchQueue.main.async {
-                    self.currentActivity = updatedActivity
+                    // Only update if we actually have an activity with data that's different
+                    // from what's currently displayed
+                    if skipSettingNil && self.currentActivity != nil {
+                        // Compare the timestamp or a key field to check if data is different
+                        if let current = self.currentActivity, self.activityHasChanged(current, updatedActivity) {
+                            self.currentActivity = updatedActivity
+                            print("FETCH REMOTE ACTIVITY - Updated with fresh data (different from cache)")
+                        } else {
+                            print("FETCH REMOTE ACTIVITY - No update needed (same as cached)")
+                        }
+                    } else {
+                        self.currentActivity = updatedActivity
+                    }
                     
                     // Debug column values for each item
                     for item in updatedActivity.items {
@@ -205,34 +221,80 @@ struct FullActivitySummaryView: View {
     // Create a dedicated function to load activity data from local state
     private func loadActivity() {
         print("LOAD ACTIVITY - Loading from local activities array")
-        if let freshActivity = activityManager.activities.first(where: { $0.id == activityId }) {
-            // Create a completely fresh copy by going through JSON
-            do {
-                let jsonData = try JSONEncoder().encode(freshActivity)
-                let freshCopy = try JSONDecoder().decode(Activity.self, from: jsonData)
-                print("LOAD ACTIVITY - Created fresh copy of activity \(freshCopy.id)")
-                
-                // Update on main thread
-                DispatchQueue.main.async {
-                    self.currentActivity = freshCopy
-                    self.refreshID = UUID() // Force UI refresh
-                }
-            } catch {
-                print("LOAD ACTIVITY - Error creating fresh copy: \(error)")
-                // Fall back to direct assignment if JSON conversion fails
-                DispatchQueue.main.async {
-                    self.currentActivity = freshActivity
-                    self.refreshID = UUID() // Force UI refresh
-                }
+        if let cachedActivity = activityManager.activities.first(where: { $0.id == activityId }) {
+            // Found in cache - use directly for immediate display
+            DispatchQueue.main.async {
+                self.currentActivity = cachedActivity
+                print("LOAD ACTIVITY - Displayed cached activity \(cachedActivity.id)")
             }
         } else {
             // If not found in current activities, try to fetch it
-            print("Activity \(activityId) not found in current activities, refreshing...")
-            Task {
-                await MainActor.run {
-                    activityManager.loadMoreActivities(refresh: true)
+            print("LOAD ACTIVITY - Activity \(activityId) not found in cache, requesting from network")
+            fetchRemoteActivity() // Will show loader
+        }
+    }
+
+    // Helper method to determine if activity data has changed
+    private func activityHasChanged(_ current: Activity, _ updated: Activity) -> Bool {
+        // Check if any of the items have different column values
+        if current.items.count != updated.items.count {
+            return true
+        }
+        
+        // Check each item
+        for (index, currentItem) in current.items.enumerated() {
+            if index >= updated.items.count {
+                return true
+            }
+            
+            let updatedItem = updated.items[index]
+            
+            // Check if the column values have changed
+            if currentItem.columnValues.keys != updatedItem.columnValues.keys {
+                return true
+            }
+            
+            // Check each column value
+            for (key, currentValue) in currentItem.columnValues {
+                guard let updatedValue = updatedItem.columnValues[key] else {
+                    return true
+                }
+                
+                if !columnValuesAreEqual(currentValue, updatedValue) {
+                    return true
                 }
             }
+        }
+        
+        // Check if notes or any other important fields have changed
+        if current.notes != updated.notes {
+            return true
+        }
+        
+        return false
+    }
+    
+    // Helper to compare column values
+    private func columnValuesAreEqual(_ lhs: ColumnValue, _ rhs: ColumnValue) -> Bool {
+        switch (lhs, rhs) {
+        case (.string(let str1), .string(let str2)):
+            return str1 == str2
+        case (.number(let num1), .number(let num2)):
+            return num1 == num2
+        case (.time(let time1), .time(let time2)):
+            return time1 == time2
+        case (.array(let arr1), .array(let arr2)):
+            guard arr1.count == arr2.count else { return false }
+            for (i, value1) in arr1.enumerated() {
+                if !columnValuesAreEqual(value1, arr2[i]) {
+                    return false
+                }
+            }
+            return true
+        case (.null, .null):
+            return true
+        default:
+            return false
         }
     }
 }
@@ -283,8 +345,8 @@ extension FullActivitySummaryView {
             if !groupedColumns.isEmpty {
                 // Check if any grouped column has values
                 let hasGroupedValues = groupedColumns.contains { column in
-                    let columnId = String(column.id)
-                    if let value = columnValues[columnId], case .array(let arr) = value, !arr.isEmpty {
+                    let columnIdStr = String(column.id)
+                    if let value = columnValues[columnIdStr], case .array(let arr) = value, !arr.isEmpty {
                         return true
                     }
                     return false
