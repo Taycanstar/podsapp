@@ -36,6 +36,11 @@ struct CreateRecipeView: View {
     
     @State private var showNameTakenAlert = false
     @State private var uiImage: UIImage? = nil
+    
+    // Add these states to track saving
+    @State private var isSaving = false
+    @State private var showSaveError = false
+    @State private var errorMessage = ""
 
     @FocusState private var focusedField: Field?
 
@@ -43,10 +48,16 @@ struct CreateRecipeView: View {
     @Binding var selectedFoods: [Food]
     @EnvironmentObject var foodManager: FoodManager
     
+    // Example share options
+    let shareOptions = ["Everyone", "Friends", "Only You"]
+    
+    // Adjust how tall you want the banner/collapsing area to be
+    let headerHeight: CGFloat = 400
+    
     // MARK: - Computed Properties
     
-    private var isFormValid: Bool {
-        !recipeName.isEmpty && !selectedFoods.isEmpty && Int(servings) ?? 0 > 0
+    private var isCreateButtonDisabled: Bool {
+        return recipeName.isEmpty
     }
     
     // Break down the nutrition calculations into separate properties
@@ -54,217 +65,116 @@ struct CreateRecipeView: View {
         Double(Int(servings) ?? 1)
     }
     
-    private var totalCalories: Double {
-        selectedFoods.reduce(0) { sum, food in
-            let servings = food.numberOfServings ?? 1
-            return sum + ((food.calories ?? 0) * servings)
-        }
+    private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
+        let totals = calculateTotalMacros(selectedFoods)
+        return (
+            protein: totals.proteinPercentage,
+            carbs: totals.carbsPercentage,
+            fat: totals.fatPercentage
+        )
     }
-    
-    private var totalProtein: Double {
-        selectedFoods.reduce(0) { sum, food in
-            let servings = food.numberOfServings ?? 1
-            return sum + ((food.protein ?? 0) * servings)
-        }
-    }
-    
-    private var totalCarbs: Double {
-        selectedFoods.reduce(0) { sum, food in
-            let servings = food.numberOfServings ?? 1
-            return sum + ((food.carbs ?? 0) * servings)
-        }
-    }
-    
-    private var totalFat: Double {
-        selectedFoods.reduce(0) { sum, food in
-            let servings = food.numberOfServings ?? 1
-            return sum + ((food.fat ?? 0) * servings)
-        }
-    }
-    
-    // Additional computed properties to simplify complex expressions
-    private var caloriesPerServing: Double {
-        totalCalories / servingsValue
-    }
-    
-    private var proteinPerServing: Double {
-        totalProtein / servingsValue
-    }
-    
-    private var carbsPerServing: Double {
-        totalCarbs / servingsValue
-    }
-    
-    private var fatPerServing: Double {
-        totalFat / servingsValue
-    }
-    
-    // MARK: - Init
     
     // MARK: - Body
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Recipe Image
-                imageSection
-                
-                // Recipe Name
-                VStack(alignment: .leading) {
-                    Text("Recipe Name")
-                        .font(.headline)
-                    
-                    TextField("Enter recipe name", text: $recipeName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .focused($focusedField, equals: .mealName)
-                }
-                
-                // Servings
-                VStack(alignment: .leading) {
-                    Text("Servings")
-                        .font(.headline)
-                    
-                    TextField("Number of servings", text: $servings)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.numberPad)
-                }
-                
-                // Time
-                HStack {
-                    // Prep Time
-                    VStack(alignment: .leading) {
-                        Text("Prep Time (mins)")
-                            .font(.headline)
+        GeometryReader { outerGeo in
+            ScrollView(showsIndicators: false) {
+                ZStack(alignment: .top) {
+                    // A) Collapsing / Stretchy Header
+                    GeometryReader { headerGeo in
+                        let offset = headerGeo.frame(in: .global).minY
+                        let height = offset > 0
+                            ? (headerHeight + offset)
+                            : headerHeight
                         
-                        TextField("Prep time", text: $prepTime)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                    }
-                    
-                    Spacer()
-                    
-                    // Cook Time
-                    VStack(alignment: .leading) {
-                        Text("Cook Time (mins)")
-                            .font(.headline)
-                        
-                        TextField("Cook time", text: $cookTime)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                    }
-                }
-                
-                // Instructions
-                VStack(alignment: .leading) {
-                    Text("Instructions")
-                        .font(.headline)
-                    
-                    TextEditor(text: $instructions)
-                        .frame(minHeight: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        .padding(.bottom)
-                }
-                
-                // Add ingredients button
-                Button(action: {
-                    path.append(FoodNavigationDestination.addRecipeIngredients)
-                }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add Ingredients")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-                
-                // Selected ingredients
-                if !selectedFoods.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Ingredients")
-                            .font(.headline)
-                        
-                        ForEach(selectedFoods) { food in
-                            ingredientRow(food)
-                        }
-                        
-                        Divider()
-                        
-                        // Nutritional Information
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Nutritional Information (per serving)")
-                                .font(.headline)
-                            
-                            HStack {
-                                nutritionItem(
-                                    label: "Calories",
-                                    value: String(format: "%.0f", caloriesPerServing)
+                        // The banner image (if selected), else a placeholder
+                        if let selectedImage {
+                            selectedImage
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: outerGeo.size.width, height: height)
+                                .clipped()
+                                // Shift upward if scrolled up
+                                .offset(y: offset > 0 ? -offset : 0)
+                                .overlay(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
                                 )
-                                
-                                Spacer()
-                                
-                                nutritionItem(
-                                    label: "Protein",
-                                    value: String(format: "%.1fg", proteinPerServing)
-                                )
-                                
-                                Spacer()
-                                
-                                nutritionItem(
-                                    label: "Carbs",
-                                    value: String(format: "%.1fg", carbsPerServing)
-                                )
-                                
-                                Spacer()
-                                
-                                nutritionItem(
-                                    label: "Fat",
-                                    value: String(format: "%.1fg", fatPerServing)
-                                )
+                                .ignoresSafeArea(edges: .top)
+                                .onTapGesture {
+                                    showOptionsSheet = true
+                                }
+                        } else {
+                            ZStack {
+                                Color("iosnp")
+                                Image(systemName: "camera.circle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.accentColor)
                             }
+                            .frame(width: outerGeo.size.width, height: height)
+                            .offset(y: offset > 0 ? -offset : 0)
+                            .onTapGesture {
+                                showOptionsSheet = true
+                            }
+                            .ignoresSafeArea(edges: .top)
                         }
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
+                    }
+                    .frame(height: headerHeight)
+                    
+                    // B) Main Scrollable Content
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: headerHeight) // leave space for header
+                        
+                        recipeDetailsSection
+                
+                        recipeItemsSection
+                        directionsSection
+                        
+                        Spacer().frame(height: 40) // extra bottom space
                     }
                 }
-                
-                // Privacy settings
-                privacySection
-                
-                // Create button
-                Button(action: createRecipe) {
-                    Text("Create Recipe")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isFormValid ? Color.blue : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .disabled(!isFormValid)
-                .padding(.vertical)
             }
-            .padding()
+            .ignoresSafeArea(edges: .top)
         }
-        .navigationTitle("Create Recipe")
+        .background(Color("iosbg"))
+        // Transparent nav bar so we see banner behind it
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.clear, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("New Recipe")
+                    .foregroundColor(selectedImage != nil ? .white : .primary)
+                    .fontWeight(.semibold)
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Create") {
+                    saveNewRecipe()
+                }
+                .disabled(isCreateButtonDisabled)
+                .foregroundColor(selectedImage != nil ? .white : .primary)
+                .fontWeight(.semibold)
+            }
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
+                Button(action: {
+                    resetFields()
                     dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(selectedImage != nil ? .white : .primary)
+                }
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
                 }
             }
         }
-        .alert("Recipe Name Already Taken", isPresented: $showNameTakenAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Please choose a different name for your recipe.")
-        }
+        .navigationBarBackButtonHidden(true)
+        
         // Full screen cover for ImagePicker
         .fullScreenCover(isPresented: $showImagePicker) {
             ImagePicker(
@@ -273,179 +183,374 @@ struct CreateRecipeView: View {
                 sourceType: sourceType
             )
         }
-        .actionSheet(isPresented: $showOptionsSheet) {
-            ActionSheet(
-                title: Text("Select Photo"),
-                buttons: [
-                    .default(Text("Take Photo")) {
-                        self.sourceType = .camera
-                        self.showImagePicker = true
-                    },
-                    .default(Text("Choose from Library")) {
-                        self.sourceType = .photoLibrary
-                        self.showImagePicker = true
-                    },
-                    .cancel()
-                ]
-            )
-        }
-        .onAppear {
-            // Set initial focus
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                focusedField = .mealName
+        .onChange(of: uiImage) { newUIImage in
+            guard let picked = newUIImage else { return }
+            // Use your existing `uploadMealImage(_:, completion:)`
+            NetworkManager().uploadMealImage(picked) { result in
+                switch result {
+                case .success(let url):
+                    print("Upload success. URL: \(url)")
+                    // store if needed, e.g. self.imageURL = url
+                case .failure(let error):
+                    print("Upload failed:", error)
+                    // show alert if you like
+                }
             }
         }
-        .onChange(of: uiImage) { newImage in
-            if let newImage = newImage {
-                uploadImage(newImage)
+        
+        // Photo selection dialog
+        .confirmationDialog("Choose Photo", isPresented: $showOptionsSheet) {
+            Button("Take Photo") {
+                sourceType = .camera
+                showImagePicker = true
             }
+            Button("Choose from Library") {
+                sourceType = .photoLibrary
+                showImagePicker = true
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        // Add error alert
+        .alert("Upload Error", isPresented: $showUploadError) {
+            Button("Retry") {
+                // implement retry if needed
+            }
+            Button("Cancel", role: .cancel) {
+                uploadError = nil
+            }
+        } message: {
+            Text(uploadError?.localizedDescription ?? "Unknown error")
+        }
+        
+        // Add error alert
+        .alert("Error Saving Recipe", isPresented: $showSaveError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+        
+        // Add name taken alert
+        .alert("Recipe Name Already Taken", isPresented: $showNameTakenAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please choose a different name.")
         }
     }
     
     // MARK: - View Components
     
-    private var imageSection: some View {
-        ZStack {
-            if let selectedImage = selectedImage {
-                selectedImage
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 200)
-                    .clipped()
-                    .cornerRadius(8)
-            } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(height: 200)
-                    .cornerRadius(8)
-                    .overlay(
-                        Image(systemName: "camera.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.white)
-                    )
-            }
+    private var recipeDetailsSection: some View {
+        VStack(spacing: 8) {
+            // Title
+            TextField("Title", text: $recipeName)
+                .focused($focusedField, equals: .mealName)
+                .textFieldStyle(.plain)
             
-            if isUploading {
-                ProgressView(value: uploadProgress)
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .scaleEffect(2)
-                    .tint(.white)
-                    .background(Color.black.opacity(0.5))
-                    .frame(width: 60, height: 60)
-                    .cornerRadius(10)
-            }
+            Divider()
             
-            Button(action: {
-                showOptionsSheet = true
-            }) {
-                Text("Add Photo")
-                    .padding(8)
-                    .background(Color.black.opacity(0.6))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            .padding(8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        }
-    }
-    
-    private var privacySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Privacy")
-                .font(.headline)
-            
-            Button(action: {
-                showingShareOptions = true
-            }) {
-                HStack {
-                    Text("Share with: \(shareWith)")
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.gray)
-                }
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-            }
-        }
-        .confirmationDialog("Share Recipe With", isPresented: $showingShareOptions, titleVisibility: .visible) {
-            Button("Everyone (Public)") { shareWith = "Everyone" }
-            Button("Only Me (Private)") { shareWith = "Only Me" }
-        } message: {
-            Text("Choose who can see your recipe")
-        }
-    }
-    
-    private func ingredientRow(_ food: Food) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(food.displayName)
-                    .fontWeight(.medium)
+               // Servings row
+            HStack {
+                Text("Servings")
+                    .foregroundColor(.primary)
                 
-                if let servings = food.numberOfServings {
-                    Text("\(String(format: "%.1f", servings)) \(food.servingSizeText)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                Spacer()
+                
+                Stepper(servings, onIncrement: {
+                    let currentValue = Int(servings) ?? 1
+                    if currentValue < 20 {
+                        servings = "\(currentValue + 1)"
+                    }
+                }, onDecrement: {
+                    let currentValue = Int(servings) ?? 1
+                    if currentValue > 1 {
+                        servings = "\(currentValue - 1)"
+                    }
+                })
+            }
+
+            Divider()
+            
+            // Share-with row
+            HStack {
+                Text("Share with")
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                Menu {
+                    ForEach(shareOptions, id: \.self) { option in
+                        Button(option) {
+                            shareWith = option
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(shareWith)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color("iosbtn"))
+                    .cornerRadius(8)
+                }
+            }
+            
+            Divider()
+            
+            // Macros
+            macroCircleAndStats
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+    
+
+    
+    private var recipeItemsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recipe Ingredients")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            // Aggregate duplicates by fdcId
+            let aggregatedFoods = aggregateFoodsByFdcId(selectedFoods)
+            
+            if !aggregatedFoods.isEmpty {
+                List {
+                    // Use aggregatedFoods instead of selectedFoods
+                    ForEach(Array(aggregatedFoods.enumerated()), id: \.element.id) { index, food in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(food.displayName)
+                                    .font(.headline)
+                                
+                                HStack {
+                                    Text(food.servingSizeText)
+                                    if let servings = food.numberOfServings,
+                                       servings > 1 {
+                                        Text("×\(Int(servings))")
+                                    }
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            
+                            if let calories = food.calories {
+                                Text("\(Int(calories * (food.numberOfServings ?? 1)))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .listRowBackground(Color("iosnp"))
+                        .listRowSeparator(index == aggregatedFoods.count - 1 ? .hidden : .visible)
+                    }
+                    .onDelete { indexSet in
+                        // Remove all items in selectedFoods that belong to the tapped row
+                        if let firstIdx = indexSet.first {
+                            let foodToRemove = aggregatedFoods[firstIdx]
+                            removeAllItems(withFdcId: foodToRemove.fdcId)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .background(Color("iosnp"))
+                .cornerRadius(12)
+                .scrollDisabled(true)
+                // Frame based on aggregatedFoods count
+                .frame(height: CGFloat(aggregatedFoods.count * 65))
+            }
+            
+            Button {
+                path.append(FoodNavigationDestination.addRecipeIngredients)
+            } label: {
+                Text("Add ingredient to recipe")
+                    .foregroundColor(.accentColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color("iosnp"))
+                    .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    private var directionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Directions")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            TextField("Add instructions for making this recipe", text: $instructions, axis: .vertical)
+                .focused($focusedField, equals: .instructions)
+                .textFieldStyle(.plain)
+                .padding()
+                .background(Color("iosnp"))
+                .cornerRadius(12)
+        }
+        .padding(.horizontal)
+        .padding(.bottom)
+    }
+    
+    private var macroCircleAndStats: some View {
+        // Get the totals
+        let totals = calculateTotalMacros(selectedFoods)
+        
+        // Create a unique identifier string based on the selectedFoods
+        // This will cause the view to rebuild when selectedFoods changes
+        let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
+        
+        return HStack(spacing: 40) {
+            ZStack {
+                Circle()
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                    .frame(width: 80, height: 80)
+                
+                // Draw the circle segments with actual percentages
+                Circle()
+                    .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
+                    .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                Circle()
+                    .trim(from: CGFloat(totals.carbsPercentage) / 100,
+                          to: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100)
+                    .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                Circle()
+                    .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
+                          to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
+                    .stroke(Color.purple, style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                VStack(spacing: 0) {
+                    Text("\(Int(totals.calories))").font(.system(size: 20, weight: .bold))
+                    Text("Cal").font(.system(size: 14))
                 }
             }
             
             Spacer()
             
-            Button(action: {
-                // Remove this food from the selected list
-                selectedFoods.removeAll { $0.id == food.id }
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
-            }
-        }
-        .padding(10)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
-    }
-    
-    private func nutritionItem(label: String, value: String) -> some View {
-        VStack {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Carbs
+            MacroView(
+                value: totals.carbs,
+                percentage: totals.carbsPercentage,
+                label: "Carbs",
+                percentageColor: Color("teal")
+            )
             
-            Text(value)
-                .font(.headline)
+            // Fat
+            MacroView(
+                value: totals.fat,
+                percentage: totals.fatPercentage,
+                label: "Fat",
+                percentageColor: Color("pinkRed")
+            )
+            
+            // Protein
+            MacroView(
+                value: totals.protein,
+                percentage: totals.proteinPercentage,
+                label: "Protein",
+                percentageColor: Color.purple
+            )
         }
+        // Force redraw when foods change by using the foodsSignature as an id
+        .id(foodsSignature)
     }
     
     // MARK: - Functions
     
-    private func uploadImage(_ image: UIImage) {
-        // Set up image for display while uploading
-        selectedImage = Image(uiImage: image)
-        isUploading = true
-        uploadProgress = 0.2
+    private func resetFields() {
+        recipeName = ""
+        instructions = ""
+        prepTime = ""
+        cookTime = ""
+        servings = "1"
+        selectedImage = nil
+        selectedFoods.removeAll()
+        // Reset any other state variables as needed
+    }
+    
+    // Check if the recipe name is already taken
+    private func isNameAlreadyTaken() -> Bool {
+        // Get all recipe names
+        let existingRecipeNames = foodManager.recipes
+            .map { $0.title.lowercased() }
         
-        // Simulate image upload with progress - in a real app, replace with actual upload code
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            uploadProgress = 0.5
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                uploadProgress = 1.0
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    isUploading = false
-                    // In a real app, you would get the image URL from the server response
-                    imageURL = URL(string: "https://example.com/images/recipe123.jpg")
+        // Check if the current name (trimmed and lowercased) exists
+        return existingRecipeNames.contains(recipeName.trimmed().lowercased())
+    }
+    
+    // Validate name before saving
+    private func validateRecipeName() -> Bool {
+        // Check if name is already taken
+        if isNameAlreadyTaken() {
+            // Show the alert
+            showNameTakenAlert = true
+            return false
+        }
+        return true
+    }
+    
+    private func saveNewRecipe() {
+        // First validate the recipe name
+        guard validateRecipeName() else {
+            return
+        }
+        
+        isSaving = true
+        
+        // First upload image if exists
+        if let uiImage = uiImage {
+            NetworkManager().uploadMealImage(uiImage) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let urlString):
+                        // Convert the string URL to a URL object
+                        if let url = URL(string: urlString) {
+                            self.imageURL = url
+                            self.createRecipe()
+                            self.resetFields()
+                        } else {
+                            // Handle invalid URL
+                            self.isSaving = false
+                            self.errorMessage = "Invalid image URL format"
+                            self.showSaveError = true
+                        }
+                    case .failure(let error):
+                        self.isSaving = false
+                        self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
+                        self.showSaveError = true
+                    }
                 }
             }
+        } else {
+            createRecipe()
+            resetFields()
         }
     }
     
     private func createRecipe() {
         guard let servingsInt = Int(servings), servingsInt > 0 else {
             // Handle invalid servings
+            errorMessage = "Please enter a valid number of servings"
+            showSaveError = true
             return
         }
         
         let prepTimeInt = Int(prepTime) ?? 0
         let cookTimeInt = Int(cookTime) ?? 0
+        
+        // Calculate macro totals from the current food items
+        let totals = calculateTotalMacros(selectedFoods)
         
         let privacy = shareWith == "Everyone" ? "public" : "private"
         
@@ -460,38 +565,137 @@ struct CreateRecipeView: View {
             image: imageURL?.absoluteString,
             prepTime: prepTimeInt,
             cookTime: cookTimeInt,
-            totalCalories: totalCalories,
-            totalProtein: totalProtein,
-            totalCarbs: totalCarbs,
-            totalFat: totalFat
+            totalCalories: totals.calories,
+            totalProtein: totals.protein,
+            totalCarbs: totals.carbs,
+            totalFat: totals.fat
         ) { result in
             // Ensure we're on the main thread
             DispatchQueue.main.async {
+                self.isSaving = false
+                
                 switch result {
                 case .success(_):
                     // Clear selected foods for future use
                     self.selectedFoods = []
                     
                     // Navigate back by removing this view from the path
+                    dismiss()
                     self.path.removeLast()
                     
                 case .failure(let error):
-                    print("Error creating recipe: \(error)")
-                    // Handle error (show alert, etc.)
+                    self.errorMessage = "Error creating recipe: \(error.localizedDescription)"
+                    self.showSaveError = true
                 }
             }
         }
     }
-}
-
-struct CreateRecipeView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            CreateRecipeView(
-                path: .constant(NavigationPath()),
-                selectedFoods: .constant([])
-            )
-            .environmentObject(FoodManager())
+    
+    // MARK: - Aggregation
+    
+    /// Groups `selectedFoods` by `fdcId`, merges duplicates into one item each, summing up `numberOfServings`.
+    private func aggregateFoodsByFdcId(_ allFoods: [Food]) -> [Food] {
+        // Dictionary to store the combined foods
+        var grouped: [Int: Food] = [:]
+        
+        // Process foods in order
+        for food in allFoods {
+            if var existing = grouped[food.fdcId] {
+                // Update existing entry by adding servings
+                let existingServings = existing.numberOfServings ?? 1
+                let additionalServings = food.numberOfServings ?? 1
+                let newServings = existingServings + additionalServings
+                
+                // Create a mutable copy of the existing food to update
+                existing.numberOfServings = newServings
+                
+                grouped[food.fdcId] = existing
+            } else {
+                // Add new entry
+                grouped[food.fdcId] = food
+            }
         }
+        
+        // Create an ordered array of unique foods
+        var result: [Food] = []
+        
+        // First, keep track of which fdcIds we've seen
+        var seenIds = Set<Int>()
+        
+        // Process foods in original order to maintain order
+        for food in allFoods {
+            if !seenIds.contains(food.fdcId), let groupedFood = grouped[food.fdcId] {
+                result.append(groupedFood)
+                seenIds.insert(food.fdcId)
+                grouped.removeValue(forKey: food.fdcId)
+            }
+        }
+        
+        // Add any remaining grouped foods (shouldn't be any, but just in case)
+        result.append(contentsOf: grouped.values)
+        
+        return result
+    }
+    
+    /// Removes all items from `selectedFoods` that have the same fdcId
+    /// as the aggregated item the user swiped to delete.
+    private func removeAllItems(withFdcId fdcId: Int) {
+        selectedFoods.removeAll { $0.fdcId == fdcId }
     }
 }
+
+private struct MacroTotals {
+    var calories: Double = 0
+    var protein: Double = 0
+    var carbs: Double = 0
+    var fat: Double = 0
+    
+    var totalMacros: Double { protein + carbs + fat }
+    
+    var proteinPercentage: Double {
+        guard totalMacros > 0 else { return 0 }
+        return (protein / totalMacros) * 100
+    }
+    
+    var carbsPercentage: Double {
+        guard totalMacros > 0 else { return 0 }
+        return (carbs / totalMacros) * 100
+    }
+    
+    var fatPercentage: Double {
+        guard totalMacros > 0 else { return 0 }
+        return (fat / totalMacros) * 100
+    }
+}
+
+private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
+    var totals = MacroTotals()
+    
+    for food in foods {
+        let servings = food.numberOfServings ?? 1
+        
+        // Sum up calories - safeguard against nil calories
+        if let calories = food.calories {
+            totals.calories += calories * servings
+        }
+        
+        // Get protein, carbs, and fat from foodNutrients array
+        for nutrient in food.foodNutrients {
+            // Apply the servings multiplier to get the total contribution
+            let value = nutrient.value * servings
+            
+            if nutrient.nutrientName == "Protein" {
+                totals.protein += value
+            } else if nutrient.nutrientName == "Carbohydrate, by difference" {
+                totals.carbs += value
+            } else if nutrient.nutrientName == "Total lipid (fat)" {
+                totals.fat += value
+            }
+        }
+    }
+    
+    return totals
+}
+
+
+

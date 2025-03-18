@@ -351,7 +351,7 @@ private struct MealListView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowSeparator(.hidden)
 
-                Text("History")
+            Text("History")
                 .font(.title2)
                 .fontWeight(.bold)
                 .padding(.top, 8)
@@ -392,7 +392,7 @@ private struct CreateRecipeButton: View {
             HStack(spacing: 16) {
                  Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 24))
-                                    .foregroundColor(.accentColor)
+                .foregroundColor(.accentColor)
                 Text("Create Recipe")
                     .font(.system(size: 16))
                     .foregroundColor(.accentColor)
@@ -400,7 +400,7 @@ private struct CreateRecipeButton: View {
 
                 Spacer()
             }
-            .padding(.horizontal, 16)
+                        .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(UIColor.secondarySystemBackground))
