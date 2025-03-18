@@ -73,14 +73,17 @@ struct FoodContainerView: View {
     @State private var path = NavigationPath()
     @Binding var selectedTab: Int
     @State private var selectedMeal: String
-        // @State private var selectedFoods: [Food] = []
-
-        @State private var selectedFoods: [Food] = [] {
-        didSet {
-            print("DEBUG [FoodContainerView] didSet selectedFoods => \(selectedFoods)")
-        }
-    }
     
+    // Separate state arrays for different contexts to prevent state bleeding
+    @State private var logFoodSelectedFoods: [Food] = []
+    @State private var createMealSelectedFoods: [Food] = []
+    
+    // Replace editMealSelectedFoods with a dictionary to store foods per meal ID
+    @State private var editMealSelectedFoodsByMealId: [Int: [Food]] = [:]
+    @State private var currentlyEditingMealId: Int? = nil
+    
+    @State private var createRecipeSelectedFoods: [Food] = []
+    @State private var editRecipeSelectedFoods: [Food] = []
     
     init(selectedTab: Binding<Int>) {
         _selectedTab = selectedTab
@@ -99,59 +102,132 @@ struct FoodContainerView: View {
         _selectedMeal = State(initialValue: defaultMeal)
     }
     
+    // Helper method to initialize meal items outside of the View body
+    private func initializeMealItems(for meal: Meal) {
+        // Initialize the meal's food items if this is the first time we're viewing it
+        if editMealSelectedFoodsByMealId[meal.id] == nil {
+            print("📦 FoodContainerView: Initializing foods for the first time - meal: \(meal.title) (ID: \(meal.id))")
+            var initialFoods: [Food] = []
+            for item in meal.mealItems {
+                let food = Food(
+                    fdcId: Int(item.externalId) ?? item.foodId,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
+                    servingSizeUnit: item.servingText,
+                    householdServingFullText: item.servingText,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                initialFoods.append(food)
+            }
+            editMealSelectedFoodsByMealId[meal.id] = initialFoods
+        } else {
+            print("📦 FoodContainerView: Using existing foods for meal: \(meal.title) (ID: \(meal.id)) - \(editMealSelectedFoodsByMealId[meal.id]?.count ?? 0) items")
+        }
+    }
+    
     var body: some View {
         NavigationStack(path: $path) {
-            // LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
-
             LogFood(
-            selectedTab: $selectedTab,
-            selectedMeal: $selectedMeal,
-            path: $path,
-            mode: .logFood, 
-            selectedFoods: $selectedFoods
-        )
-                .navigationDestination(for: FoodNavigationDestination.self) { destination in
-                    switch destination {
-                    case .logFood:
-                        // LogFood(selectedTab: $selectedTab, selectedMeal: $selectedMeal, path: $path)
-                             LogFood(
-            selectedTab: $selectedTab,
-            selectedMeal: $selectedMeal,
-            path: $path,
-            mode: .logFood,
-            selectedFoods: $selectedFoods
-        )
-                    case .foodDetails(let food, _):
-                        FoodDetailsView(food: food, selectedMeal: $selectedMeal)
-                    case .createMeal:
-                        // Implementation of create meal view
-                        //  CreateMealView()
-                        CreateMealView(path: $path, selectedFoods: $selectedFoods )
-                    case .addMealItems:
-                        LogFood(
-                            selectedTab: $selectedTab,
-                            selectedMeal: $selectedMeal,
-                            path: $path,
-                            mode: .addToMeal,
-                            selectedFoods: $selectedFoods
+                selectedTab: $selectedTab,
+                selectedMeal: $selectedMeal,
+                path: $path,
+                mode: .logFood, 
+                selectedFoods: $logFoodSelectedFoods
+            )
+            .navigationDestination(for: FoodNavigationDestination.self) { destination in
+                switch destination {
+                case .logFood:
+                    LogFood(
+                        selectedTab: $selectedTab,
+                        selectedMeal: $selectedMeal,
+                        path: $path,
+                        mode: .logFood,
+                        selectedFoods: $logFoodSelectedFoods
+                    )
+                case .foodDetails(let food, _):
+                    FoodDetailsView(food: food, selectedMeal: $selectedMeal)
+                case .createMeal:
+                    // Clear previous selections when creating a new meal
+                    CreateMealView(path: $path, selectedFoods: $createMealSelectedFoods)
+                        .onAppear {
+                            // Reset this context's selectedFoods when view appears
+                            createMealSelectedFoods = []
+                        }
+                case .addMealItems:
+                    // Create a binding that will edit the correct meal's food items
+                    let binding = Binding<[Food]>(
+                        get: {
+                            guard let mealId = currentlyEditingMealId else { return [] }
+                            return editMealSelectedFoodsByMealId[mealId] ?? []
+                        },
+                        set: { newValue in
+                            guard let mealId = currentlyEditingMealId else { return }
+                            editMealSelectedFoodsByMealId[mealId] = newValue
+                        }
+                    )
+                    
+                    LogFood(
+                        selectedTab: $selectedTab,
+                        selectedMeal: $selectedMeal,
+                        path: $path,
+                        mode: .addToMeal,
+                        selectedFoods: binding
+                    )
+                case .editMeal(let meal):
+                    // We must return a view directly, so we'll create the view first
+                    // and then handle state setup in onAppear
+                    EditMealView(
+                        meal: meal, 
+                        path: $path, 
+                        selectedFoods: Binding(
+                            get: { editMealSelectedFoodsByMealId[meal.id] ?? [] },
+                            set: { editMealSelectedFoodsByMealId[meal.id] = $0 }
                         )
-                    case .editMeal(let meal):
-                        EditMealView(meal: meal, path: $path, selectedFoods: $selectedFoods)
-                    case .createRecipe:
-                        CreateRecipeView(path: $path, selectedFoods: $selectedFoods)
-                    case .addRecipeIngredients:
-                        LogFood(
-                            selectedTab: $selectedTab,
-                            selectedMeal: $selectedMeal,
-                            path: $path,
-                            mode: .addToRecipe,
-                            selectedFoods: $selectedFoods
-                        )
-                    case .editRecipe(let recipe):
-                        EditRecipeView(recipe: recipe, path: $path, selectedFoods: $selectedFoods)
-
+                    )
+                    .id("edit-meal-\(meal.id)")
+                    .onAppear {
+                        // Set the currently editing meal ID when this view appears
+                        currentlyEditingMealId = meal.id
+                        
+                        // Initialize the meal's food items if needed
+                        initializeMealItems(for: meal)
                     }
+                case .createRecipe:
+                    CreateRecipeView(path: $path, selectedFoods: $createRecipeSelectedFoods)
+                        .onAppear {
+                            // Reset this context's selectedFoods when view appears
+                            createRecipeSelectedFoods = []
+                        }
+                case .addRecipeIngredients:
+                    LogFood(
+                        selectedTab: $selectedTab,
+                        selectedMeal: $selectedMeal,
+                        path: $path,
+                        mode: .addToRecipe,
+                        selectedFoods: $editRecipeSelectedFoods
+                    )
+                case .editRecipe(let recipe):
+                    EditRecipeView(recipe: recipe, path: $path, selectedFoods: $editRecipeSelectedFoods)
+                        .onAppear {
+                            // Don't reset if we're returning from adding recipe ingredients
+                            // We know we're returning if the array already has items
+                            if editRecipeSelectedFoods.isEmpty {
+                                // First time viewing this recipe - populate from recipe's original items
+                                // EditRecipeView will do this in its initializer
+                            }
+                            // Otherwise we're returning from adding items, so keep the existing selectedFoods array
+                        }
                 }
+            }
         }
     }
 }

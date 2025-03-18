@@ -148,6 +148,36 @@ struct EditRecipeView: View {
         } else {
             _imageURL = State(initialValue: nil)
         }
+        
+        // Only convert recipe items to foods if selectedFoods is empty.
+        // If it already has items, we're returning from adding items, so preserve them.
+        if selectedFoods.wrappedValue.isEmpty {
+            print("📦 EditRecipeView: Initializing foods from recipe items for recipe: \(recipe.title)")
+            var recipeItemFoods: [Food] = []
+            for item in recipe.recipeItems {
+                let food = Food(
+                    fdcId: item.foodId,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: 1.0, // Default to 1 serving
+                    servingSizeUnit: item.servingText ?? "",
+                    householdServingFullText: item.servings,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                recipeItemFoods.append(food)
+            }
+            selectedFoods.wrappedValue = recipeItemFoods
+        } else {
+            print("📦 EditRecipeView: Using existing \(selectedFoods.wrappedValue.count) foods for recipe: \(recipe.title)")
+        }
     }
     
     // MARK: - Body

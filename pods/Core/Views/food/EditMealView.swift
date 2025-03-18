@@ -123,36 +123,8 @@ struct EditMealView: View {
             self._imageURL = State(initialValue: nil)
         }
         
-        // Initialize selectedFoods with meal items if it's empty
-        if selectedFoods.wrappedValue.isEmpty {
-            // Convert meal items to foods for editing
-            var initialFoods: [Food] = []
-            for item in meal.mealItems {
-                let food = Food(
-                    fdcId: Int(item.externalId) ?? item.foodId,
-                    description: item.name,
-                    brandOwner: nil,
-                    brandName: nil,
-                    servingSize: 1.0,
-                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
-                    servingSizeUnit: item.servingText,
-                    householdServingFullText: item.servingText,
-                    foodNutrients: [
-                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                    ],
-                    foodMeasures: []
-                )
-                initialFoods.append(food)
-            }
-            
-            // Set the foods to the binding
-            DispatchQueue.main.async {
-                selectedFoods.wrappedValue = initialFoods
-            }
-        }
+        // Food initialization is now handled in FoodContainerView
+        print("📦 EditMealView: Initialized for meal ID: \(meal.id) - '\(meal.title)'")
     }
     
     // MARK: - Body
@@ -357,7 +329,15 @@ struct EditMealView: View {
         .onChange(of: servings) { _ in hasChanges = true }
         .onChange(of: mealTime) { _ in hasChanges = true }
         .onChange(of: scheduledDate) { _ in hasChanges = true }
-        .onChange(of: selectedFoods) { _ in hasChanges = true }
+        .onChange(of: selectedFoods) { newValue in 
+            hasChanges = true
+            print("📋 EditMealView: Food items changed for meal '\(meal.title)' - now has \(newValue.count) items")
+        }
+        
+        // Add onAppear for debugging
+        .onAppear {
+            print("📋 EditMealView: Appeared for meal '\(meal.title)' with \(selectedFoods.count) food items")
+        }
         
         // Add this modifier to your view's body to show the error alert
         .alert(isPresented: $showingError) {
