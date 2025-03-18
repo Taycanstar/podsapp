@@ -192,7 +192,7 @@ struct PodColumnsView: View {
             visibleColumns.append(columnName)
         }
         hasUnsavedChanges = true
-        HapticFeedback.generateLigth()
+        HapticFeedback.generate()
     }
     
     // Modify updateColumnGrouping to not make backend calls

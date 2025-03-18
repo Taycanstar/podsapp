@@ -14,9 +14,11 @@ class FoodManager: ObservableObject {
     @Published var showToast = false
     @Published var showMealToast = false
     @Published var showMealLoggedToast = false
+    @Published var showRecipeLoggedToast = false
     @Published var recentlyAddedFoodIds: Set<Int> = []
 
     @Published var lastLoggedMealId: Int? = nil
+    @Published var lastLoggedRecipeId: Int? = nil
     private let networkManager: NetworkManager
     private var userEmail: String?
     private var currentPage = 1
@@ -31,6 +33,12 @@ class FoodManager: ObservableObject {
     
     private var lastRefreshTime: Date?
     
+    // Recipe-related properties
+    @Published var recipes: [Recipe] = []
+    @Published var isLoadingRecipePage = false
+    private var currentRecipePage = 1
+    private var hasMoreRecipes = true
+    
     init() {
         self.networkManager = NetworkManager()
     }
@@ -43,9 +51,9 @@ class FoodManager: ObservableObject {
         
         print("📋 FoodManager: Starting initialization sequence")
         resetAndFetchFoods()
-        resetAndFetchMeals() 
+        resetAndFetchMeals()
+        resetAndFetchRecipes()
         resetAndFetchLogs()
-       
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -368,7 +376,10 @@ private func loadMoreLogs(refresh: Bool = false) {
                         mealLogId: nil,
                         meal: nil,
                         mealTime: nil,
-                        scheduledAt: nil
+                        scheduledAt: nil,
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
                     )
                     
                     // Insert at the top with animation
@@ -771,7 +782,10 @@ func logMeal(
                         mealLogId: loggedMeal.mealLogId,
                         meal: loggedMeal.meal,
                         mealTime: loggedMeal.mealTime,
-                        scheduledAt: loggedMeal.scheduledAt
+                        scheduledAt: loggedMeal.scheduledAt,
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
                     )
                     
                     // Insert at the top with animation
@@ -837,6 +851,7 @@ func prefetchMealImages() {
 private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
     var seenFoodLogIds = Set<Int>()
     var seenMealLogIds = Set<Int>()
+    var seenRecipeLogIds = Set<Int>()
     var uniqueLogs: [CombinedLog] = []
     
     for log in logs {
@@ -851,6 +866,11 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
         case .meal:
             if let mealLogId = log.mealLogId, !seenMealLogIds.contains(mealLogId) {
                 seenMealLogIds.insert(mealLogId)
+                isUnique = true
+            }
+        case .recipe:
+            if let recipeLogId = log.recipeLogId, !seenRecipeLogIds.contains(recipeLogId) {
+                seenRecipeLogIds.insert(recipeLogId)
                 isUnique = true
             }
         }
@@ -1072,8 +1092,398 @@ private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: M
         mealLogId: originalLog.mealLogId,
         meal: updatedMeal,
         mealTime: originalLog.mealTime,
-        scheduledAt: updatedMeal.scheduledAt
+        scheduledAt: updatedMeal.scheduledAt,
+        recipeLogId: originalLog.recipeLogId,
+        recipe: originalLog.recipe,
+        servingsConsumed: originalLog.servingsConsumed
     )
+}
+
+// After the resetAndFetchMeals method
+private func resetAndFetchRecipes() {
+    print("🍛 FoodManager: Reset and fetch recipes called")
+    currentRecipePage = 1
+    hasMoreRecipes = true
+    
+    // Store existing recipes to allow smooth transitions
+    let oldRecipes = recipes
+    
+    // Clear recipes with animation if we had previous recipes
+    if !oldRecipes.isEmpty {
+        withAnimation(.easeOut(duration: 0.2)) {
+            recipes = []
+        }
+    } else {
+        recipes = []
+    }
+    
+    // Try loading from cache first
+    loadCachedRecipes()
+    
+    // Then fetch from server with animation
+    loadMoreRecipes(refresh: true)
+    
+    // Update refresh timestamp
+    lastRefreshTime = Date()
+}
+
+private func loadCachedRecipes() {
+    guard let userEmail = userEmail else { return }
+    if let cached = UserDefaults.standard.data(forKey: "recipes_\(userEmail)_page_1"),
+       let decodedResponse = try? {
+           let decoder = JSONDecoder()
+           decoder.keyDecodingStrategy = .convertFromSnakeCase
+           decoder.dateDecodingStrategy = .iso8601
+           return try decoder.decode(RecipesResponse.self, from: cached)
+       }() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            self.recipes = decodedResponse.recipes
+        }
+        self.hasMoreRecipes = decodedResponse.hasMore
+    }
+}
+
+private func cacheRecipes(_ response: RecipesResponse, forPage page: Int) {
+    guard let userEmail = userEmail else { return }
+    if let encoded = try? JSONEncoder().encode(response) {
+        UserDefaults.standard.set(encoded, forKey: "recipes_\(userEmail)_page_\(page)")
+    }
+}
+
+func loadMoreRecipes(refresh: Bool = false) {
+    guard let email = userEmail else { return }
+    guard !isLoadingRecipePage else { return }
+    
+    let pageToLoad = refresh ? 1 : currentRecipePage
+    isLoadingRecipePage = true
+    error = nil
+    
+    networkManager.getRecipes(userEmail: email, page: pageToLoad) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            self.isLoadingRecipePage = false
+            
+            switch result {
+            case .success(let response):
+                if refresh {
+                    self.recipes = response.recipes
+                    self.currentRecipePage = 2
+                } else {
+                    self.recipes.append(contentsOf: response.recipes)
+                    self.currentRecipePage += 1
+                }
+                self.hasMoreRecipes = response.hasMore
+                self.cacheRecipes(response, forPage: pageToLoad)
+            case .failure(let error):
+                self.error = error
+                self.hasMoreRecipes = false
+            }
+        }
+    }
+}
+
+// Add this function after createMeal
+func createRecipe(
+    title: String,
+    description: String? = nil,
+    instructions: String? = nil,
+    privacy: String,
+    servings: Int,
+    foods: [Food],
+    image: String? = nil,
+    prepTime: Int? = nil,
+    cookTime: Int? = nil,
+    totalCalories: Double? = nil,
+    totalProtein: Double? = nil,
+    totalCarbs: Double? = nil,
+    totalFat: Double? = nil,
+    completion: ((Result<Recipe, Error>) -> Void)? = nil
+) {
+    guard let email = userEmail else { return }
+    
+    // Use provided totals or calculate if not provided
+    let calculatedCalories = totalCalories ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.calories ?? 0) * servings)
+    }
+    
+    // Calculate macros if not provided
+    let calculatedProtein = totalProtein ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.protein ?? 0) * servings)
+    }
+    
+    let calculatedCarbs = totalCarbs ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.carbs ?? 0) * servings)
+    }
+    
+    let calculatedFat = totalFat ?? foods.reduce(0) { sum, food in
+        let servings = food.numberOfServings ?? 1
+        return sum + ((food.fat ?? 0) * servings)
+    }
+    
+    networkManager.createRecipe(
+        userEmail: email,
+        title: title,
+        description: description,
+        instructions: instructions,
+        privacy: privacy,
+        servings: servings,
+        foods: foods,
+        image: image,
+        prepTime: prepTime,
+        cookTime: cookTime,
+        totalCalories: calculatedCalories,
+        totalProtein: calculatedProtein,
+        totalCarbs: calculatedCarbs,
+        totalFat: calculatedFat
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let recipe):
+                // Add the new recipe to our list
+                withAnimation {
+                    self.recipes.insert(recipe, at: 0)
+                }
+                
+                // Invalidate cache for page 1
+                UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_1")
+                
+                // Notify success
+                completion?(.success(recipe))
+                
+            case .failure(let error):
+                print("❌ Error creating recipe: \(error.localizedDescription)")
+                completion?(.failure(error))
+            }
+        }
+    }
+}
+
+// Add this function after logMeal
+func logRecipe(
+    recipe: Recipe,
+    mealTime: String,
+    servingsConsumed: Int,
+    date: Date,
+    notes: String? = nil,
+    completion: ((Result<LoggedRecipe, Error>) -> Void)? = nil,
+    statusCompletion: ((Bool) -> Void)? = nil
+) {
+    guard let email = userEmail else { return }
+    
+    networkManager.logRecipe(
+        userEmail: email,
+        recipeId: recipe.id,
+        mealTime: mealTime,
+        servingsConsumed: servingsConsumed,
+        date: date,
+        notes: notes
+    ) { [weak self] result in
+        DispatchQueue.main.async {
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let recipeLog):
+                // Create a new CombinedLog for the UI
+                let newLog = CombinedLog(
+                    type: .recipe,
+                    status: recipeLog.status,
+                    calories: recipeLog.recipe.calories,
+                    message: "\(recipe.title) - \(mealTime)",
+                    foodLogId: nil,
+                    food: nil,
+                    mealType: nil,
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: mealTime,
+                    scheduledAt: date,
+                    recipeLogId: recipeLog.recipeLogId,
+                    recipe: recipeLog.recipe,
+                    servingsConsumed: servingsConsumed
+                )
+                
+                // Add to combined logs
+                withAnimation {
+                    self.combinedLogs.insert(newLog, at: 0)
+                }
+                
+                // Invalidate cache
+                for page in 1...9 {
+                    UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_\(page)")
+                    UserDefaults.standard.removeObject(forKey: "combined_logs_\(email)_page_\(page)")
+                }
+                
+                // Update last logged recipe ID for UI feedback
+                self.lastLoggedRecipeId = recipe.id
+                
+                // Show toast
+                self.showRecipeLoggedToast = true
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.showRecipeLoggedToast = false
+                }
+                
+                // Call completion handlers
+                completion?(.success(recipeLog))
+                statusCompletion?(true)
+                
+            case .failure(let error):
+                print("❌ Error logging recipe: \(error.localizedDescription)")
+                completion?(.failure(error))
+                statusCompletion?(false)
+            }
+        }
+    }
+}
+
+// Add this function after updateMeal
+func updateRecipe(
+    recipe: Recipe,
+    foods: [Food] = [],
+    completion: ((Result<Recipe, Error>) -> Void)? = nil
+) {
+    guard let email = userEmail else { 
+        completion?(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+        return 
+    }
+    
+    print("🔄 updateRecipe called with recipe ID: \(recipe.id), title: \(recipe.title), foods count: \(foods.count)")
+    
+    // If foods array is not empty, use it to calculate macros
+    // Otherwise use the recipe's existing values
+    let calculatedCalories: Double
+    let calculatedProtein: Double
+    let calculatedCarbs: Double
+    let calculatedFat: Double
+    
+    if !foods.isEmpty {
+        // Calculate totals from foods
+        calculatedCalories = recipe.totalCalories ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.calories ?? 0) * servings)
+        }
+        
+        calculatedProtein = recipe.totalProtein ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.protein ?? 0) * servings)
+        }
+        
+        calculatedCarbs = recipe.totalCarbs ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.carbs ?? 0) * servings)
+        }
+        
+        calculatedFat = recipe.totalFat ?? foods.reduce(0) { sum, food in
+            let servings = food.numberOfServings ?? 1
+            return sum + ((food.fat ?? 0) * servings)
+        }
+        
+        // Use updateRecipeWithFoods if we're changing the ingredients
+        networkManager.updateRecipeWithFoods(
+            userEmail: email,
+            recipeId: recipe.id,
+            title: recipe.title,
+            description: recipe.description ?? "",
+            instructions: recipe.instructions ?? "",
+            privacy: recipe.privacy,
+            servings: recipe.servings,
+            foods: foods,
+            image: recipe.image,
+            prepTime: recipe.prepTime,
+            cookTime: recipe.cookTime,
+            totalCalories: calculatedCalories,
+            totalProtein: calculatedProtein,
+            totalCarbs: calculatedCarbs,
+            totalFat: calculatedFat
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let updatedRecipe):
+                    // Update the recipe in our list
+                    if let index = self.recipes.firstIndex(where: { $0.id == updatedRecipe.id }) {
+                        self.recipes[index] = updatedRecipe
+                    }
+                    
+                    // Invalidate cache for recipe pages
+                    for page in 1...9 {
+                        UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_\(page)")
+                    }
+                    
+                    // Notify success
+                    completion?(.success(updatedRecipe))
+                    
+                case .failure(let error):
+                    print("❌ Error updating recipe with foods: \(error.localizedDescription)")
+                    completion?(.failure(error))
+                }
+            }
+        }
+    } else {
+        // Use the original updateRecipe if no food items are provided
+        // Use provided totals or calculate from recipe items
+        calculatedCalories = recipe.totalCalories ?? recipe.recipeItems.reduce(0) { sum, item in
+            return sum + item.calories
+        }
+        
+        calculatedProtein = recipe.totalProtein ?? recipe.recipeItems.reduce(0) { sum, item in
+            return sum + (item.protein)
+        }
+        
+        calculatedCarbs = recipe.totalCarbs ?? recipe.recipeItems.reduce(0) { sum, item in
+            return sum + (item.carbs)
+        }
+        
+        calculatedFat = recipe.totalFat ?? recipe.recipeItems.reduce(0) { sum, item in
+            return sum + (item.fat)
+        }
+        
+        networkManager.updateRecipe(
+            userEmail: email,
+            recipeId: recipe.id,
+            title: recipe.title,
+            description: recipe.description ?? "",
+            instructions: recipe.instructions ?? "",
+            privacy: recipe.privacy,
+            servings: recipe.servings,
+            image: recipe.image,
+            prepTime: recipe.prepTime,
+            cookTime: recipe.cookTime,
+            totalCalories: calculatedCalories,
+            totalProtein: calculatedProtein,
+            totalCarbs: calculatedCarbs,
+            totalFat: calculatedFat
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let updatedRecipe):
+                    // Update the recipe in our list
+                    if let index = self.recipes.firstIndex(where: { $0.id == updatedRecipe.id }) {
+                        self.recipes[index] = updatedRecipe
+                    }
+                    
+                    // Invalidate cache for recipe pages
+                    for page in 1...9 {
+                        UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_\(page)")
+                    }
+                    
+                    // Notify success
+                    completion?(.success(updatedRecipe))
+                    
+                case .failure(let error):
+                    print("❌ Error updating recipe: \(error)")
+                    completion?(.failure(error))
+                }
+            }
+        }
+    }
 }
 
 }

@@ -16,6 +16,8 @@ enum NetworkError: Error {
     case configError
     case badURL
     case uploadFailed
+    case decodingFailed(Error)
+    case jsonEncodingFailed
 } 
 
  struct GracieResponse: Codable {
@@ -1028,7 +1030,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 // Convert the PodJSON into your Pod model.
                 let pod = Pod(from: podJSON)
                 
-          
+                
                 completion(.success(pod))
             } catch {
                 print("Decoding error: \(error)")
@@ -4989,7 +4991,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             
             
             DispatchQueue.main.async {
-                completion(.success(loggedFood))
+            completion(.success(loggedFood))
             }
         } catch {
             // Detailed error for debugging
@@ -5011,7 +5013,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             }
             
             DispatchQueue.main.async {
-                completion(.failure(error))
+            completion(.failure(error))
             }
         }
     }.resume()
@@ -5425,7 +5427,7 @@ func getMeals(userEmail: String, page: Int = 1, completion: @escaping (Result<Me
         }
     }.resume()
 }
-
+   
 func logMeal(
     userEmail: String,
     mealId: Int,
@@ -6014,5 +6016,645 @@ func updateMealWithFoods(
     }.resume()
 }
 
+// MARK: - Recipe API Methods
+
+func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<RecipesResponse, Error>) -> Void) {
+    guard var urlComponents = URLComponents(string: "\(baseUrl)/get-recipes/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    urlComponents.queryItems = [
+        URLQueryItem(name: "user_email", value: userEmail),
+        URLQueryItem(name: "page", value: String(page))
+    ]
+    
+    guard let url = urlComponents.url else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    print("🔍 Requesting recipes from: \(url)")
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            print("❌ Network error when fetching recipes: \(error)")
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            print("❌ No data received when fetching recipes")
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        // Log raw response for deeper analysis
+        if let responseString = String(data: data, encoding: .utf8) {
+            // Comment out to reduce log spam
+            // print("📥 Raw recipes response: \(responseString)")
+        }
+        
+        do {
+            // First, parse as dictionary to inspect structure if needed
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let recipes = jsonObj["recipes"] as? [[String: Any]] {
+                
+                // Analyze the first few recipes if needed
+                for (index, recipe) in recipes.prefix(2).enumerated() {
+                    // Debug if needed
+                    // print("📊 Recipe #\(index): \(recipe["title"] ?? "unknown")")
+                    
+                    // Check for recipe items
+                    if let recipeItems = recipe["recipe_items"] as? [[String: Any]] {
+                        print("  - contains \(recipeItems.count) recipe items")
+                        if let firstItem = recipeItems.first {
+                            print("    - first item: \(firstItem["name"] ?? "unknown"), calories: \(firstItem["calories"] ?? "unknown")")
+                        }
+                    } else if let recipeItems = recipe["recipeItems"] as? [[String: Any]] {
+                        print("  - contains \(recipeItems.count) recipe items (camelCase key)")
+                    }
+                }
+            }
+            
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let recipesResponse = try decoder.decode(RecipesResponse.self, from: data)
+            
+            // Debug if needed
+            for (index, recipe) in recipesResponse.recipes.prefix(2).enumerated() {
+                // print("📊 Decoded Recipe #\(index): \(recipe.title)")
+                // print("  - calories: \(recipe.calories)")
+                // print("  - recipe items: \(recipe.recipeItems.count)")
+            }
+            
+            completion(.success(recipesResponse))
+        } catch {
+            print("❌ Decoding error when fetching recipes: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("  Missing key: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue })") 
+                case .typeMismatch(let type, let context):
+                    print("  Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("  Value missing: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .dataCorrupted(let context):
+                    print("  Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("  Unknown decoding error")
+                }
+            }
+            completion(.failure(error))
+        }
+    }.resume()
 }
 
+func createRecipe(
+    userEmail: String,
+    title: String,
+    description: String?,
+    instructions: String?,
+    privacy: String,
+    servings: Int,
+    foods: [Food],
+    image: String?,
+    prepTime: Int?,
+    cookTime: Int?,
+    totalCalories: Double,
+    totalProtein: Double,
+    totalCarbs: Double,
+    totalFat: Double,
+    completion: @escaping (Result<Recipe, Error>) -> Void
+) {
+    let urlString = "\(baseUrl)/create-recipe/"
+    guard let url = URL(string: urlString) else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    // Convert Food to the expected format for the API
+    let foodItems = foods.map { food -> [String: Any] in
+        var item: [String: Any] = [
+            "external_id": "\(food.fdcId)",
+            "name": food.displayName,
+            "number_of_servings": food.numberOfServings ?? 1
+        ]
+        
+        if let brandText = food.brandText {
+            item["brand"] = brandText
+        }
+        
+        if let servingSize = food.servingSize {
+            item["serving_size"] = servingSize
+        }
+        
+        if let servingSizeUnit = food.servingSizeUnit {
+            item["serving_unit"] = servingSizeUnit
+        }
+        
+        item["serving_text"] = food.servingSizeText
+        item["calories"] = food.calories ?? 0
+        item["protein"] = food.protein ?? 0
+        item["carbs"] = food.carbs ?? 0
+        item["fat"] = food.fat ?? 0
+        
+        return item
+    }
+    
+    // Create the request body
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "title": title,
+        "privacy": privacy,
+        "servings": servings,
+        "food_items": foodItems,
+        "total_calories": totalCalories,
+        "total_protein": totalProtein,
+        "total_carbs": totalCarbs,
+        "total_fat": totalFat
+    ]
+    
+    if let description = description {
+        parameters["description"] = description
+    }
+    
+    if let instructions = instructions {
+        parameters["instructions"] = instructions
+    }
+    
+    if let image = image {
+        parameters["image"] = image
+    }
+    
+    if let prepTime = prepTime {
+        parameters["prep_time"] = prepTime
+    }
+    
+    if let cookTime = cookTime {
+        parameters["cook_time"] = cookTime
+    }
+    
+    // Print the parameters we're sending
+    print("📤 Creating recipe with parameters:")
+    print("- title: \(title)")
+    print("- description: \(description ?? "none")")
+    print("- instructions: \(instructions ?? "none")")
+    print("- servings: \(servings)")
+    print("- total items: \(foods.count)")
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        
+        // Print formatted JSON for better debugging
+        if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+            print("📤 CREATE RECIPE REQUEST JSON:")
+            print(jsonString)
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error when creating recipe: \(error)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received when creating recipe")
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            // Add debug print to see the JSON response
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📥 CREATE RECIPE RESPONSE JSON:")
+                print(jsonString)
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                decoder.dateDecodingStrategy = .iso8601
+                
+                let recipe = try decoder.decode(Recipe.self, from: data)
+                print("✅ Successfully created recipe: \(recipe.title) (ID: \(recipe.id))")
+                completion(.success(recipe))
+            } catch {
+                print("❌ Decoding error when creating recipe: \(error)")
+                print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+                completion(.failure(NetworkError.decodingFailed(error)))
+            }
+        }.resume()
+    } catch {
+        print("❌ JSON serialization error: \(error)")
+        completion(.failure(NetworkError.jsonEncodingFailed))
+    }
+}
+
+
+func logRecipe(
+    userEmail: String,
+    recipeId: Int,
+    mealTime: String,
+    servingsConsumed: Int = 1,
+    date: Date = Date(),
+    notes: String? = nil,
+    completion: @escaping (Result<LoggedRecipe, Error>) -> Void
+) {
+    let dateFormatter = ISO8601DateFormatter()
+    let dateString = dateFormatter.string(from: date)
+    
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - logRecipe:")
+    print("- userEmail: \(userEmail)")
+    print("- recipeId: \(recipeId)")
+    print("- mealTime: \(mealTime)")
+    print("- servingsConsumed: \(servingsConsumed)")
+    print("- date: \(dateString)")
+    print("- notes: \(notes ?? "none")")
+    
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "recipe_id": recipeId,
+        "meal_time": mealTime,
+        "logged_at": dateString,
+        "servings_consumed": servingsConsumed
+    ]
+    
+    if let notes = notes {
+        parameters["notes"] = notes
+    }
+    
+    // Print what we're about to send as JSON
+    if let jsonData = try? JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted),
+       let jsonStr = String(data: jsonData, encoding: .utf8) {
+        print("📤 Request JSON: \(jsonStr)")
+    }
+    
+    let url = URL(string: "\(baseUrl)/log-recipe/")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        completion(.failure(error))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        // DEBUG - Print raw response JSON
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📥 Response JSON for logRecipe: \(jsonString)")
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
+            let loggedRecipe = try decoder.decode(LoggedRecipe.self, from: data)
+            print("✅ Successfully decoded LoggedRecipe with ID: \(loggedRecipe.recipeLogId)")
+            completion(.success(loggedRecipe))
+        } catch let decodingError {
+            print("❌ Decoding error: \(decodingError)")
+            
+            // More detailed error analysis
+            if let decodingError = decodingError as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
+                case .valueNotFound(let type, let context):
+                    print("❌ Value of type \(type) not found: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("❌ Type mismatch for type \(type): \(context.debugDescription)")
+                case .dataCorrupted(let context):
+                    print("❌ Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("❌ Unknown decoding error")
+                }
+            }
+            
+            print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+            completion(.failure(NetworkError.decodingFailed(decodingError)))
+        }
+    }.resume()
+}
+
+
+func updateRecipe(
+    userEmail: String,
+    recipeId: Int,
+    title: String,
+    description: String,
+    instructions: String,
+    privacy: String,
+    servings: Int,
+    image: String?,
+    prepTime: Int?,
+    cookTime: Int?,
+    totalCalories: Double,
+    totalProtein: Double,
+    totalCarbs: Double,
+    totalFat: Double,
+    completion: @escaping (Result<Recipe, Error>) -> Void
+) {
+    guard let url = URL(string: "\(baseUrl)/update-recipe/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    // Create the request body
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "recipe_id": recipeId,
+        "title": title,
+        "description": description,
+        "instructions": instructions,
+        "privacy": privacy,
+        "servings": servings,
+        "total_calories": totalCalories,
+        "total_protein": totalProtein,
+        "total_carbs": totalCarbs,
+        "total_fat": totalFat
+    ]
+    
+    if let image = image {
+        parameters["image"] = image
+    }
+    
+    if let prepTime = prepTime {
+        parameters["prep_time"] = prepTime
+    }
+    
+    if let cookTime = cookTime {
+        parameters["cook_time"] = cookTime
+    }
+    
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - updateRecipe:")
+    print("- userEmail: \(userEmail)")
+    print("- recipeId: \(recipeId)")
+    print("- title: \(title)")
+    print("- description: \(description)")
+    print("- instructions: \(instructions)")
+    print("- privacy: \(privacy)")
+    print("- servings: \(servings)")
+    print("- totalCalories: \(totalCalories)")
+    print("- totalProtein: \(totalProtein)")
+    print("- totalCarbs: \(totalCarbs)")
+    print("- totalFat: \(totalFat)")
+    print("- prepTime: \(prepTime ?? 0)")
+    print("- cookTime: \(cookTime ?? 0)")
+    print("- image: \(image ?? "none")")
+    
+    let jsonData: Data
+    do {
+        jsonData = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        print("JSON Serialization Error: \(error)")
+        completion(.failure(NetworkError.jsonEncodingFailed))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.httpBody = jsonData
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        // Print response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("⬇️ RECEIVED FROM SERVER - updateRecipe response:")
+            print(responseString)
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let recipe = try decoder.decode(Recipe.self, from: data)
+            print("✅ Successfully updated recipe: \(recipe.title) (ID: \(recipe.id))")
+            completion(.success(recipe))
+        } catch {
+            print("❌ Decoding error when updating recipe: \(error)")
+            
+            // More detailed error analysis
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
+                case .valueNotFound(let type, let context):
+                    print("❌ Value of type \(type) not found: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("❌ Type mismatch for type \(type): \(context.debugDescription)")
+                case .dataCorrupted(let context):
+                    print("❌ Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("❌ Unknown decoding error")
+                }
+            }
+            
+            print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+            completion(.failure(NetworkError.decodingFailed(error)))
+        }
+    }.resume()
+}
+
+func updateRecipeWithFoods(
+    userEmail: String,
+    recipeId: Int,
+    title: String,
+    description: String,
+    instructions: String,
+    privacy: String,
+    servings: Int,
+    foods: [Food],
+    image: String?,
+    prepTime: Int?,
+    cookTime: Int?,
+    totalCalories: Double,
+    totalProtein: Double,
+    totalCarbs: Double,
+    totalFat: Double,
+    completion: @escaping (Result<Recipe, Error>) -> Void
+) {
+    guard let url = URL(string: "\(baseUrl)/update-recipe/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    // Convert Food to the expected format for the API
+    let foodItems = foods.map { food -> [String: Any] in
+        var item: [String: Any] = [
+            "external_id": "\(food.fdcId)",
+            "name": food.displayName,
+            "number_of_servings": food.numberOfServings ?? 1
+        ]
+        
+        if let brandText = food.brandText {
+            item["brand"] = brandText
+        }
+        
+        if let servingSize = food.servingSize {
+            item["serving_size"] = servingSize
+        }
+        
+        if let servingSizeUnit = food.servingSizeUnit {
+            item["serving_unit"] = servingSizeUnit
+        }
+        
+        item["serving_text"] = food.servingSizeText
+        item["calories"] = food.calories ?? 0
+        item["protein"] = food.protein ?? 0
+        item["carbs"] = food.carbs ?? 0
+        item["fat"] = food.fat ?? 0
+        
+        return item
+    }
+    
+    // Create the request body
+    var parameters: [String: Any] = [
+        "user_email": userEmail,
+        "recipe_id": recipeId,
+        "title": title,
+        "description": description,
+        "instructions": instructions,
+        "privacy": privacy,
+        "servings": servings,
+        "food_items": foodItems,
+        "total_calories": totalCalories,
+        "total_protein": totalProtein,
+        "total_carbs": totalCarbs,
+        "total_fat": totalFat
+    ]
+    
+    if let image = image {
+        parameters["image"] = image
+    }
+    
+    if let prepTime = prepTime {
+        parameters["prep_time"] = prepTime
+    }
+    
+    if let cookTime = cookTime {
+        parameters["cook_time"] = cookTime
+    }
+    
+    // DEBUG - Print what we're sending to the server
+    print("⬆️ SENDING TO SERVER - updateRecipeWithFoods:")
+    print("- userEmail: \(userEmail)")
+    print("- recipeId: \(recipeId)")
+    print("- title: \(title)")
+    print("- description: \(description)")
+    print("- instructions: \(instructions)")
+    print("- privacy: \(privacy)")
+    print("- servings: \(servings)")
+    print("- image: \(image ?? "none")")
+    print("- prepTime: \(prepTime ?? 0)")
+    print("- cookTime: \(cookTime ?? 0)")
+    print("- totalCalories: \(totalCalories)")
+    print("- totalProtein: \(totalProtein)")
+    print("- totalCarbs: \(totalCarbs)")
+    print("- totalFat: \(totalFat)")
+    print("- food_items: \(foodItems.count) items")
+    
+    // Create the actual request body
+    let jsonData: Data
+    do {
+        jsonData = try JSONSerialization.data(withJSONObject: parameters)
+    } catch {
+        print("JSON Serialization Error: \(error)")
+        completion(.failure(NetworkError.jsonEncodingFailed))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.httpBody = jsonData
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            completion(.failure(error))
+            return
+        }
+        
+        guard let data = data else {
+            completion(.failure(NetworkError.noData))
+            return
+        }
+        
+        // Print response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("⬇️ RECEIVED FROM SERVER - updateRecipeWithFoods response:")
+            print(responseString)
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let recipe = try decoder.decode(Recipe.self, from: data)
+            print("✅ Successfully updated recipe with foods: \(recipe.title) (ID: \(recipe.id))")
+            completion(.success(recipe))
+        } catch {
+            print("❌ Decoding error when updating recipe with foods: \(error)")
+            
+            // More detailed error analysis
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
+                case .valueNotFound(let type, let context):
+                    print("❌ Value of type \(type) not found: \(context.debugDescription)")
+                case .typeMismatch(let type, let context):
+                    print("❌ Type mismatch for type \(type): \(context.debugDescription)")
+                case .dataCorrupted(let context):
+                    print("❌ Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("❌ Unknown decoding error")
+                }
+            }
+            
+            print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+            completion(.failure(NetworkError.decodingFailed(error)))
+        }
+    }.resume()
+}
+
+}

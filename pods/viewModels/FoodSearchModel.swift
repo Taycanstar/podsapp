@@ -189,7 +189,8 @@ extension LoggedFoodItem {
 
 enum LogFoodMode {
     case logFood       
-    case addToMeal     
+    case addToMeal
+    case addToRecipe
 }
 
 
@@ -319,6 +320,7 @@ struct MealSummary: Codable {
 enum LogType: String, Codable {
     case food
     case meal
+    case recipe
 }
 
 struct CombinedLog: Codable, Identifiable {
@@ -338,6 +340,11 @@ struct CombinedLog: Codable, Identifiable {
     let mealTime: String?     // Keep mealTime for meal category
     let scheduledAt: Date?    // Add scheduledAt for the precise time
     
+    // Recipe-specific properties
+    let recipeLogId: Int?
+    let recipe: RecipeSummary?
+    let servingsConsumed: Int?
+    
     // Add a computed property to handle zero calories
     var displayCalories: Double {
         if calories > 0 {
@@ -347,6 +354,11 @@ struct CombinedLog: Codable, Identifiable {
         // If calories is zero but we have a meal with displayCalories, use that
         if let meal = meal, type == .meal {
             return meal.displayCalories
+        }
+        
+        // If calories is zero but we have a recipe with displayCalories, use that
+        if let recipe = recipe, type == .recipe {
+            return recipe.displayCalories * Double(servingsConsumed ?? 1)
         }
         
         // If it's a food item, try to calculate from the food
@@ -361,6 +373,7 @@ struct CombinedLog: Codable, Identifiable {
         switch type {
         case .food: return foodLogId ?? 0
         case .meal: return mealLogId ?? 0
+        case .recipe: return recipeLogId ?? 0
         }
     }
 }
@@ -384,4 +397,151 @@ protocol MealDisplayable {
 
 extension MealSummary: MealDisplayable {
     var id: Int { mealId }  // Map mealId to id for the protocol
+}
+
+// MARK: - Recipe Structs
+
+// Recipe food items (similar to MealFoodItem)
+struct RecipeFoodItem: Codable {
+    let foodId: Int
+    let externalId: String
+    let name: String
+    let servings: String
+    let servingText: String?
+    let notes: String?
+    let calories: Double
+    let protein: Double
+    let carbs: Double
+    let fat: Double
+}
+
+// Full Recipe struct (similar to Meal)
+struct Recipe: Codable, Identifiable {
+    let id: Int
+    let title: String
+    let description: String?
+    let instructions: String?
+    let privacy: String
+    let servings: Int
+    let createdAt: Date
+    let updatedAt: Date
+    let recipeItems: [RecipeFoodItem]
+    let image: String?
+    let prepTime: Int?
+    let cookTime: Int?
+    let totalCalories: Double?
+    let totalProtein: Double?
+    let totalCarbs: Double?
+    let totalFat: Double?
+    
+    // Add computed properties to provide default values when the fields are nil
+    var calories: Double {
+        // If totalCalories has a valid value > 0, use it
+        if let total = totalCalories, total > 0 {
+            return total
+        }
+        
+        // If we have recipe items, sum their calories
+        if !recipeItems.isEmpty {
+            let itemCalories = recipeItems.reduce(0) { sum, item in
+                sum + item.calories
+            }
+            if itemCalories > 0 {
+                return itemCalories
+            }
+        }
+        
+        // If we have macros, calculate from them
+        let calculatedProtein = protein
+        let calculatedCarbs = carbs
+        let calculatedFat = fat
+        
+        if (calculatedProtein + calculatedCarbs + calculatedFat) > 0 {
+            // Rough estimate: protein and carbs = 4 cal/g, fat = 9 cal/g
+            return (calculatedProtein * 4) + (calculatedCarbs * 4) + (calculatedFat * 9)
+        }
+        
+        return totalCalories ?? 0 // fallback to original value
+    }
+    var protein: Double { totalProtein ?? 0 }
+    var carbs: Double { totalCarbs ?? 0 }
+    var fat: Double { totalFat ?? 0 }
+    
+    // Total time in minutes
+    var totalTime: Int {
+        (prepTime ?? 0) + (cookTime ?? 0)
+    }
+}
+
+// Recipe summary for display in lists (similar to MealSummary)
+struct RecipeSummary: Codable {
+    let recipeId: Int
+    let title: String
+    let description: String?
+    let image: String?
+    let calories: Double
+    let servings: Int
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    let prepTime: Int?
+    let cookTime: Int?
+    
+    // Computed property to ensure we display a reasonable calorie count
+    var displayCalories: Double {
+        if calories > 0 {
+            return calories
+        }
+        
+        // Fallback: estimate based on macros if available
+        if let protein = protein, let carbs = carbs, let fat = fat,
+           (protein + carbs + fat) > 0 {
+            // Rough estimate: protein and carbs = 4 cal/g, fat = 9 cal/g
+            return (protein * 4) + (carbs * 4) + (fat * 9)
+        }
+        
+        // If all else fails, return the original value
+        return calories
+    }
+    
+    // Total time in minutes
+    var totalTime: Int {
+        (prepTime ?? 0) + (cookTime ?? 0)
+    }
+}
+
+// Logged Recipe (similar to LoggedMeal)
+struct LoggedRecipe: Codable, Identifiable {
+    let status: String
+    let recipeLogId: Int
+    let calories: Double
+    let message: String
+    let recipe: RecipeSummary
+    let mealTime: String
+    let servingsConsumed: Int
+    let notes: String?
+    let loggedAt: Date
+    
+    var id: Int { recipeLogId }
+}
+
+// Response for recipes (similar to MealsResponse)
+struct RecipesResponse: Codable {
+    let recipes: [Recipe]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+    
+    // Initializer for creating a RecipesResponse from existing data
+    init(recipes: [Recipe], hasMore: Bool, totalPages: Int, currentPage: Int) {
+        self.recipes = recipes
+        self.hasMore = hasMore
+        self.totalPages = totalPages
+        self.currentPage = currentPage
+    }
+}
+
+// Make RecipeSummary conform to MealDisplayable for reuse in UI components
+extension RecipeSummary: MealDisplayable {
+    var id: Int { recipeId }  // Map recipeId to id for the protocol
 }

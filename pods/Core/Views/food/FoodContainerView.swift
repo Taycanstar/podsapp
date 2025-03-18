@@ -14,6 +14,10 @@ enum FoodNavigationDestination: Hashable {
     case createMeal 
     case addMealItems
     case editMeal(Meal)  // Added case for editing a meal
+    case createRecipe    // Added case for creating a recipe
+    case addRecipeIngredients // Added case for adding ingredients to a recipe
+    case editRecipe(Recipe)   // Added case for editing a recipe
+
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
         switch (lhs, rhs) {
@@ -27,6 +31,12 @@ enum FoodNavigationDestination: Hashable {
             return true
         case let (.editMeal(meal1), .editMeal(meal2)):
             return meal1.id == meal2.id
+        case (.createRecipe, .createRecipe):
+            return true
+        case (.addRecipeIngredients, .addRecipeIngredients):
+            return true
+        case let (.editRecipe(recipe1), .editRecipe(recipe2)):
+            return recipe1.id == recipe2.id
         default:
             return false
         }
@@ -47,6 +57,13 @@ enum FoodNavigationDestination: Hashable {
         case .editMeal(let meal):
             hasher.combine(4)
             hasher.combine(meal.id)
+        case .createRecipe:
+            hasher.combine(5)
+        case .addRecipeIngredients:
+            hasher.combine(6)
+        case .editRecipe(let recipe):
+            hasher.combine(7)
+            hasher.combine(recipe.id)
         }
     }
 }
@@ -120,6 +137,19 @@ struct FoodContainerView: View {
                         )
                     case .editMeal(let meal):
                         EditMealView(meal: meal, path: $path, selectedFoods: $selectedFoods)
+                    case .createRecipe:
+                        CreateRecipeView(path: $path, selectedFoods: $selectedFoods)
+                    case .addRecipeIngredients:
+                        LogFood(
+                            selectedTab: $selectedTab,
+                            selectedMeal: $selectedMeal,
+                            path: $path,
+                            mode: .addToRecipe,
+                            selectedFoods: $selectedFoods
+                        )
+                    case .editRecipe(let recipe):
+                        EditRecipeView(recipe: recipe, path: $path, selectedFoods: $selectedFoods)
+
                     }
                 }
         }
