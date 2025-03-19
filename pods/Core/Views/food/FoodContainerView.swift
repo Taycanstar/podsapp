@@ -80,6 +80,8 @@ struct FoodContainerView: View {
     
     // Replace editMealSelectedFoods with a dictionary to store foods per meal ID
     @State private var editMealSelectedFoodsByMealId: [Int: [Food]] = [:]
+    // Keep track of the original foods for each meal to restore when canceling
+    @State private var originalMealFoodsByMealId: [Int: [Food]] = [:]
     @State private var currentlyEditingMealId: Int? = nil
     
     @State private var createRecipeSelectedFoods: [Food] = []
@@ -104,9 +106,9 @@ struct FoodContainerView: View {
     
     // Helper method to initialize meal items outside of the View body
     private func initializeMealItems(for meal: Meal) {
-        // Initialize the meal's food items if this is the first time we're viewing it
-        if editMealSelectedFoodsByMealId[meal.id] == nil {
-            print("📦 FoodContainerView: Initializing foods for the first time - meal: \(meal.title) (ID: \(meal.id))")
+        // If we don't have original foods for this meal yet, create them
+        if originalMealFoodsByMealId[meal.id] == nil {
+            print("📦 FoodContainerView: Saving original foods for meal: \(meal.title) (ID: \(meal.id))")
             var initialFoods: [Food] = []
             for item in meal.mealItems {
                 let food = Food(
@@ -128,9 +130,31 @@ struct FoodContainerView: View {
                 )
                 initialFoods.append(food)
             }
-            editMealSelectedFoodsByMealId[meal.id] = initialFoods
+            // Save the original foods
+            originalMealFoodsByMealId[meal.id] = initialFoods
+        }
+        
+        // Initialize the meal's food items if this is the first time we're viewing it
+        if editMealSelectedFoodsByMealId[meal.id] == nil {
+            print("📦 FoodContainerView: Initializing foods for the first time - meal: \(meal.title) (ID: \(meal.id))")
+            // Use the original foods we saved
+            editMealSelectedFoodsByMealId[meal.id] = originalMealFoodsByMealId[meal.id] ?? []
         } else {
             print("📦 FoodContainerView: Using existing foods for meal: \(meal.title) (ID: \(meal.id)) - \(editMealSelectedFoodsByMealId[meal.id]?.count ?? 0) items")
+        }
+    }
+    
+    // Helper method to clear cached meal items for a specific meal
+    private func clearCachedMealItems(for mealId: Int) {
+        editMealSelectedFoodsByMealId.removeValue(forKey: mealId)
+        print("🗑️ FoodContainerView: Cleared cached foods for meal ID: \(mealId)")
+    }
+    
+    // Helper method to restore original foods for a meal (used when canceling)
+    private func restoreOriginalFoods(for mealId: Int) {
+        if let originalFoods = originalMealFoodsByMealId[mealId] {
+            print("🔄 FoodContainerView: Restoring original foods for meal ID: \(mealId)")
+            editMealSelectedFoodsByMealId[mealId] = originalFoods
         }
     }
     
@@ -226,6 +250,40 @@ struct FoodContainerView: View {
                             }
                             // Otherwise we're returning from adding items, so keep the existing selectedFoods array
                         }
+                }
+            }
+        }
+        .onChange(of: path) { newPath in
+            // Check if we were editing a meal before and now we're no longer in that flow
+            // We don't need to clear cached foods since EditMealView clears them on Cancel
+            if newPath.isEmpty && currentlyEditingMealId != nil {
+                print("ℹ️ FoodContainerView: Navigation path changed, currentlyEditingMealId: \(currentlyEditingMealId!)")
+                currentlyEditingMealId = nil
+            }
+        }
+        .onAppear {
+            // Set up notification listener for the "cancel edit" action
+            NotificationCenter.default.addObserver(
+                forName: Notification.Name("RestoreOriginalMealItemsNotification"),
+                object: nil,
+                queue: .main
+            ) { [self] notification in
+                if let mealId = notification.userInfo?["mealId"] as? Int {
+                    restoreOriginalFoods(for: mealId)
+                }
+            }
+            
+            // Set up notification listener for successful saves
+            NotificationCenter.default.addObserver(
+                forName: Notification.Name("MealSuccessfullySavedNotification"),
+                object: nil,
+                queue: .main
+            ) { [self] notification in
+                if let mealId = notification.userInfo?["mealId"] as? Int,
+                   let foods = notification.userInfo?["foods"] as? [Food] {
+                    print("📢 FoodContainerView: Updating original foods for successfully saved meal ID: \(mealId)")
+                    // Update the original foods to match the saved state
+                    originalMealFoodsByMealId[mealId] = foods
                 }
             }
         }

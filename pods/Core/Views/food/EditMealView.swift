@@ -245,6 +245,12 @@ struct EditMealView: View {
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
+                    // Post a notification to restore original meal items
+                    NotificationCenter.default.post(
+                        name: Notification.Name("RestoreOriginalMealItemsNotification"),
+                        object: nil,
+                        userInfo: ["mealId": meal.id]
+                    )
                     dismiss()
                 }) {
                     Image(systemName: "chevron.left")
@@ -416,6 +422,17 @@ struct EditMealView: View {
                 switch result {
                 case .success(let updatedMeal):
                     print("✅ Meal update succeeded: \(updatedMeal.title)")
+                    
+                    // Send notification to update the original saved foods
+                    NotificationCenter.default.post(
+                        name: Notification.Name("MealSuccessfullySavedNotification"),
+                        object: nil,
+                        userInfo: [
+                            "mealId": self.meal.id,
+                            "foods": self.selectedFoods
+                        ]
+                    )
+                    
                     // Only dismiss and navigate back on success
                     self.dismiss()
                     self.path.removeLast()
