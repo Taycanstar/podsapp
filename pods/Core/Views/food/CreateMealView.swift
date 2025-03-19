@@ -18,19 +18,23 @@ struct CreateMealView: View {
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - State
-    @State private var mealName = ""
-    @State private var shareWith = "Everyone"
-    @State private var instructions = ""
+    // Get navigation state to persist between views
+    @EnvironmentObject private var navState: FoodNavigationState
+    
+    // Replace local state with binding to navState
+    // @State private var mealName = ""
+    // @State private var shareWith = "Everyone"
+    // @State private var instructions = ""
     @State private var showingShareOptions = false
     
     @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: Image? = nil
+    // @State private var selectedImage: Image? = nil
     @State private var showImagePicker = false
     @State private var showOptionsSheet = false
     @State private var sourceType: UIImagePickerController.SourceType = .camera
     
     // ADDED: These must exist in the parent if we reference them in Coordinator
-    @State private var imageURL: URL? = nil
+    // @State private var imageURL: URL? = nil
     @State private var uploadProgress: Double = 0
     @State private var isUploading = false
     @State private var uploadError: Error?
@@ -39,7 +43,7 @@ struct CreateMealView: View {
     // Add states for name validation
     @State private var showNameTakenAlert = false
 
-    @State private var uiImage: UIImage? = nil
+    // @State private var uiImage: UIImage? = nil
 
     // Add this state variable with your other @State properties
     @FocusState private var focusedField: Field?
@@ -57,7 +61,7 @@ struct CreateMealView: View {
     @State private var hasAppeared = false
 
 private var isCreateButtonDisabled: Bool {
-    return mealName.isEmpty
+    return navState.createMealName.isEmpty
 }
 
     // Example share options
@@ -88,7 +92,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                             : headerHeight
                         
                         // The banner image (if selected), else a placeholder
-                        if let selectedImage {
+                        if let selectedImage = navState.createMealImage {
                             selectedImage
                                 .resizable()
                                 .scaledToFill()
@@ -145,7 +149,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("New Meal")
-                    .foregroundColor(selectedImage != nil ? .white : .primary)
+                    .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -156,7 +160,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                      
                 }
                 .disabled(isCreateButtonDisabled)
-                .foregroundColor(selectedImage != nil ? .white : .primary)
+                .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
@@ -165,7 +169,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                      dismiss()
                       }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(selectedImage != nil ? .white : .primary)
+                        .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                 }
             }
             ToolbarItemGroup(placement: .keyboard) {
@@ -180,12 +184,18 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         // Full screen cover for ImagePicker
       .fullScreenCover(isPresented: $showImagePicker) {
     ImagePicker(
-        uiImage: $uiImage,
-        image: $selectedImage,
+        uiImage: Binding(
+            get: { navState.createMealUIImage },
+            set: { navState.createMealUIImage = $0 }
+        ),
+        image: Binding(
+            get: { navState.createMealImage },
+            set: { navState.createMealImage = $0 }
+        ),
         sourceType: sourceType
     )
 }
-.onChange(of: uiImage) { newUIImage in
+.onChange(of: navState.createMealUIImage) { newUIImage in
     guard let picked = newUIImage else { return }
     // Use your existing `uploadMealImage(_:, completion:)`
     // For example:
@@ -193,7 +203,12 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         switch result {
         case .success(let url):
             print("Upload success. URL: \(url)")
-            // store if needed, e.g. self.imageURL = url
+            // Store in navState
+            if let imageUrl = URL(string: url) {
+                DispatchQueue.main.async {
+                    self.navState.createMealImageURL = imageUrl
+                }
+            }
         case .failure(let error):
             print("Upload failed:", error)
             // show alert if you like
@@ -256,11 +271,10 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
     }
 
     private func resetFields() {
-        mealName = ""
-        instructions = ""
-        selectedImage = nil
-        selectedFoods.removeAll() // Assuming selectedFoods is a mutable array
-        // Reset any other state variables as needed
+        // Reset all state in navState
+        navState.resetCreateMealState()
+        // Remove any remaining foods
+        selectedFoods.removeAll()
     }
 
     // Check if the meal name is already taken
@@ -270,7 +284,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
             .map { $0.title.lowercased() }
         
         // Check if the current name (trimmed and lowercased) exists
-        return existingMealNames.contains(mealName.trimmed().lowercased())
+        return existingMealNames.contains(navState.createMealName.trimmed().lowercased())
     }
     
     // Validate name before saving
@@ -293,14 +307,14 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         isSaving = true
         
         // First upload image if exists
-        if let uiImage = uiImage {
+        if let uiImage = navState.createMealUIImage {
             NetworkManager().uploadMealImage(uiImage) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let urlString):
                         // Convert the string URL to a URL object
                         if let url = URL(string: urlString) {
-                            self.imageURL = url
+                            self.navState.createMealImageURL = url
                             self.createMeal()
                             self.resetFields()
                         } else {
@@ -333,13 +347,13 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         print("- Fat: \(totals.fat)g")
 
         foodManager.createMeal(
-            title: mealName,
+            title: navState.createMealName,
             description: nil,
-            directions: instructions,
-            privacy: shareWith.lowercased(),
+            directions: navState.createMealInstructions,
+            privacy: navState.createMealShareWith.lowercased(),
             servings: 1,
             foods: selectedFoods,
-            image: imageURL?.absoluteString,
+            image: navState.createMealImageURL?.absoluteString,
             totalCalories: totals.calories,
             totalProtein: totals.protein,
             totalCarbs: totals.carbs,
@@ -355,7 +369,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
     private var mealDetailsSection: some View {
         VStack(spacing: 16) {
             // Title
-            TextField("Title", text: $mealName)
+            TextField("Title", text: $navState.createMealName)
                 .focused($focusedField, equals: .mealName)
                 .textFieldStyle(.plain)
                 // .padding(.vertical, 8)
@@ -371,12 +385,12 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                 Menu {
                     ForEach(shareOptions, id: \.self) { option in
                         Button(option) {
-                            shareWith = option
+                            navState.createMealShareWith = option
                         }
                     }
                 } label: {
                     HStack {
-                        Text(shareWith)
+                        Text(navState.createMealShareWith)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 12))
                     }
@@ -604,7 +618,7 @@ private func removeAllItems(withFdcId fdcId: Int) {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            TextField("Add instructions for making this meal", text: $instructions, axis: .vertical)
+            TextField("Add instructions for making this meal", text: $navState.createMealInstructions, axis: .vertical)
                 .focused($focusedField, equals: .instructions)
                 .textFieldStyle(.plain)
                 .padding()

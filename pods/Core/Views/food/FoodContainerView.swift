@@ -11,6 +11,25 @@ import SwiftUI
 // This class will maintain state between views
 class FoodNavigationState: ObservableObject {
     @Published var createMealSelectedFoods: [Food] = []
+    
+    // Add state for CreateMealView
+    @Published var createMealName: String = ""
+    @Published var createMealShareWith: String = "Everyone"
+    @Published var createMealInstructions: String = ""
+    @Published var createMealImageURL: URL? = nil
+    @Published var createMealUIImage: UIImage? = nil
+    @Published var createMealImage: Image? = nil
+    
+    // Method to reset all create meal state
+    func resetCreateMealState() {
+        createMealSelectedFoods = []
+        createMealName = ""
+        createMealShareWith = "Everyone"
+        createMealInstructions = ""
+        createMealImageURL = nil
+        createMealUIImage = nil
+        createMealImage = nil
+    }
 }
 
 enum FoodNavigationDestination: Hashable {
@@ -292,8 +311,10 @@ struct FoodContainerView: View {
             // If the navigation path is empty, we've exited all flows
             // Reset the createMealSelectedFoods array so next time we start fresh
             if newPath.isEmpty {
-                print("🧹 FoodContainerView: Navigation stack empty, resetting createMealSelectedFoods")
-                navState.createMealSelectedFoods = []
+                print("🧹 FoodContainerView: Navigation stack empty, resetting createMealState")
+                print("📊 Before reset: \(navState.createMealSelectedFoods.count) foods, name: \(navState.createMealName)")
+                navState.resetCreateMealState()
+                print("📊 After reset: \(navState.createMealSelectedFoods.count) foods, name: \(navState.createMealName)")
             }
         }
         .onAppear {
