@@ -52,6 +52,9 @@ struct CreateMealView: View {
     @State private var isSaving = false
     @State private var showSaveError = false
     @State private var errorMessage = ""
+    
+    // Add an onAppear flag to track if we've seen this view before
+    @State private var hasAppeared = false
 
 private var isCreateButtonDisabled: Bool {
     return mealName.isEmpty
@@ -232,9 +235,23 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         
         // Add name taken alert
         .alert("Name Taken", isPresented: $showNameTakenAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) { }
         } message: {
-            Text("Please choose a different name.")
+            Text("Name already in use. Please choose a different name.")
+        }
+        // Add debug tracking
+        .onAppear {
+            print("🔍 CreateMealView appeared with \(selectedFoods.count) foods")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                print("🔍 CreateMealView appeared (delayed check): \(selectedFoods.count) foods")
+            }
+            hasAppeared = true
+        }
+        .onChange(of: selectedFoods) { newFoods in
+            print("📊 CreateMealView selectedFoods changed: now has \(newFoods.count) foods")
+            for (index, food) in newFoods.enumerated() {
+                print("📊 Food \(index+1): \(food.displayName)")
+            }
         }
     }
 
@@ -386,6 +403,15 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         Text("Meal Items")
             .font(.title2)
             .fontWeight(.bold)
+        
+        // Print the raw array for debugging
+        let _ = {
+            print("⭐️ CreateMealView.mealItemsSection rendering with \(selectedFoods.count) foods")
+            for (index, food) in selectedFoods.enumerated() {
+                print("⭐️ Raw Food #\(index+1): \(food.displayName) (ID: \(food.fdcId))")
+            }
+            return 0
+        }()
         
         // 1) Aggregate duplicates by fdcId
         let aggregatedFoods = aggregateFoodsByFdcId(selectedFoods)

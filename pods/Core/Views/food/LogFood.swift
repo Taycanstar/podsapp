@@ -562,12 +562,27 @@ private func handleFoodTap() {
             foodNutrients: food.foodNutrients,
             foodMeasures: food.foodMeasures
         )
-
-    selectedFoods.append(newFood)
-    
-    // track, then pop back
-    foodManager.trackRecentlyAdded(foodId: food.fdcId)
-    path.removeLast()
+        
+        // Debug before adding
+        print("📝 Adding food to selection: \(newFood.displayName)")
+        print("📊 Current selection count: \(selectedFoods.count)")
+        
+        // Add to the selection
+        selectedFoods.append(newFood)
+        
+        // Debug after adding
+        print("✅ Food added to selection, new count: \(selectedFoods.count)")
+        
+        // track, then pop back
+        foodManager.trackRecentlyAdded(foodId: food.fdcId)
+        print("👈 DEBUG: Navigating back from food selection after adding \(newFood.displayName)")
+        print("👈 DEBUG: Selection count BEFORE removeLast(): \(selectedFoods.count)")
+        path.removeLast()
+        
+        // Add a delay and check count again to see if the binding is working
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("👈 DEBUG: Selection count AFTER removeLast(): \(selectedFoods.count)")
+        }
     }
 }
 

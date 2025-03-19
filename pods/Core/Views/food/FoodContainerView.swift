@@ -8,6 +8,11 @@
 import Foundation
 import SwiftUI
 
+// This class will maintain state between views
+class FoodNavigationState: ObservableObject {
+    @Published var createMealSelectedFoods: [Food] = []
+}
+
 enum FoodNavigationDestination: Hashable {
     case logFood
     case foodDetails(Food, Binding<String>) // Food and selected meal
@@ -74,9 +79,13 @@ struct FoodContainerView: View {
     @Binding var selectedTab: Int
     @State private var selectedMeal: String
     
+    // Add the observable state object
+    @StateObject private var navState = FoodNavigationState()
+    
     // Separate state arrays for different contexts to prevent state bleeding
     @State private var logFoodSelectedFoods: [Food] = []
-    @State private var createMealSelectedFoods: [Food] = []
+    // Use the observable object's array instead of local state
+    // @State private var createMealSelectedFoods: [Food] = []
     
     // Replace editMealSelectedFoods with a dictionary to store foods per meal ID
     @State private var editMealSelectedFoodsByMealId: [Int: [Food]] = [:]
@@ -180,22 +189,40 @@ struct FoodContainerView: View {
                 case .foodDetails(let food, _):
                     FoodDetailsView(food: food, selectedMeal: $selectedMeal)
                 case .createMeal:
-                    // Clear previous selections when creating a new meal
-                    CreateMealView(path: $path, selectedFoods: $createMealSelectedFoods)
-                        .onAppear {
-                            // Reset this context's selectedFoods when view appears
-                            createMealSelectedFoods = []
-                        }
+                    CreateMealView(
+                        path: $path,
+                        selectedFoods: Binding(
+                            get: { self.navState.createMealSelectedFoods },
+                            set: { self.navState.createMealSelectedFoods = $0 }
+                        )
+                    )
+                    .id("create-meal-\(navState.createMealSelectedFoods.count)")
                 case .addMealItems:
-                    // Create a binding that will edit the correct meal's food items
+                    // Create a binding that will use the correct array of selected foods
+                    // If we're editing a meal, use the meal-specific array
+                    // If we're creating a meal, use the createMealSelectedFoods array
                     let binding = Binding<[Food]>(
                         get: {
-                            guard let mealId = currentlyEditingMealId else { return [] }
-                            return editMealSelectedFoodsByMealId[mealId] ?? []
+                            if let mealId = currentlyEditingMealId {
+                                // Editing an existing meal
+                                print("📋 DEBUG: Getting foods for existing meal ID: \(mealId), count: \(editMealSelectedFoodsByMealId[mealId]?.count ?? 0)")
+                                return editMealSelectedFoodsByMealId[mealId] ?? []
+                            } else {
+                                // Creating a new meal
+                                print("📋 DEBUG: Getting foods for new meal, count: \(navState.createMealSelectedFoods.count)")
+                                return navState.createMealSelectedFoods
+                            }
                         },
                         set: { newValue in
-                            guard let mealId = currentlyEditingMealId else { return }
-                            editMealSelectedFoodsByMealId[mealId] = newValue
+                            if let mealId = currentlyEditingMealId {
+                                // Editing an existing meal
+                                print("📋 DEBUG: Setting foods for existing meal ID: \(mealId), new count: \(newValue.count)")
+                                editMealSelectedFoodsByMealId[mealId] = newValue
+                            } else {
+                                // Creating a new meal
+                                print("📋 DEBUG: Setting foods for new meal, new count: \(newValue.count)")
+                                navState.createMealSelectedFoods = newValue
+                            }
                         }
                     )
                     
@@ -253,12 +280,20 @@ struct FoodContainerView: View {
                 }
             }
         }
+        .environmentObject(navState)
         .onChange(of: path) { newPath in
             // Check if we were editing a meal before and now we're no longer in that flow
             // We don't need to clear cached foods since EditMealView clears them on Cancel
             if newPath.isEmpty && currentlyEditingMealId != nil {
                 print("ℹ️ FoodContainerView: Navigation path changed, currentlyEditingMealId: \(currentlyEditingMealId!)")
                 currentlyEditingMealId = nil
+            }
+            
+            // If the navigation path is empty, we've exited all flows
+            // Reset the createMealSelectedFoods array so next time we start fresh
+            if newPath.isEmpty {
+                print("🧹 FoodContainerView: Navigation stack empty, resetting createMealSelectedFoods")
+                navState.createMealSelectedFoods = []
             }
         }
         .onAppear {
