@@ -248,7 +248,7 @@ struct EditMealView: View {
                             }
                             .disabled(isDoneButtonDisabled)
                         }
-                        .padding(.top, 50) // Adjust for safe area
+                        .padding(.top)
                         .background(Color.clear)
                         
                         Spacer()
@@ -262,13 +262,14 @@ struct EditMealView: View {
                         mealItemsSection
                         directionsSection
                         
-                        Spacer().frame(height: 40) // extra bottom space
+                        // Spacer().frame(height: 40) 
                     }
                 }
             }
             .ignoresSafeArea(edges: .top)
         }
         .background(Color("iosbg"))
+       
 
         
         // Keep keyboard toolbar
