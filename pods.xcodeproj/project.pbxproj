@@ -54,6 +54,7 @@
 		364A83AC2D81F3F7009D2620 /* EditMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AB2D81F3F7009D2620 /* EditMealView.swift */; };
 		364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AD2D87D210009D2620 /* CreateRecipeView.swift */; };
 		364A83B02D87D21E009D2620 /* EditRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AF2D87D21E009D2620 /* EditRecipeView.swift */; };
+		364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -211,6 +212,7 @@
 		364A83AB2D81F3F7009D2620 /* EditMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMealView.swift; sourceTree = "<group>"; };
 		364A83AD2D87D210009D2620 /* CreateRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRecipeView.swift; sourceTree = "<group>"; };
 		364A83AF2D87D21E009D2620 /* EditRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRecipeView.swift; sourceTree = "<group>"; };
+		364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonWithIcon.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
@@ -440,6 +442,7 @@
 				36B851682D4EBAB200A876C3 /* NewSheetView.swift */,
 				36CB033C2D64E0CC006A74E9 /* CardDetailView.swift */,
 				36CB03432D72C1B9006A74E9 /* BottomPopup.swift */,
+				364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1004,6 +1007,7 @@
 				363AF9FD2D2095D600C91A14 /* GroupedColumnActivityView.swift in Sources */,
 				36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
+				364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
