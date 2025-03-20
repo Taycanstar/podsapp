@@ -126,142 +126,152 @@ struct EditMealView: View {
         // Food initialization is now handled in FoodContainerView
         print("📦 EditMealView: Initialized for meal ID: \(meal.id) - '\(meal.title)'")
     }
+
+
     
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 0) {
-            // Custom sheet header
-            ZStack {
-                Text("Edit Meal")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                HStack {
-                    Button("Cancel") {
-                        // Post a notification to restore original meal items
-                        NotificationCenter.default.post(
-                            name: Notification.Name("RestoreOriginalMealItemsNotification"),
-                            object: nil,
-                            userInfo: ["mealId": meal.id]
-                        )
-                        dismiss()
-                    }
-                    
-                    Spacer()
-                    
-                    Button("Done") {
-                        saveUpdatedMeal()
-                    }
-                    .disabled(isDoneButtonDisabled)
-                    .foregroundColor(.accentColor)
-                    .fontWeight(.semibold)
-                }
-                .padding(.horizontal)
-            }
-            .padding(.vertical, 16)
-            
-            Divider()
-            
-            // Main content
-            GeometryReader { outerGeo in
-                ScrollView(showsIndicators: false) {
-                    ZStack(alignment: .top) {
-                        // A) Collapsing / Stretchy Header
-                        GeometryReader { headerGeo in
-                            let offset = headerGeo.frame(in: .global).minY
-                            let height = offset > 0
-                                ? (headerHeight + offset)
-                                : headerHeight
-                            
-                            // The banner image (if selected or from meal)
-                            if let selectedImage {
-                                selectedImage
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: outerGeo.size.width, height: height)
-                                    .clipped()
-                                    .offset(y: offset > 0 ? -offset : 0)
-                                    .overlay(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                                    .ignoresSafeArea(edges: .top)
-                                    .onTapGesture {
-                                        showOptionsSheet = true
-                                    }
-                            } else if let imageUrlString = meal.image, !imageUrlString.isEmpty, let url = URL(string: imageUrlString) {
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ProgressView()
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: outerGeo.size.width, height: height)
-                                            .clipped()
-                                            .offset(y: offset > 0 ? -offset : 0)
-                                            .overlay(
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                )
-                                            )
-                                    case .failure:
-                                        ZStack {
-                                            Color("iosnp")
-                                            Image(systemName: "camera.circle.fill")
-                                                .font(.system(size: 40))
-                                                .foregroundColor(.accentColor)
-                                        }
-                                        .frame(width: outerGeo.size.width, height: height)
-                                        .offset(y: offset > 0 ? -offset : 0)
-                                    @unknown default:
-                                        EmptyView()
-                                    }
-                                }
-                                .ignoresSafeArea(edges: .top)
-                                .onTapGesture {
-                                    showOptionsSheet = true
-                                }
-                            } else {
-                                ZStack {
-                                    Color("iosnp")
-                                    Image(systemName: "camera.circle.fill")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.accentColor)
-                                }
-                                .frame(width: outerGeo.size.width, height: height)
-                                .offset(y: offset > 0 ? -offset : 0)
-                                .onTapGesture {
-                                    showOptionsSheet = true
-                                }
-                                .ignoresSafeArea(edges: .top)
-                            }
-                        }
-                        .frame(height: headerHeight)
+        GeometryReader { outerGeo in
+            ScrollView(showsIndicators: false) {
+                ZStack(alignment: .top) {
+                    // A) Collapsing / Stretchy Header
+                    GeometryReader { headerGeo in
+                        let offset = headerGeo.frame(in: .global).minY
+                        let height = offset > 0
+                            ? (headerHeight + offset)
+                            : headerHeight
                         
-                        // B) Main Scrollable Content
-                        VStack(spacing: 16) {
-                            Spacer().frame(height: headerHeight) // leave space for header
-                            
-                            mealDetailsSection
-                            mealItemsSection
-                            directionsSection
-                            
-                            Spacer().frame(height: 40) // extra bottom space
+                        // The banner image (if selected or from meal)
+                        if let selectedImage {
+                            selectedImage
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: outerGeo.size.width, height: height)
+                                .clipped()
+                                .offset(y: offset > 0 ? -offset : 0)
+                                .overlay(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .ignoresSafeArea(edges: .top)
+                                .onTapGesture {
+                                    showOptionsSheet = true
+                                }
+                        } else if let imageUrlString = meal.image, !imageUrlString.isEmpty, let url = URL(string: imageUrlString) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: outerGeo.size.width, height: height)
+                                        .clipped()
+                                        .offset(y: offset > 0 ? -offset : 0)
+                                        .overlay(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                case .failure:
+                                    ZStack {
+                                        Color("iosnp")
+                                        Image(systemName: "camera.circle.fill")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.accentColor)
+                                    }
+                                    .frame(width: outerGeo.size.width, height: height)
+                                    .offset(y: offset > 0 ? -offset : 0)
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                            .ignoresSafeArea(edges: .top)
+                            .onTapGesture {
+                                showOptionsSheet = true
+                            }
+                        } else {
+                            ZStack {
+                                Color("iosnp")
+                                Image(systemName: "camera.circle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.accentColor)
+                            }
+                            .frame(width: outerGeo.size.width, height: height)
+                            .offset(y: offset > 0 ? -offset : 0)
+                            .onTapGesture {
+                                showOptionsSheet = true
+                            }
+                            .ignoresSafeArea(edges: .top)
                         }
+                    }
+                    .frame(height: headerHeight)
+                    
+                    // Custom nav bar overlay
+                    VStack {
+                        HStack {
+                            Button(action: {
+                                // Post a notification to restore original meal items
+                                NotificationCenter.default.post(
+                                    name: Notification.Name("RestoreOriginalMealItemsNotification"),
+                                    object: nil,
+                                    userInfo: ["mealId": meal.id]
+                                )
+                                dismiss()
+                            }) {
+                                Image(systemName: "xmark")
+                                    .foregroundColor(hasImage ? .white : .primary)
+                                    .padding()
+                            }
+                            
+                            Spacer()
+                            
+                            Text("Edit Meal")
+                                .font(.headline)
+                                .foregroundColor(hasImage ? .white : .primary)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                saveUpdatedMeal()
+                            }) {
+                                Text("Done")
+                                    .foregroundColor(hasImage ? .white : .primary)
+                                    .fontWeight(.semibold)
+                                    .padding()
+                            }
+                            .disabled(isDoneButtonDisabled)
+                        }
+                        .padding(.top, 50) // Adjust for safe area
+                        .background(Color.clear)
+                        
+                        Spacer()
+                    }
+                    
+                    // B) Main Scrollable Content
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: headerHeight) // leave space for header
+                        
+                        mealDetailsSection
+                        mealItemsSection
+                        directionsSection
+                        
+                        Spacer().frame(height: 40) // extra bottom space
                     }
                 }
             }
             .ignoresSafeArea(edges: .top)
         }
         .background(Color("iosbg"))
-        // Keep only the keyboard toolbar
+
+        
+        // Keep keyboard toolbar
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
