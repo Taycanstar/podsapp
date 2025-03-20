@@ -10,6 +10,8 @@ struct ButtonWithIcon: View {
     let label: String
     let iconName: String
     let action: () -> Void
+    let bgColor: Color?
+    let textColor: Color?
 
     var body: some View {
         Button(action: action) {
@@ -25,7 +27,8 @@ struct ButtonWithIcon: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(bgColor ?? Color(UIColor.secondarySystemBackground))
+            .foregroundColor(textColor ?? .accentColor)
             .cornerRadius(12)
         }
         .padding(.horizontal)

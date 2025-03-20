@@ -131,12 +131,13 @@ struct MealDetailView: View {
                         }
 
                         ButtonWithIcon(
-                            title: "Edit Meal",
-                            icon: "square.and.pencil",
+                            label: "Edit Meal",
+                            iconName: "square.and.pencil",
                             action: {
                                 isShowingEditMeal = true
                             },
-                            color: Color("iosnp")
+                            bgColor: Color("iosnp"),
+                            textColor: .accentColor
                         )
                         
                         Spacer().frame(height: 80) // extra bottom space
