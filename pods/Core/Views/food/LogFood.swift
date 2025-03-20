@@ -819,10 +819,10 @@ struct CombinedLogMealRow: View {
             .onTapGesture {
                 // Find the full meal from FoodManager.meals
                 if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
-                    // Navigate to EditMealView with the full meal
-                    path.append(FoodNavigationDestination.editMeal(fullMeal))
+                    // Navigate to MealDetailView with the full meal
+                    path.append(FoodNavigationDestination.mealDetails(fullMeal))
                 } else {
-                    // Create a minimal meal object to edit if we can't find the full meal
+                    // Create a minimal meal object to show if we can't find the full meal
                     let minimalMeal = Meal(
                         id: meal.mealId,
                         title: meal.title,
@@ -838,7 +838,7 @@ struct CombinedLogMealRow: View {
                         totalFat: meal.fat,
                         scheduledAt: meal.scheduledAt
                     )
-                    path.append(FoodNavigationDestination.editMeal(minimalMeal))
+                    path.append(FoodNavigationDestination.mealDetails(minimalMeal))
                 }
             }
         }
@@ -1177,9 +1177,9 @@ struct MealRow: View {
             .padding(.vertical, 0)
             .contentShape(Rectangle())
             .onTapGesture {
-                // Only navigate to EditMealView when in logFood mode
+                // Only navigate to MealDetailView when in logFood mode
                 if mode == .logFood {
-                    path.append(FoodNavigationDestination.editMeal(meal))
+                    path.append(FoodNavigationDestination.mealDetails(meal))
                 }
             }
         }
