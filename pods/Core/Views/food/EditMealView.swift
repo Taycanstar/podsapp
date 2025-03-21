@@ -376,23 +376,25 @@ struct EditMealView: View {
             )
         }
         // Add sheet for food selection
-        .sheet(isPresented: $isShowingAddItems) {
+        .sheet(isPresented: $isShowingAddItems, onDismiss: {
             // Handle sheet dismiss
             let newCount = selectedFoods.count
+            print("📝 Sheet dismissed, food count: \(newCount), previous count: \(foodCountBeforeSheet)")
             if newCount > foodCountBeforeSheet {
-                print("Items were added: \(newCount - foodCountBeforeSheet) new items")
+                print("📈 Items were added: \(newCount - foodCountBeforeSheet) new items")
                 hasChanges = true
             }
-        } content: {
+        }) {
             NavigationView {
                 LogFood(
                     selectedTab: .constant(0),  // Default to first tab
                     selectedMeal: .constant(mealTime),  // Use current meal time
                     path: $path,
                     mode: .addToMeal,
-                    selectedFoods: $selectedFoods,
+                    selectedFoods: $selectedFoods,  // Direct binding to selectedFoods
                     onItemAdded: {
                         // This callback is called when an item is added
+                        print("✅ onItemAdded callback triggered - closing LogFood sheet")
                         // We'll dismiss the sheet and mark that changes were made
                         isShowingAddItems = false
                         hasChanges = true
@@ -666,6 +668,7 @@ struct EditMealView: View {
             Button {
                 // Store the current food count before showing the sheet
                 foodCountBeforeSheet = selectedFoods.count
+                print("📊 Storing food count before opening sheet: \(foodCountBeforeSheet)")
                 isShowingAddItems = true
             } label: {
                 Text("Add item to meal")

@@ -200,44 +200,42 @@ struct MealDetailView: View {
                     selectedPrivacy = updatedMeal.privacy.capitalized
                 }
             }) {
-                NavigationView {
-                    EditMealView(
-                        meal: meal,
-                        path: $path,
-                        selectedFoods: Binding(
-                            get: {
-                                // Check if there are foods already loaded in FoodContainerView
-                                // Create foods from meal.mealItems if none exist yet
-                                var initialFoods: [Food] = []
-                                for item in meal.mealItems {
-                                    let food = Food(
-                                        fdcId: Int(item.externalId) ?? item.foodId,
-                                        description: item.name,
-                                        brandOwner: nil,
-                                        brandName: nil,
-                                        servingSize: 1.0,
-                                        numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
-                                        servingSizeUnit: item.servingText,
-                                        householdServingFullText: item.servingText,
-                                        foodNutrients: [
-                                            Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                                            Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                                            Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                                            Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                                        ],
-                                        foodMeasures: []
-                                    )
-                                    initialFoods.append(food)
-                                }
-                                return initialFoods
-                            },
-                            set: { _ in
-                                // This is a sheet, so we don't need to persist changes back
-                                // Changes will be saved by the EditMealView itself
+                EditMealView(
+                    meal: meal,
+                    path: $path,
+                    selectedFoods: Binding(
+                        get: {
+                            // Create foods from meal.mealItems
+                            var initialFoods: [Food] = []
+                            for item in meal.mealItems {
+                                let food = Food(
+                                    fdcId: Int(item.externalId) ?? item.foodId,
+                                    description: item.name,
+                                    brandOwner: nil,
+                                    brandName: nil,
+                                    servingSize: 1.0,
+                                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
+                                    servingSizeUnit: item.servingText,
+                                    householdServingFullText: item.servingText,
+                                    foodNutrients: [
+                                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                                    ],
+                                    foodMeasures: []
+                                )
+                                initialFoods.append(food)
                             }
-                        )
+                            return initialFoods
+                        },
+                        set: { newFoods in
+                            print("📊 MealDetailView received \(newFoods.count) updated foods")
+                            // Since we can't directly update the meal.mealItems, 
+                            // EditMealView will handle applying the changes when Save is tapped
+                        }
                     )
-                }
+                )
             }
             .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
                 Button("Cancel", role: .cancel) {}
