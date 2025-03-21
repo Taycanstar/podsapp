@@ -22,7 +22,7 @@ struct LogFood: View {
     @Binding var selectedFoods: [Food]  
     
     // Add callback that will be called when an item is added
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
 
     
    
@@ -59,7 +59,7 @@ struct LogFood: View {
          path: Binding<NavigationPath>,
          mode: LogFoodMode = .logFood,
          selectedFoods: Binding<[Food]>,
-         onItemAdded: (() -> Void)? = nil) {
+         onItemAdded: ((Food) -> Void)? = nil) {
         _selectedTab = selectedTab
         _path = path
         _selectedMeal = selectedMeal
@@ -271,7 +271,7 @@ private struct FoodListView: View {
     @Binding var path: NavigationPath
     
     // Add onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
                 List {
@@ -359,7 +359,7 @@ private struct MealListView: View {
     @Binding var path: NavigationPath
     
     // Add onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
             List {
@@ -436,7 +436,7 @@ private struct RecipeListView: View {
     @Binding var path: NavigationPath
     
     // Add onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
         List {
@@ -478,7 +478,7 @@ struct FoodRow: View {
     @Binding var path: NavigationPath 
     
     // Add the onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
 
     var body: some View {
         ZStack {
@@ -564,53 +564,64 @@ struct FoodRow: View {
     }
 
     
-private func handleFoodTap() {
-    HapticFeedback.generate()
-    switch mode {
-    case .logFood:
-        logFood()
-        
-    case .addToMeal, .addToRecipe:
-        // Create a new mutable Food object with the same properties
-        let newFood = Food(
-            fdcId: food.fdcId,
-            description: food.description,
-            brandOwner: food.brandOwner,
-            brandName: food.brandName,
-            servingSize: food.servingSize,
-            numberOfServings: 1, // Always start with 1 serving
-            servingSizeUnit: food.servingSizeUnit,
-            householdServingFullText: food.householdServingFullText,
-            foodNutrients: food.foodNutrients,
-            foodMeasures: food.foodMeasures
-        )
-        
-        // Debug before adding
-        print("📝 Adding food to selection: \(newFood.displayName)")
-        print("📊 Current selection count: \(selectedFoods.count)")
-        
-        // Add to the selection
-        selectedFoods.append(newFood)
-        
-        // Debug after adding
-        print("✅ Food added to selection, new count: \(selectedFoods.count)")
-        
-        // Track recently added food
-        foodManager.trackRecentlyAdded(foodId: food.fdcId)
-        
-        // Call the onItemAdded callback if provided - this will close the sheet
-        // If we're not in a sheet context, fall back to navigation path handling
-        if let callback = onItemAdded {
-            print("📲 Using callback to close sheet after adding item")
-            callback()
-        } else if !path.isEmpty {
-            print("👈 Using navigation path to go back after adding item")
-            path.removeLast()
+    private func handleFoodTap() {
+        HapticFeedback.generate()
+        switch mode {
+        case .logFood:
+            logFood()
+            
+        case .addToMeal, .addToRecipe:
+            // Create a new mutable Food object with the same properties
+            let newFood = Food(
+                fdcId: food.fdcId,
+                description: food.description,
+                brandOwner: food.brandOwner,
+                brandName: food.brandName,
+                servingSize: food.servingSize,
+                numberOfServings: 1, // Always start with 1 serving
+                servingSizeUnit: food.servingSizeUnit,
+                householdServingFullText: food.householdServingFullText,
+                foodNutrients: food.foodNutrients,
+                foodMeasures: food.foodMeasures
+            )
+            
+            // Debug before adding
+            print("📝 Adding food to selection: \(newFood.displayName)")
+            print("📊 Current selection count: \(selectedFoods.count)")
+            
+            // Create a completely new array to force binding update
+            var updatedFoods = [Food]()
+            // Add all existing foods
+            for existingFood in selectedFoods {
+                updatedFoods.append(existingFood)
+            }
+            // Add the new food
+            updatedFoods.append(newFood)
+            
+            // Replace the entire array to force binding is triggered
+            selectedFoods = updatedFoods
+            
+            // Debug after adding
+            print("✅ Food added to selection, new count: \(selectedFoods.count)")
+            print("📋 Current foods in selection:")
+            for (index, item) in selectedFoods.enumerated() {
+                print("  \(index+1). \(item.displayName)")
+            }
+            
+            // Track recently added food
+            foodManager.trackRecentlyAdded(foodId: food.fdcId)
+            
+            // Call the onItemAdded callback if provided - this will close the sheet
+            // If we're not in a sheet context, fall back to navigation path handling
+            if let callback = onItemAdded {
+                print("📲 Using callback to close sheet after adding item")
+                callback(newFood)
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding item")
+                path.removeLast()
+            }
         }
     }
-}
-
-
     
     private func logFood() {
         // Track the request is in progress locally to prevent multiple taps
@@ -668,7 +679,7 @@ struct HistoryRow: View {
     @Binding var path: NavigationPath
     
     // Add the onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
         switch log.type {
@@ -726,7 +737,7 @@ struct CombinedLogMealRow: View {
     @Binding var path: NavigationPath
     
     // Add the onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
@@ -737,7 +748,7 @@ struct CombinedLogMealRow: View {
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
          path: Binding<NavigationPath> = .constant(NavigationPath()),
-         onItemAdded: (() -> Void)? = nil) {
+         onItemAdded: ((Food) -> Void)? = nil) {
         self.log = log
         self.meal = meal
         self._selectedMeal = selectedMeal
@@ -787,7 +798,7 @@ struct CombinedLogMealRow: View {
                             // Original behavior - log the meal
                             foodManager.logMeal(
                                 meal: Meal(
-                                    id: meal.mealId,
+                                    id: meal.id,
                                     title: meal.title,
                                     description: meal.description,
                                     directions: nil,
@@ -806,7 +817,7 @@ struct CombinedLogMealRow: View {
                                     if !success {
                                         // Ensure the food manager's lastLoggedMealId is cleared
                                         withAnimation {
-                                            if self.foodManager.lastLoggedMealId == self.meal.mealId {
+                                            if self.foodManager.lastLoggedMealId == self.meal.id {
                                                 self.foodManager.lastLoggedMealId = nil
                                             }
                                         }
@@ -829,7 +840,7 @@ struct CombinedLogMealRow: View {
                                 .foregroundColor(.accentColor)
                         } else {
                             // Original behavior for logFood mode
-                            if foodManager.lastLoggedMealId == meal.mealId {
+                            if foodManager.lastLoggedMealId == meal.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 24))
                                     .foregroundColor(.green)
@@ -853,13 +864,13 @@ struct CombinedLogMealRow: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 // Find the full meal from FoodManager.meals
-                if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
+                if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
                     // Navigate to MealDetailView with the full meal
                     path.append(FoodNavigationDestination.mealDetails(fullMeal))
                 } else {
                     // Create a minimal meal object to show if we can't find the full meal
                     let minimalMeal = Meal(
-                        id: meal.mealId,
+                        id: meal.id,
                         title: meal.title,
                         description: meal.description,
                         directions: nil,
@@ -887,50 +898,29 @@ struct CombinedLogMealRow: View {
     
     // Add this method to add meal items to selection using already loaded meals
     private func addMealItemsToSelection() {
-        // Find the full meal from FoodManager.meals
-        if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
-            print("✅ Found meal in FoodManager: \(fullMeal.title) with \(fullMeal.mealItems.count) items")
+        // Try to find the full meal from FoodManager to get access to mealItems
+        if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
+            // Track the last food added for callback
+            var lastAddedFood: Food? = nil
             
-            // DUMP ENTIRE MEAL ITEMS ARRAY FOR INSPECTION
-            print("📋 COMPLETE MEAL ITEMS DATA:")
-            for (index, item) in fullMeal.mealItems.enumerated() {
-                print("  ITEM #\(index+1): \(item.name)")
-                print("    - food_id: \(item.foodId)")
-                print("    - external_id: \(item.externalId)")
-                print("    - servings: \(item.servings)")
-             
-                print("    - calories: \(item.calories)")
-            }
-            
-            // Convert each MealFoodItem to Food and add to selectedFoods
             for mealItem in fullMeal.mealItems {
-                print("🔍 Processing meal item: \(mealItem.name)")
-                print("  - Servings: \(mealItem.servings)")
-                print("  - Raw serving_text from meal item: \(mealItem.servingText ?? "nil")")
-                
                 // Try to extract numeric value from servings string
-                var servingsValue = 1.0
-                if !mealItem.servings.isEmpty {
-                    if let parsed = Double(mealItem.servings) {
-                        servingsValue = parsed
-                    }
-                }
+                let servingsValue = Double(mealItem.servings.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)) ?? 1.0
                 
                 // Get the proper serving text - use the serving_text if available
-                // If not available, create a more descriptive fallback
                 let servingText: String
                 if let text = mealItem.servingText, !text.isEmpty {
                     servingText = text
                 } else {
                     // Get the unit of measurement, if any
                     if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
-                       !unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        servingText = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+                       !unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
+                        servingText = unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                     } else {
                         servingText = "serving"
                     }
                 }
-                print("  - Final servingText to be used: \(servingText)")
+
                 
                 // Create a Food object from the MealFoodItem
                 let food = Food(
@@ -938,10 +928,10 @@ struct CombinedLogMealRow: View {
                     description: mealItem.name,
                     brandOwner: nil,
                     brandName: nil,
-                    servingSize: 1.0,  // Setting an explicit servingSize
+                    servingSize: 1.0,
                     numberOfServings: servingsValue,
-                    servingSizeUnit: servingText,  // Using the servingText as the unit
-                    householdServingFullText: servingText, // Use the proper serving text
+                    servingSizeUnit: servingText,
+                    householdServingFullText: servingText,
                     foodNutrients: [
                         Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
                         Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
@@ -951,26 +941,22 @@ struct CombinedLogMealRow: View {
                     foodMeasures: []
                 )
                 
-                
                 // Add to selection
                 selectedFoods.append(food)
+                lastAddedFood = food
             }
             
             // Use callback if available, otherwise fall back to path
-            if let callback = onItemAdded {
+            if let callback = onItemAdded, let lastFood = lastAddedFood {
                 print("📲 Using callback to close sheet after adding meal items")
-                callback()
+                callback(lastFood)
             } else if !path.isEmpty {
                 print("👈 Using navigation path to go back after adding meal items")
                 path.removeLast()
             }
         } else {
-            print("❌ Could not find meal with ID \(meal.mealId) in FoodManager.meals")
-            
-            // If we couldn't find the meal, still navigate back using the appropriate method
-            if let callback = onItemAdded {
-                callback()
-            } else if !path.isEmpty {
+            // If we couldn't find the meal, navigate back
+            if !path.isEmpty {
                 path.removeLast()
             }
         }
@@ -1009,7 +995,7 @@ struct MealHistoryRow: View {
                     HapticFeedback.generate()
                     foodManager.logMeal(
                         meal: Meal(
-                            id: meal.mealId, 
+                            id: meal.id, 
                             title: meal.title, 
                             description: meal.description, 
                             directions: nil, 
@@ -1028,7 +1014,7 @@ struct MealHistoryRow: View {
                             if !success {
                                 // Ensure the food manager's lastLoggedMealId is cleared
                                 withAnimation {
-                                    if self.foodManager.lastLoggedMealId == self.meal.mealId {
+                                    if self.foodManager.lastLoggedMealId == self.meal.id {
                                         self.foodManager.lastLoggedMealId = nil
                                     }
                                 }
@@ -1039,7 +1025,7 @@ struct MealHistoryRow: View {
                         }
                     )
                 } label: {
-                    if foodManager.lastLoggedMealId == meal.mealId {
+                    if foodManager.lastLoggedMealId == meal.id {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 24))
                             .foregroundColor(.green)
@@ -1078,7 +1064,7 @@ struct MealRow: View {
     @Binding var path: NavigationPath
     
     // Add the onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
@@ -1089,7 +1075,7 @@ struct MealRow: View {
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
          path: Binding<NavigationPath> = .constant(NavigationPath()),
-         onItemAdded: (() -> Void)? = nil) {
+         onItemAdded: ((Food) -> Void)? = nil) {
         self.meal = meal
         self._selectedMeal = selectedMeal
         self.mode = mode
@@ -1246,59 +1232,69 @@ struct MealRow: View {
         }
     }
     
-    // Add this method to handle adding meal items to selection
+    // Update this method to handle adding meal items to selection
     private func addMealItemsToSelection() {
-     
-        for mealItem in meal.mealItems {
-   
-            // Try to extract numeric value from servings string
-            let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
+        // Try to find the full meal from FoodManager to get access to mealItems
+        if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
+            // Track the last food added for callback
+            var lastAddedFood: Food? = nil
             
-            // Get the proper serving text - use the serving_text if available
-            let servingText: String
-            if let text = mealItem.servingText, !text.isEmpty {
-                servingText = text
-            } else {
-                // Get the unit of measurement, if any
-                if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
-                   !unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    servingText = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+            for mealItem in fullMeal.mealItems {
+                // Try to extract numeric value from servings string
+                let servingsValue = Double(mealItem.servings.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)) ?? 1.0
+                
+                // Get the proper serving text - use the serving_text if available
+                let servingText: String
+                if let text = mealItem.servingText, !text.isEmpty {
+                    servingText = text
                 } else {
-                    servingText = "serving"
+                    // Get the unit of measurement, if any
+                    if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
+                       !unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
+                        servingText = unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    } else {
+                        servingText = "serving"
+                    }
                 }
-            }
 
+                
+                // Create a Food object from the MealFoodItem
+                let food = Food(
+                    fdcId: Int(mealItem.externalId) ?? mealItem.foodId,
+                    description: mealItem.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: servingsValue,
+                    servingSizeUnit: servingText,
+                    householdServingFullText: servingText,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                
+                // Add to selection
+                selectedFoods.append(food)
+                lastAddedFood = food
+            }
             
-            // Create a Food object from the MealFoodItem
-            let food = Food(
-                fdcId: Int(mealItem.externalId) ?? mealItem.foodId,
-                description: mealItem.name,
-                brandOwner: nil,
-                brandName: nil,
-                servingSize: 1.0,
-                numberOfServings: servingsValue,
-                servingSizeUnit: servingText,
-                householdServingFullText: servingText,
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
-                ],
-                foodMeasures: []
-            )
-            
-            // Add to selection
-            selectedFoods.append(food)
-        }
-        
-        // Use callback if available, otherwise fall back to path
-        if let callback = onItemAdded {
-            print("📲 Using callback to close sheet after adding meal items")
-            callback()
-        } else if !path.isEmpty {
-            print("👈 Using navigation path to go back after adding meal items")
-            path.removeLast()
+            // Use callback if available, otherwise fall back to path
+            if let callback = onItemAdded, let lastFood = lastAddedFood {
+                print("📲 Using callback to close sheet after adding meal items")
+                callback(lastFood)
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding meal items")
+                path.removeLast()
+            }
+        } else {
+            // If we couldn't find the meal, navigate back
+            if !path.isEmpty {
+                path.removeLast()
+            }
         }
     }
 }
@@ -1316,7 +1312,7 @@ struct CombinedLogRecipeRow: View {
     @Binding var path: NavigationPath
     
     // Add onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
@@ -1327,7 +1323,7 @@ struct CombinedLogRecipeRow: View {
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
          path: Binding<NavigationPath> = .constant(NavigationPath()),
-         onItemAdded: (() -> Void)? = nil) {
+         onItemAdded: ((Food) -> Void)? = nil) {
         self.log = log
         self.recipe = recipe
         self._selectedMeal = selectedMeal
@@ -1448,8 +1444,11 @@ struct CombinedLogRecipeRow: View {
     }
     
     private func addRecipeItemsToSelection() {
-        // Find the full recipe
-        if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.recipeId }) {
+        // Find the full recipe - use recipe.id instead of recipeId
+        if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
+            // Create a variable to store the last food added for the callback
+            var lastAddedFood: Food? = nil
+            
             // Convert each RecipeFoodItem to Food and add to selectedFoods
             for recipeItem in fullRecipe.recipeItems {
                 // Create a Food object from the RecipeFoodItem
@@ -1473,21 +1472,20 @@ struct CombinedLogRecipeRow: View {
                 
                 // Add to selection
                 selectedFoods.append(food)
+                lastAddedFood = food
             }
             
             // Use callback if available, otherwise fall back to path
-            if let callback = onItemAdded {
+            if let callback = onItemAdded, let lastFood = lastAddedFood {
                 print("📲 Using callback to close sheet after adding recipe items")
-                callback()
+                callback(lastFood)
             } else if !path.isEmpty {
                 print("👈 Using navigation path to go back after adding recipe items")
                 path.removeLast()
             }
         } else {
             // If recipe not found, still try to navigate back
-            if let callback = onItemAdded {
-                callback()
-            } else if !path.isEmpty {
+            if !path.isEmpty {
                 path.removeLast()
             }
         }
@@ -1506,7 +1504,7 @@ struct RecipeRow: View {
     @Binding var path: NavigationPath
     
     // Add the onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
@@ -1517,7 +1515,7 @@ struct RecipeRow: View {
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
          path: Binding<NavigationPath> = .constant(NavigationPath()),
-         onItemAdded: (() -> Void)? = nil) {
+         onItemAdded: ((Food) -> Void)? = nil) {
         self.recipe = recipe
         self._selectedMeal = selectedMeal
         self.mode = mode
@@ -1677,38 +1675,50 @@ struct RecipeRow: View {
     }
     
     private func addRecipeItemsToSelection() {
-        // Convert each RecipeFoodItem to Food and add to selectedFoods
-        for recipeItem in recipe.recipeItems {
-            // Create a Food object from the RecipeFoodItem
-            let food = Food(
-                fdcId: recipeItem.foodId,
-                description: recipeItem.name,
-                brandOwner: nil,
-                brandName: nil,
-                servingSize: 1.0,
-                numberOfServings: 1.0,
-                servingSizeUnit: recipeItem.servingText,
-                householdServingFullText: recipeItem.servings,
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
-                ],
-                foodMeasures: []
-            )
+        // Find the full recipe - use recipe.id instead of recipeId
+        if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
+            // Create a variable to store the last food added for the callback
+            var lastAddedFood: Food? = nil
             
-            // Add to selection
-            selectedFoods.append(food)
-        }
-        
-        // Use callback if available, otherwise fall back to path
-        if let callback = onItemAdded {
-            print("📲 Using callback to close sheet after adding recipe items")
-            callback()
-        } else if !path.isEmpty {
-            print("👈 Using navigation path to go back after adding recipe items")
-            path.removeLast()
+            // Convert each RecipeFoodItem to Food and add to selectedFoods
+            for recipeItem in fullRecipe.recipeItems {
+                // Create a Food object from the RecipeFoodItem
+                let food = Food(
+                    fdcId: recipeItem.foodId,
+                    description: recipeItem.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: 1.0,
+                    servingSizeUnit: recipeItem.servingText,
+                    householdServingFullText: recipeItem.servings,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                
+                // Add to selection
+                selectedFoods.append(food)
+                lastAddedFood = food
+            }
+            
+            // Use callback if available, otherwise fall back to path
+            if let callback = onItemAdded, let lastFood = lastAddedFood {
+                print("📲 Using callback to close sheet after adding recipe items")
+                callback(lastFood)
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding recipe items")
+                path.removeLast()
+            }
+        } else {
+            // If recipe not found, still try to navigate back
+            if !path.isEmpty {
+                path.removeLast()
+            }
         }
     }
 }
@@ -1721,7 +1731,7 @@ private struct RecipeHistorySection: View {
     @Binding var path: NavigationPath
     
     // Add onItemAdded callback
-    var onItemAdded: (() -> Void)?
+    var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
         Section {

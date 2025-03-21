@@ -383,6 +383,11 @@ struct EditMealView: View {
             if newCount > foodCountBeforeSheet {
                 print("📈 Items were added: \(newCount - foodCountBeforeSheet) new items")
                 hasChanges = true
+                // Print each food in the array for debugging
+                print("📋 Current foods in EditMealView:")
+                for (index, food) in selectedFoods.enumerated() {
+                    print("  \(index+1). \(food.displayName)")
+                }
             }
         }) {
             NavigationView {
@@ -392,9 +397,12 @@ struct EditMealView: View {
                     path: $path,
                     mode: .addToMeal,
                     selectedFoods: $selectedFoods,  // Direct binding to selectedFoods
-                    onItemAdded: {
+                    onItemAdded: { food in
                         // This callback is called when an item is added
                         print("✅ onItemAdded callback triggered - closing LogFood sheet")
+                        // Force update to ensure changes are reflected
+                        let updatedFoods = selectedFoods
+                        print("📊 EditMealView has \(updatedFoods.count) foods after item added")
                         // We'll dismiss the sheet and mark that changes were made
                         isShowingAddItems = false
                         hasChanges = true

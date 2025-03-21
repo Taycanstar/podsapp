@@ -242,11 +242,13 @@ struct FoodContainerView: View {
                             if let mealId = currentlyEditingMealId {
                                 // Editing an existing meal
                                 print("📋 DEBUG: Setting foods for existing meal ID: \(mealId), new count: \(newValue.count)")
-                                editMealSelectedFoodsByMealId[mealId] = newValue
+                                // Create new array reference
+                                editMealSelectedFoodsByMealId[mealId] = Array(newValue)
                             } else {
                                 // Creating a new meal
                                 print("📋 DEBUG: Setting foods for new meal, new count: \(newValue.count)")
-                                navState.createMealSelectedFoods = newValue
+                                // Create new array reference
+                                navState.createMealSelectedFoods = Array(newValue)
                             }
                         }
                     )
@@ -256,7 +258,30 @@ struct FoodContainerView: View {
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .addToMeal,
-                        selectedFoods: binding
+                        selectedFoods: binding,
+                        onItemAdded: { food in
+                            // Save the updated foods
+                            print("📦 FoodContainerView: Item added callback triggered with food: \(food.displayName)")
+                            
+                            // Check current counts
+                            if let mealId = currentlyEditingMealId {
+                                let mealFoods = editMealSelectedFoodsByMealId[mealId] ?? []
+                                print("📊 FoodContainerView: Meal \(mealId) now has \(mealFoods.count) foods")
+                                // Print each food in the array
+                                for (index, food) in mealFoods.enumerated() {
+                                    print("  \(index+1). \(food.displayName)")
+                                }
+                            } else {
+                                print("📊 FoodContainerView: CreateMeal now has \(navState.createMealSelectedFoods.count) foods")
+                                // Print each food in the array
+                                for (index, food) in navState.createMealSelectedFoods.enumerated() {
+                                    print("  \(index+1). \(food.displayName)")
+                                }
+                            }
+                            
+                            // Navigate back 
+                            path.removeLast()
+                        }
                     )
                 case .editMeal(let meal):
                     // We must return a view directly, so we'll create the view first
