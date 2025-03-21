@@ -33,6 +33,9 @@ struct MealDetailView: View {
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
     
+    // Add a real @State for selectedFoods
+    @State private var selectedFoods: [Food] = []
+    
     // Adjust how tall you want the banner/collapsing area to be
     private let headerHeight: CGFloat = 400
     
@@ -192,6 +195,10 @@ struct MealDetailView: View {
                 }
             }
             .navigationBarBackButtonHidden(true)
+            .onAppear {
+                // Initialize selectedFoods on appear
+                initializeSelectedFoods()
+            }
             .sheet(isPresented: $isShowingEditMeal, onDismiss: {
                 // Refresh the meal data after editing
                 if let updatedMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
@@ -203,38 +210,7 @@ struct MealDetailView: View {
                 EditMealView(
                     meal: meal,
                     path: $path,
-                    selectedFoods: Binding(
-                        get: {
-                            // Create foods from meal.mealItems
-                            var initialFoods: [Food] = []
-                            for item in meal.mealItems {
-                                let food = Food(
-                                    fdcId: Int(item.externalId) ?? item.foodId,
-                                    description: item.name,
-                                    brandOwner: nil,
-                                    brandName: nil,
-                                    servingSize: 1.0,
-                                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
-                                    servingSizeUnit: item.servingText,
-                                    householdServingFullText: item.servingText,
-                                    foodNutrients: [
-                                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                                    ],
-                                    foodMeasures: []
-                                )
-                                initialFoods.append(food)
-                            }
-                            return initialFoods
-                        },
-                        set: { newFoods in
-                            print("📊 MealDetailView received \(newFoods.count) updated foods")
-                            // Since we can't directly update the meal.mealItems, 
-                            // EditMealView will handle applying the changes when Save is tapped
-                        }
-                    )
+                    selectedFoods: $selectedFoods
                 )
             }
             .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
@@ -557,6 +533,36 @@ struct MealDetailView: View {
                     print("❌ Failed to update meal details: \(error)")
                 }
             }
+        }
+    }
+
+    // Add a method to initialize selectedFoods from meal.mealItems
+    private func initializeSelectedFoods() {
+        if selectedFoods.isEmpty {
+            // Convert meal items to Food objects
+            var foods: [Food] = []
+            for item in meal.mealItems {
+                let food = Food(
+                    fdcId: Int(item.externalId) ?? item.foodId,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: Double(item.servings) != 0 ? Double(item.servings) : 1.0,
+                    servingSizeUnit: item.servingText,
+                    householdServingFullText: item.servingText,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                foods.append(food)
+            }
+            selectedFoods = foods
+            print("📊 MealDetailView initialized \(selectedFoods.count) foods from meal items")
         }
     }
 }
