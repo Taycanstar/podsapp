@@ -515,7 +515,6 @@ struct FoodRow: View {
                 
                 Button {
                     HapticFeedback.generate()
-                    // logFood()
                     handleFoodTap()
                 } label: {
                         switch mode {
@@ -573,7 +572,6 @@ private func handleFoodTap() {
         
     case .addToMeal, .addToRecipe:
         // Create a new mutable Food object with the same properties
-        // NOTE: We can't directly modify 'food' because most of its properties are constants
         let newFood = Food(
             fdcId: food.fdcId,
             description: food.description,
@@ -597,22 +595,17 @@ private func handleFoodTap() {
         // Debug after adding
         print("✅ Food added to selection, new count: \(selectedFoods.count)")
         
-        // track, then pop back
+        // Track recently added food
         foodManager.trackRecentlyAdded(foodId: food.fdcId)
         
-        // Check if we're in a sheet (empty path) first to prevent crashes
-        if !path.isEmpty {
-            print("👈 DEBUG: Navigating back from food selection after adding \(newFood.displayName)")
-            print("👈 DEBUG: Selection count BEFORE removeLast(): \(selectedFoods.count)")
+        // Call the onItemAdded callback if provided - this will close the sheet
+        // If we're not in a sheet context, fall back to navigation path handling
+        if let callback = onItemAdded {
+            print("📲 Using callback to close sheet after adding item")
+            callback()
+        } else if !path.isEmpty {
+            print("👈 Using navigation path to go back after adding item")
             path.removeLast()
-        } else {
-            // Call the onItemAdded callback if provided
-            onItemAdded?()
-        }
-        
-        // Add a delay and check count again to see if the binding is working
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("👈 DEBUG: Selection count AFTER removeLast(): \(selectedFoods.count)")
         }
     }
 }
@@ -892,7 +885,7 @@ struct CombinedLogMealRow: View {
         }
     }
     
-    // New method to add meal items to selection using already loaded meals
+    // Add this method to add meal items to selection using already loaded meals
     private func addMealItemsToSelection() {
         // Find the full meal from FoodManager.meals
         if let fullMeal = foodManager.meals.first(where: { $0.id == meal.mealId }) {
@@ -916,7 +909,12 @@ struct CombinedLogMealRow: View {
                 print("  - Raw serving_text from meal item: \(mealItem.servingText ?? "nil")")
                 
                 // Try to extract numeric value from servings string
-                let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
+                var servingsValue = 1.0
+                if !mealItem.servings.isEmpty {
+                    if let parsed = Double(mealItem.servings) {
+                        servingsValue = parsed
+                    }
+                }
                 
                 // Get the proper serving text - use the serving_text if available
                 // If not available, create a more descriptive fallback
@@ -958,19 +956,23 @@ struct CombinedLogMealRow: View {
                 selectedFoods.append(food)
             }
             
-            // Track, then pop back
-            // Check if we're in a sheet (empty path) first to prevent crashes
-            if !path.isEmpty {
+            // Use callback if available, otherwise fall back to path
+            if let callback = onItemAdded {
+                print("📲 Using callback to close sheet after adding meal items")
+                callback()
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding meal items")
                 path.removeLast()
-            } else {
-                // Call the onItemAdded callback if provided
-                onItemAdded?()
             }
         } else {
             print("❌ Could not find meal with ID \(meal.mealId) in FoodManager.meals")
             
-            // If we couldn't find the meal, still navigate back
-            path.removeLast()
+            // If we couldn't find the meal, still navigate back using the appropriate method
+            if let callback = onItemAdded {
+                callback()
+            } else if !path.isEmpty {
+                path.removeLast()
+            }
         }
     }
 }
@@ -1247,14 +1249,8 @@ struct MealRow: View {
     // Add this method to handle adding meal items to selection
     private func addMealItemsToSelection() {
      
-        for (index, item) in meal.mealItems.enumerated() {
-  
-        }
-        
-        // Convert each MealFoodItem to Food and add to selectedFoods
         for mealItem in meal.mealItems {
-       
-            
+   
             // Try to extract numeric value from servings string
             let servingsValue = Double(mealItem.servings.trimmingCharacters(in: .whitespaces)) ?? 1.0
             
@@ -1292,19 +1288,17 @@ struct MealRow: View {
                 foodMeasures: []
             )
             
-         
-            
             // Add to selection
             selectedFoods.append(food)
         }
         
-        // Track, then pop back
-        // Check if we're in a sheet (empty path) first to prevent crashes
-        if !path.isEmpty {
+        // Use callback if available, otherwise fall back to path
+        if let callback = onItemAdded {
+            print("📲 Using callback to close sheet after adding meal items")
+            callback()
+        } else if !path.isEmpty {
+            print("👈 Using navigation path to go back after adding meal items")
             path.removeLast()
-        } else {
-            // Call the onItemAdded callback if provided
-            onItemAdded?()
         }
     }
 }
@@ -1371,46 +1365,9 @@ struct CombinedLogRecipeRow: View {
                     Spacer()
                     
                     Button {
-                        // Handle recipe log tap based on mode
-                        switch mode {
-                        case .logFood:
-                            // Find the full recipe first
-                            if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.recipeId }) {
-                                // Log the recipe using the complete recipe object
-                                foodManager.logRecipe(
-                                    recipe: fullRecipe,
-                                    mealTime: selectedMeal,
-                                    servingsConsumed: 1,
-                                    date: Date(),
-                                    notes: nil,
-                                    statusCompletion: { success in
-                                        if !success {
-                                            // Ensure the food manager's lastLoggedRecipeId is cleared
-                                            withAnimation {
-                                                if self.foodManager.lastLoggedRecipeId == self.recipe.recipeId {
-                                                    self.foodManager.lastLoggedRecipeId = nil
-                                                }
-                                            }
-                                            
-                                            // Show error alert
-                                            showLoggingErrorAlert = true
-                                        }
-                                    }
-                                )
-                            } else {
-                                // Show error if recipe not found
-                                showLoggingErrorAlert = true
-                            }
-                        case .addToMeal, .addToRecipe:
-                            // Add recipe items to selection
-                            addRecipeItemsToSelection()
-                        }
+                        handleRecipeTap()
                     } label: {
                         switch mode {
-                        case .addToMeal, .addToRecipe:
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
                         case .logFood:
                             // For log food mode, similar to meal rows
                             if foodManager.lastLoggedRecipeId == recipe.recipeId {
@@ -1423,6 +1380,10 @@ struct CombinedLogRecipeRow: View {
                                     .font(.system(size: 24))
                                     .foregroundColor(.accentColor)
                             }
+                        case .addToMeal, .addToRecipe:
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -1443,7 +1404,32 @@ struct CombinedLogRecipeRow: View {
         }
     }
     
-    // Add this method to handle adding recipe items to selection
+    private func handleRecipeTap() {
+        HapticFeedback.generate()
+        
+        switch mode {
+        case .logFood:
+            // Log the recipe instead of navigating
+            foodManager.logRecipe(
+                recipe: recipe,
+                mealTime: selectedMeal,
+                servingsConsumed: 1,
+                date: Date(),
+                notes: nil,
+                statusCompletion: { success in
+                    if !success {
+                        // Show error alert
+                        showLoggingErrorAlert = true
+                    }
+                }
+            )
+            
+        case .addToMeal, .addToRecipe:
+            // Add recipe items to selection
+            addRecipeItemsToSelection()
+        }
+    }
+    
     private func addRecipeItemsToSelection() {
         // Find the full recipe
         if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.recipeId }) {
@@ -1472,13 +1458,20 @@ struct CombinedLogRecipeRow: View {
                 selectedFoods.append(food)
             }
             
-            // Track, then pop back
-            // Check if we're in a sheet (empty path) first to prevent crashes
-            if !path.isEmpty {
+            // Use callback if available, otherwise fall back to path
+            if let callback = onItemAdded {
+                print("📲 Using callback to close sheet after adding recipe items")
+                callback()
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding recipe items")
                 path.removeLast()
-            } else {
-                // Call the onItemAdded callback if provided
-                onItemAdded?()
+            }
+        } else {
+            // If recipe not found, still try to navigate back
+            if let callback = onItemAdded {
+                callback()
+            } else if !path.isEmpty {
+                path.removeLast()
             }
         }
     }
@@ -1645,38 +1638,7 @@ struct RecipeRow: View {
             
         case .addToMeal, .addToRecipe:
             // Add recipe items to selection
-            for recipeItem in recipe.recipeItems {
-                // Create a Food object from the RecipeFoodItem
-                let food = Food(
-                    fdcId: recipeItem.foodId,
-                    description: recipeItem.name,
-                    brandOwner: nil,
-                    brandName: nil,
-                    servingSize: 1.0,
-                    numberOfServings: 1.0,
-                    servingSizeUnit: recipeItem.servingText,
-                    householdServingFullText: recipeItem.servings,
-                    foodNutrients: [
-                        Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
-                        Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
-                        Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
-                        Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
-                    ],
-                    foodMeasures: []
-                )
-                
-                // Add to selection
-                selectedFoods.append(food)
-            }
-            
-            // Track, then pop back
-            // Check if we're in a sheet (empty path) first to prevent crashes
-            if !path.isEmpty {
-                path.removeLast()
-            } else {
-                // Call the onItemAdded callback if provided
-                onItemAdded?()
-            }
+            addRecipeItemsToSelection()
         }
     }
 }

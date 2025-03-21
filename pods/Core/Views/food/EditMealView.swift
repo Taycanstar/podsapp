@@ -384,19 +384,25 @@ struct EditMealView: View {
                 hasChanges = true
             }
         } content: {
-            LogFood(
-                selectedTab: .constant(0),  // Default to first tab
-                selectedMeal: .constant(mealTime),  // Use current meal time
-                path: $path,
-                mode: .addToMeal,
-                selectedFoods: $selectedFoods,
-                onItemAdded: {
-                    // This callback is called when an item is added
-                    // We'll dismiss the sheet and mark that changes were made
+            NavigationView {
+                LogFood(
+                    selectedTab: .constant(0),  // Default to first tab
+                    selectedMeal: .constant(mealTime),  // Use current meal time
+                    path: $path,
+                    mode: .addToMeal,
+                    selectedFoods: $selectedFoods,
+                    onItemAdded: {
+                        // This callback is called when an item is added
+                        // We'll dismiss the sheet and mark that changes were made
+                        isShowingAddItems = false
+                        hasChanges = true
+                    }
+                )
+                .navigationBarTitle("Add Item to Meal", displayMode: .inline)
+                .navigationBarItems(leading: Button("Cancel") {
                     isShowingAddItems = false
-                    hasChanges = true
-                }
-            )
+                })
+            }
         }
     }
     
