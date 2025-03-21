@@ -592,9 +592,9 @@ private func removeAllItems(withFdcId fdcId: Int) {
         let carbsNutrient = firstFood.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }
         let fatNutrient = firstFood.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }
         
-        let proteinToRemove = (proteinNutrient?.value ?? 0) * servings
-        let carbsToRemove = (carbsNutrient?.value ?? 0) * servings
-        let fatToRemove = (fatNutrient?.value ?? 0) * servings
+        let proteinToRemove = (proteinNutrient?.safeValue ?? 0) * servings
+        let carbsToRemove = (carbsNutrient?.safeValue ?? 0) * servings
+        let fatToRemove = (fatNutrient?.safeValue ?? 0) * servings
         
         print("- Total to be removed: \(calsToRemove) cal, \(proteinToRemove)g protein, \(carbsToRemove)g carbs, \(fatToRemove)g fat")
     }
@@ -746,9 +746,9 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
             let carbsNutrient = food.foodNutrients.first { $0.nutrientName == "Carbohydrate, by difference" }
             let fatNutrient = food.foodNutrients.first { $0.nutrientName == "Total lipid (fat)" }
             
-            print("  - Protein: \(proteinNutrient?.value ?? 0)g × \(servings) = \((proteinNutrient?.value ?? 0) * servings)g")
-            print("  - Carbs: \(carbsNutrient?.value ?? 0)g × \(servings) = \((carbsNutrient?.value ?? 0) * servings)g")
-            print("  - Fat: \(fatNutrient?.value ?? 0)g × \(servings) = \((fatNutrient?.value ?? 0) * servings)g")
+            print("  - Protein: \(proteinNutrient?.safeValue ?? 0)g × \(servings) = \((proteinNutrient?.safeValue ?? 0) * servings)g")
+            print("  - Carbs: \(carbsNutrient?.safeValue ?? 0)g × \(servings) = \((carbsNutrient?.safeValue ?? 0) * servings)g")
+            print("  - Fat: \(fatNutrient?.safeValue ?? 0)g × \(servings) = \((fatNutrient?.safeValue ?? 0) * servings)g")
         }
         
         // Sum up calories - safeguard against nil calories
@@ -759,7 +759,7 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         // Get protein, carbs, and fat from foodNutrients array
         for nutrient in food.foodNutrients {
             // Apply the servings multiplier to get the total contribution
-            let value = nutrient.value * servings
+            let value = nutrient.safeValue * servings
             
             if nutrient.nutrientName == "Protein" {
                 totals.protein += value

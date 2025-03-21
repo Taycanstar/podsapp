@@ -682,7 +682,7 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         // Get protein, carbs, and fat from foodNutrients array
         for nutrient in food.foodNutrients {
             // Apply the servings multiplier to get the total contribution
-            let value = nutrient.value * servings
+            let value = nutrient.safeValue * servings
             
             if nutrient.nutrientName == "Protein" {
                 totals.protein += value

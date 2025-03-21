@@ -5171,7 +5171,7 @@ func createMeal(
         var fat: Double = 0
         
         for nutrient in food.foodNutrients {
-            let value = nutrient.value * servings
+            let value = nutrient.safeValue * servings
             if nutrient.nutrientName == "Protein" {
                 protein = value
             } else if nutrient.nutrientName.lowercased().contains("carbohydrate") {
@@ -5758,7 +5758,7 @@ func updateMealWithFoods(
         var fat: Double = 0
         
         for nutrient in food.foodNutrients {
-            let value = nutrient.value * servings
+            let value = nutrient.safeValue * servings
             if nutrient.nutrientName == "Protein" {
                 protein = value
             } else if nutrient.nutrientName.lowercased().contains("carbohydrate") {

@@ -348,7 +348,7 @@ struct NutritionFactsSection: View {
                 HStack {
                     Text(nutrient.nutrientName)
                     Spacer()
-                    Text("\(Int(nutrient.value))\(nutrient.unitName.lowercased())")
+                    Text("\(Int(nutrient.safeValue))\(nutrient.unitName.lowercased())")
                 }
                 if index < nutrients.count - 1 {  // Only add Divider if it's not the last item
                     Divider()

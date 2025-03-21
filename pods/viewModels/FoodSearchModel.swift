@@ -27,23 +27,23 @@ struct Food: Codable, Identifiable, Hashable{
     var id: Int { fdcId }
     
     var calories: Double? {
-        foodNutrients.first { $0.nutrientName == "Energy" }?.value
+        foodNutrients.first { $0.nutrientName == "Energy" }?.value ?? 0
     }
     var protein: Double? {
-    foodNutrients.first { $0.nutrientName.lowercased() == "protein" }?.value
-}
+        foodNutrients.first { $0.nutrientName.lowercased() == "protein" }?.value ?? 0
+    }
 
     var carbs: Double? {
         foodNutrients.first { 
             $0.nutrientName.lowercased().contains("carbohydrate") 
-        }?.value
+        }?.value ?? 0
     }
 
     var fat: Double? {
         foodNutrients.first { 
             $0.nutrientName.lowercased().contains("fat") || 
             $0.nutrientName.lowercased().contains("lipid")
-        }?.value
+        }?.value ?? 0
     }
     
     var displayName: String {
@@ -70,8 +70,13 @@ struct Food: Codable, Identifiable, Hashable{
 
 struct Nutrient: Codable {
     let nutrientName: String
-    let value: Double
+    let value: Double?
     let unitName: String
+    
+    // Add a computed property that always returns a non-optional Double
+    var safeValue: Double {
+        return value ?? 0.0
+    }
 }
 
 struct FoodMeasure: Codable, Hashable {
