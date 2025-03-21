@@ -36,6 +36,12 @@ struct MealDetailView: View {
     // Add a real @State for selectedFoods
     @State private var selectedFoods: [Food] = []
     
+    // Add backup for selected foods
+    @State private var backupFoods: [Food] = []
+    
+    // Flag to track if meal was saved
+    @State private var mealWasSaved = false
+    
     // Adjust how tall you want the banner/collapsing area to be
     private let headerHeight: CGFloat = 400
     
@@ -199,6 +205,14 @@ struct MealDetailView: View {
                 // Initialize selectedFoods on appear
                 initializeSelectedFoods()
             }
+            .onChange(of: isShowingEditMeal) { isShowing in
+                if isShowing {
+                    // Sheet is about to show, make a backup
+                    self.backupFoods = self.selectedFoods
+                    // Reset the saved flag
+                    self.mealWasSaved = false
+                }
+            }
             .sheet(isPresented: $isShowingEditMeal, onDismiss: {
                 // Refresh the meal data after editing
                 if let updatedMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
@@ -206,11 +220,21 @@ struct MealDetailView: View {
                     servingsCount = updatedMeal.servings
                     selectedPrivacy = updatedMeal.privacy.capitalized
                 }
+                
+                // If the meal wasn't saved (user tapped X), restore from backup
+                if !mealWasSaved {
+                    print("📝 Restoring original foods - meal was not saved")
+                    selectedFoods = backupFoods
+                }
             }) {
                 EditMealView(
                     meal: meal,
                     path: $path,
-                    selectedFoods: $selectedFoods
+                    selectedFoods: $selectedFoods,
+                    onSave: {
+                        // Mark as saved when Done is tapped
+                        mealWasSaved = true
+                    }
                 )
             }
             .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
@@ -562,6 +586,8 @@ struct MealDetailView: View {
                 foods.append(food)
             }
             selectedFoods = foods
+            // Also initialize the backup
+            backupFoods = foods
             print("📊 MealDetailView initialized \(selectedFoods.count) foods from meal items")
         }
     }

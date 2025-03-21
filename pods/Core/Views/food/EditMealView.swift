@@ -16,6 +16,9 @@ struct EditMealView: View {
     @Binding var path: NavigationPath
     @Binding var selectedFoods: [Food]
     
+    // Add callback for when Done is tapped and meal is saved successfully
+    var onSave: (() -> Void)?
+    
     // MARK: - State
     @State private var mealName: String
     @State private var shareWith: String
@@ -110,10 +113,11 @@ struct EditMealView: View {
     }
     
     // MARK: - Initializer
-    init(meal: Meal, path: Binding<NavigationPath>, selectedFoods: Binding<[Food]>) {
+    init(meal: Meal, path: Binding<NavigationPath>, selectedFoods: Binding<[Food]>, onSave: (() -> Void)? = nil) {
         self.meal = meal
         self._path = path
         self._selectedFoods = selectedFoods
+        self.onSave = onSave
         
         // Initialize state variables with meal data
         self._mealName = State(initialValue: meal.title)
@@ -223,12 +227,7 @@ struct EditMealView: View {
                     VStack {
                         HStack {
                             Button(action: {
-                                // Post a notification to restore original meal items
-                                NotificationCenter.default.post(
-                                    name: Notification.Name("RestoreOriginalMealItemsNotification"),
-                                    object: nil,
-                                    userInfo: ["mealId": meal.id]
-                                )
+                                // When X is tapped, just dismiss without calling onSave
                                 dismiss()
                             }) {
                                 Image(systemName: "xmark")
@@ -493,6 +492,9 @@ struct EditMealView: View {
                             "foods": self.selectedFoods
                         ]
                     )
+                    
+                    // Call the onSave callback to mark the meal as saved
+                    self.onSave?()
                     
                     // Only dismiss and navigate back on success
                     self.dismiss()
