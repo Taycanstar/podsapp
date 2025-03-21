@@ -1411,7 +1411,24 @@ struct CombinedLogRecipeRow: View {
         case .logFood:
             // Log the recipe instead of navigating
             foodManager.logRecipe(
-                recipe: recipe,
+                recipe: Recipe(
+                    id: recipe.recipeId,
+                    title: recipe.title,
+                    description: recipe.description,
+                    instructions: nil,
+                    privacy: "private",
+                    servings: recipe.servings,
+                    createdAt: Date(),
+                    updatedAt: Date(),
+                    recipeItems: [],
+                    image: recipe.image,
+                    prepTime: recipe.prepTime,
+                    cookTime: recipe.cookTime,
+                    totalCalories: recipe.calories,
+                    totalProtein: recipe.protein,
+                    totalCarbs: recipe.carbs,
+                    totalFat: recipe.fat
+                ),
                 mealTime: selectedMeal,
                 servingsConsumed: 1,
                 date: Date(),
@@ -1623,7 +1640,24 @@ struct RecipeRow: View {
         case .logFood:
             // Log the recipe instead of navigating
             foodManager.logRecipe(
-                recipe: recipe,
+                recipe: Recipe(
+                    id: recipe.id,
+                    title: recipe.title,
+                    description: recipe.description,
+                    instructions: nil,
+                    privacy: "private",
+                    servings: recipe.servings,
+                    createdAt: Date(),
+                    updatedAt: Date(),
+                    recipeItems: [],
+                    image: recipe.image,
+                    prepTime: recipe.prepTime,
+                    cookTime: recipe.cookTime,
+                    totalCalories: recipe.calories,
+                    totalProtein: recipe.protein,
+                    totalCarbs: recipe.carbs,
+                    totalFat: recipe.fat
+                ),
                 mealTime: selectedMeal,
                 servingsConsumed: 1,
                 date: Date(),
@@ -1639,6 +1673,42 @@ struct RecipeRow: View {
         case .addToMeal, .addToRecipe:
             // Add recipe items to selection
             addRecipeItemsToSelection()
+        }
+    }
+    
+    private func addRecipeItemsToSelection() {
+        // Convert each RecipeFoodItem to Food and add to selectedFoods
+        for recipeItem in recipe.recipeItems {
+            // Create a Food object from the RecipeFoodItem
+            let food = Food(
+                fdcId: recipeItem.foodId,
+                description: recipeItem.name,
+                brandOwner: nil,
+                brandName: nil,
+                servingSize: 1.0,
+                numberOfServings: 1.0,
+                servingSizeUnit: recipeItem.servingText,
+                householdServingFullText: recipeItem.servings,
+                foodNutrients: [
+                    Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
+                    Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
+                    Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
+                    Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
+                ],
+                foodMeasures: []
+            )
+            
+            // Add to selection
+            selectedFoods.append(food)
+        }
+        
+        // Use callback if available, otherwise fall back to path
+        if let callback = onItemAdded {
+            print("📲 Using callback to close sheet after adding recipe items")
+            callback()
+        } else if !path.isEmpty {
+            print("👈 Using navigation path to go back after adding recipe items")
+            path.removeLast()
         }
     }
 }
