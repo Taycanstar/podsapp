@@ -56,6 +56,12 @@ struct EditMealView: View {
     // Add a state for error handling
     @State private var showingError = false
     
+    // Add a state variable to track when the add items sheet is being shown
+    @State private var isShowingAddItems = false
+    
+    // Add a state variable to store the food count before showing the sheet
+    @State private var foodCountBeforeSheet = 0
+    
     // MARK: - Computed Properties
     private var isDoneButtonDisabled: Bool {
         return mealName.isEmpty || !hasChanges
@@ -369,6 +375,29 @@ struct EditMealView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        // Add sheet for food selection
+        .sheet(isPresented: $isShowingAddItems) {
+            // Handle sheet dismiss
+            let newCount = selectedFoods.count
+            if newCount > foodCountBeforeSheet {
+                print("Items were added: \(newCount - foodCountBeforeSheet) new items")
+                hasChanges = true
+            }
+        } content: {
+            LogFood(
+                selectedTab: .constant(0),  // Default to first tab
+                selectedMeal: .constant(mealTime),  // Use current meal time
+                path: $path,
+                mode: .addToMeal,
+                selectedFoods: $selectedFoods,
+                onItemAdded: {
+                    // This callback is called when an item is added
+                    // We'll dismiss the sheet and mark that changes were made
+                    isShowingAddItems = false
+                    hasChanges = true
+                }
+            )
+        }
     }
     
     // MARK: - Methods
@@ -629,7 +658,9 @@ struct EditMealView: View {
             }
             
             Button {
-                path.append(FoodNavigationDestination.addMealItems)
+                // Store the current food count before showing the sheet
+                foodCountBeforeSheet = selectedFoods.count
+                isShowingAddItems = true
             } label: {
                 Text("Add item to meal")
                     .foregroundColor(.accentColor)

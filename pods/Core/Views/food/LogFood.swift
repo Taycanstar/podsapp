@@ -20,6 +20,9 @@ struct LogFood: View {
 
     var mode: LogFoodMode = .logFood 
     @Binding var selectedFoods: [Food]  
+    
+    // Add callback that will be called when an item is added
+    var onItemAdded: (() -> Void)?
 
     
    
@@ -55,12 +58,14 @@ struct LogFood: View {
          selectedMeal: Binding<String>, 
          path: Binding<NavigationPath>,
          mode: LogFoodMode = .logFood,
-         selectedFoods: Binding<[Food]>) {
+         selectedFoods: Binding<[Food]>,
+         onItemAdded: (() -> Void)? = nil) {
         _selectedTab = selectedTab
         _path = path
         _selectedMeal = selectedMeal
         self.mode = mode
         _selectedFoods = selectedFoods
+        self.onItemAdded = onItemAdded
     }
     
     var body: some View {
@@ -128,7 +133,8 @@ struct LogFood: View {
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
-                    path: $path
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
             } else {
                 switch selectedFoodTab {
@@ -137,14 +143,16 @@ struct LogFood: View {
                         selectedMeal: $selectedMeal,
                         mode: mode,
                         selectedFoods: $selectedFoods,
-                        path: $path
+                        path: $path,
+                        onItemAdded: onItemAdded
                     )
                 case .recipes:
                     RecipeListView(
                         selectedMeal: $selectedMeal,
                         mode: mode,
                         selectedFoods: $selectedFoods,
-                        path: $path
+                        path: $path,
+                        onItemAdded: onItemAdded
                     )
                 default:
                     EmptyView()
@@ -262,6 +270,9 @@ private struct FoodListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     var body: some View {
                 List {
                     if searchResults.isEmpty && !isSearching {
@@ -279,7 +290,8 @@ private struct FoodListView: View {
                             selectedMeal: $selectedMeal,
                             mode: mode,
                             selectedFoods: $selectedFoods,
-                            path: $path
+                            path: $path,
+                            onItemAdded: onItemAdded
                         )
                             .onAppear {
                             foodManager.loadMoreIfNeeded(log: log)
@@ -295,7 +307,8 @@ private struct FoodListView: View {
                         selectedMeal: $selectedMeal,
                         mode: mode,
                         selectedFoods: $selectedFoods,
-                        path: $path
+                        path: $path,
+                        onItemAdded: onItemAdded
                     )
                     .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                                 }
@@ -345,6 +358,9 @@ private struct MealListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     var body: some View {
             List {
             CreateMealButton(path: $path)
@@ -364,7 +380,8 @@ private struct MealListView: View {
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
-                    path: $path
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 }
@@ -418,6 +435,9 @@ private struct RecipeListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     var body: some View {
         List {
             CreateRecipeButton(path: $path)
@@ -428,7 +448,8 @@ private struct RecipeListView: View {
                 selectedMeal: $selectedMeal,
                 mode: mode,
                 selectedFoods: $selectedFoods,
-                path: $path
+                path: $path,
+                onItemAdded: onItemAdded
             )
             .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         }
@@ -456,6 +477,9 @@ struct FoodRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath 
     
+    // Add the onItemAdded callback
+    var onItemAdded: (() -> Void)?
+
     var body: some View {
         ZStack {
             NavigationLink(value: FoodNavigationDestination.foodDetails(food, selectedMeal)) {
@@ -575,9 +599,16 @@ private func handleFoodTap() {
         
         // track, then pop back
         foodManager.trackRecentlyAdded(foodId: food.fdcId)
-        print("👈 DEBUG: Navigating back from food selection after adding \(newFood.displayName)")
-        print("👈 DEBUG: Selection count BEFORE removeLast(): \(selectedFoods.count)")
-        path.removeLast()
+        
+        // Check if we're in a sheet (empty path) first to prevent crashes
+        if !path.isEmpty {
+            print("👈 DEBUG: Navigating back from food selection after adding \(newFood.displayName)")
+            print("👈 DEBUG: Selection count BEFORE removeLast(): \(selectedFoods.count)")
+            path.removeLast()
+        } else {
+            // Call the onItemAdded callback if provided
+            onItemAdded?()
+        }
         
         // Add a delay and check count again to see if the binding is working
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -643,6 +674,9 @@ struct HistoryRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add the onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     var body: some View {
         switch log.type {
         case .food:
@@ -651,8 +685,9 @@ struct HistoryRow: View {
                     food: food.asFood, // Make sure LoggedFoodItem has an asFood property
                     selectedMeal: $selectedMeal,
                     mode: mode,
-            selectedFoods: $selectedFoods,
-                    path: $path
+                    selectedFoods: $selectedFoods,
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
             }
         case .meal:
@@ -664,7 +699,8 @@ struct HistoryRow: View {
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
-                    path: $path
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
             }
         case .recipe:
@@ -676,7 +712,8 @@ struct HistoryRow: View {
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
-                    path: $path
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
             }
         }
@@ -695,6 +732,9 @@ struct CombinedLogMealRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add the onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
     
@@ -703,13 +743,15 @@ struct CombinedLogMealRow: View {
          selectedMeal: Binding<String>, 
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
-         path: Binding<NavigationPath> = .constant(NavigationPath())) {
+         path: Binding<NavigationPath> = .constant(NavigationPath()),
+         onItemAdded: (() -> Void)? = nil) {
         self.log = log
         self.meal = meal
         self._selectedMeal = selectedMeal
         self.mode = mode
         self._selectedFoods = selectedFoods
         self._path = path
+        self.onItemAdded = onItemAdded
     }
     
     var body: some View {
@@ -916,8 +958,14 @@ struct CombinedLogMealRow: View {
                 selectedFoods.append(food)
             }
             
-            // Navigate back to the meal creation screen
-            path.removeLast()
+            // Track, then pop back
+            // Check if we're in a sheet (empty path) first to prevent crashes
+            if !path.isEmpty {
+                path.removeLast()
+            } else {
+                // Call the onItemAdded callback if provided
+                onItemAdded?()
+            }
         } else {
             print("❌ Could not find meal with ID \(meal.mealId) in FoodManager.meals")
             
@@ -1027,6 +1075,9 @@ struct MealRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add the onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
     
@@ -1035,12 +1086,14 @@ struct MealRow: View {
          selectedMeal: Binding<String>, 
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
-         path: Binding<NavigationPath> = .constant(NavigationPath())) {
+         path: Binding<NavigationPath> = .constant(NavigationPath()),
+         onItemAdded: (() -> Void)? = nil) {
         self.meal = meal
         self._selectedMeal = selectedMeal
         self.mode = mode
         self._selectedFoods = selectedFoods
         self._path = path
+        self.onItemAdded = onItemAdded
     }
     
     // Computed property to calculate calories from meal items if needed
@@ -1245,8 +1298,14 @@ struct MealRow: View {
             selectedFoods.append(food)
         }
         
-        // Navigate back to the meal creation screen
-        path.removeLast()
+        // Track, then pop back
+        // Check if we're in a sheet (empty path) first to prevent crashes
+        if !path.isEmpty {
+            path.removeLast()
+        } else {
+            // Call the onItemAdded callback if provided
+            onItemAdded?()
+        }
     }
 }
 
@@ -1262,8 +1321,27 @@ struct CombinedLogRecipeRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
+    
+    init(log: CombinedLog, 
+         recipe: RecipeSummary, 
+         selectedMeal: Binding<String>, 
+         mode: LogFoodMode = .logFood, 
+         selectedFoods: Binding<[Food]> = .constant([]), 
+         path: Binding<NavigationPath> = .constant(NavigationPath()),
+         onItemAdded: (() -> Void)? = nil) {
+        self.log = log
+        self.recipe = recipe
+        self._selectedMeal = selectedMeal
+        self.mode = mode
+        self._selectedFoods = selectedFoods
+        self._path = path
+        self.onItemAdded = onItemAdded
+    }
     
     var body: some View {
         ZStack {
@@ -1394,8 +1472,14 @@ struct CombinedLogRecipeRow: View {
                 selectedFoods.append(food)
             }
             
-            // Navigate back
-            path.removeLast()
+            // Track, then pop back
+            // Check if we're in a sheet (empty path) first to prevent crashes
+            if !path.isEmpty {
+                path.removeLast()
+            } else {
+                // Call the onItemAdded callback if provided
+                onItemAdded?()
+            }
         }
     }
 }
@@ -1411,6 +1495,9 @@ struct RecipeRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
+    // Add the onItemAdded callback
+    var onItemAdded: (() -> Void)?
+    
     // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
     
@@ -1419,12 +1506,14 @@ struct RecipeRow: View {
          selectedMeal: Binding<String>, 
          mode: LogFoodMode = .logFood, 
          selectedFoods: Binding<[Food]> = .constant([]), 
-         path: Binding<NavigationPath> = .constant(NavigationPath())) {
+         path: Binding<NavigationPath> = .constant(NavigationPath()),
+         onItemAdded: (() -> Void)? = nil) {
         self.recipe = recipe
         self._selectedMeal = selectedMeal
         self.mode = mode
         self._selectedFoods = selectedFoods
         self._path = path
+        self.onItemAdded = onItemAdded
     }
     
     // Computed property for calories per serving
@@ -1581,7 +1670,13 @@ struct RecipeRow: View {
             }
             
             // Track, then pop back
-            path.removeLast()
+            // Check if we're in a sheet (empty path) first to prevent crashes
+            if !path.isEmpty {
+                path.removeLast()
+            } else {
+                // Call the onItemAdded callback if provided
+                onItemAdded?()
+            }
         }
     }
 }
@@ -1592,6 +1687,9 @@ private struct RecipeHistorySection: View {
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
+    
+    // Add onItemAdded callback
+    var onItemAdded: (() -> Void)?
     
     var body: some View {
         Section {
@@ -1608,7 +1706,8 @@ private struct RecipeHistorySection: View {
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
-                    path: $path
+                    path: $path,
+                    onItemAdded: onItemAdded
                 )
                 .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
             }
