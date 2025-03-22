@@ -429,7 +429,7 @@ struct Recipe: Codable, Identifiable {
     let privacy: String
     let servings: Int
     let createdAt: Date
-    let updatedAt: Date
+    let updatedAt: Date?  // Make this optional since it might not always be provided
     let recipeItems: [RecipeFoodItem]
     let image: String?
     let prepTime: Int?
