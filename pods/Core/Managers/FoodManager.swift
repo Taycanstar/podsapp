@@ -1129,17 +1129,75 @@ private func resetAndFetchRecipes() {
 
 private func loadCachedRecipes() {
     guard let userEmail = userEmail else { return }
-    if let cached = UserDefaults.standard.data(forKey: "recipes_\(userEmail)_page_1"),
-       let decodedResponse = try? {
-           let decoder = JSONDecoder()
-           decoder.keyDecodingStrategy = .convertFromSnakeCase
-           decoder.dateDecodingStrategy = .iso8601
-           return try decoder.decode(RecipesResponse.self, from: cached)
-       }() {
-        withAnimation(.easeOut(duration: 0.3)) {
-            self.recipes = decodedResponse.recipes
+    
+    if let cached = UserDefaults.standard.data(forKey: "recipes_\(userEmail)_page_1") {
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            
+            // Use custom date formatting strategy to handle different Python date formats
+            decoder.dateDecodingStrategy = .custom { decoder -> Date in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                print("🕒 Attempting to decode cached date string: '\(dateString)' at path: \(decoder.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                
+                // If string is empty or null, return current date
+                if dateString.isEmpty {
+                    print("⚠️ Empty date string found in cache, using current date")
+                    return Date()
+                }
+                
+                // Try ISO8601 first with various options
+                let iso8601 = ISO8601DateFormatter()
+                if let date = iso8601.date(from: dateString) {
+                    print("✅ Successfully decoded cached date with standard ISO8601: '\(dateString)'")
+                    return date
+                }
+                
+                // Try with fractional seconds
+                iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = iso8601.date(from: dateString) {
+                    print("✅ Successfully decoded cached date with ISO8601 + fractional seconds: '\(dateString)'")
+                    return date
+                }
+                
+                // Try each of our custom formats
+                let formats = [
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits, no timezone
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits, no timezone
+                    "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits, no timezone
+                    "yyyy-MM-dd"                     // Just date
+                ]
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                
+                for format in formats {
+                    dateFormatter.dateFormat = format
+                    if let date = dateFormatter.date(from: dateString) {
+                        print("✅ Successfully decoded cached date with format '\(format)': '\(dateString)'")
+                        return date
+                    }
+                }
+                
+                // Last resort - return current date rather than crashing
+                print("⚠️ Failed to parse cached date string: '\(dateString)' at path: \(decoder.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                print("⚠️ Tried formats: \(formats)")
+                return Date()
+            }
+            
+            let decodedResponse = try decoder.decode(RecipesResponse.self, from: cached)
+            
+            withAnimation(.easeOut(duration: 0.3)) {
+                self.recipes = decodedResponse.recipes
+            }
+            self.hasMoreRecipes = decodedResponse.hasMore
+            
+        } catch {
+            print("❌ Error decoding cached recipes: \(error)")
         }
-        self.hasMoreRecipes = decodedResponse.hasMore
     }
 }
 

@@ -18,6 +18,7 @@ enum NetworkError: Error {
     case uploadFailed
     case decodingFailed(Error)
     case jsonEncodingFailed
+    case invalidData
 } 
 
  struct GracieResponse: Codable {
@@ -57,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -1013,16 +1014,86 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 let iso8601Formatter = ISO8601DateFormatter()
                 iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 
-                decoder.dateDecodingStrategy = .custom { decoder in
+                // Create a custom date formatter that can handle Python's isoformat() output
+                let dateFormatter = DateFormatter()
+                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                
+                // Try multiple different date format patterns
+                let dateFormats = [
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits, no timezone
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits, no timezone
+                    "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits, no timezone
+                    "yyyy-MM-dd"                     // Just date
+                ]
+                
+                // Use custom date formatting strategy to handle different Python date formats
+                decoder.dateDecodingStrategy = .custom { decoder -> Date in
                     let container = try decoder.singleValueContainer()
                     let dateString = try container.decode(String.self)
-                    if let date = createdAtFormatter.date(from: dateString) {
+                    
+                    // Log every date string we're trying to decode
+                    print("🕒 Attempting to decode date string: '\(dateString)'")
+                    
+                    // If string is empty or null, return current date
+                    if dateString.isEmpty {
+                        print("⚠️ Empty date string, using current date")
+                        return Date()
+                    }
+                    
+                    // Try ISO8601 first with various options
+                    let iso8601 = ISO8601DateFormatter()
+                    if let date = iso8601.date(from: dateString) {
+                        print("✅ Successfully parsed date with standard ISO8601")
                         return date
                     }
-                    if let date = iso8601Formatter.date(from: dateString) {
+                    
+                    // Try with fractional seconds
+                    iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = iso8601.date(from: dateString) {
+                        print("✅ Successfully parsed date with ISO8601 + fractional seconds")
                         return date
                     }
-                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+                    
+                    // Try each of our custom formats
+                    for format in dateFormats {
+                        dateFormatter.dateFormat = format
+                        if let date = dateFormatter.date(from: dateString) {
+                            print("✅ Successfully parsed date with format: \(format)")
+                            return date
+                        }
+                    }
+                    
+                    // Last resort - try to fix the date string
+                    var fixedDateString = dateString
+                    
+                    // If it looks like ISO8601 but missing Z, add it
+                    if dateString.contains("T") && !dateString.hasSuffix("Z") && !dateString.contains("+") {
+                        fixedDateString = dateString + "Z"
+                        print("🔄 Trying to fix date string by adding Z: '\(fixedDateString)'")
+                        
+                        // Try again with the fixed string
+                        if let date = iso8601.date(from: fixedDateString) {
+                            print("✅ Successfully parsed fixed date string")
+                            return date
+                        }
+                    }
+                    
+                    // If we still couldn't parse it, log the context and paths
+                    print("⚠️ Failed to parse date string: '\(dateString)'")
+                    print("⚠️ Attempted ISO8601 formats and these custom formats: \(dateFormats.joined(separator: ", "))")
+                    
+                    // Get coding path
+                    let context = DecodingError.Context(
+                        codingPath: decoder.codingPath,
+                        debugDescription: "Failed to decode date: \(dateString)"
+                    )
+                    
+                    print("⚠️ Coding path: \(context.codingPath.map { $0.stringValue })")
+                    
+                    // Last resort - return current date rather than crashing
+                    print("⚠️ Using current date as fallback")
+                    return Date()
                 }
                 
                 // Decode the JSON into your temporary PodJSON model.
@@ -5281,38 +5352,66 @@ func createMeal(
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             
-            // Custom date decoder for the specific format from the server
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            // Create a custom date formatter that can handle Python's isoformat() output
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
             
-            decoder.dateDecodingStrategy = .custom { decoder in
+            // Use custom date formatting strategy to handle different Python date formats
+            decoder.dateDecodingStrategy = .custom { decoder -> Date in
                 let container = try decoder.singleValueContainer()
                 let dateString = try container.decode(String.self)
                 
-                if let date = formatter.date(from: dateString) {
+                print("🕒 Attempting to decode date string: '\(dateString)' at path: \(decoder.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                
+                // Handle empty strings
+                if dateString.isEmpty {
+                    print("⚠️ Empty date string found, using current date")
+                    return Date()
+                }
+                
+                // Try ISO8601 with various options
+                let iso8601 = ISO8601DateFormatter()
+                
+                // Standard ISO8601
+                if let date = iso8601.date(from: dateString) {
+                    print("✅ Successfully decoded with standard ISO8601: '\(dateString)'")
                     return date
                 }
                 
-                // Try another format without fractional seconds
-                formatter.formatOptions = [.withInternetDateTime]
-                if let date = formatter.date(from: dateString) {
+                // With fractional seconds
+                iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = iso8601.date(from: dateString) {
+                    print("✅ Successfully decoded with ISO8601 + fractional seconds: '\(dateString)'")
                     return date
                 }
                 
-                // Final fallback
-                let fallbackFormatter = DateFormatter()
-                fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-                fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
-                fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                // Fall back to DateFormatter
+                let dateFormatter = DateFormatter()
+                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
                 
-                if let date = fallbackFormatter.date(from: dateString) {
-                    return date
+                // Try multiple formats
+                let formats = [
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits
+                    "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits
+                    "yyyy-MM-dd"                     // Just date
+                ]
+                
+                for format in formats {
+                    dateFormatter.dateFormat = format
+                    if let date = dateFormatter.date(from: dateString) {
+                        print("✅ Successfully decoded with format '\(format)': '\(dateString)'")
+                        return date
+                    }
                 }
                 
-                throw DecodingError.dataCorruptedError(
-                    in: container,
-                    debugDescription: "Cannot decode date string \(dateString)"
-                )
+                // Last resort, return current date rather than crashing
+                print("⚠️ Failed to parse date: '\(dateString)' at path: \(decoder.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                print("⚠️ Tried formats: \(formats)")
+                return Date()
             }
             
             // Add debug print to see the JSON response
@@ -5521,81 +5620,19 @@ func logMeal(
                 switch decodingError {
                 case .keyNotFound(let key, let context):
                     print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
-                    print("  codingPath: \(context.codingPath)")
                 case .valueNotFound(let type, let context):
                     print("❌ Value of type \(type) not found: \(context.debugDescription)")
-                    print("  codingPath: \(context.codingPath)")
                 case .typeMismatch(let type, let context):
                     print("❌ Type mismatch for type \(type): \(context.debugDescription)")
-                    print("  codingPath: \(context.codingPath)")
                 case .dataCorrupted(let context):
                     print("❌ Data corrupted: \(context.debugDescription)")
-                    print("  codingPath: \(context.codingPath)")
                 @unknown default:
                     print("❌ Unknown decoding error")
                 }
             }
             
-            // Try to decode the error message if available
-            if let errorObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = errorObj["error"] as? String {
-                print("Server error: \(errorMessage)")
-            }
-            
-            // If we have data, let's manually recreate the LoggedMeal object as a workaround
-            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                print("🔧 Attempting manual workaround...")
-                
-                if let mealLogId = jsonObj["mealLogId"] as? Int,
-                   let calories = jsonObj["calories"] as? Double,
-                   let mealData = jsonObj["meal"] as? [String: Any],
-                   let mealTime = jsonObj["mealTime"] as? String {
-                    
-                    print("✅ Found key fields in JSON response")
-                    
-                    // Try to create a LoggedMeal with default values for missing fields
-                    let status = jsonObj["status"] as? String ?? "success" // Provide default
-                    let message = jsonObj["message"] as? String ?? "Meal logged successfully" // Provide default
-                    
-                    // Attempt to reconstruct the meal summary
-                    if let mealId = mealData["id"] as? Int,
-                       let title = mealData["title"] as? String,
-                       let calories = mealData["calories"] as? Double {
-                        
-                        let mealSummary = MealSummary(
-                            mealId: mealId,
-                            title: title,
-                            description: mealData["description"] as? String,
-                            image: mealData["image"] as? String,
-                            calories: calories,
-                            servings: mealData["servings"] as? Int ?? 1,
-                            protein: nil,
-                            carbs: nil,
-                            fat: nil,
-                            scheduledAt: nil
-                        )
-                        
-                        // Create a manually constructed LoggedMeal
-                        let loggedMeal = LoggedMeal(
-                            status: status,
-                            mealLogId: mealLogId,
-                            calories: calories,
-                            message: message,
-                            meal: mealSummary,
-                            mealTime: mealTime,
-                            scheduledAt: nil  // Add this parameter as nil since we don't have the data
-                        )
-                        
-                        print("✅ Successfully created LoggedMeal manually with ID: \(loggedMeal.mealLogId)")
-                        completion(.success(loggedMeal))
-                        return
-                    }
-                }
-                
-                print("❌ Failed to manually create LoggedMeal")
-            }
-            
-            completion(.failure(decodingError))
+            print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+            completion(.failure(NetworkError.decodingFailed(decodingError)))
         }
     }.resume()
 }
@@ -6055,48 +6092,138 @@ func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<
         
         // Log raw response for deeper analysis
         if let responseString = String(data: data, encoding: .utf8) {
-            // Comment out to reduce log spam
-            // print("📥 Raw recipes response: \(responseString)")
+            print("📥 Raw recipes response (first 200 chars): \(String(responseString.prefix(200)))...")
         }
         
         do {
-            // First, parse as dictionary to inspect structure if needed
-            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let recipes = jsonObj["recipes"] as? [[String: Any]] {
-                
-                // Analyze the first few recipes if needed
-                for (index, recipe) in recipes.prefix(2).enumerated() {
-                    // Debug if needed
-                    // print("📊 Recipe #\(index): \(recipe["title"] ?? "unknown")")
-                    
-                    // Check for recipe items
-                    if let recipeItems = recipe["recipe_items"] as? [[String: Any]] {
-                        print("  - contains \(recipeItems.count) recipe items")
-                        if let firstItem = recipeItems.first {
-                            print("    - first item: \(firstItem["name"] ?? "unknown"), calories: \(firstItem["calories"] ?? "unknown")")
-                        }
-                    } else if let recipeItems = recipe["recipeItems"] as? [[String: Any]] {
-                        print("  - contains \(recipeItems.count) recipe items (camelCase key)")
-                    }
+            // First, manually decode the JSON to get control over the date fields
+            guard let jsonDict = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  var recipesArray = jsonDict["recipes"] as? [[String: Any]] else {
+                throw NetworkError.invalidData
+            }
+            
+            print("🔍 Found \(recipesArray.count) recipes in response")
+            
+            // CRITICAL DEBUG: Examine first recipe's date fields
+            if let firstRecipe = recipesArray.first {
+                print("📅 First recipe date fields:")
+                if let createdAt = firstRecipe["created_at"] as? String {
+                    print("  created_at: \(createdAt)")
+                }
+                if let updatedAt = firstRecipe["updated_at"] as? String {
+                    print("  updated_at: \(updatedAt)")
                 }
             }
             
+            // Fix date strings in all recipes
+            for i in 0..<recipesArray.count {
+                var recipe = recipesArray[i]
+                
+                // Function to fix date strings
+                func fixDateString(_ dateString: String) -> String {
+                    // If it's already in correct format with Z or timezone info, leave it alone
+                    if dateString.hasSuffix("Z") || dateString.contains("+") || dateString.contains("-0") {
+                        return dateString
+                    }
+                    
+                    // If it has a T (ISO format) but no timezone info, add Z
+                    if dateString.contains("T") {
+                        return dateString + "Z"
+                    }
+                    
+                    // Otherwise return as is
+                    return dateString
+                }
+                
+                // Check all keys that might contain date values
+                for (key, value) in recipe {
+                    if let dateString = value as? String, 
+                       (key.contains("date") || key.hasSuffix("_at") || key.hasSuffix("At")) {
+                        let fixedDateString = fixDateString(dateString)
+                        if fixedDateString != dateString {
+                            print("📅 Fixed date string for \(key): \(dateString) -> \(fixedDateString)")
+                            recipe[key] = fixedDateString
+                        }
+                    }
+                }
+                
+                recipesArray[i] = recipe
+            }
+            
+            // Reconstruct the JSON with fixed dates
+            var fixedJsonDict = jsonDict
+            fixedJsonDict["recipes"] = recipesArray
+            
+            // Convert back to data
+            let fixedData = try JSONSerialization.data(withJSONObject: fixedJsonDict)
+            
+            // Now use JSONDecoder with the fixed data
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .iso8601
             
-            let recipesResponse = try decoder.decode(RecipesResponse.self, from: data)
+            // Create a custom date decoding strategy
+            decoder.dateDecodingStrategy = .custom { decoder -> Date in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                // Handle empty strings
+                if dateString.isEmpty {
+                    print("⚠️ Empty date string found, using current date")
+                    return Date()
+                }
+                
+                // Try ISO8601 with various options
+                let iso8601 = ISO8601DateFormatter()
+                
+                // Standard ISO8601
+                if let date = iso8601.date(from: dateString) {
+                    return date
+                }
+                
+                // With fractional seconds
+                iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = iso8601.date(from: dateString) {
+                    return date
+                }
+                
+                // Fall back to DateFormatter
+                let dateFormatter = DateFormatter()
+                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                
+                // Try multiple formats
+                let formats = [
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits
+                    "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits
+                    "yyyy-MM-dd"                     // Just date
+                ]
+                
+                for format in formats {
+                    dateFormatter.dateFormat = format
+                    if let date = dateFormatter.date(from: dateString) {
+                        return date
+                    }
+                }
+                
+                // Last resort, return current date rather than crashing
+                print("⚠️ Could not parse date: \(dateString), falling back to current date")
+                return Date()
+            }
+            
+            let recipesResponse = try decoder.decode(RecipesResponse.self, from: fixedData)
             
             // Debug if needed
             for (index, recipe) in recipesResponse.recipes.prefix(2).enumerated() {
-                // print("📊 Decoded Recipe #\(index): \(recipe.title)")
-                // print("  - calories: \(recipe.calories)")
-                // print("  - recipe items: \(recipe.recipeItems.count)")
+                print("📊 Successfully decoded Recipe #\(index): \(recipe.title)")
             }
             
             completion(.success(recipesResponse))
         } catch {
             print("❌ Decoding error when fetching recipes: \(error)")
+            
+            // Extra debugging for decoding errors
             if let decodingError = error as? DecodingError {
                 switch decodingError {
                 case .keyNotFound(let key, let context):
@@ -6107,10 +6234,23 @@ func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<
                     print("  Value missing: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
                 case .dataCorrupted(let context):
                     print("  Data corrupted: \(context.debugDescription)")
+                    print("  Coding path: \(context.codingPath.map { $0.stringValue })")
                 @unknown default:
                     print("  Unknown decoding error")
                 }
             }
+            
+            // Try to extract the raw recipe data for inspection
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let recipes = jsonObj["recipes"] as? [[String: Any]],
+               let firstRecipe = recipes.first {
+                print("⚙️ Raw structure of first recipe:")
+                for (key, value) in firstRecipe {
+                    let valueType = type(of: value)
+                    print("  - \(key): \(value) (Type: \(valueType))")
+                }
+            }
+            
             completion(.failure(error))
         }
     }.resume()
