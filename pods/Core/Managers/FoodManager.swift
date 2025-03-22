@@ -1099,12 +1099,11 @@ private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: M
     )
 }
 
-// After the resetAndFetchMeals method
+// After the resetAndFetchRecipes method
 private func resetAndFetchRecipes() {
     print("🍛 FoodManager: Reset and fetch recipes called")
     currentRecipePage = 1
-    hasMoreRecipes = true
-    
+    hasMoreRecipes = true    
     // Store existing recipes to allow smooth transitions
     let oldRecipes = recipes
     

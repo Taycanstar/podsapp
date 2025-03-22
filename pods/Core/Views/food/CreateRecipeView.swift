@@ -235,6 +235,22 @@ struct CreateRecipeView: View {
         } message: {
             Text("Please choose a different name.")
         }
+        .onAppear {
+            print("🔍 CreateRecipeView appeared with \(selectedFoods.count) ingredients")
+            
+            // Debug each food item
+            for (index, food) in selectedFoods.enumerated() {
+                print("  \(index+1). \(food.displayName) (servings: \(food.numberOfServings ?? 1))")
+            }
+        }
+        .onChange(of: selectedFoods) { newFoods in
+            print("📊 CreateRecipeView selectedFoods changed: now has \(newFoods.count) ingredients")
+            
+            // Debug each food item
+            for (index, food) in newFoods.enumerated() {
+                print("  \(index+1). \(food.displayName) (servings: \(food.numberOfServings ?? 1))")
+            }
+        }
     }
     
     // MARK: - View Components

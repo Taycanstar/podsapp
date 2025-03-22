@@ -121,6 +121,9 @@ struct FoodContainerView: View {
     @State private var createRecipeSelectedFoods: [Food] = []
     @State private var editRecipeSelectedFoods: [Food] = []
     
+    // Add a state variable to track the currently editing recipe ID, similar to currentlyEditingMealId
+    @State private var currentlyEditingRecipeId: Int? = nil
+    
     init(selectedTab: Binding<Int>) {
         _selectedTab = selectedTab
         // Set initial meal based on time of day
@@ -306,22 +309,81 @@ struct FoodContainerView: View {
                     MealDetailView(meal: meal, path: $path)
 
                 case .createRecipe:
-                    CreateRecipeView(path: $path, selectedFoods: $createRecipeSelectedFoods)
-                        .onAppear {
-                            // Reset this context's selectedFoods when view appears
-                            createRecipeSelectedFoods = []
-                        }
+                    CreateRecipeView(
+                        path: $path, 
+                        selectedFoods: $createRecipeSelectedFoods
+                    )
+                    .onAppear {
+                        // Reset this context's selectedFoods when view appears
+                        print("📊 DEBUG: CreateRecipeView appeared, initializing with empty foods array")
+                        createRecipeSelectedFoods = []
+                    }
                 case .addRecipeIngredients:
+                    // Create a binding that will use the correct array of selected foods
+                    // If we're editing a recipe, use editRecipeSelectedFoods
+                    // If we're creating a new recipe, use createRecipeSelectedFoods
+                    let recipeBinding = Binding<[Food]>(
+                        get: {
+                            if currentlyEditingRecipeId != nil {
+                                // Editing an existing recipe
+                                print("📋 DEBUG: Getting foods for existing recipe, count: \(editRecipeSelectedFoods.count)")
+                                return editRecipeSelectedFoods
+                            } else {
+                                // Creating a new recipe
+                                print("📋 DEBUG: Getting foods for new recipe, count: \(createRecipeSelectedFoods.count)")
+                                return createRecipeSelectedFoods
+                            }
+                        },
+                        set: { newValue in
+                            if currentlyEditingRecipeId != nil {
+                                // Editing an existing recipe
+                                print("📋 DEBUG: Setting foods for existing recipe, new count: \(newValue.count)")
+                                // Create new array reference
+                                editRecipeSelectedFoods = Array(newValue)
+                            } else {
+                                // Creating a new recipe
+                                print("📋 DEBUG: Setting foods for new recipe, new count: \(newValue.count)")
+                                // Create new array reference
+                                createRecipeSelectedFoods = Array(newValue)
+                            }
+                        }
+                    )
+                    
                     LogFood(
                         selectedTab: $selectedTab,
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .addToRecipe,
-                        selectedFoods: $editRecipeSelectedFoods
+                        selectedFoods: recipeBinding,
+                        onItemAdded: { food in
+                            // Save the updated foods
+                            print("📦 FoodContainerView: Recipe ingredient added: \(food.displayName)")
+                            
+                            // Check current counts
+                            if currentlyEditingRecipeId != nil {
+                                print("📊 FoodContainerView: EditRecipe now has \(editRecipeSelectedFoods.count) foods")
+                                // Print each food in the array
+                                for (index, food) in editRecipeSelectedFoods.enumerated() {
+                                    print("  \(index+1). \(food.displayName)")
+                                }
+                            } else {
+                                print("📊 FoodContainerView: CreateRecipe now has \(createRecipeSelectedFoods.count) foods")
+                                // Print each food in the array
+                                for (index, food) in createRecipeSelectedFoods.enumerated() {
+                                    print("  \(index+1). \(food.displayName)")
+                                }
+                            }
+                            
+                            // Navigate back
+                            path.removeLast()
+                        }
                     )
                 case .editRecipe(let recipe):
                     EditRecipeView(recipe: recipe, path: $path, selectedFoods: $editRecipeSelectedFoods)
                         .onAppear {
+                            // Set the currently editing recipe ID
+                            currentlyEditingRecipeId = recipe.id
+                            
                             // Don't reset if we're returning from adding recipe ingredients
                             // We know we're returning if the array already has items
                             if editRecipeSelectedFoods.isEmpty {
@@ -337,19 +399,32 @@ struct FoodContainerView: View {
         .environmentObject(navState)
         .onChange(of: path) { newPath in
             // Check if we were editing a meal before and now we're no longer in that flow
-            // We don't need to clear cached foods since EditMealView clears them on Cancel
             if newPath.isEmpty && currentlyEditingMealId != nil {
                 print("ℹ️ FoodContainerView: Navigation path changed, currentlyEditingMealId: \(currentlyEditingMealId!)")
                 currentlyEditingMealId = nil
             }
             
+            // Reset recipe editing state if we're no longer in that flow
+            if newPath.isEmpty && currentlyEditingRecipeId != nil {
+                print("ℹ️ FoodContainerView: Navigation path changed, currentlyEditingRecipeId: \(currentlyEditingRecipeId!)")
+                currentlyEditingRecipeId = nil
+            }
+            
             // If the navigation path is empty, we've exited all flows
             // Reset the createMealSelectedFoods array so next time we start fresh
             if newPath.isEmpty {
-                print("🧹 FoodContainerView: Navigation stack empty, resetting createMealState")
-                print("📊 Before reset: \(navState.createMealSelectedFoods.count) foods, name: \(navState.createMealName)")
+                print("🧹 FoodContainerView: Navigation stack empty, resetting state")
+                
+                // Reset meal-related state
+                print("📊 Before reset: \(navState.createMealSelectedFoods.count) meal foods")
                 navState.resetCreateMealState()
-                print("📊 After reset: \(navState.createMealSelectedFoods.count) foods, name: \(navState.createMealName)")
+                print("📊 After reset: \(navState.createMealSelectedFoods.count) meal foods")
+                
+                // Reset recipe-related state
+                print("📊 Before reset: \(createRecipeSelectedFoods.count) recipe foods")
+                createRecipeSelectedFoods = []
+                editRecipeSelectedFoods = []
+                print("📊 After reset: Recipe foods arrays cleared")
             }
         }
         .onAppear {
