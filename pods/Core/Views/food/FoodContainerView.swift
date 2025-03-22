@@ -68,6 +68,7 @@ enum FoodNavigationDestination: Hashable {
     case addRecipeIngredients // Added case for adding ingredients to a recipe
     case editRecipe(Recipe)   // Added case for editing a recipe
     case mealDetails(Meal)    // Added case for viewing a meal      
+    case recipeDetails(Recipe) // Added case for viewing a recipe
 
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
@@ -90,6 +91,8 @@ enum FoodNavigationDestination: Hashable {
             return recipe1.id == recipe2.id
         case let (.mealDetails(meal1), .mealDetails(meal2)):
             return meal1.id == meal2.id
+        case let (.recipeDetails(recipe1), .recipeDetails(recipe2)):
+            return recipe1.id == recipe2.id
         default:
             return false
         }
@@ -120,7 +123,10 @@ enum FoodNavigationDestination: Hashable {
         case .mealDetails(let meal):
             hasher.combine(8)
             hasher.combine(meal.id)
-            }
+        case .recipeDetails(let recipe):
+            hasher.combine(9)
+            hasher.combine(recipe.id)
+        }
     }
 }
 
@@ -333,7 +339,8 @@ struct FoodContainerView: View {
                     }
                 case .mealDetails(let meal):
                     MealDetailView(meal: meal, path: $path)
-
+                case .recipeDetails(let recipe):
+                    RecipeDetailView(recipe: recipe, path: $path)
                 case .createRecipe:
                     CreateRecipeView(
                         path: $path, 

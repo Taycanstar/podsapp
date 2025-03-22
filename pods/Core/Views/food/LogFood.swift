@@ -1298,30 +1298,28 @@ struct MealRow: View {
         }
     }
 }
-
-// Add a new struct for recipe logs
 struct CombinedLogRecipeRow: View {
     @EnvironmentObject var foodManager: FoodManager
     let log: CombinedLog
     let recipe: RecipeSummary
     @Binding var selectedMeal: String
-    
-    // Add these properties
+
+    // These properties match the meal version
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
-    
-    // Add onItemAdded callback
+
+    // Optional callback for when an item is added
     var onItemAdded: ((Food) -> Void)?
-    
-    // Add state for logging error alert
+
+    // State to handle logging error alert
     @State private var showLoggingErrorAlert: Bool = false
-    
-    init(log: CombinedLog, 
-         recipe: RecipeSummary, 
-         selectedMeal: Binding<String>, 
-         mode: LogFoodMode = .logFood, 
-         selectedFoods: Binding<[Food]> = .constant([]), 
+
+    init(log: CombinedLog,
+         recipe: RecipeSummary,
+         selectedMeal: Binding<String>,
+         mode: LogFoodMode = .logFood,
+         selectedFoods: Binding<[Food]> = .constant([]),
          path: Binding<NavigationPath> = .constant(NavigationPath()),
          onItemAdded: ((Food) -> Void)? = nil) {
         self.log = log
@@ -1332,40 +1330,77 @@ struct CombinedLogRecipeRow: View {
         self._path = path
         self.onItemAdded = onItemAdded
     }
-    
+
     var body: some View {
         ZStack {
-            HStack {
+            HStack(spacing: 16) {
+                // Recipe details
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(recipe.title)
-                        .font(.headline)
-                        .fontWeight(.regular)
-                    
-                    HStack {
+                    Text(recipe.title.isEmpty ? "Untitled Recipe" : recipe.title)
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                    HStack(spacing: 4) {
                         Text("\(Int(log.displayCalories)) cal")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         Text("•")
-                        Text("\(log.servingsConsumed ?? 1) serving\(log.servingsConsumed == 1 ? "" : "s")")
+                        Text("\(log.servingsConsumed ?? 1) serving\( (log.servingsConsumed ?? 1) == 1 ? "" : "s" )")
                         if let mealTime = log.mealTime {
                             Text("•")
                             Text(mealTime)
                         }
                     }
-                            .font(.subheadline)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                 }
-                
                 Spacer()
-                
-                // Fixed-width container for the button
+                // Button area
                 HStack {
                     Spacer()
-                    
                     Button {
-                        handleRecipeTap()
-                    } label: {
+                        HapticFeedback.generate()
                         switch mode {
                         case .logFood:
-                            // For log food mode, similar to meal rows
+                            // Log the recipe by creating a new Recipe (without items)
+                            foodManager.logRecipe(
+                                recipe: Recipe(
+                                    id: recipe.recipeId,
+                                    title: recipe.title,
+                                    description: recipe.description,
+                                    instructions: nil,
+                                    privacy: "private",
+                                    servings: recipe.servings,
+                                    createdAt: Date(),
+                                    updatedAt: Date(),
+                                    recipeItems: [],
+                                    image: recipe.image,
+                                    prepTime: recipe.prepTime,
+                                    cookTime: recipe.cookTime,
+                                    totalCalories: recipe.calories,
+                                    totalProtein: recipe.protein,
+                                    totalCarbs: recipe.carbs,
+                                    totalFat: recipe.fat,
+                                    scheduledAt: nil
+                                ),
+                                mealTime: selectedMeal,
+                                servingsConsumed: 1,
+                                date: Date(),
+                                notes: nil,
+                                statusCompletion: { success in
+                                    if !success {
+                                        showLoggingErrorAlert = true
+                                    }
+                                }
+                            )
+                        case .addToMeal, .addToRecipe:
+                            addRecipeItemsToSelection()
+                        }
+                    } label: {
+                        if mode == .addToMeal || mode == .addToRecipe {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                        } else {
                             if foodManager.lastLoggedRecipeId == recipe.recipeId {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 24))
@@ -1376,22 +1411,27 @@ struct CombinedLogRecipeRow: View {
                                     .font(.system(size: 24))
                                     .foregroundColor(.accentColor)
                             }
-                        case .addToMeal, .addToRecipe:
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
+                    .zIndex(1)
                 }
                 .frame(width: 44)
-                .zIndex(1)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .contentShape(Rectangle())
+            .onTapGesture {
+                if mode == .logFood {
+                    if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.recipeId }) {
+                        path.append(FoodNavigationDestination.recipeDetails(fullRecipe))
+                    }
+                } else {
+                    handleRecipeTap()
+                }
+            }
         }
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
@@ -1399,13 +1439,11 @@ struct CombinedLogRecipeRow: View {
             Text("Please try again.")
         }
     }
-    
+
     private func handleRecipeTap() {
         HapticFeedback.generate()
-        
         switch mode {
         case .logFood:
-            // Log the recipe instead of navigating
             foodManager.logRecipe(
                 recipe: Recipe(
                     id: recipe.recipeId,
@@ -1423,7 +1461,8 @@ struct CombinedLogRecipeRow: View {
                     totalCalories: recipe.calories,
                     totalProtein: recipe.protein,
                     totalCarbs: recipe.carbs,
-                    totalFat: recipe.fat
+                    totalFat: recipe.fat,
+                    scheduledAt: nil
                 ),
                 mealTime: selectedMeal,
                 servingsConsumed: 1,
@@ -1431,27 +1470,19 @@ struct CombinedLogRecipeRow: View {
                 notes: nil,
                 statusCompletion: { success in
                     if !success {
-                        // Show error alert
                         showLoggingErrorAlert = true
                     }
                 }
             )
-            
         case .addToMeal, .addToRecipe:
-            // Add recipe items to selection
             addRecipeItemsToSelection()
         }
     }
-    
+
     private func addRecipeItemsToSelection() {
-        // Find the full recipe - use recipe.id instead of recipeId
         if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
-            // Create a variable to store the last food added for the callback
             var lastAddedFood: Food? = nil
-            
-            // Convert each RecipeFoodItem to Food and add to selectedFoods
             for recipeItem in fullRecipe.recipeItems {
-                // Create a Food object from the RecipeFoodItem
                 let food = Food(
                     fdcId: recipeItem.foodId,
                     description: recipeItem.name,
@@ -1469,22 +1500,15 @@ struct CombinedLogRecipeRow: View {
                     ],
                     foodMeasures: []
                 )
-                
-                // Add to selection
                 selectedFoods.append(food)
                 lastAddedFood = food
             }
-            
-            // Use callback if available, otherwise fall back to path
             if let callback = onItemAdded, let lastFood = lastAddedFood {
-                print("📲 Using callback to close sheet after adding recipe items")
                 callback(lastFood)
             } else if !path.isEmpty {
-                print("👈 Using navigation path to go back after adding recipe items")
                 path.removeLast()
             }
         } else {
-            // If recipe not found, still try to navigate back
             if !path.isEmpty {
                 path.removeLast()
             }
@@ -1492,30 +1516,234 @@ struct CombinedLogRecipeRow: View {
     }
 }
 
-// Add RecipeRow struct similar to MealRow
+// Add a new struct for recipe logs
+// struct CombinedLogRecipeRow: View {
+//     @EnvironmentObject var foodManager: FoodManager
+//     let log: CombinedLog
+//     let recipe: RecipeSummary
+//     @Binding var selectedMeal: String
+    
+//     // Add these properties
+//     let mode: LogFoodMode
+//     @Binding var selectedFoods: [Food]
+//     @Binding var path: NavigationPath
+    
+//     // Add onItemAdded callback
+//     var onItemAdded: ((Food) -> Void)?
+    
+//     // Add state for logging error alert
+//     @State private var showLoggingErrorAlert: Bool = false
+    
+//     init(log: CombinedLog, 
+//          recipe: RecipeSummary, 
+//          selectedMeal: Binding<String>, 
+//          mode: LogFoodMode = .logFood, 
+//          selectedFoods: Binding<[Food]> = .constant([]), 
+//          path: Binding<NavigationPath> = .constant(NavigationPath()),
+//          onItemAdded: ((Food) -> Void)? = nil) {
+//         self.log = log
+//         self.recipe = recipe
+//         self._selectedMeal = selectedMeal
+//         self.mode = mode
+//         self._selectedFoods = selectedFoods
+//         self._path = path
+//         self.onItemAdded = onItemAdded
+//     }
+    
+//     var body: some View {
+//         ZStack {
+//             HStack {
+//                 VStack(alignment: .leading, spacing: 4) {
+//                     Text(recipe.title)
+//                         .font(.headline)
+//                         .fontWeight(.regular)
+                    
+//                     HStack {
+//                         Text("\(Int(log.displayCalories)) cal")
+//                         Text("•")
+//                         Text("\(log.servingsConsumed ?? 1) serving\(log.servingsConsumed == 1 ? "" : "s")")
+//                         if let mealTime = log.mealTime {
+//                             Text("•")
+//                             Text(mealTime)
+//                         }
+//                     }
+//                             .font(.subheadline)
+//                     .foregroundColor(.secondary)
+//                 }
+                
+//                 Spacer()
+                
+//                 // Fixed-width container for the button
+//                 HStack {
+//                     Spacer()
+                    
+//                     Button {
+//                         handleRecipeTap()
+//                     } label: {
+//                         switch mode {
+//                         case .logFood:
+//                             // For log food mode, similar to meal rows
+//                             if foodManager.lastLoggedRecipeId == recipe.recipeId {
+//                                 Image(systemName: "checkmark.circle.fill")
+//                                     .font(.system(size: 24))
+//                                     .foregroundColor(.green)
+//                                     .transition(.opacity)
+//                             } else {
+//                                 Image(systemName: "plus.circle.fill")
+//                                     .font(.system(size: 24))
+//                                     .foregroundColor(.accentColor)
+//                             }
+//                         case .addToMeal, .addToRecipe:
+//                             Image(systemName: "plus.circle.fill")
+//                                 .font(.system(size: 24))
+//                                 .foregroundColor(.accentColor)
+//                         }
+//                     }
+//                     .buttonStyle(PlainButtonStyle())
+//                     .frame(width: 44, height: 44)
+//                     .contentShape(Rectangle())
+//                 }
+//                 .frame(width: 44)
+//                 .zIndex(1)
+//             }
+//             .padding(.horizontal, 16)
+//             .padding(.vertical, 8)
+//             .contentShape(Rectangle())
+//             .onTapGesture {
+//                 // Only navigate to RecipeDetailView when in logFood mode
+//                 if mode == .logFood {
+//                     // Get full recipe from foodManager and navigate
+//                     if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.recipeId }) {
+//                         path.append(FoodNavigationDestination.recipeDetails(fullRecipe))
+//                     }
+//                 } else {
+//                     handleRecipeTap()
+//                 }
+//             }
+//         }
+//         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+//             Button("OK", role: .cancel) { }
+//         } message: {
+//             Text("Please try again.")
+//         }
+//     }
+    
+//     private func handleRecipeTap() {
+//         HapticFeedback.generate()
+        
+//         switch mode {
+//         case .logFood:
+//             // Log the recipe instead of navigating
+//             foodManager.logRecipe(
+//                 recipe: Recipe(
+//                     id: recipe.recipeId,
+//                     title: recipe.title,
+//                     description: recipe.description,
+//                     instructions: nil,
+//                     privacy: "private",
+//                     servings: recipe.servings,
+//                     createdAt: Date(),
+//                     updatedAt: Date(),
+//                     recipeItems: [],
+//                     image: recipe.image,
+//                     prepTime: recipe.prepTime,
+//                     cookTime: recipe.cookTime,
+//                     totalCalories: recipe.calories,
+//                     totalProtein: recipe.protein,
+//                     totalCarbs: recipe.carbs,
+//                     totalFat: recipe.fat
+//                 ),
+//                 mealTime: selectedMeal,
+//                 servingsConsumed: 1,
+//                 date: Date(),
+//                 notes: nil,
+//                 statusCompletion: { success in
+//                     if !success {
+//                         // Show error alert
+//                         showLoggingErrorAlert = true
+//                     }
+//                 }
+//             )
+            
+//         case .addToMeal, .addToRecipe:
+//             // Add recipe items to selection
+//             addRecipeItemsToSelection()
+//         }
+//     }
+    
+//     private func addRecipeItemsToSelection() {
+//         // Find the full recipe - use recipe.id instead of recipeId
+//         if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
+//             // Create a variable to store the last food added for the callback
+//             var lastAddedFood: Food? = nil
+            
+//             // Convert each RecipeFoodItem to Food and add to selectedFoods
+//             for recipeItem in fullRecipe.recipeItems {
+//                 // Create a Food object from the RecipeFoodItem
+//                 let food = Food(
+//                     fdcId: recipeItem.foodId,
+//                     description: recipeItem.name,
+//                     brandOwner: nil,
+//                     brandName: nil,
+//                     servingSize: 1.0,
+//                     numberOfServings: 1.0,
+//                     servingSizeUnit: recipeItem.servingText,
+//                     householdServingFullText: recipeItem.servings,
+//                     foodNutrients: [
+//                         Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
+//                         Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
+//                         Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
+//                         Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
+//                     ],
+//                     foodMeasures: []
+//                 )
+                
+//                 // Add to selection
+//                 selectedFoods.append(food)
+//                 lastAddedFood = food
+//             }
+            
+//             // Use callback if available, otherwise fall back to path
+//             if let callback = onItemAdded, let lastFood = lastAddedFood {
+//                 print("📲 Using callback to close sheet after adding recipe items")
+//                 callback(lastFood)
+//             } else if !path.isEmpty {
+//                 print("👈 Using navigation path to go back after adding recipe items")
+//                 path.removeLast()
+//             }
+//         } else {
+//             // If recipe not found, still try to navigate back
+//             if !path.isEmpty {
+//                 path.removeLast()
+//             }
+//         }
+//     }
+// }
+
+
+
 struct RecipeRow: View {
     @EnvironmentObject var foodManager: FoodManager
     let recipe: Recipe
     @Binding var selectedMeal: String
     
-    // Add these properties to match MealRow
-    var mode: LogFoodMode = .logFood  // Default to logFood mode
+    // Just like MealRow
+    var mode: LogFoodMode = .logFood  // Default to logFood
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
-    // Add the onItemAdded callback
     var onItemAdded: ((Food) -> Void)?
     
-    // Add state for logging error alert
     @State private var showLoggingErrorAlert: Bool = false
     
-    // Make these optional bindings with default values
-    init(recipe: Recipe, 
-         selectedMeal: Binding<String>, 
-         mode: LogFoodMode = .logFood, 
-         selectedFoods: Binding<[Food]> = .constant([]), 
-         path: Binding<NavigationPath> = .constant(NavigationPath()),
-         onItemAdded: ((Food) -> Void)? = nil) {
+    init(
+        recipe: Recipe,
+        selectedMeal: Binding<String>,
+        mode: LogFoodMode = .logFood,
+        selectedFoods: Binding<[Food]> = .constant([]),
+        path: Binding<NavigationPath> = .constant(NavigationPath()),
+        onItemAdded: ((Food) -> Void)? = nil
+    ) {
         self.recipe = recipe
         self._selectedMeal = selectedMeal
         self.mode = mode
@@ -1524,204 +1752,420 @@ struct RecipeRow: View {
         self.onItemAdded = onItemAdded
     }
     
-    // Computed property for calories per serving
-    private var caloriesPerServing: Double {
-        return recipe.calories / Double(recipe.servings)
+    // Optional convenience so if totalCalories is 0, we fallback
+    private var displayCalories: Double {
+        recipe.calories
     }
     
     var body: some View {
         ZStack {
-            HStack(spacing: 16) {
-                // Recipe image or placeholder
+            HStack(spacing: 12) {
+                // 1) Recipe image or fallback
                 if let imageUrl = recipe.image, !imageUrl.isEmpty {
                     AsyncImage(url: URL(string: imageUrl)) { phase in
                         switch phase {
                         case .empty:
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                            ProgressView()
                                 .frame(width: 50, height: 50)
-                                .cornerRadius(8)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 50, height: 50)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    case .failure:
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                            .frame(width: 50, height: 50)
-                                .cornerRadius(8)
-                                .overlay(
-                                    Image(systemName: "fork.knife")
-                                        .foregroundColor(.gray)
-                                )
-                    @unknown default:
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                        case .success(let loaded):
+                            loaded
+                                .resizable()
+                                .scaledToFill()
                                 .frame(width: 50, height: 50)
-                                .cornerRadius(8)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        case .failure:
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.system(size: 40))
+                                .frame(width: 50, height: 50)
+                        @unknown default:
+                            EmptyView()
                         }
                     }
                 } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
+                    // Default icon if no image
+                    Image(systemName: "fork.knife.circle.fill")
+                        .font(.system(size: 40))
                         .frame(width: 50, height: 50)
-                        .cornerRadius(8)
-                        .overlay(
-                            Image(systemName: "fork.knife")
-                                .foregroundColor(.gray)
-                        )
                 }
                 
-                // Recipe details
+                // 2) Recipe title & subheadline
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(recipe.title)
-                        .font(.headline)
-                        .fontWeight(.regular)
+                    Text(recipe.title.isEmpty ? "Untitled Recipe" : recipe.title)
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
                     
-                    HStack {
-                        Text("\(Int(caloriesPerServing)) cal/serving")
+                    HStack(spacing: 4) {
+                        Text("\(Int(displayCalories)) cal")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         Text("•")
                         Text("\(recipe.servings) servings")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         if recipe.totalTime > 0 {
                             Text("•")
                             Text("\(recipe.totalTime) min")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                // Action button
+                // 3) Action Button
                 HStack {
                     Spacer()
-                    
                     Button {
-                        handleRecipeTap()
+                        HapticFeedback.generate()
+                        switch mode {
+                        case .logFood:
+                            logRecipe()
+                        case .addToMeal, .addToRecipe:
+                            addRecipeItemsToSelection()
+                        }
                     } label: {
-                        let isAddMode = (mode == .addToMeal || mode == .addToRecipe)
-                        let isChecked = (!isAddMode && foodManager.lastLoggedRecipeId == recipe.id)
-                        
-                        Image(systemName: isChecked ? "checkmark.circle.fill" : "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(isChecked ? .green : .accentColor)
-                            .animation(.easeInOut, value: isChecked)
+                        // Show a check if just logged
+                        if mode == .logFood,
+                           foodManager.lastLoggedRecipeId == recipe.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.green)
+                                .transition(.opacity)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                        }
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                 }
                 .frame(width: 44)
-                .zIndex(1)  // Keep button on top
+                .zIndex(1)
             }
             .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
             .onTapGesture {
-                handleRecipeTap()
+                // For logFood mode, let's push to a detail page
+                if mode == .logFood {
+                    path.append(FoodNavigationDestination.recipeDetails(recipe))
+                }
             }
         }
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text("Please try again.")
         }
     }
     
-    private func handleRecipeTap() {
-        HapticFeedback.generate()
-        
-        switch mode {
-        case .logFood:
-            // Log the recipe instead of navigating
-            foodManager.logRecipe(
-                recipe: Recipe(
-                    id: recipe.id,
-                    title: recipe.title,
-                    description: recipe.description,
-                    instructions: nil,
-                    privacy: "private",
-                    servings: recipe.servings,
-                    createdAt: Date(),
-                    updatedAt: Date(),
-                    recipeItems: [],
-                    image: recipe.image,
-                    prepTime: recipe.prepTime,
-                    cookTime: recipe.cookTime,
-                    totalCalories: recipe.calories,
-                    totalProtein: recipe.protein,
-                    totalCarbs: recipe.carbs,
-                    totalFat: recipe.fat
-                ),
-                mealTime: selectedMeal,
-                servingsConsumed: 1,
-                date: Date(),
-                notes: nil,
-                statusCompletion: { success in
-                    if !success {
-                        // Show error alert
-                        showLoggingErrorAlert = true
-                    }
-                }
-            )
-            
-        case .addToMeal, .addToRecipe:
-            // Add recipe items to selection
-            addRecipeItemsToSelection()
+    // MARK: - Logging
+    private func logRecipe() {
+        foodManager.logRecipe(
+            recipe: recipe,
+            mealTime: selectedMeal,
+            servingsConsumed: 1,
+            date: Date(),
+            notes: nil
+        ) { result in
+            // If you want to handle error messages:
+        } statusCompletion: { success in
+            if !success {
+                showLoggingErrorAlert = true
+            }
         }
     }
     
+    // MARK: - Adding Items to Another Meal/Recipe
     private func addRecipeItemsToSelection() {
-        // Find the full recipe - use recipe.id instead of recipeId
-        if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
-            // Create a variable to store the last food added for the callback
-            var lastAddedFood: Food? = nil
+        // We already have a full `Recipe` object in 'recipe'
+        // Convert each `RecipeFoodItem` to a `Food` and append
+        var lastAddedFood: Food? = nil
+        
+        for item in recipe.recipeItems {
+            // Attempt to parse item.servings or fall back to 1
+            let servingsValue = Double(
+                item.servings.trimmingCharacters(in: .whitespacesAndNewlines)
+            ) ?? 1.0
             
-            // Convert each RecipeFoodItem to Food and add to selectedFoods
-            for recipeItem in fullRecipe.recipeItems {
-                // Create a Food object from the RecipeFoodItem
-                let food = Food(
-                    fdcId: recipeItem.foodId,
-                    description: recipeItem.name,
-                    brandOwner: nil,
-                    brandName: nil,
-                    servingSize: 1.0,
-                    numberOfServings: 1.0,
-                    servingSizeUnit: recipeItem.servingText,
-                    householdServingFullText: recipeItem.servings,
-                    foodNutrients: [
-                        Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
-                        Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
-                        Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
-                        Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
-                    ],
-                    foodMeasures: []
-                )
-                
-                // Add to selection
-                selectedFoods.append(food)
-                lastAddedFood = food
+            // Serving text
+            let servingText: String
+            if let text = item.servingText, !text.isEmpty {
+                servingText = text
+            } else {
+                servingText = "serving"
             }
             
-            // Use callback if available, otherwise fall back to path
-            if let callback = onItemAdded, let lastFood = lastAddedFood {
-                print("📲 Using callback to close sheet after adding recipe items")
-                callback(lastFood)
-            } else if !path.isEmpty {
-                print("👈 Using navigation path to go back after adding recipe items")
-                path.removeLast()
-            }
-        } else {
-            // If recipe not found, still try to navigate back
-            if !path.isEmpty {
-                path.removeLast()
-            }
+            // Create a Food from the item
+            let newFood = Food(
+                fdcId: item.foodId,
+                description: item.name,
+                brandOwner: nil,
+                brandName: nil,
+                servingSize: 1.0,
+                numberOfServings: servingsValue,
+                servingSizeUnit: servingText,
+                householdServingFullText: servingText,
+                foodNutrients: [
+                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                ],
+                foodMeasures: []
+            )
+            
+            selectedFoods.append(newFood)
+            lastAddedFood = newFood
+        }
+        
+        // If we have a callback, call it. Otherwise pop back
+        if let callback = onItemAdded, let lastFood = lastAddedFood {
+            callback(lastFood)
+        } else if !path.isEmpty {
+            path.removeLast() // close sheet
         }
     }
 }
+
+
+// Add RecipeRow struct similar to MealRow
+// struct RecipeRow: View {
+//     @EnvironmentObject var foodManager: FoodManager
+//     let recipe: Recipe
+//     @Binding var selectedMeal: String
+    
+//     // Add these properties to match MealRow
+//     var mode: LogFoodMode = .logFood  // Default to logFood mode
+//     @Binding var selectedFoods: [Food]
+//     @Binding var path: NavigationPath
+    
+//     // Add the onItemAdded callback
+//     var onItemAdded: ((Food) -> Void)?
+    
+//     // Add state for logging error alert
+//     @State private var showLoggingErrorAlert: Bool = false
+    
+//     // Make these optional bindings with default values
+//     init(recipe: Recipe, 
+//          selectedMeal: Binding<String>, 
+//          mode: LogFoodMode = .logFood, 
+//          selectedFoods: Binding<[Food]> = .constant([]), 
+//          path: Binding<NavigationPath> = .constant(NavigationPath()),
+//          onItemAdded: ((Food) -> Void)? = nil) {
+//         self.recipe = recipe
+//         self._selectedMeal = selectedMeal
+//         self.mode = mode
+//         self._selectedFoods = selectedFoods
+//         self._path = path
+//         self.onItemAdded = onItemAdded
+//     }
+    
+//     // Computed property for calories per serving
+//     private var caloriesPerServing: Double {
+//         return recipe.calories / Double(recipe.servings)
+//     }
+    
+//     var body: some View {
+//         ZStack {
+//             HStack(spacing: 16) {
+//                 // Recipe image or placeholder
+//                 if let imageUrl = recipe.image, !imageUrl.isEmpty {
+//                     AsyncImage(url: URL(string: imageUrl)) { phase in
+//                         switch phase {
+//                         case .empty:
+//                             Rectangle()
+//                                 .fill(Color.gray.opacity(0.2))
+//                                 .frame(width: 50, height: 50)
+//                                 .cornerRadius(8)
+//                     case .success(let image):
+//                         image
+//                             .resizable()
+//                             .aspectRatio(contentMode: .fill)
+//                             .frame(width: 50, height: 50)
+//                             .clipShape(RoundedRectangle(cornerRadius: 8))
+//                     case .failure:
+//                             Rectangle()
+//                                 .fill(Color.gray.opacity(0.2))
+//                             .frame(width: 50, height: 50)
+//                                 .cornerRadius(8)
+//                                 .overlay(
+//                                     Image(systemName: "fork.knife")
+//                                         .foregroundColor(.gray)
+//                                 )
+//                     @unknown default:
+//                             Rectangle()
+//                                 .fill(Color.gray.opacity(0.2))
+//                                 .frame(width: 50, height: 50)
+//                                 .cornerRadius(8)
+//                         }
+//                     }
+//                 } else {
+//                     Rectangle()
+//                         .fill(Color.gray.opacity(0.2))
+//                         .frame(width: 50, height: 50)
+//                         .cornerRadius(8)
+//                         .overlay(
+//                             Image(systemName: "fork.knife")
+//                                 .foregroundColor(.gray)
+//                         )
+//                 }
+                
+//                 // Recipe details
+//                 VStack(alignment: .leading, spacing: 4) {
+//                     Text(recipe.title)
+//                         .font(.headline)
+//                         .fontWeight(.regular)
+                    
+//                     HStack {
+//                         Text("\(Int(caloriesPerServing)) cal/serving")
+//                         Text("•")
+//                         Text("\(recipe.servings) servings")
+//                         if recipe.totalTime > 0 {
+//                             Text("•")
+//                             Text("\(recipe.totalTime) min")
+//                         }
+//                     }
+//                     .font(.subheadline)
+//                     .foregroundColor(.secondary)
+//                 }
+                
+//                 Spacer()
+                
+//                 // Action button
+//                 HStack {
+//                     Spacer()
+                    
+//                     Button {
+//                         handleRecipeTap()
+//                     } label: {
+//                         let isAddMode = (mode == .addToMeal || mode == .addToRecipe)
+//                         let isChecked = (!isAddMode && foodManager.lastLoggedRecipeId == recipe.id)
+                        
+//                         Image(systemName: isChecked ? "checkmark.circle.fill" : "plus.circle.fill")
+//                             .font(.system(size: 24))
+//                             .foregroundColor(isChecked ? .green : .accentColor)
+//                             .animation(.easeInOut, value: isChecked)
+//                     }
+//                     .buttonStyle(PlainButtonStyle())
+//                     .frame(width: 44, height: 44)
+//                     .contentShape(Rectangle())
+//                 }
+//                 .frame(width: 44)
+//                 .zIndex(1)  // Keep button on top
+//             }
+//             .padding(.horizontal, 16)
+//             .padding(.vertical, 4)
+//             .contentShape(Rectangle())
+//             .onTapGesture {
+//                 // Only navigate to RecipeDetailView when in logFood mode
+//                 if mode == .logFood {
+//                     path.append(FoodNavigationDestination.recipeDetails(recipe))
+//                 }
+//             }
+//         }
+//         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+//             Button("OK", role: .cancel) { }
+//         } message: {
+//             Text("Please try again.")
+//         }
+//     }
+    
+//     private func handleRecipeTap() {
+//         HapticFeedback.generate()
+        
+//         switch mode {
+//         case .logFood:
+//             // Log the recipe instead of navigating
+//             foodManager.logRecipe(
+//                 recipe: Recipe(
+//                     id: recipe.id,
+//                     title: recipe.title,
+//                     description: recipe.description,
+//                     instructions: nil,
+//                     privacy: "private",
+//                     servings: recipe.servings,
+//                     createdAt: Date(),
+//                     updatedAt: Date(),
+//                     recipeItems: [],
+//                     image: recipe.image,
+//                     prepTime: recipe.prepTime,
+//                     cookTime: recipe.cookTime,
+//                     totalCalories: recipe.calories,
+//                     totalProtein: recipe.protein,
+//                     totalCarbs: recipe.carbs,
+//                     totalFat: recipe.fat,
+//                     scheduledAt: <#Date?#>
+//                 ),
+//                 mealTime: selectedMeal,
+//                 servingsConsumed: 1,
+//                 date: Date(),
+//                 notes: nil,
+//                 statusCompletion: { success in
+//                     if !success {
+//                         // Show error alert
+//                         showLoggingErrorAlert = true
+//                     }
+//                 }
+//             )
+            
+//         case .addToMeal, .addToRecipe:
+//             // Add recipe items to selection
+//             addRecipeItemsToSelection()
+//         }
+//     }
+    
+//     private func addRecipeItemsToSelection() {
+//         // Find the full recipe - use recipe.id instead of recipeId
+//         if let fullRecipe = foodManager.recipes.first(where: { $0.id == recipe.id }) {
+//             // Create a variable to store the last food added for the callback
+//             var lastAddedFood: Food? = nil
+            
+//             // Convert each RecipeFoodItem to Food and add to selectedFoods
+//             for recipeItem in fullRecipe.recipeItems {
+//                 // Create a Food object from the RecipeFoodItem
+//                 let food = Food(
+//                     fdcId: recipeItem.foodId,
+//                     description: recipeItem.name,
+//                     brandOwner: nil,
+//                     brandName: nil,
+//                     servingSize: 1.0,
+//                     numberOfServings: 1.0,
+//                     servingSizeUnit: recipeItem.servingText,
+//                     householdServingFullText: recipeItem.servings,
+//                     foodNutrients: [
+//                         Nutrient(nutrientName: "Energy", value: recipeItem.calories, unitName: "kcal"),
+//                         Nutrient(nutrientName: "Protein", value: recipeItem.protein, unitName: "g"),
+//                         Nutrient(nutrientName: "Carbohydrate, by difference", value: recipeItem.carbs, unitName: "g"),
+//                         Nutrient(nutrientName: "Total lipid (fat)", value: recipeItem.fat, unitName: "g")
+//                     ],
+//                     foodMeasures: []
+//                 )
+                
+//                 // Add to selection
+//                 selectedFoods.append(food)
+//                 lastAddedFood = food
+//             }
+            
+//             // Use callback if available, otherwise fall back to path
+//             if let callback = onItemAdded, let lastFood = lastAddedFood {
+//                 print("📲 Using callback to close sheet after adding recipe items")
+//                 callback(lastFood)
+//             } else if !path.isEmpty {
+//                 print("👈 Using navigation path to go back after adding recipe items")
+//                 path.removeLast()
+//             }
+//         } else {
+//             // If recipe not found, still try to navigate back
+//             if !path.isEmpty {
+//                 path.removeLast()
+//             }
+//         }
+//     }
+// }
 
 private struct RecipeHistorySection: View {
     @EnvironmentObject var foodManager: FoodManager

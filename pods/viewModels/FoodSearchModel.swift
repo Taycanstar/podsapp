@@ -220,7 +220,6 @@ struct Meal: Codable, Identifiable {
     let directions: String?
     let privacy: String
     let servings: Int
-    // let createdAt: Date? = Date()  // Default to current date
     let mealItems: [MealFoodItem]
     let image: String?
     let totalCalories: Double?
@@ -228,7 +227,7 @@ struct Meal: Codable, Identifiable {
     let totalCarbs: Double?
     let totalFat: Double?
     let scheduledAt: Date?
-    
+
     // Add computed properties to provide default values when the fields are nil
     var calories: Double {
         // If totalCalories has a valid value > 0, use it
@@ -300,7 +299,7 @@ struct MealSummary: Codable {
     let protein: Double?
     let carbs: Double?
     let fat: Double?
-    let scheduledAt: Date?   // Optional precise time for the meal
+    let scheduledAt: Date?   
     
     // Computed property to ensure we display a reasonable calorie count
     // This is a safety measure in case the server returns 0 calories
@@ -438,6 +437,7 @@ struct Recipe: Codable, Identifiable {
     let totalProtein: Double?
     let totalCarbs: Double?
     let totalFat: Double?
+    let scheduledAt: Date?
     
     // Add computed properties to provide default values when the fields are nil
     var calories: Double {

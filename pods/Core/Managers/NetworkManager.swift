@@ -6100,45 +6100,33 @@ func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<
             
             print("🔍 Found \(recipesArray.count) recipes in response")
             
-            // CRITICAL DEBUG: Examine first recipe's date fields
-            if let firstRecipe = recipesArray.first {
-                print("📅 First recipe date fields:")
-                if let createdAt = firstRecipe["created_at"] as? String {
-                    print("  created_at: \(createdAt)")
-                }
-                if let updatedAt = firstRecipe["updated_at"] as? String {
-                    print("  updated_at: \(updatedAt)")
-                }
-            }
-            
-            // Fix date strings in all recipes
+            // Process each recipe to handle date fields
             for i in 0..<recipesArray.count {
                 var recipe = recipesArray[i]
                 
-                // Function to fix date strings
-                func fixDateString(_ dateString: String) -> String {
-                    // If it's already in correct format with Z or timezone info, leave it alone
-                    if dateString.hasSuffix("Z") || dateString.contains("+") || dateString.contains("-0") {
-                        return dateString
-                    }
-                    
-                    // If it has a T (ISO format) but no timezone info, add Z
-                    if dateString.contains("T") {
-                        return dateString + "Z"
-                    }
-                    
-                    // Otherwise return as is
-                    return dateString
-                }
+                // Check and convert date fields
+                let dateFields = ["created_at", "updated_at", "scheduled_at"]
                 
-                // Check all keys that might contain date values
-                for (key, value) in recipe {
-                    if let dateString = value as? String, 
-                       (key.contains("date") || key.hasSuffix("_at") || key.hasSuffix("At")) {
-                        let fixedDateString = fixDateString(dateString)
-                        if fixedDateString != dateString {
-                            print("📅 Fixed date string for \(key): \(dateString) -> \(fixedDateString)")
-                            recipe[key] = fixedDateString
+                for field in dateFields {
+                    // Handle numeric timestamp values
+                    if let timestamp = recipe[field] as? Double {
+                        // Convert timestamp to ISO string
+                        let date = Date(timeIntervalSince1970: timestamp)
+                        let iso8601Formatter = ISO8601DateFormatter()
+                        iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        let isoString = iso8601Formatter.string(from: date)
+                        
+                        print("🔄 Converting numeric timestamp for \(field): \(timestamp) -> \(isoString)")
+                        recipe[field] = isoString
+                    }
+                    // Handle existing string dates - ensure they have timezone info
+                    else if let dateString = recipe[field] as? String, !dateString.isEmpty {
+                        // If it's already in correct format with Z or timezone info, leave it alone
+                        if !dateString.hasSuffix("Z") && !dateString.contains("+") && !dateString.contains("-0") && dateString.contains("T") {
+                            // Add Z to indicate UTC if it has a T but no timezone
+                            let fixedDateString = dateString + "Z"
+                            print("🔄 Fixed date string for \(field): \(dateString) -> \(fixedDateString)")
+                            recipe[field] = fixedDateString
                         }
                     }
                 }
@@ -6156,65 +6144,66 @@ func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<
             // Now use JSONDecoder with the fixed data
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
             
-            // Create a custom date decoding strategy
+            // Use custom date decoding strategy that can handle both formats
             decoder.dateDecodingStrategy = .custom { decoder -> Date in
                 let container = try decoder.singleValueContainer()
-                let dateString = try container.decode(String.self)
                 
-                // Handle empty strings
-                if dateString.isEmpty {
-                    print("⚠️ Empty date string found, using current date")
-                    return Date()
-                }
-                
-                // Try ISO8601 with various options
-                let iso8601 = ISO8601DateFormatter()
-                
-                // Standard ISO8601
-                if let date = iso8601.date(from: dateString) {
-                    return date
-                }
-                
-                // With fractional seconds
-                iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                if let date = iso8601.date(from: dateString) {
-                    return date
-                }
-                
-                // Fall back to DateFormatter
-                let dateFormatter = DateFormatter()
-                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-                
-                // Try multiple formats
-                let formats = [
-                    "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits
-                    "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits
-                    "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits
-                    "yyyy-MM-dd"                     // Just date
-                ]
-                
-                for format in formats {
-                    dateFormatter.dateFormat = format
-                    if let date = dateFormatter.date(from: dateString) {
+                // Try to decode as a string first
+                do {
+                    let dateString = try container.decode(String.self)
+                    
+                    // Handle empty strings
+                    if dateString.isEmpty {
+                        return Date()
+                    }
+                    
+                    // Try ISO8601 with various options
+                    let iso8601 = ISO8601DateFormatter()
+                    
+                    // Standard ISO8601
+                    if let date = iso8601.date(from: dateString) {
                         return date
                     }
+                    
+                    // With fractional seconds
+                    iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = iso8601.date(from: dateString) {
+                        return date
+                    }
+                    
+                    // Try with DateFormatter and multiple formats
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                    
+                    for format in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd"] {
+                        dateFormatter.dateFormat = format
+                        if let date = dateFormatter.date(from: dateString) {
+                            return date
+                        }
+                    }
+                    
+                    // Fall back to current date
+                    print("⚠️ Could not parse date string: \(dateString)")
+                    return Date()
+                } 
+                catch {
+                    // If string fails, try to decode as a timestamp (number)
+                    do {
+                        let timestamp = try container.decode(Double.self)
+                        return Date(timeIntervalSince1970: timestamp)
+                    } catch {
+                        // Last resort
+                        print("⚠️ Failed to decode date as string or number")
+                        return Date()
+                    }
                 }
-                
-                // Last resort, return current date rather than crashing
-                print("⚠️ Could not parse date: \(dateString), falling back to current date")
-                return Date()
             }
             
             let recipesResponse = try decoder.decode(RecipesResponse.self, from: fixedData)
             
-            // Debug if needed
-            for (index, recipe) in recipesResponse.recipes.prefix(2).enumerated() {
-                print("📊 Successfully decoded Recipe #\(index): \(recipe.title)")
-            }
-            
+            print("✅ Successfully decoded \(recipesResponse.recipes.count) recipes")
             completion(.success(recipesResponse))
         } catch {
             print("❌ Decoding error when fetching recipes: \(error)")
