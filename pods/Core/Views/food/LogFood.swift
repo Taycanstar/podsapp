@@ -1751,7 +1751,7 @@ private struct RecipeHistorySection: View {
                     path: $path,
                     onItemAdded: onItemAdded
                 )
-                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             }
         }
         .listSectionSeparator(.hidden)
