@@ -1618,7 +1618,7 @@ struct RecipeRow: View {
                 .zIndex(1)  // Keep button on top
             }
             .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
             .contentShape(Rectangle())
             .onTapGesture {
                 handleRecipeTap()
