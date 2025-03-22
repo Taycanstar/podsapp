@@ -537,7 +537,6 @@ struct CreateRecipeView: View {
                         if let url = URL(string: urlString) {
                             self.navState.createRecipeImageURL = url
                             self.createRecipe()
-                            self.resetFields()
                         } else {
                             // Handle invalid URL
                             self.isSaving = false
@@ -553,7 +552,6 @@ struct CreateRecipeView: View {
             }
         } else {
             createRecipe()
-            resetFields()
         }
     }
     
@@ -597,6 +595,9 @@ struct CreateRecipeView: View {
                 case .success(_):
                     // Clear selected foods for future use
                     self.selectedFoods = []
+                    
+                    // Reset fields just before dismissing
+                    self.resetFields()
                     
                     // Navigate back by removing this view from the path
                     dismiss()
