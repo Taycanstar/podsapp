@@ -14,28 +14,32 @@ struct CreateRecipeView: View {
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - State
-    @State private var recipeName = ""
-    @State private var shareWith = "Everyone"
-    @State private var instructions = ""
-    @State private var prepTime = ""
-    @State private var cookTime = ""
-    @State private var servings = "1"
+    // Get navigation state to persist between views
+    @EnvironmentObject private var navState: FoodNavigationState
+    
+    // Replace local state with bindings to navState
+    // @State private var recipeName = ""
+    // @State private var shareWith = "Everyone"
+    // @State private var instructions = ""
+    // @State private var prepTime = ""
+    // @State private var cookTime = ""
+    // @State private var servings = "1"
     @State private var showingShareOptions = false
     
     @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: Image? = nil
+    // @State private var selectedImage: Image? = nil
     @State private var showImagePicker = false
     @State private var showOptionsSheet = false
     @State private var sourceType: UIImagePickerController.SourceType = .camera
     
-    @State private var imageURL: URL? = nil
+    // @State private var imageURL: URL? = nil
     @State private var uploadProgress: Double = 0
     @State private var isUploading = false
     @State private var uploadError: Error?
     @State private var showUploadError = false
     
     @State private var showNameTakenAlert = false
-    @State private var uiImage: UIImage? = nil
+    // @State private var uiImage: UIImage? = nil
     
     // Add these states to track saving
     @State private var isSaving = false
@@ -57,12 +61,12 @@ struct CreateRecipeView: View {
     // MARK: - Computed Properties
     
     private var isCreateButtonDisabled: Bool {
-        return recipeName.isEmpty
+        return navState.createRecipeName.isEmpty
     }
     
     // Break down the nutrition calculations into separate properties
     private var servingsValue: Double {
-        Double(Int(servings) ?? 1)
+        Double(Int(navState.createRecipeServings) ?? 1)
     }
     
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
@@ -88,7 +92,7 @@ struct CreateRecipeView: View {
                             : headerHeight
                         
                         // The banner image (if selected), else a placeholder
-                        if let selectedImage {
+                        if let selectedImage = navState.createRecipeImage {
                             selectedImage
                                 .resizable()
                                 .scaledToFill()
@@ -146,7 +150,7 @@ struct CreateRecipeView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("New Recipe")
-                    .foregroundColor(selectedImage != nil ? .white : .primary)
+                    .foregroundColor(navState.createRecipeImage != nil ? .white : .primary)
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -154,7 +158,7 @@ struct CreateRecipeView: View {
                     saveNewRecipe()
                 }
                 .disabled(isCreateButtonDisabled)
-                .foregroundColor(selectedImage != nil ? .white : .primary)
+                .foregroundColor(navState.createRecipeImage != nil ? .white : .primary)
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
@@ -163,7 +167,7 @@ struct CreateRecipeView: View {
                     dismiss()
                 }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(selectedImage != nil ? .white : .primary)
+                        .foregroundColor(navState.createRecipeImage != nil ? .white : .primary)
                 }
             }
             ToolbarItemGroup(placement: .keyboard) {
@@ -178,12 +182,18 @@ struct CreateRecipeView: View {
         // Full screen cover for ImagePicker
         .fullScreenCover(isPresented: $showImagePicker) {
             ImagePicker(
-                uiImage: $uiImage,
-                image: $selectedImage,
+                uiImage: Binding(
+                    get: { navState.createRecipeUIImage },
+                    set: { navState.createRecipeUIImage = $0 }
+                ),
+                image: Binding(
+                    get: { navState.createRecipeImage },
+                    set: { navState.createRecipeImage = $0 }
+                ),
                 sourceType: sourceType
             )
         }
-        .onChange(of: uiImage) { newUIImage in
+        .onChange(of: navState.createRecipeUIImage) { newUIImage in
             guard let picked = newUIImage else { return }
             // Use your existing `uploadMealImage(_:, completion:)`
             NetworkManager().uploadMealImage(picked) { result in
@@ -191,6 +201,11 @@ struct CreateRecipeView: View {
                 case .success(let url):
                     print("Upload success. URL: \(url)")
                     // store if needed, e.g. self.imageURL = url
+                    if let imageUrl = URL(string: url) {
+                        DispatchQueue.main.async {
+                            self.navState.createRecipeImageURL = imageUrl
+                        }
+                    }
                 case .failure(let error):
                     print("Upload failed:", error)
                     // show alert if you like
@@ -258,7 +273,7 @@ struct CreateRecipeView: View {
     private var recipeDetailsSection: some View {
         VStack(spacing: 8) {
             // Title
-            TextField("Title", text: $recipeName)
+            TextField("Title", text: $navState.createRecipeName)
                 .focused($focusedField, equals: .mealName)
                 .textFieldStyle(.plain)
             
@@ -271,15 +286,15 @@ struct CreateRecipeView: View {
                 
                 Spacer()
                 
-                Stepper(servings, onIncrement: {
-                    let currentValue = Int(servings) ?? 1
+                Stepper(navState.createRecipeServings, onIncrement: {
+                    let currentValue = Int(navState.createRecipeServings) ?? 1
                     if currentValue < 20 {
-                        servings = "\(currentValue + 1)"
+                        navState.createRecipeServings = "\(currentValue + 1)"
                     }
                 }, onDecrement: {
-                    let currentValue = Int(servings) ?? 1
+                    let currentValue = Int(navState.createRecipeServings) ?? 1
                     if currentValue > 1 {
-                        servings = "\(currentValue - 1)"
+                        navState.createRecipeServings = "\(currentValue - 1)"
                     }
                 })
             }
@@ -295,12 +310,12 @@ struct CreateRecipeView: View {
                 Menu {
                     ForEach(shareOptions, id: \.self) { option in
                         Button(option) {
-                            shareWith = option
+                            navState.createRecipeShareWith = option
                         }
                     }
                 } label: {
                     HStack {
-                        Text(shareWith)
+                        Text(navState.createRecipeShareWith)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 12))
                     }
@@ -400,7 +415,7 @@ struct CreateRecipeView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            TextField("Add instructions for making this recipe", text: $instructions, axis: .vertical)
+            TextField("Add instructions for making this recipe", text: $navState.createRecipeInstructions, axis: .vertical)
                 .focused($focusedField, equals: .instructions)
                 .textFieldStyle(.plain)
                 .padding()
@@ -485,14 +500,9 @@ struct CreateRecipeView: View {
     // MARK: - Functions
     
     private func resetFields() {
-        recipeName = ""
-        instructions = ""
-        prepTime = ""
-        cookTime = ""
-        servings = "1"
-        selectedImage = nil
+        // Reset all state in navState
+        navState.resetCreateRecipeState()
         selectedFoods.removeAll()
-        // Reset any other state variables as needed
     }
     
     // Check if the recipe name is already taken
@@ -502,7 +512,7 @@ struct CreateRecipeView: View {
             .map { $0.title.lowercased() }
         
         // Check if the current name (trimmed and lowercased) exists
-        return existingRecipeNames.contains(recipeName.trimmed().lowercased())
+        return existingRecipeNames.contains(navState.createRecipeName.trimmed().lowercased())
     }
     
     // Validate name before saving
@@ -525,14 +535,14 @@ struct CreateRecipeView: View {
         isSaving = true
         
         // First upload image if exists
-        if let uiImage = uiImage {
+        if let uiImage = navState.createRecipeUIImage {
             NetworkManager().uploadMealImage(uiImage) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let urlString):
                         // Convert the string URL to a URL object
                         if let url = URL(string: urlString) {
-                            self.imageURL = url
+                            self.navState.createRecipeImageURL = url
                             self.createRecipe()
                             self.resetFields()
                         } else {
@@ -555,30 +565,30 @@ struct CreateRecipeView: View {
     }
     
     private func createRecipe() {
-        guard let servingsInt = Int(servings), servingsInt > 0 else {
+        guard let servingsInt = Int(navState.createRecipeServings), servingsInt > 0 else {
             // Handle invalid servings
             errorMessage = "Please enter a valid number of servings"
             showSaveError = true
             return
         }
         
-        let prepTimeInt = Int(prepTime) ?? 0
-        let cookTimeInt = Int(cookTime) ?? 0
+        let prepTimeInt = Int(navState.createRecipePrepTime) ?? 0
+        let cookTimeInt = Int(navState.createRecipeCookTime) ?? 0
         
         // Calculate macro totals from the current food items
         let totals = calculateTotalMacros(selectedFoods)
         
-        let privacy = shareWith == "Everyone" ? "public" : "private"
+        let privacy = navState.createRecipeShareWith == "Everyone" ? "public" : "private"
         
         // Set any existing tags for FoodNavigationDestination
         foodManager.createRecipe(
-            title: recipeName,
+            title: navState.createRecipeName,
             description: "",
-            instructions: instructions,
+            instructions: navState.createRecipeInstructions,
             privacy: privacy,
             servings: servingsInt,
             foods: selectedFoods,
-            image: imageURL?.absoluteString,
+            image: navState.createRecipeImageURL?.absoluteString,
             prepTime: prepTimeInt,
             cookTime: cookTimeInt,
             totalCalories: totals.calories,

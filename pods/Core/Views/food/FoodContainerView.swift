@@ -21,6 +21,17 @@ class FoodNavigationState: ObservableObject {
     @Published var createMealUIImage: UIImage? = nil
     @Published var createMealImage: Image? = nil
     
+    // Add state for CreateRecipeView
+    @Published var createRecipeName: String = ""
+    @Published var createRecipeShareWith: String = "Everyone"
+    @Published var createRecipeInstructions: String = ""
+    @Published var createRecipePrepTime: String = ""
+    @Published var createRecipeCookTime: String = ""
+    @Published var createRecipeServings: String = "1"
+    @Published var createRecipeImageURL: URL? = nil
+    @Published var createRecipeUIImage: UIImage? = nil
+    @Published var createRecipeImage: Image? = nil
+    
     // Method to reset all create meal state
     func resetCreateMealState() {
         createMealSelectedFoods = []
@@ -35,6 +46,15 @@ class FoodNavigationState: ObservableObject {
     // Method to reset all create recipe state
     func resetCreateRecipeState() {
         createRecipeSelectedFoods = []
+        createRecipeName = ""
+        createRecipeShareWith = "Everyone"
+        createRecipeInstructions = ""
+        createRecipePrepTime = ""
+        createRecipeCookTime = ""
+        createRecipeServings = "1"
+        createRecipeImageURL = nil
+        createRecipeUIImage = nil
+        createRecipeImage = nil
     }
 }
 
