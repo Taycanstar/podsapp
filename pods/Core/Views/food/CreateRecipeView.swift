@@ -16,14 +16,7 @@ struct CreateRecipeView: View {
     // MARK: - State
     // Get navigation state to persist between views
     @EnvironmentObject private var navState: FoodNavigationState
-    
-    // Replace local state with bindings to navState
-    // @State private var recipeName = ""
-    // @State private var shareWith = "Everyone"
-    // @State private var instructions = ""
-    // @State private var prepTime = ""
-    // @State private var cookTime = ""
-    // @State private var servings = "1"
+
     @State private var showingShareOptions = false
     
     @State private var selectedItem: PhotosPickerItem? = nil
