@@ -11,6 +11,7 @@ import SwiftUI
 // This class will maintain state between views
 class FoodNavigationState: ObservableObject {
     @Published var createMealSelectedFoods: [Food] = []
+    @Published var createRecipeSelectedFoods: [Food] = []
     
     // Add state for CreateMealView
     @Published var createMealName: String = ""
@@ -29,6 +30,11 @@ class FoodNavigationState: ObservableObject {
         createMealImageURL = nil
         createMealUIImage = nil
         createMealImage = nil
+    }
+    
+    // Method to reset all create recipe state
+    func resetCreateRecipeState() {
+        createRecipeSelectedFoods = []
     }
 }
 
@@ -118,7 +124,7 @@ struct FoodContainerView: View {
     @State private var originalMealFoodsByMealId: [Int: [Food]] = [:]
     @State private var currentlyEditingMealId: Int? = nil
     
-    @State private var createRecipeSelectedFoods: [Food] = []
+    // @State private var createRecipeSelectedFoods: [Food] = []
     @State private var editRecipeSelectedFoods: [Food] = []
     
     // Add a state variable to track the currently editing recipe ID, similar to currentlyEditingMealId
@@ -311,40 +317,67 @@ struct FoodContainerView: View {
                 case .createRecipe:
                     CreateRecipeView(
                         path: $path, 
-                        selectedFoods: $createRecipeSelectedFoods
+                        selectedFoods: Binding(
+                            get: { self.navState.createRecipeSelectedFoods },
+                            set: { self.navState.createRecipeSelectedFoods = $0 }
+                        )
                     )
+                    .id("create-recipe-\(navState.createRecipeSelectedFoods.count)")
                     .onAppear {
-                        // Reset this context's selectedFoods when view appears
-                        print("📊 DEBUG: CreateRecipeView appeared, initializing with empty foods array")
-                        createRecipeSelectedFoods = []
+                        print("🛑 RECIPE DEBUG - CreateRecipeView.onAppear with path.count = \(path.count)")
+                        print("🛑 RECIPE DEBUG - createRecipeSelectedFoods has \(navState.createRecipeSelectedFoods.count) items")
+                        
+                        // Print the current items without clearing them
+                        let _ = {
+                            for (i, f) in navState.createRecipeSelectedFoods.enumerated() {
+                                print("🛑   \(i+1). \(f.displayName) (ID: \(f.fdcId))")
+                            }
+                            return 0
+                        }()
                     }
                 case .addRecipeIngredients:
                     // Create a binding that will use the correct array of selected foods
                     // If we're editing a recipe, use editRecipeSelectedFoods
                     // If we're creating a new recipe, use createRecipeSelectedFoods
+                    let _ = {
+                        print("🛑 RECIPE DEBUG - Entering addRecipeIngredients case")
+                        print("🛑 RECIPE DEBUG - createRecipeSelectedFoods has \(navState.createRecipeSelectedFoods.count) items:")
+                        for (i, f) in navState.createRecipeSelectedFoods.enumerated() {
+                            print("🛑   \(i+1). \(f.displayName) (ID: \(f.fdcId))")
+                        }
+                        return 0
+                    }()
+                    
                     let recipeBinding = Binding<[Food]>(
                         get: {
                             if currentlyEditingRecipeId != nil {
                                 // Editing an existing recipe
-                                print("📋 DEBUG: Getting foods for existing recipe, count: \(editRecipeSelectedFoods.count)")
+                                print("🛑 RECIPE DEBUG - GET for existing recipe, count: \(editRecipeSelectedFoods.count)")
                                 return editRecipeSelectedFoods
                             } else {
                                 // Creating a new recipe
-                                print("📋 DEBUG: Getting foods for new recipe, count: \(createRecipeSelectedFoods.count)")
-                                return createRecipeSelectedFoods
+                                print("🛑 RECIPE DEBUG - GET for new recipe, count: \(navState.createRecipeSelectedFoods.count)")
+                                return navState.createRecipeSelectedFoods
                             }
                         },
                         set: { newValue in
                             if currentlyEditingRecipeId != nil {
                                 // Editing an existing recipe
-                                print("📋 DEBUG: Setting foods for existing recipe, new count: \(newValue.count)")
+                                print("🛑 RECIPE DEBUG - SET for existing recipe, new count: \(newValue.count)")
                                 // Create new array reference
                                 editRecipeSelectedFoods = Array(newValue)
                             } else {
                                 // Creating a new recipe
-                                print("📋 DEBUG: Setting foods for new recipe, new count: \(newValue.count)")
+                                print("🛑 RECIPE DEBUG - SET for new recipe, new count: \(newValue.count)")
+                                print("🛑 RECIPE DEBUG - New foods:")
+                                let _ = {
+                                    for (i, f) in newValue.enumerated() {
+                                        print("🛑   \(i+1). \(f.displayName) (ID: \(f.fdcId))")
+                                    }
+                                    return 0
+                                }()
                                 // Create new array reference
-                                createRecipeSelectedFoods = Array(newValue)
+                                navState.createRecipeSelectedFoods = Array(newValue)
                             }
                         }
                     )
@@ -367,9 +400,9 @@ struct FoodContainerView: View {
                                     print("  \(index+1). \(food.displayName)")
                                 }
                             } else {
-                                print("📊 FoodContainerView: CreateRecipe now has \(createRecipeSelectedFoods.count) foods")
+                                print("📊 FoodContainerView: CreateRecipe now has \(navState.createRecipeSelectedFoods.count) foods")
                                 // Print each food in the array
-                                for (index, food) in createRecipeSelectedFoods.enumerated() {
+                                for (index, food) in navState.createRecipeSelectedFoods.enumerated() {
                                     print("  \(index+1). \(food.displayName)")
                                 }
                             }
@@ -421,8 +454,8 @@ struct FoodContainerView: View {
                 print("📊 After reset: \(navState.createMealSelectedFoods.count) meal foods")
                 
                 // Reset recipe-related state
-                print("📊 Before reset: \(createRecipeSelectedFoods.count) recipe foods")
-                createRecipeSelectedFoods = []
+                print("📊 Before reset: \(navState.createRecipeSelectedFoods.count) recipe foods")
+                navState.resetCreateRecipeState()
                 editRecipeSelectedFoods = []
                 print("📊 After reset: Recipe foods arrays cleared")
             }
