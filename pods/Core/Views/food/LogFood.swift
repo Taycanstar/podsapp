@@ -1387,7 +1387,11 @@ struct CombinedLogRecipeRow: View {
                                 date: Date(),
                                 notes: nil,
                                 statusCompletion: { success in
-                                    if !success {
+                                    if success {
+                                        withAnimation {
+                                            self.foodManager.lastLoggedRecipeId = 0
+                                        }
+                                    } else {
                                         showLoggingErrorAlert = true
                                     }
                                 }
@@ -1468,7 +1472,11 @@ struct CombinedLogRecipeRow: View {
                 date: Date(),
                 notes: nil,
                 statusCompletion: { success in
-                    if !success {
+                    if success {
+                        withAnimation {
+                            self.foodManager.lastLoggedRecipeId = 0
+                        }
+                    } else {
                         showLoggingErrorAlert = true
                     }
                 }
