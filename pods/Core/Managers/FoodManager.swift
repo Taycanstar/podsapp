@@ -1394,6 +1394,8 @@ func logRecipe(
                     }
                   
                 }
+
+                self.updateCombinedLogsCache()
                 
                 // Call completion handlers
                 completion?(.success(recipeLog))
