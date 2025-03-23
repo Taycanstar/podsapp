@@ -1386,7 +1386,13 @@ func logRecipe(
                 self.showRecipeLoggedToast = true
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    self.showRecipeLoggedToast = false
+                    withAnimation {
+                        if self.lastLoggedRecipeId == recipe.id {
+                            self.lastLoggedRecipeId = nil
+                        }
+                          self.showRecipeLoggedToast = false
+                    }
+                  
                 }
                 
                 // Call completion handlers
