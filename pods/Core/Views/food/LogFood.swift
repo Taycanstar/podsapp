@@ -1383,7 +1383,7 @@ struct CombinedLogRecipeRow: View {
                                     scheduledAt: nil
                                 ),
                                 mealTime: selectedMeal,
-                                servingsConsumed: 1,
+                               
                                 date: Date(),
                                 notes: nil,
                                 statusCompletion: { success in
@@ -1465,7 +1465,6 @@ struct CombinedLogRecipeRow: View {
                     scheduledAt: nil
                 ),
                 mealTime: selectedMeal,
-                servingsConsumed: 1,
                 date: Date(),
                 notes: nil,
                 statusCompletion: { success in
@@ -1867,7 +1866,6 @@ struct RecipeRow: View {
         foodManager.logRecipe(
             recipe: recipe,
             mealTime: selectedMeal,
-            servingsConsumed: 1,
             date: Date(),
             notes: nil
         ) { result in

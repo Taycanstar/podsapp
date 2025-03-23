@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -6496,8 +6496,7 @@ func logRecipe(
     userEmail: String,
     recipeId: Int,
     mealTime: String,
-    servingsConsumed: Int = 1,
-    date: Date = Date(),
+    date: Date,
     notes: String? = nil,
     completion: @escaping (Result<LoggedRecipe, Error>) -> Void
 ) {
@@ -6509,7 +6508,6 @@ func logRecipe(
     print("- userEmail: \(userEmail)")
     print("- recipeId: \(recipeId)")
     print("- mealTime: \(mealTime)")
-    print("- servingsConsumed: \(servingsConsumed)")
     print("- date: \(dateString)")
     print("- notes: \(notes ?? "none")")
     
@@ -6517,8 +6515,7 @@ func logRecipe(
         "user_email": userEmail,
         "recipe_id": recipeId,
         "meal_time": mealTime,
-        "logged_at": dateString,
-        "servings_consumed": servingsConsumed
+        "date": dateString,
     ]
     
     if let notes = notes {

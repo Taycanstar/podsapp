@@ -523,9 +523,7 @@ struct LoggedRecipe: Codable, Identifiable {
     let message: String
     let recipe: RecipeSummary
     let mealTime: String
-    let servingsConsumed: Int
     let notes: String?
-    let loggedAt: Date
     
     var id: Int { recipeLogId }
 }

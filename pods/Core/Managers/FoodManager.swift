@@ -1331,7 +1331,6 @@ func createRecipe(
 func logRecipe(
     recipe: Recipe,
     mealTime: String,
-    servingsConsumed: Int,
     date: Date,
     notes: String? = nil,
     completion: ((Result<LoggedRecipe, Error>) -> Void)? = nil,
@@ -1343,7 +1342,6 @@ func logRecipe(
         userEmail: email,
         recipeId: recipe.id,
         mealTime: mealTime,
-        servingsConsumed: servingsConsumed,
         date: date,
         notes: notes
     ) { [weak self] result in
@@ -1367,7 +1365,7 @@ func logRecipe(
                     scheduledAt: date,
                     recipeLogId: recipeLog.recipeLogId,
                     recipe: recipeLog.recipe,
-                    servingsConsumed: servingsConsumed
+                    servingsConsumed: nil
                 )
                 
                 // Add to combined logs

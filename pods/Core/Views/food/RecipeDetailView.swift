@@ -481,7 +481,6 @@ struct RecipeDetailView: View {
         foodManager.logRecipe(
             recipe: recipe,
             mealTime: selectedMealTime,
-            servingsConsumed: 1,
             date: Date(),
             notes: nil,
             statusCompletion: { success in
