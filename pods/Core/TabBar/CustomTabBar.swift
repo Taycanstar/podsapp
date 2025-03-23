@@ -32,6 +32,7 @@ struct CustomTabBar: View {
                     Spacer() 
 
                     TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
+                        HapticFeedback.generate()
                         showNewSheet = true
                     //    showQuickPodView = true
                     }
