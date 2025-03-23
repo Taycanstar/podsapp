@@ -206,6 +206,7 @@ struct EditRecipeView: View {
                 Button("Done") {
                     focusedField = nil
                 }
+                .font(.system(size: 16, weight: .semibold))
             }
         }
         
