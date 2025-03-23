@@ -259,8 +259,6 @@ private struct MealPickerMenu: View {
     }
 }
 
-// MARK: - List Views
-
 private struct FoodListView: View {
     @EnvironmentObject var foodManager: FoodManager
     let searchResults: [Food]
@@ -1425,7 +1423,7 @@ struct CombinedLogRecipeRow: View {
                 .frame(width: 44)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            // .padding(.vertical, 8)
             .contentShape(Rectangle())
             .onTapGesture {
                 if mode == .logFood {
