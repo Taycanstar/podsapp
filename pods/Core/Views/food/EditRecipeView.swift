@@ -191,6 +191,8 @@ struct EditRecipeView: View {
                         recipeDetailsSection
                         recipeItemsSection
                         directionsSection
+                        
+                        Spacer().frame(height: 40) // extra bottom space
                     }
                 }
             }
@@ -477,6 +479,7 @@ struct EditRecipeView: View {
             TextField("Add instructions for this recipe", text: $instructions, axis: .vertical)
                 .focused($focusedField, equals: .instructions)
                 .textFieldStyle(.plain)
+            
                 .padding()
                 .background(Color("iosnp"))
                 .cornerRadius(12)

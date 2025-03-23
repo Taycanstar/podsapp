@@ -267,16 +267,16 @@ struct EditMealView: View {
                         mealItemsSection
                         directionsSection
                         
-                        // Spacer().frame(height: 40) 
+                        Spacer().frame(height: 40) // extra bottom space
                     }
                 }
             }
             .ignoresSafeArea(edges: .top)
+
         }
+        .navigationBarHidden(true) // Hide the default navigation bar
         .background(Color("iosbg"))
        
-
-        
         // Keep keyboard toolbar
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {

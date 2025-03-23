@@ -32,6 +32,7 @@ struct MealDetailView: View {
     @State private var servingsCount: Int
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
+    @State private var imageURL: URL?
     
     // Add a real @State for selectedFoods
     @State private var selectedFoods: [Food] = []
@@ -214,9 +215,13 @@ struct MealDetailView: View {
                 }
             }
             .sheet(isPresented: $isShowingEditMeal, onDismiss: {
-                // Refresh the meal data after editing
-                if let updatedMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
-                    // Update local state to match the updated meal
+                print("🔍 EditMeal dismissed, checking if saved: \(mealWasSaved)")
+                
+                if mealWasSaved {
+                    // If saved, update the UI with the edited values
+                    // we get from userInfo dictionary
+                    let updatedMeal = meal
+                    imageURL = (updatedMeal.image != nil) ? URL(string: updatedMeal.image!) : nil
                     servingsCount = updatedMeal.servings
                     selectedPrivacy = updatedMeal.privacy.capitalized
                 }
@@ -227,15 +232,17 @@ struct MealDetailView: View {
                     selectedFoods = backupFoods
                 }
             }) {
-                EditMealView(
-                    meal: meal,
-                    path: $path,
-                    selectedFoods: $selectedFoods,
-                    onSave: {
-                        // Mark as saved when Done is tapped
-                        mealWasSaved = true
-                    }
-                )
+                NavigationView {
+                    EditMealView(
+                        meal: meal,
+                        path: $path,
+                        selectedFoods: $selectedFoods,
+                        onSave: {
+                            // Mark as saved when Done is tapped
+                            mealWasSaved = true
+                        }
+                    )
+                }
             }
             .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
                 Button("Cancel", role: .cancel) {}

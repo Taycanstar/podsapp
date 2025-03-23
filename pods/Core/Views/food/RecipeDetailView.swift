@@ -25,7 +25,7 @@ struct RecipeDetailView: View {
     @State private var servingsCount: Int
     @State private var selectedPrivacy: String
     
-    // Keep track of the recipe’s items in a local array
+    // Keep track of the recipe's items in a local array
     @State private var selectedFoods: [Food] = []
     // Backup in case user cancels
     @State private var backupFoods: [Food] = []
@@ -48,7 +48,7 @@ struct RecipeDetailView: View {
         _servingsCount = State(initialValue: recipe.servings)
         _selectedPrivacy = State(initialValue: recipe.privacy.capitalized)
         
-        // We’ll fill `selectedFoods` onAppear below
+        // We'll fill `selectedFoods` onAppear below
     }
     
     // MARK: - Body
@@ -187,15 +187,17 @@ struct RecipeDetailView: View {
                     selectedFoods = backupFoods
                 }
             }, content: {
-                EditRecipeView(
-                    recipe: recipe,
-                    path: $path,
-                    selectedFoods: $selectedFoods,
-                    onSave: {
-                        // Mark the recipe as saved
-                        recipeWasSaved = true
-                    }
-                )
+                NavigationView {
+                    EditRecipeView(
+                        recipe: recipe,
+                        path: $path,
+                        selectedFoods: $selectedFoods,
+                        onSave: {
+                            // Mark the recipe as saved
+                            recipeWasSaved = true
+                        }
+                    )
+                }
             })
             .onAppear(perform: handleOnAppear)
             .onChange(of: servingsCount) { _ in
