@@ -62,8 +62,8 @@ class FoodManager: ObservableObject {
     recentlyAddedFoodIds.insert(foodId)
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
         self.recentlyAddedFoodIds.remove(foodId)
+        }
     }
-}
     
     private func resetAndFetchFoods() {
         print("🍔 FoodManager: Reset and fetch foods called")
@@ -1211,8 +1211,8 @@ private func cacheRecipes(_ response: RecipesResponse, forPage page: Int) {
     guard let userEmail = userEmail else { return }
     if let encoded = try? JSONEncoder().encode(response) {
         UserDefaults.standard.set(encoded, forKey: "recipes_\(userEmail)_page_\(page)")
+        }
     }
-}
 
 func loadMoreRecipes(refresh: Bool = false) {
     guard let email = userEmail else { return }
