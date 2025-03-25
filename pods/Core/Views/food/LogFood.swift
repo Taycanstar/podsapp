@@ -763,6 +763,11 @@ struct CombinedLogMealRow: View {
         
         // Print debugging info when this view is created
         let _ = {
+            print("🔍 CombinedLogMealRow displaying meal: \(meal.title)")
+            print("  - log.calories: \(rawCalories)")
+            print("  - log.displayCalories: \(displayCals)")
+            print("  - meal.displayCalories: \(mealDisplayCals)")
+            print("  - meal.calories: \(meal.calories)")
             return 0
         }()
         
@@ -779,6 +784,8 @@ struct CombinedLogMealRow: View {
                         Text("\(Int(log.displayCalories)) cal")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                        
+                      
                     }
                 }
                 

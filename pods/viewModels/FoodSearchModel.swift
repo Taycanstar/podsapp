@@ -344,26 +344,31 @@ struct CombinedLog: Codable, Identifiable {
     
     // Add a computed property to handle zero calories
     var displayCalories: Double {
+        // If the log has explicitly set calories > 0, always use that as first priority
         if calories > 0 {
             return calories
         }
         
-        // If calories is zero but we have a meal with displayCalories, use that
+        // For meal logs, use meal's calories multiplied by servings
         if let meal = meal, type == .meal {
-            return meal.displayCalories
+            // If meal has its own displayCalories, use that
+            let baseMealCalories = meal.displayCalories
+            // Return the base calories, as servings are already factored in at log time
+            return baseMealCalories
         }
         
-        // If calories is zero but we have a recipe with displayCalories, use that
+        // For recipe logs, use recipe's calories multiplied by servingsConsumed
         if let recipe = recipe, type == .recipe {
             return recipe.displayCalories * Double(servingsConsumed ?? 1)
         }
         
-        // If it's a food item, try to calculate from the food
+        // For food logs, use food's calories multiplied by numberOfServings
         if let food = food, type == .food {
             return food.calories * (food.numberOfServings)
         }
         
-        return calories // fallback to original value
+        // If all else fails, return the original calories value
+        return calories
     }
     
     var id: Int {

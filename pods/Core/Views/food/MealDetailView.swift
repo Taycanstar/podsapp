@@ -205,6 +205,9 @@ struct MealDetailView: View {
             .onAppear {
                 // Initialize selectedFoods on appear
                 initializeSelectedFoods()
+                
+                // Reset servingsCount to meal's original servings
+                self.servingsCount = meal.servings
             }
             .onChange(of: isShowingEditMeal) { isShowing in
                 if isShowing {
@@ -260,11 +263,9 @@ struct MealDetailView: View {
                 Text("Meal logged successfully")
             }
         }
-        .onChange(of: servingsCount) { _ in
-            updateMealDetails()
-        }
         .onChange(of: selectedPrivacy) { _ in
-            updateMealDetails()
+            // Don't update the meal - this should only happen in EditMealView
+            // Just update the local UI
         }
     }
     
@@ -545,41 +546,6 @@ struct MealDetailView: View {
         .id(servingsCount) // Force redraw when servings change
     }
     
-    // Add a function to update meal servings and privacy
-    private func updateMealDetails() {
-        // Only update if values have changed
-        if servingsCount != meal.servings || selectedPrivacy.lowercased() != meal.privacy {
-            print("📝 Updating meal details - servings: \(servingsCount), privacy: \(selectedPrivacy)")
-            
-            // Create a copy of the meal with updated values
-            let updatedMeal = Meal(
-                id: meal.id,
-                title: meal.title,
-                description: meal.description,
-                directions: meal.directions,
-                privacy: selectedPrivacy.lowercased(),
-                servings: servingsCount,
-                mealItems: meal.mealItems,
-                image: meal.image,
-                totalCalories: meal.totalCalories,
-                totalProtein: meal.totalProtein,
-                totalCarbs: meal.totalCarbs,
-                totalFat: meal.totalFat,
-                scheduledAt: meal.scheduledAt
-            )
-            
-            // Use foodManager to update the meal
-            foodManager.updateMeal(meal: updatedMeal) { result in
-                switch result {
-                case .success(let meal):
-                    print("✅ Successfully updated meal details")
-                case .failure(let error):
-                    print("❌ Failed to update meal details: \(error)")
-                }
-            }
-        }
-    }
-
     // Add a method to initialize selectedFoods from meal.mealItems
     private func initializeSelectedFoods() {
         if selectedFoods.isEmpty {
