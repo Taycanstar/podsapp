@@ -1351,12 +1351,7 @@ struct CombinedLogRecipeRow: View {
                         Text("\(Int(log.displayCalories)) cal")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("•")
-                        Text("\(log.servingsConsumed ?? 1) serving\( (log.servingsConsumed ?? 1) == 1 ? "" : "s" )")
-                        if let mealTime = log.mealTime {
-                            Text("•")
-                            Text(mealTime)
-                        }
+                        
                     }
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -1394,6 +1389,7 @@ struct CombinedLogRecipeRow: View {
                                
                                 date: Date(),
                                 notes: nil,
+                                calories: recipe.calories,
                                 statusCompletion: { success in
                                     if success {
                                         withAnimation {
@@ -1479,6 +1475,7 @@ struct CombinedLogRecipeRow: View {
                 mealTime: selectedMeal,
                 date: Date(),
                 notes: nil,
+                calories: recipe.calories,
                 statusCompletion: { success in
                     if success {
                         withAnimation {
@@ -1883,7 +1880,8 @@ struct RecipeRow: View {
             recipe: recipe,
             mealTime: selectedMeal,
             date: Date(),
-            notes: nil
+            notes: nil,
+            calories: recipe.totalCalories ?? (recipe.recipeItems.reduce(0) { $0 + $1.calories })
         ) { result in
             // If you want to handle error messages:
         } statusCompletion: { success in

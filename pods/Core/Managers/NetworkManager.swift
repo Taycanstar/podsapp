@@ -6500,6 +6500,7 @@ func logRecipe(
     mealTime: String,
     date: Date,
     notes: String? = nil,
+    calories: Double,
     completion: @escaping (Result<LoggedRecipe, Error>) -> Void
 ) {
     let dateFormatter = ISO8601DateFormatter()
@@ -6518,6 +6519,7 @@ func logRecipe(
         "recipe_id": recipeId,
         "meal_time": mealTime,
         "date": dateString,
+        "calories": calories
     ]
     
     if let notes = notes {

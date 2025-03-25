@@ -200,12 +200,7 @@ struct RecipeDetailView: View {
                 }
             })
             .onAppear(perform: handleOnAppear)
-            .onChange(of: servingsCount) { _ in
-                updateRecipeDetails()
-            }
-            .onChange(of: selectedPrivacy) { _ in
-                updateRecipeDetails()
-            }
+   
         }
     }
     
@@ -487,11 +482,16 @@ struct RecipeDetailView: View {
     
     /// Fire a "logRecipe" call in your `FoodManager`.
     private func logRecipe() {
+        // Calculate the scaled calories based on serving count
+        let baseCalories = recipe.calories
+        let scaledCalories = baseCalories * Double(servingsCount) / Double(recipe.servings)
+        
         foodManager.logRecipe(
             recipe: recipe,
             mealTime: selectedMealTime,
             date: Date(),
             notes: nil,
+            calories: scaledCalories,
             statusCompletion: { success in
                 if success {
                     showLoggingSuccess = true
@@ -507,43 +507,5 @@ struct RecipeDetailView: View {
         dismiss()
     }
     
-    /// If you want to allow inline changes to "servings" or "privacy," update it on the server.
-    private func updateRecipeDetails() {
-        // Only if changed from original
-        let newPrivacy = selectedPrivacy.lowercased()
-        if servingsCount != recipe.servings || newPrivacy != recipe.privacy {
-            print("📝 Updating recipe details -> servings: \(servingsCount), privacy: \(newPrivacy)")
-            
-            // Create a new Recipe instance with updated values
-            let updated = Recipe(
-                id: recipe.id,
-                title: recipe.title,
-                description: recipe.description,
-                instructions: recipe.instructions,
-                privacy: newPrivacy,
-                servings: servingsCount,
-                createdAt: recipe.createdAt,
-                updatedAt: Date(),
-                recipeItems: recipe.recipeItems,
-                image: recipe.image,
-                prepTime: recipe.prepTime,
-                cookTime: recipe.cookTime,
-                totalCalories: recipe.totalCalories,
-                totalProtein: recipe.totalProtein,
-                totalCarbs: recipe.totalCarbs,
-                totalFat: recipe.totalFat,
-                scheduledAt: recipe.scheduledAt
-            )
-            
-            // We're not changing foods array here—just reusing the same items
-            foodManager.updateRecipe(recipe: updated, foods: selectedFoods) { result in
-                switch result {
-                case .success(let updatedRecipe):
-                    print("✅ Successfully updated recipe details: \(updatedRecipe.title)")
-                case .failure(let error):
-                    print("❌ Failed to update recipe details: \(error)")
-                }
-            }
-        }
-    }
+
 }

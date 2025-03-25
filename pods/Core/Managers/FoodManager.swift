@@ -1340,6 +1340,7 @@ func logRecipe(
     mealTime: String,
     date: Date,
     notes: String? = nil,
+    calories: Double,
     completion: ((Result<LoggedRecipe, Error>) -> Void)? = nil,
     statusCompletion: ((Bool) -> Void)? = nil
 ) {
@@ -1350,7 +1351,8 @@ func logRecipe(
         recipeId: recipe.id,
         mealTime: mealTime,
         date: date,
-        notes: notes
+        notes: notes,
+        calories: calories
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
