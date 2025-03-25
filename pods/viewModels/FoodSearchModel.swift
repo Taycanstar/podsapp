@@ -132,14 +132,7 @@ struct LoggedFood: Codable, Identifiable {
     
     var id: Int { foodLogId }
     
-    // enum CodingKeys: String, CodingKey {
-    //     case status
-    //     case foodLogId = "food_log_id"  // Map camelCase to snake_case
-    //     case calories
-    //     case message
-    //     case food
-    //     case mealType = "meal_type" // Map from backend field
-    // }
+
 }
 
 
@@ -330,7 +323,7 @@ enum LogType: String, Codable {
 struct CombinedLog: Codable, Identifiable {
     let type: LogType
     let status: String
-    let calories: Double
+    var calories: Double
     let message: String
     
     // Food-specific properties
@@ -340,13 +333,13 @@ struct CombinedLog: Codable, Identifiable {
     
     // Meal-specific properties
     let mealLogId: Int?
-    let meal: MealSummary?
-    let mealTime: String?     // Keep mealTime for meal category
-    let scheduledAt: Date?    // Add scheduledAt for the precise time
+    var meal: MealSummary?
+    var mealTime: String?     // Keep mealTime for meal category
+    var scheduledAt: Date?    // Add scheduledAt for the precise time
     
     // Recipe-specific properties
     let recipeLogId: Int?
-    let recipe: RecipeSummary?
+    var recipe: RecipeSummary?
     let servingsConsumed: Int?
     
     // Add a computed property to handle zero calories

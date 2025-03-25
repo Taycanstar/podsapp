@@ -767,7 +767,13 @@ func logMeal(
                 // If the meal already exists in our list, just move it to the top
                 if let index = existingIndex {
                     // Remove it from its current position
-                    let updatedLog = self.combinedLogs.remove(at: index)
+                    var updatedLog = self.combinedLogs.remove(at: index)
+                    
+                    // Update log with new values from the response
+                    updatedLog.calories = loggedMeal.calories
+                    updatedLog.meal = loggedMeal.meal
+                    updatedLog.mealTime = loggedMeal.mealTime
+                    
                     // Insert at the top
                     withAnimation(.spring()) {
                         self.combinedLogs.insert(updatedLog, at: 0)
