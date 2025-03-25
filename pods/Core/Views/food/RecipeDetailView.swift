@@ -356,14 +356,22 @@ struct RecipeDetailView: View {
     
     /// Macro ring and percentages
     private var macroCircleAndStats: some View {
-        let proteinValue = recipe.totalProtein ?? 0
-        let carbsValue   = recipe.totalCarbs   ?? 0
-        let fatValue     = recipe.totalFat     ?? 0
+        // Base values for a single serving
+        let baseProteinValue = recipe.totalProtein ?? 0
+        let baseCarbsValue = recipe.totalCarbs ?? 0
+        let baseFatValue = recipe.totalFat ?? 0
+        let baseCalories = recipe.calories
+        
+        // Scale values according to servings count
+        let proteinValue = baseProteinValue * Double(servingsCount) / Double(recipe.servings)
+        let carbsValue = baseCarbsValue * Double(servingsCount) / Double(recipe.servings)
+        let fatValue = baseFatValue * Double(servingsCount) / Double(recipe.servings)
+        let scaledCalories = baseCalories * Double(servingsCount) / Double(recipe.servings)
         
         let totalMacros = proteinValue + carbsValue + fatValue
-        let proteinPct  = totalMacros > 0 ? (proteinValue / totalMacros) * 100 : 0
-        let carbsPct    = totalMacros > 0 ? (carbsValue / totalMacros)   * 100 : 0
-        let fatPct      = totalMacros > 0 ? (fatValue / totalMacros)     * 100 : 0
+        let proteinPct = totalMacros > 0 ? (proteinValue / totalMacros) * 100 : 0
+        let carbsPct = totalMacros > 0 ? (carbsValue / totalMacros) * 100 : 0
+        let fatPct = totalMacros > 0 ? (fatValue / totalMacros) * 100 : 0
         
         return HStack(spacing: 40) {
             ZStack {
@@ -395,9 +403,9 @@ struct RecipeDetailView: View {
                     .frame(width: 80, height: 80)
                     .rotationEffect(.degrees(-90))
                 
-                // Center text: total cals
+                // Center text: scaled calories
                 VStack(spacing: 0) {
-                    Text("\(Int(recipe.calories))")
+                    Text("\(Int(scaledCalories))")
                         .font(.system(size: 20, weight: .bold))
                     Text("Cal").font(.system(size: 14))
                 }
@@ -429,6 +437,7 @@ struct RecipeDetailView: View {
                 colorName: "purple"
             )
         }
+        .id(servingsCount) // Force redraw when servings change
     }
     
     private func macroStatBlock(percentage: Double, grams: Double, label: String, colorName: String) -> some View {

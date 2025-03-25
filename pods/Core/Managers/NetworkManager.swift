@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.3:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -5529,6 +5529,7 @@ func logMeal(
     mealTime: String,
     date: Date,
     notes: String?,
+    calories: Double,
     completion: @escaping (Result<LoggedMeal, Error>) -> Void
 ) {
     let dateFormatter = ISO8601DateFormatter()
@@ -5546,7 +5547,8 @@ func logMeal(
         "user_email": userEmail,
         "meal_id": mealId,
         "meal_time": mealTime,
-        "date": dateString
+        "date": dateString,
+        "calories": calories
     ]
     
     if let notes = notes {

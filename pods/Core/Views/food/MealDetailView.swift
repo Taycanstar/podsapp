@@ -281,10 +281,14 @@ struct MealDetailView: View {
     }
     
     private func logMeal() {
-        // Use the foodManager to log the meal with appropriate parameters
+        // Calculate the scaled calories based on serving count
+        let baseCalories = meal.calories
+        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
+        
         foodManager.logMeal(
             meal: meal,
             mealTime: selectedMealTime,
+            calories: scaledCalories,
             statusCompletion: { success in
                 if success {
                     showLoggingSuccess = true
@@ -451,9 +455,17 @@ struct MealDetailView: View {
     }
 
     private var macroCircleAndStats: some View {
-        let proteinValue = meal.totalProtein ?? 0
-        let carbsValue = meal.totalCarbs ?? 0
-        let fatValue = meal.totalFat ?? 0
+        // Base values for a single serving
+        let baseProteinValue = meal.totalProtein ?? 0
+        let baseCarbsValue = meal.totalCarbs ?? 0
+        let baseFatValue = meal.totalFat ?? 0
+        let baseCalories = meal.calories
+        
+        // Scale values according to servings count
+        let proteinValue = baseProteinValue * Double(servingsCount) / Double(meal.servings)
+        let carbsValue = baseCarbsValue * Double(servingsCount) / Double(meal.servings)
+        let fatValue = baseFatValue * Double(servingsCount) / Double(meal.servings)
+        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
         
         // Calculate percentages
         let totalMacros = proteinValue + carbsValue + fatValue
@@ -489,7 +501,7 @@ struct MealDetailView: View {
                     .rotationEffect(.degrees(-90))
                 
                 VStack(spacing: 0) {
-                    Text("\(Int(meal.calories))").font(.system(size: 20, weight: .bold))
+                    Text("\(Int(scaledCalories))").font(.system(size: 20, weight: .bold))
                     Text("Cal").font(.system(size: 14))
                 }
             }
@@ -530,6 +542,7 @@ struct MealDetailView: View {
                     .foregroundColor(.secondary)
             }
         }
+        .id(servingsCount) // Force redraw when servings change
     }
     
     // Add a function to update meal servings and privacy

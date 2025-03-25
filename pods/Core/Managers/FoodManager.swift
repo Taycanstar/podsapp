@@ -30,7 +30,6 @@ class FoodManager: ObservableObject {
     private var currentMealPage = 1
     private var hasMoreMeals = true
     @Published var combinedLogs: [CombinedLog] = []
-    
     private var lastRefreshTime: Date?
     
     // Recipe-related properties
@@ -725,6 +724,7 @@ func logMeal(
     mealTime: String,
     date: Date = Date(),
     notes: String? = nil,
+    calories: Double,
     completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
     statusCompletion: ((Bool) -> Void)? = nil
 ) {
@@ -750,7 +750,8 @@ func logMeal(
         mealId: meal.id,
         mealTime: mealTime,
         date: date,
-        notes: notes
+        notes: notes,
+        calories: calories
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { 

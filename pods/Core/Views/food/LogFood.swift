@@ -811,6 +811,7 @@ struct CombinedLogMealRow: View {
                                     scheduledAt: nil
                                 ), 
                                 mealTime: selectedMeal,
+                                calories: log.displayCalories,
                                 statusCompletion: { success in
                                     if !success {
                                         // Ensure the food manager's lastLoggedMealId is cleared
@@ -1008,6 +1009,7 @@ struct MealHistoryRow: View {
                             scheduledAt: meal.scheduledAt
                         ), 
                         mealTime: selectedMeal,
+                        calories: meal.displayCalories,
                         statusCompletion: { success in
                             if !success {
                                 // Ensure the food manager's lastLoggedMealId is cleared
@@ -1166,6 +1168,7 @@ struct MealRow: View {
                             foodManager.logMeal(
                                 meal: meal, 
                                 mealTime: selectedMeal,
+                                calories: displayCalories,
                                 statusCompletion: { success in
                                     if !success {
                                         // Ensure the food manager's lastLoggedMealId is cleared
