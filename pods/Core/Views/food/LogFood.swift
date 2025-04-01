@@ -759,41 +759,25 @@ struct CombinedLogMealRow: View {
     }
     
     var body: some View {
-        let rawCalories = log.calories
-        let displayCals = log.displayCalories
-        let mealDisplayCals = meal.displayCalories
-        
-        // Print debugging info when this view is created
-        let _ = {
-            print("🔍 CombinedLogMealRow displaying meal: \(meal.title)")
-            print("  - log.calories: \(rawCalories)")
-            print("  - log.displayCalories: \(displayCals)")
-            print("  - meal.displayCalories: \(mealDisplayCals)")
-            print("  - meal.calories: \(meal.calories)")
-            return 0
-        }()
-        
-        return ZStack(alignment: .trailing) {
-            // Main row content with tap gesture for navigation
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        ZStack {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
                         .font(.system(size: 16))
-                    .foregroundColor(.primary)
+                        .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
-                        // Use the displayCalories from the log directly
-                        Text("\(Int(log.displayCalories)) cal")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                      
-                    }
+                    Image(systemName: "flame.fill")
+                        .padding(.trailing, 4)
+                    Text("\(Int(log.displayCalories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
                 }
                 
                 Spacer() // Push the button to the right edge
                 
-                // Fixed-width container for the button - consistent with other rows
+                // Fixed-width container for the button
                 HStack {
                     Spacer() // Center the button within the container
                     
@@ -843,9 +827,14 @@ struct CombinedLogMealRow: View {
                     } label: {
                         if mode == .addToMeal {
                             // Similar to FoodRow's addToMeal mode
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color("bg"))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
                         } else {
                             // Original behavior for logFood mode
                             if foodManager.lastLoggedMealId == meal.id {
@@ -854,9 +843,14 @@ struct CombinedLogMealRow: View {
                                     .foregroundColor(.green)
                                     .transition(.opacity)
                             } else {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.accentColor)
+                                ZStack {
+                                    Circle()
+                                        .fill(Color("bg"))
+                                        .frame(width: 32, height: 32)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
                             }
                         }
                     }
@@ -868,7 +862,9 @@ struct CombinedLogMealRow: View {
                 .frame(width: 44) // Fixed width for the button container
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 0)
+            .padding(.vertical, 12)
+            .background(Color("iosbg"))
+            .cornerRadius(12)
             .contentShape(Rectangle())
             .onTapGesture {
                 // Find the full meal from FoodManager.meals
@@ -896,6 +892,8 @@ struct CombinedLogMealRow: View {
                 }
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
@@ -1067,7 +1065,7 @@ struct MealRow: View {
     let meal: Meal
     @Binding var selectedMeal: String
     
-    // Add these properties to match CombinedLogMealRow
+    // Add these properties to match CombinedMealRow
     var mode: LogFoodMode = .logFood  // Default to logFood mode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
@@ -1120,14 +1118,14 @@ struct MealRow: View {
     
     var body: some View {
         ZStack {
-        HStack(alignment: .center, spacing: 12) {
-            // If meal has an image, display it
-            if let imageUrl = meal.image, !imageUrl.isEmpty {
-                AsyncImage(url: URL(string: imageUrl)) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 50, height: 50)
+            HStack(alignment: .center, spacing: 12) {
+                // If meal has an image, display it
+                if let imageUrl = meal.image, !imageUrl.isEmpty {
+                    AsyncImage(url: URL(string: imageUrl)) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 50, height: 50)
                         case .success(let loadedImage):
                             loadedImage
                                 .resizable()
@@ -1149,16 +1147,18 @@ struct MealRow: View {
                         .frame(width: 50, height: 50)
                 }
                 
-            VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
                         .font(.system(size: 16))
-                    .foregroundColor(.primary)
+                        .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
-                        Text("\(Int(displayCalories)) cal")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                    Image(systemName: "flame.fill")
+                        .padding(.trailing, 4)
+                    Text("\(Int(displayCalories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
                 }
                 
                 Spacer() // Push the button to the right edge
@@ -1200,9 +1200,14 @@ struct MealRow: View {
                     } label: {
                         if mode == .addToMeal {
                             // For add to meal mode
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color("bg"))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
                         } else {
                             // For log food mode
                             if foodManager.lastLoggedMealId == meal.id {
@@ -1211,21 +1216,28 @@ struct MealRow: View {
                                     .foregroundColor(.green)
                                     .transition(.opacity)
                             } else {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.accentColor)
+                                ZStack {
+                                    Circle()
+                                        .fill(Color("bg"))
+                                        .frame(width: 32, height: 32)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
                             }
                         }
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .frame(width: 44, height: 44)  // Fixed size for the button
+                    .buttonStyle(.plain)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                 }
-                .frame(width: 44) // Fixed width for the button container
+                .frame(width: 44)
                 .zIndex(1)  // Keep button on top
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 0)
+            .padding(.vertical, 12)
+            .background(Color("iosbg"))
+            .cornerRadius(12)
             .contentShape(Rectangle())
             .onTapGesture {
                 // Only navigate to MealDetailView when in logFood mode
@@ -1234,9 +1246,11 @@ struct MealRow: View {
                 }
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text("Please try again.")
         }
@@ -2213,5 +2227,251 @@ private struct RecipeHistorySection: View {
             }
         }
         .listSectionSeparator(.hidden)
+    }
+}
+
+struct CombinedMealRow: View {
+    @EnvironmentObject var foodManager: FoodManager
+    let log: CombinedLog
+    let meal: MealSummary
+    @Binding var selectedMeal: String
+    
+    // Add these properties to match FoodRow
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    
+    // Add the onItemAdded callback
+    var onItemAdded: ((Food) -> Void)?
+    
+    // Add state for logging error alert
+    @State private var showLoggingErrorAlert: Bool = false
+    
+    init(log: CombinedLog, 
+         meal: MealSummary, 
+         selectedMeal: Binding<String>, 
+         mode: LogFoodMode = .logFood, 
+         selectedFoods: Binding<[Food]> = .constant([]), 
+         path: Binding<NavigationPath> = .constant(NavigationPath()),
+         onItemAdded: ((Food) -> Void)? = nil) {
+        self.log = log
+        self.meal = meal
+        self._selectedMeal = selectedMeal
+        self.mode = mode
+        self._selectedFoods = selectedFoods
+        self._path = path
+        self.onItemAdded = onItemAdded
+    }
+    
+    var body: some View {
+        ZStack {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .padding(.trailing, 4)
+                    Text("\(Int(log.displayCalories)) cal")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
+                }
+                
+                Spacer() // Push the button to the right edge
+                
+                // Fixed-width container for the button
+                HStack {
+                    Spacer() // Center the button within the container
+                    
+                    Button {
+                        HapticFeedback.generate()
+                        
+                        switch mode {
+                        case .logFood:
+                            // Original behavior - log the meal
+                            foodManager.logMeal(
+                                meal: Meal(
+                                    id: meal.id,
+                                    title: meal.title,
+                                    description: meal.description,
+                                    directions: nil,
+                                    privacy: "private",
+                                    servings: meal.servings,
+                                    mealItems: [],
+                                    image: meal.image,
+                                    totalCalories: log.displayCalories,
+                                    totalProtein: meal.protein,
+                                    totalCarbs: meal.carbs,
+                                    totalFat: meal.fat,
+                                    scheduledAt: nil
+                                ), 
+                                mealTime: selectedMeal,
+                                calories: log.displayCalories,
+                                statusCompletion: { success in
+                                    if !success {
+                                        // Ensure the food manager's lastLoggedMealId is cleared
+                                        withAnimation {
+                                            if self.foodManager.lastLoggedMealId == self.meal.id {
+                                                self.foodManager.lastLoggedMealId = nil
+                                            }
+                                        }
+                                        
+                                        // Show error alert
+                                        showLoggingErrorAlert = true
+                                    }
+                                }
+                            )
+                        
+                        case .addToMeal, .addToRecipe:
+                            // Add meal items to selection
+                            addMealItemsToSelection()
+                        }
+                    } label: {
+                        if mode == .addToMeal {
+                            // Similar to FoodRow's addToMeal mode
+                            ZStack {
+                                Circle()
+                                    .fill(Color("bg"))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
+                        } else {
+                            // Original behavior for logFood mode
+                            if foodManager.lastLoggedMealId == meal.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.green)
+                                    .transition(.opacity)
+                            } else {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color("bg"))
+                                        .frame(width: 32, height: 32)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(width: 44, height: 44)  // Fixed size for the button
+                    .contentShape(Rectangle())
+                    .zIndex(1) // Keep button on top
+                }
+                .frame(width: 44) // Fixed width for the button container
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color("iosbg"))
+            .cornerRadius(12)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Find the full meal from FoodManager.meals
+                if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
+                    // Navigate to MealDetailView with the full meal
+                    path.append(FoodNavigationDestination.mealDetails(fullMeal))
+                } else {
+                    // Create a minimal meal object to show if we can't find the full meal
+                    let minimalMeal = Meal(
+                        id: meal.id,
+                        title: meal.title,
+                        description: meal.description,
+                        directions: nil,
+                        privacy: "private",
+                        servings: meal.servings,
+                        mealItems: [],
+                        image: meal.image,
+                        totalCalories: log.displayCalories,
+                        totalProtein: meal.protein,
+                        totalCarbs: meal.carbs,
+                        totalFat: meal.fat,
+                        scheduledAt: meal.scheduledAt
+                    )
+                    path.append(FoodNavigationDestination.mealDetails(minimalMeal))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        // Add a specific logging error alert
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
+        }
+    }
+    
+
+    
+    // Add this method to add meal items to selection using already loaded meals
+    private func addMealItemsToSelection() {
+        // Try to find the full meal from FoodManager to get access to mealItems
+        if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
+            // Track the last food added for callback
+            var lastAddedFood: Food? = nil
+            
+            for mealItem in fullMeal.mealItems {
+                // Try to extract numeric value from servings string
+                let servingsValue = Double(mealItem.servings.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)) ?? 1.0
+                
+                // Get the proper serving text - use the serving_text if available
+                let servingText: String
+                if let text = mealItem.servingText, !text.isEmpty {
+                    servingText = text
+                } else {
+                    // Get the unit of measurement, if any
+                    if let unit = mealItem.servings.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: "."))).last,
+                       !unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
+                        servingText = unit.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    } else {
+                        servingText = "serving"
+                    }
+                }
+
+                
+                // Create a Food object from the MealFoodItem
+                let food = Food(
+                    fdcId: Int(mealItem.externalId) ?? mealItem.foodId,
+                    description: mealItem.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: 1.0,
+                    numberOfServings: servingsValue,
+                    servingSizeUnit: servingText,
+                    householdServingFullText: servingText,
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+                    ],
+                    foodMeasures: []
+                )
+                
+                // Add to selection
+                selectedFoods.append(food)
+                lastAddedFood = food
+            }
+            
+            // Use callback if available, otherwise fall back to path
+            if let callback = onItemAdded, let lastFood = lastAddedFood {
+                print("📲 Using callback to close sheet after adding meal items")
+                callback(lastFood)
+            } else if !path.isEmpty {
+                print("👈 Using navigation path to go back after adding meal items")
+                path.removeLast()
+            }
+        } else {
+            // If we couldn't find the meal, navigate back
+            if !path.isEmpty {
+                path.removeLast()
+            }
+        }
     }
 }
