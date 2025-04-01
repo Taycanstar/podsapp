@@ -550,7 +550,7 @@ struct FoodRow: View {
             .contentShape(Rectangle())
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)  // Reduced from 4
+        .padding(.vertical, 0)  // Reduced from 4
         .alert("Something went wrong", isPresented: $showErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -884,7 +884,7 @@ struct CombinedLogMealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)  // Reduced from 4
+        .padding(.vertical, 0)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
@@ -1238,7 +1238,7 @@ struct MealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)  // Reduced from 4
+        .padding(.vertical, 0)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) {}
@@ -2389,7 +2389,7 @@ struct CombinedMealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)  // Reduced from 4
+        .padding(.vertical, 0)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
