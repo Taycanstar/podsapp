@@ -544,13 +544,13 @@ struct FoodRow: View {
                 .frame(width: 44) // Fixed width for the button container
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 12)  // Reduced from 12
             .background(Color("iosbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.vertical, 4)  // Reduced from 4
         .alert("Something went wrong", isPresented: $showErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -853,7 +853,7 @@ struct CombinedLogMealRow: View {
                 .frame(width: 44) // Fixed width for the button container
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 12)  // Reduced from 12
             .background(Color("iosbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
@@ -884,7 +884,7 @@ struct CombinedLogMealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.vertical, 4)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
@@ -1226,7 +1226,7 @@ struct MealRow: View {
                 .zIndex(1)  // Keep button on top
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 12)  // Reduced from 12
             .background(Color("iosbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
@@ -1238,7 +1238,7 @@ struct MealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.vertical, 4)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) {}
@@ -1865,7 +1865,7 @@ struct RecipeRow: View {
                 .zIndex(1)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 12)  // Reduced from 12
             .contentShape(Rectangle())
             .onTapGesture {
                 // For logFood mode, let's push to a detail page
@@ -2358,7 +2358,7 @@ struct CombinedMealRow: View {
                 .frame(width: 44) // Fixed width for the button container
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 12)  // Reduced from 12
             .background(Color("iosbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
@@ -2389,7 +2389,7 @@ struct CombinedMealRow: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.vertical, 4)  // Reduced from 4
         // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
