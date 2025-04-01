@@ -397,6 +397,13 @@
 			path = viewModels;
 			sourceTree = "<group>";
 		};
+		364A83BD2D9B7DC7009D2620 /* foodsv2 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = foodsv2;
+			sourceTree = "<group>";
+		};
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -452,6 +459,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				364A83BD2D9B7DC7009D2620 /* foodsv2 */,
 				36CB032A2D5AAD4A006A74E9 /* food */,
 				36B8516C2D507BD000A876C3 /* friends */,
 				363AFA162D4746A900C91A14 /* pods */,

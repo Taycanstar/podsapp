@@ -29,14 +29,13 @@ struct LogFood: View {
 
     
     enum FoodTab: Hashable {
-        case all, meals, recipes, foods
+        case all, meals, foods
         
         var title: String {
             switch self {
             case .all: return "All"
-            case .meals: return "Meals"
-            case .recipes: return "Recipes"
-            case .foods: return "Foods"
+            case .meals: return "My Meals"
+            case .foods: return "My Foods"
             }
         }
         
@@ -46,13 +45,11 @@ struct LogFood: View {
                 return "Search Food"
             case .meals:
                 return "Search Meals"
-            case .recipes:
-                return "Search Recipes"
             }
         }
     }
     
-    let foodTabs: [FoodTab] = [.all, .meals, .recipes, .foods]
+    let foodTabs: [FoodTab] = [.all, .meals, .foods]
     
     init(selectedTab: Binding<Int>, 
          selectedMeal: Binding<String>, 
@@ -140,14 +137,6 @@ struct LogFood: View {
                 switch selectedFoodTab {
                 case .meals:
                     MealListView(
-                        selectedMeal: $selectedMeal,
-                        mode: mode,
-                        selectedFoods: $selectedFoods,
-                        path: $path,
-                        onItemAdded: onItemAdded
-                    )
-                case .recipes:
-                    RecipeListView(
                         selectedMeal: $selectedMeal,
                         mode: mode,
                         selectedFoods: $selectedFoods,
