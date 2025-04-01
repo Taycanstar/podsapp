@@ -264,12 +264,7 @@ private struct FoodListView: View {
                 List {
                     if searchResults.isEmpty && !isSearching {
                         Section {
-                            Text("History")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .padding(.top, 8)
-                                 .listRowSeparator(.hidden) 
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+            
                     
                     ForEach(foodManager.combinedLogs, id: \.id) { log in
                         HistoryRow(
@@ -478,8 +473,11 @@ struct FoodRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(food.displayName)
                         .font(.headline)
-                        .fontWeight(.regular)
+                        .fontWeight(.semibold)
+
                     HStack {
+                        Image(systemName: "flame.fill")
+                            .padding(.trailing, 4)
                         if let calories = food.calories {
                             Text("\(Int(calories)) cal")
                         }
@@ -491,7 +489,7 @@ struct FoodRow: View {
                         }
                     }
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
                 }
                 
                 Spacer() // Push the button to the right edge
@@ -511,9 +509,14 @@ struct FoodRow: View {
                                 .font(.system(size: 24))
                                 .foregroundColor(.green)
                         } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color("bg"))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
                         }
                         case .logFood:
                         if foodManager.lastLoggedFoodId == food.fdcId {
@@ -522,9 +525,14 @@ struct FoodRow: View {
                                 .foregroundColor(.green)
                                 .transition(.opacity)
                         } else {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color("bg"))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
                         }
                     }
                 }
@@ -535,8 +543,13 @@ struct FoodRow: View {
                 .frame(width: 44) // Fixed width for the button container
             }
             .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color("iosbg"))
+            .cornerRadius(12)
             .contentShape(Rectangle())
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         .alert("Something went wrong", isPresented: $showErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
