@@ -261,11 +261,9 @@ private struct FoodListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-                List {
-                    if searchResults.isEmpty && !isSearching {
-                        Section {
-            
-                    
+        List {
+            if searchResults.isEmpty && !isSearching {
+                Section {
                     ForEach(foodManager.combinedLogs, id: \.id) { log in
                         HistoryRow(
                             log: log,
@@ -275,15 +273,16 @@ private struct FoodListView: View {
                             path: $path,
                             onItemAdded: onItemAdded
                         )
-                            .onAppear {
+                        .onAppear {
                             foodManager.loadMoreIfNeeded(log: log)
-                            }
+                        }
                         .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                        .listRowSeparator(.hidden)
                     }
-                                }
+                }
                 .listSectionSeparator(.hidden)
-                            } else {
-                                ForEach(searchResults) { food in
+            } else {
+                ForEach(searchResults) { food in
                     FoodRow(
                         food: food,
                         selectedMeal: $selectedMeal,
@@ -293,13 +292,14 @@ private struct FoodListView: View {
                         onItemAdded: onItemAdded
                     )
                     .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                                }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .safeAreaInset(edge: .bottom) {
-                            Color.clear.frame(height: 60)
-                        }
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 60)
+        }
     }
 }
 
@@ -344,7 +344,7 @@ private struct MealListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-            List {
+        List {
             CreateMealButton(path: $path)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowSeparator(.hidden)
@@ -356,7 +356,7 @@ private struct MealListView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
             
-                ForEach(foodManager.meals) { meal in
+            ForEach(foodManager.meals) { meal in
                 MealRow(
                     meal: meal,
                     selectedMeal: $selectedMeal,
@@ -366,17 +366,18 @@ private struct MealListView: View {
                     onItemAdded: onItemAdded
                 )
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                }
+                .listRowSeparator(.hidden)
             }
-            .listStyle(.plain)
+        }
+        .listStyle(.plain)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
         }
-    .onAppear {
-        if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
-            foodManager.refreshMeals()
+        .onAppear {
+            if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
+                foodManager.refreshMeals()
+            }
         }
-    }
     }
 }
 
@@ -685,7 +686,7 @@ struct HistoryRow: View {
         switch log.type {
         case .food:
             if let food = log.food {
-        FoodRow(
+                FoodRow(
                     food: food.asFood, // Make sure LoggedFoodItem has an asFood property
                     selectedMeal: $selectedMeal,
                     mode: mode,
