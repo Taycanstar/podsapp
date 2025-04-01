@@ -709,18 +709,8 @@ struct HistoryRow: View {
                 )
             }
         case .recipe:
-            if let recipe = log.recipe {
-                // Pass all parameters to CombinedLogRecipeRow
-                CombinedLogRecipeRow(
-                    log: log,
-                    recipe: recipe,
-                    selectedMeal: $selectedMeal,
-                    mode: mode,
-                    selectedFoods: $selectedFoods,
-                    path: $path,
-                    onItemAdded: onItemAdded
-                )
-            }
+            // Return empty view for recipe cases since we don't want to show them
+            EmptyView()
         }
     }
 }
