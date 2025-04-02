@@ -285,25 +285,53 @@ private struct FoodListView: View {
                 .padding(.horizontal)
                 .padding(.top)
                 
-                // Main Content Card
+                // Completely rewritten card implementation to avoid divider issues
                 if searchResults.isEmpty && !isSearching {
                     VStack(spacing: 0) {
-                        ForEach(Array(foodManager.combinedLogs.enumerated()), id: \.element.id) { index, log in
-                            HistoryRow(
-                                log: log,
-                                selectedMeal: $selectedMeal,
-                                mode: mode,
-                                selectedFoods: $selectedFoods,
-                                path: $path,
-                                onItemAdded: onItemAdded
-                            )
-                            .onAppear {
-                                foodManager.loadMoreIfNeeded(log: log)
+                        // For each log, directly render the appropriate row
+                        ForEach(foodManager.combinedLogs.indices, id: \.self) { index in
+                            let log = foodManager.combinedLogs[index]
+                            
+                            // Directly render the appropriate content based on log type
+                            Group {
+                                switch log.type {
+                                case .food:
+                                    if let food = log.food {
+                                        FoodRow(
+                                            food: food.asFood,
+                                            selectedMeal: $selectedMeal,
+                                            mode: mode,
+                                            selectedFoods: $selectedFoods,
+                                            path: $path,
+                                            onItemAdded: onItemAdded
+                                        )
+                                        .onAppear {
+                                            foodManager.loadMoreIfNeeded(log: log)
+                                        }
+                                    }
+                                case .meal:
+                                    if let meal = log.meal {
+                                        CombinedLogMealRow(
+                                            log: log,
+                                            meal: meal,
+                                            selectedMeal: $selectedMeal,
+                                            mode: mode,
+                                            selectedFoods: $selectedFoods,
+                                            path: $path,
+                                            onItemAdded: onItemAdded
+                                        )
+                                        .onAppear {
+                                            foodManager.loadMoreIfNeeded(log: log)
+                                        }
+                                    }
+                                case .recipe:
+                                    EmptyView() // Handle recipe case if needed
+                                }
                             }
                             
+                            // Only add divider if not the last item
                             if index < foodManager.combinedLogs.count - 1 {
                                 Divider()
-                                    .padding(.horizontal, 16)
                             }
                         }
                     }
@@ -312,7 +340,10 @@ private struct FoodListView: View {
                     .padding(.horizontal, 16)
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(Array(searchResults.enumerated()), id: \.element.id) { index, food in
+                        // Directly render food rows without HistoryRow
+                        ForEach(searchResults.indices, id: \.self) { index in
+                            let food = searchResults[index]
+                            
                             FoodRow(
                                 food: food,
                                 selectedMeal: $selectedMeal,
@@ -322,9 +353,9 @@ private struct FoodListView: View {
                                 onItemAdded: onItemAdded
                             )
                             
+                            // Only add divider if not the last item
                             if index < searchResults.count - 1 {
                                 Divider()
-                                    .padding(.horizontal, 16)
                             }
                         }
                     }
@@ -505,7 +536,7 @@ struct FoodRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(food.displayName)
-                    .font(.system(size: 14))
+                    .font(.system(size: 15))
                     .foregroundColor(.primary)
 
                 HStack(spacing: 4) {
@@ -678,7 +709,6 @@ struct HistoryRow: View {
     @EnvironmentObject var foodManager: FoodManager
     @State private var showLoggingErrorAlert = false
     
-    // Add onItemAdded callback
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
@@ -709,11 +739,9 @@ struct HistoryRow: View {
                     )
                 }
             case .recipe:
-                // Return empty view for recipe cases since we don't want to show them
                 EmptyView()
             }
         }
-        // No dividers here!
     }
 }
 
