@@ -42,7 +42,7 @@ struct LogFood: View {
         var searchPrompt: String {
             switch self {
             case .all, .foods:
-                return "Search Food"
+                return "Describe what you ate"
             case .meals:
                 return "Search Meals"
             }
