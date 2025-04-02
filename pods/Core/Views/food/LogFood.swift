@@ -264,7 +264,33 @@ private struct FoodListView: View {
     var body: some View {
         List {
             if searchResults.isEmpty && !isSearching {
+          
                 Section {
+
+                        Button(action: {
+            print("Tapped quick Log")
+        }) {
+
+            HStack(spacing: 16) {
+                 Image(systemName: "square.and.pencil")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                Text("Quick Log")
+                    .font(.system(size: 16))
+                    .foregroundColor(.accentColor)
+                  
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
+         .padding(0)
+        // .padding(.top)
+                    
                     ForEach(foodManager.combinedLogs, id: \.id) { log in
                         HistoryRow(
                             log: log,
@@ -546,7 +572,7 @@ struct FoodRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)  // Reduced from 12
-            .background(Color("tikbg"))
+                .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
             .contentShape(Rectangle())
         }
@@ -857,7 +883,7 @@ struct CombinedLogMealRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)  // Reduced from 12
-            .background(Color("tikbg"))
+                .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
             .contentShape(Rectangle())
             .onTapGesture {
