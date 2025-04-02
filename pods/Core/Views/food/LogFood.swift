@@ -288,8 +288,9 @@ private struct FoodListView: View {
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
         }
-         .padding(0)
-        // .padding(.top)
+         .padding(.horizontal, 16)
+        .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
+        .listRowSeparator(.hidden)
                     
                     ForEach(foodManager.combinedLogs, id: \.id) { log in
                         HistoryRow(
