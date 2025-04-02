@@ -258,16 +258,13 @@ private struct FoodListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     
-    // Add onItemAdded callback
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        List {
-            if searchResults.isEmpty && !isSearching {
-          
-                Section {
-
-                        Button(action: {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Quick Log Button
+                    Button(action: {
             print("Tapped quick Log")
         }) {
 
@@ -285,46 +282,65 @@ private struct FoodListView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(Color(UIColor.systemBackground))
             .cornerRadius(12)
         }
-         .padding(.horizontal, 16)
-        .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
-        .listRowSeparator(.hidden)
-                    
-                    ForEach(foodManager.combinedLogs, id: \.id) { log in
-                        HistoryRow(
-                            log: log,
-                            selectedMeal: $selectedMeal,
-                            mode: mode,
-                            selectedFoods: $selectedFoods,
-                            path: $path,
-                            onItemAdded: onItemAdded
-                        )
-                        .onAppear {
-                            foodManager.loadMoreIfNeeded(log: log)
+         .padding(.horizontal)
+         .padding(.top)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        // .padding(.top)
+                
+                // Main Content Card
+                if searchResults.isEmpty && !isSearching {
+                    VStack(spacing: 0) {
+                        ForEach(foodManager.combinedLogs, id: \.id) { log in
+                            HistoryRow(
+                                log: log,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            .onAppear {
+                                foodManager.loadMoreIfNeeded(log: log)
+                            }
+                            
+                            if log.id != foodManager.combinedLogs.last?.id {
+                                Divider()
+                                    .padding(.horizontal, 16)
+                            }
                         }
-                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                        .listRowSeparator(.hidden)
                     }
-                }
-                .listSectionSeparator(.hidden)
-            } else {
-                ForEach(searchResults) { food in
-                    FoodRow(
-                        food: food,
-                        selectedMeal: $selectedMeal,
-                        mode: mode,
-                        selectedFoods: $selectedFoods,
-                        path: $path,
-                        onItemAdded: onItemAdded
-                    )
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                    .listRowSeparator(.hidden)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(searchResults) { food in
+                            FoodRow(
+                                food: food,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            
+                            if food.id != searchResults.last?.id {
+                                Divider()
+                                    .padding(.horizontal, 16)
+                            }
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
                 }
             }
         }
-        .listStyle(.plain)
+        .background(Color("iosbg"))
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 60)
         }
@@ -492,104 +508,59 @@ struct FoodRow: View {
     var onItemAdded: ((Food) -> Void)?
 
     var body: some View {
-        ZStack {
-            NavigationLink(value: FoodNavigationDestination.foodDetails(food, selectedMeal)) {
-                EmptyView()
-            }
-            .opacity(0)
-            
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(food.displayName)
-                        .font(.system(size: 14))
-                        .foregroundColor(.primary)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(food.displayName)
+                    .font(.system(size: 17))
+                    .foregroundColor(.primary)
 
-                    HStack {
-                        Image(systemName: "flame.fill")
-                            .padding(.trailing, 4)
-                        if let calories = food.calories {
-                            Text("\(Int(calories)) cal")
-                        }
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    if let calories = food.calories {
+                        Text("\(Int(calories)) cal")
+                            .foregroundColor(.secondary)
+                    }
+                    if !food.servingSizeText.isEmpty {
                         Text("•")
+                            .foregroundColor(.secondary)
                         Text(food.servingSizeText)
-                        if let brand = food.brandText {
-                            Text("•")
-                            Text(brand)
-                        }
+                            .foregroundColor(.secondary)
                     }
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                }
-                
-                Spacer() // Push the button to the right edge
-                
-                // Fixed-width container for the button
-                HStack {
-                    Spacer() // Center the button within the container
-                
-                Button {
-                    HapticFeedback.generate()
-                    handleFoodTap()
-                } label: {
-                        switch mode {
-                        case .addToMeal, .addToRecipe:
-                                if foodManager.recentlyAddedFoodIds.contains(food.fdcId) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
-                        } else {
-                            ZStack {
-                                Circle()
-                                    .fill(Color("bg"))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                        case .logFood:
-                        if foodManager.lastLoggedFoodId == food.fdcId {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.green)
-                                .transition(.opacity)
-                        } else {
-                            ZStack {
-                                Circle()
-                                    .fill(Color("bg"))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                        }
+                    if let brand = food.brandText {
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        Text(brand)
+                            .foregroundColor(.secondary)
                     }
                 }
-                .buttonStyle(PlainButtonStyle())
-                    .frame(width: 44, height: 44) // Fixed size for the button
-                    .contentShape(Rectangle())
+                .font(.system(size: 13))
             }
-                .frame(width: 44) // Fixed width for the button container
+            
+            Spacer()
+            
+            Button {
+                HapticFeedback.generate()
+                handleFoodTap()
+            } label: {
+                if foodManager.lastLoggedFoodId == food.fdcId || 
+                   foodManager.recentlyAddedFoodIds.contains(food.fdcId) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.green)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20))
+                        .foregroundColor(.accentColor)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)  // Reduced from 12
-                .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 0)  // Reduced from 4
-        .alert("Something went wrong", isPresented: $showErrorAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
-        }
-        // Add a specific logging error alert
-        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Please try again.")
-        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .background(Color(.systemBackground))
     }
 
     
@@ -778,122 +749,82 @@ struct CombinedLogMealRow: View {
     }
     
     var body: some View {
-        ZStack {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                        .font(.system(size: 14))
-                        .foregroundColor(.primary)
-                        
-                
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                    .font(.system(size: 17))
+                    .foregroundColor(.primary)
+            
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .padding(.trailing, 4)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Text("\(Int(log.displayCalories)) cal")
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
-                }
-                
-                Spacer() // Push the button to the right edge
-                
-                // Fixed-width container for the button
-                HStack {
-                    Spacer() // Center the button within the container
-                    
-                    Button {
-                        HapticFeedback.generate()
-                        
-                        switch mode {
-                        case .logFood:
-                            // Original behavior - log the meal
-                            foodManager.logMeal(
-                                meal: Meal(
-                                    id: meal.id,
-                                    title: meal.title,
-                                    description: meal.description,
-                                    directions: nil,
-                                    privacy: "private",
-                                    servings: meal.servings,
-                                    mealItems: [],
-                                    image: meal.image,
-                                    totalCalories: log.displayCalories,
-                                    totalProtein: meal.protein,
-                                    totalCarbs: meal.carbs,
-                                    totalFat: meal.fat,
-                                    scheduledAt: nil
-                                ), 
-                                mealTime: selectedMeal,
-                                calories: log.displayCalories,
-                                statusCompletion: { success in
-                                    if !success {
-                                        // Ensure the food manager's lastLoggedMealId is cleared
-                                        withAnimation {
-                                            if self.foodManager.lastLoggedMealId == self.meal.id {
-                                                self.foodManager.lastLoggedMealId = nil
-                                            }
-                                        }
-                                        
-                                        // Show error alert
-                                        showLoggingErrorAlert = true
+            }
+            
+            Spacer()
+            
+            Button {
+                HapticFeedback.generate()
+                switch mode {
+                case .logFood:
+                    foodManager.logMeal(
+                        meal: Meal(
+                            id: meal.id,
+                            title: meal.title,
+                            description: meal.description,
+                            directions: nil,
+                            privacy: "private",
+                            servings: meal.servings,
+                            mealItems: [],
+                            image: meal.image,
+                            totalCalories: log.displayCalories,
+                            totalProtein: meal.protein,
+                            totalCarbs: meal.carbs,
+                            totalFat: meal.fat,
+                            scheduledAt: nil
+                        ), 
+                        mealTime: selectedMeal,
+                        calories: log.displayCalories,
+                        statusCompletion: { success in
+                            if !success {
+                                withAnimation {
+                                    if self.foodManager.lastLoggedMealId == self.meal.id {
+                                        self.foodManager.lastLoggedMealId = nil
                                     }
                                 }
-                            )
-                        
-                        case .addToMeal, .addToRecipe:
-                            // Add meal items to selection
-                            addMealItemsToSelection()
-                        }
-                    } label: {
-                        if mode == .addToMeal {
-                            // Similar to FoodRow's addToMeal mode
-                            ZStack {
-                                Circle()
-                                    .fill(Color("bg"))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                        } else {
-                            // Original behavior for logFood mode
-                            if foodManager.lastLoggedMealId == meal.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.green)
-                                    .transition(.opacity)
-                            } else {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color("bg"))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                }
+                                showLoggingErrorAlert = true
                             }
                         }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .frame(width: 44, height: 44)  // Fixed size for the button
-                    .contentShape(Rectangle())
-                    .zIndex(1) // Keep button on top
+                    )
+                case .addToMeal, .addToRecipe:
+                    addMealItemsToSelection()
                 }
-                .frame(width: 44) // Fixed width for the button container
+            } label: {
+                if foodManager.lastLoggedMealId == meal.id {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.green)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20))
+                        .foregroundColor(.accentColor)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)  // Reduced from 12
-                .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                // Find the full meal from FoodManager.meals
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .background(Color(.systemBackground))
+        .onTapGesture {
+            if mode == .logFood {
                 if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
-                    // Navigate to MealDetailView with the full meal
                     path.append(FoodNavigationDestination.mealDetails(fullMeal))
                 } else {
-                    // Create a minimal meal object to show if we can't find the full meal
                     let minimalMeal = Meal(
                         id: meal.id,
                         title: meal.title,
@@ -913,9 +844,6 @@ struct CombinedLogMealRow: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 0)  // Reduced from 4
-        // Add a specific logging error alert
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -1138,138 +1066,68 @@ struct MealRow: View {
     }
     
     var body: some View {
-        ZStack {
-            HStack(alignment: .center, spacing: 12) {
-                // If meal has an image, display it
-                if let imageUrl = meal.image, !imageUrl.isEmpty {
-                    AsyncImage(url: URL(string: imageUrl)) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                                .frame(width: 50, height: 50)
-                        case .success(let loadedImage):
-                            loadedImage
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 50, height: 50)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        case .failure:
-                            Image(systemName: "fork.knife.circle.fill")
-                                .font(.system(size: 40))
-                                .frame(width: 50, height: 50)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
-                } else {
-                    // Display a default system icon if no image
-                    Image(systemName: "fork.knife.circle.fill")
-                        .font(.system(size: 40))
-                        .frame(width: 50, height: 50)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
-                
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
+                    .font(.system(size: 17))
+                    .foregroundColor(.primary)
+            
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .padding(.trailing, 4)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
                     Text("\(Int(displayCalories)) cal")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
                 }
-                }
-                
-                Spacer() // Push the button to the right edge
-                
-                // Fixed-width container for the button
-                HStack {
-                    Spacer() // Center the button within the container
-                    
-                    Button {
-                        HapticFeedback.generate()
-                        
-                        // Switch behavior based on mode
-                        switch mode {
-                        case .logFood:
-                            // Original behavior - log the meal
-                            foodManager.logMeal(
-                                meal: meal, 
-                                mealTime: selectedMeal,
-                                calories: displayCalories,
-                                statusCompletion: { success in
-                                    if !success {
-                                        // Ensure the food manager's lastLoggedMealId is cleared
-                                        withAnimation {
-                                            if self.foodManager.lastLoggedMealId == self.meal.id {
-                                                self.foodManager.lastLoggedMealId = nil
-                                            }
-                                        }
-                                        
-                                        // Show error alert
-                                        showLoggingErrorAlert = true
+            }
+            
+            Spacer()
+            
+            Button {
+                HapticFeedback.generate()
+                switch mode {
+                case .logFood:
+                    foodManager.logMeal(
+                        meal: meal, 
+                        mealTime: selectedMeal,
+                        calories: displayCalories,
+                        statusCompletion: { success in
+                            if !success {
+                                withAnimation {
+                                    if self.foodManager.lastLoggedMealId == self.meal.id {
+                                        self.foodManager.lastLoggedMealId = nil
                                     }
                                 }
-                            )
-                        
-                        case .addToMeal, .addToRecipe:
-                            // Add meal items to selection
-                            addMealItemsToSelection()
-                        }
-                    } label: {
-                        if mode == .addToMeal {
-                            // For add to meal mode
-                            ZStack {
-                                Circle()
-                                    .fill(Color("bg"))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                        } else {
-                            // For log food mode
-                            if foodManager.lastLoggedMealId == meal.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.green)
-                                    .transition(.opacity)
-                            } else {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color("bg"))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                }
+                                showLoggingErrorAlert = true
                             }
                         }
-                    }
-                    .buttonStyle(.plain)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                    )
+                case .addToMeal, .addToRecipe:
+                    addMealItemsToSelection()
                 }
-                .frame(width: 44)
-                .zIndex(1)  // Keep button on top
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)  // Reduced from 12
-            .background(Color("iosbg"))
-            .cornerRadius(12)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                // Only navigate to MealDetailView when in logFood mode
-                if mode == .logFood {
-                    path.append(FoodNavigationDestination.mealDetails(meal))
+            } label: {
+                if foodManager.lastLoggedMealId == meal.id {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.green)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20))
+                        .foregroundColor(.accentColor)
                 }
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 0)  // Reduced from 4
-        // Add a specific logging error alert
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .background(Color(.systemBackground))
+        .onTapGesture {
+            if mode == .logFood {
+                path.append(FoodNavigationDestination.mealDetails(meal))
+            }
+        }
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -2289,15 +2147,16 @@ struct CombinedMealRow: View {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                        .font(.system(size: 16))
+                        .font(.system(size: 17))
                         .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .padding(.trailing, 4)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
                     Text("\(Int(log.displayCalories)) cal")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
                 }
                 }
                 
@@ -2351,39 +2210,17 @@ struct CombinedMealRow: View {
                             addMealItemsToSelection()
                         }
                     } label: {
-                        if mode == .addToMeal {
-                            // Similar to FoodRow's addToMeal mode
-                            ZStack {
-                                Circle()
-                                    .fill(Color("bg"))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
+                        if foodManager.lastLoggedMealId == meal.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.green)
                         } else {
-                            // Original behavior for logFood mode
-                            if foodManager.lastLoggedMealId == meal.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.green)
-                                    .transition(.opacity)
-                            } else {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color("bg"))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                }
-                            }
+                            Image(systemName: "plus")
+                                .font(.system(size: 20))
+                                .foregroundColor(.accentColor)
                         }
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .frame(width: 44, height: 44)  // Fixed size for the button
-                    .contentShape(Rectangle())
-                    .zIndex(1) // Keep button on top
+                    .buttonStyle(.plain)
                 }
                 .frame(width: 44) // Fixed width for the button container
             }
