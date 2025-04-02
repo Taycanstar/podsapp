@@ -264,37 +264,31 @@ private struct FoodListView: View {
         ScrollView {
             VStack(spacing: 16) {
                 // Quick Log Button
-                    Button(action: {
-            print("Tapped quick Log")
-        }) {
-
-            HStack(spacing: 16) {
-                 Image(systemName: "square.and.pencil")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.accentColor)
-                Text("Quick Log")
-                    .font(.system(size: 16))
-                    .foregroundColor(.accentColor)
-                  
-
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.systemBackground))
-            .cornerRadius(12)
-        }
-         .padding(.horizontal)
-         .padding(.top)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-        // .padding(.top)
+                Button(action: {
+                    print("Tapped quick Log")
+                }) {
+                    HStack(spacing: 16) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Quick Log")
+                            .font(.system(size: 16))
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(UIColor.systemBackground))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top)
                 
                 // Main Content Card
                 if searchResults.isEmpty && !isSearching {
                     VStack(spacing: 0) {
-                        ForEach(foodManager.combinedLogs, id: \.id) { log in
+                        ForEach(Array(foodManager.combinedLogs.enumerated()), id: \.element.id) { index, log in
                             HistoryRow(
                                 log: log,
                                 selectedMeal: $selectedMeal,
@@ -307,7 +301,7 @@ private struct FoodListView: View {
                                 foodManager.loadMoreIfNeeded(log: log)
                             }
                             
-                            if log.id != foodManager.combinedLogs.last?.id {
+                            if index < foodManager.combinedLogs.count - 1 {
                                 Divider()
                                     .padding(.horizontal, 16)
                             }
@@ -318,7 +312,7 @@ private struct FoodListView: View {
                     .padding(.horizontal, 16)
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(searchResults) { food in
+                        ForEach(Array(searchResults.enumerated()), id: \.element.id) { index, food in
                             FoodRow(
                                 food: food,
                                 selectedMeal: $selectedMeal,
@@ -328,7 +322,7 @@ private struct FoodListView: View {
                                 onItemAdded: onItemAdded
                             )
                             
-                            if food.id != searchResults.last?.id {
+                            if index < searchResults.count - 1 {
                                 Divider()
                                     .padding(.horizontal, 16)
                             }
@@ -511,7 +505,7 @@ struct FoodRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(food.displayName)
-                    .font(.system(size: 17))
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
 
                 HStack(spacing: 4) {
@@ -550,9 +544,14 @@ struct FoodRow: View {
                         .font(.system(size: 22))
                         .foregroundColor(.green)
                 } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20))
-                        .foregroundColor(.accentColor)
+                    ZStack {
+                        Circle()
+                            .fill(Color(UIColor.secondarySystemBackground))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
             .buttonStyle(.plain)
@@ -560,7 +559,6 @@ struct FoodRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
-        .background(Color(.systemBackground))
     }
 
     
@@ -674,43 +672,48 @@ struct FoodRow: View {
 struct HistoryRow: View {
     let log: CombinedLog
     @Binding var selectedMeal: String
-    let mode: LogFoodMode  
+    let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
+    @EnvironmentObject var foodManager: FoodManager
+    @State private var showLoggingErrorAlert = false
     
-    // Add the onItemAdded callback
+    // Add onItemAdded callback
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        switch log.type {
-        case .food:
-            if let food = log.food {
-                FoodRow(
-                    food: food.asFood, // Make sure LoggedFoodItem has an asFood property
-                    selectedMeal: $selectedMeal,
-                    mode: mode,
-                    selectedFoods: $selectedFoods,
-                    path: $path,
-                    onItemAdded: onItemAdded
-                )
+        Group {
+            switch log.type {
+            case .food:
+                if let food = log.food {
+                    let updatedFood = food.asFood
+                    FoodRow(
+                        food: updatedFood,
+                        selectedMeal: $selectedMeal,
+                        mode: mode,
+                        selectedFoods: $selectedFoods,
+                        path: $path,
+                        onItemAdded: onItemAdded
+                    )
+                }
+            case .meal:
+                if let meal = log.meal {
+                    CombinedLogMealRow(
+                        log: log,
+                        meal: meal,
+                        selectedMeal: $selectedMeal,
+                        mode: mode,
+                        selectedFoods: $selectedFoods,
+                        path: $path,
+                        onItemAdded: onItemAdded
+                    )
+                }
+            case .recipe:
+                // Return empty view for recipe cases since we don't want to show them
+                EmptyView()
             }
-        case .meal:
-            if let meal = log.meal {
-                // Pass all parameters to CombinedLogMealRow
-                CombinedLogMealRow(
-                    log: log,
-                    meal: meal,
-                    selectedMeal: $selectedMeal,
-                    mode: mode,
-                    selectedFoods: $selectedFoods,
-                    path: $path,
-                    onItemAdded: onItemAdded
-                )
-            }
-        case .recipe:
-            // Return empty view for recipe cases since we don't want to show them
-            EmptyView()
         }
+        // No dividers here!
     }
 }
 
@@ -752,7 +755,7 @@ struct CombinedLogMealRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                    .font(.system(size: 17))
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
             
                 HStack(spacing: 4) {
@@ -809,9 +812,14 @@ struct CombinedLogMealRow: View {
                         .font(.system(size: 22))
                         .foregroundColor(.green)
                 } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20))
-                        .foregroundColor(.accentColor)
+                    ZStack {
+                        Circle()
+                            .fill(Color(UIColor.secondarySystemBackground))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
             .buttonStyle(.plain)
@@ -819,7 +827,6 @@ struct CombinedLogMealRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
-        .background(Color(.systemBackground))
         .onTapGesture {
             if mode == .logFood {
                 if let fullMeal = foodManager.meals.first(where: { $0.id == meal.id }) {
@@ -1069,7 +1076,7 @@ struct MealRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                    .font(.system(size: 17))
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
             
                 HStack(spacing: 4) {
@@ -1112,9 +1119,14 @@ struct MealRow: View {
                         .font(.system(size: 22))
                         .foregroundColor(.green)
                 } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20))
-                        .foregroundColor(.accentColor)
+                    ZStack {
+                        Circle()
+                            .fill(Color(UIColor.secondarySystemBackground))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
             .buttonStyle(.plain)
@@ -1122,7 +1134,6 @@ struct MealRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
-        .background(Color(.systemBackground))
         .onTapGesture {
             if mode == .logFood {
                 path.append(FoodNavigationDestination.mealDetails(meal))
@@ -2147,7 +2158,7 @@ struct CombinedMealRow: View {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                        .font(.system(size: 17))
+                        .font(.system(size: 14))
                         .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
@@ -2215,9 +2226,14 @@ struct CombinedMealRow: View {
                                 .font(.system(size: 22))
                                 .foregroundColor(.green)
                         } else {
-                            Image(systemName: "plus")
-                                .font(.system(size: 20))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemBackground))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
                         }
                     }
                     .buttonStyle(.plain)
