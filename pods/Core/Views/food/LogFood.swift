@@ -104,6 +104,7 @@ struct LogFood: View {
 
             toastMessages
         }
+
         .navigationBarBackButtonHidden(mode != .addToMeal && mode != .addToRecipe)
     }
     
@@ -473,8 +474,8 @@ struct FoodRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(food.displayName)
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 14))
+                        .foregroundColor(.primary)
 
                     HStack {
                         Image(systemName: "flame.fill")
@@ -489,8 +490,8 @@ struct FoodRow: View {
                             Text(brand)
                         }
                     }
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
                 }
                 
                 Spacer() // Push the button to the right edge
@@ -545,7 +546,7 @@ struct FoodRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)  // Reduced from 12
-            .background(Color("iosbg"))
+            .background(Color("tikbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
         }
@@ -754,15 +755,17 @@ struct CombinedLogMealRow: View {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meal.title.isEmpty ? "Untitled Meal" : meal.title)
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                         .foregroundColor(.primary)
+                        
                 
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .padding(.trailing, 4)
+                        .foregroundColor(.secondary)
                     Text("\(Int(log.displayCalories)) cal")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
                 }
                 }
                 
@@ -854,7 +857,7 @@ struct CombinedLogMealRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)  // Reduced from 12
-            .background(Color("iosbg"))
+            .background(Color("tikbg"))
             .cornerRadius(12)
             .contentShape(Rectangle())
             .onTapGesture {
