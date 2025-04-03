@@ -893,7 +893,7 @@ struct CombinedLogMealRow: View {
                 } else {
                     ZStack {
                         Circle()
-                            .fill(Color(UIColor.secondarySystemBackground))
+                            .fill(Color("iosbg2"))
                             .frame(width: 32, height: 32)
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
@@ -1087,7 +1087,7 @@ struct MealRow: View {
                 } else {
                     ZStack {
                         Circle()
-                            .fill(Color("iosfit"))
+                            .fill(Color("iosbg2"))
                             .frame(width: 32, height: 32)
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
