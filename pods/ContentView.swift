@@ -1,4 +1,3 @@
-
 import AVFoundation
 import SwiftUI
 import MicrosoftCognitiveServicesSpeech
@@ -71,16 +70,32 @@ struct ContentView: View {
                             case 4:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                             case 5:  // Add new case without adding tab
-                            FoodContainerView(selectedTab: $selectedTab)
+                                ZStack {
+                                    if selectedTab == 5 {
+                                        FoodContainerView(selectedTab: $selectedTab)
+                                            .transition(.move(edge: .bottom))
+                                    }
+                                }
+                                .animation(.spring(response: 0.35, dampingFraction: 0.86), value: selectedTab)
                             default:
                                 EmptyView()
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .ignoresSafeArea(.keyboard)
-                        .onChange(of: selectedTab) {_, _ in
-                            if selectedTab == 1 {
+                        .onChange(of: selectedTab) {_, newValue in
+                            if newValue == 1 {
                                 showingVideoCreationScreen = true
+                            }
+                            
+                            if newValue == 5 {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                                    isTabBarVisible = false
+                                }
+                            } else if selectedTab == 5 && newValue != 5 {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                                    isTabBarVisible = true
+                                }
                             }
                         }
                         .onDisappear {

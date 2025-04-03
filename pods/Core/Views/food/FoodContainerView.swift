@@ -457,6 +457,8 @@ struct FoodContainerView: View {
             }
         }
         .environmentObject(navState)
+        .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
+        .transition(.move(edge: .bottom))
         .onChange(of: path) { newPath in
             // Check if we were editing a meal before and now we're no longer in that flow
             if newPath.isEmpty && currentlyEditingMealId != nil {

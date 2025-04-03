@@ -64,12 +64,20 @@ struct LogFood: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                tabHeaderView
-                Divider()
+                // Fixed non-transparent header
+                VStack(spacing: 0) {
+                    tabHeaderView
+                    Divider()
+                }
+                .background(Color(.systemBackground))
+                .zIndex(1) // Keep header on top
+                
+                // Main content
                 mainContentView
+                    .padding(.top, 8) // Add a little spacing between header and content
                 Spacer()
             }
-            .edgesIgnoringSafeArea(.horizontal)
+            .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
             .searchable(
                 text: $searchText, 
                 placement: .navigationBarDrawer(displayMode: .always), 
@@ -163,7 +171,9 @@ struct LogFood: View {
             }
             
             ToolbarItem(placement: .principal) {
-                MealPickerMenu(selectedMeal: $selectedMeal)
+                // MealPickerMenu(selectedMeal: $selectedMeal)
+                Text("Log Food")
+                    .font(.headline)
             }
         }
     }
@@ -393,9 +403,6 @@ private struct FoodListView: View {
             }
         }
         .background(Color("iosbg"))
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 60)
-        }
     }
 }
 
@@ -480,9 +487,6 @@ private struct MealListView: View {
             }
         }
         .listStyle(.plain)
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 70)
-        }
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
                 foodManager.refreshMeals()
@@ -546,9 +550,6 @@ private struct RecipeListView: View {
         }
         .listStyle(.plain)
         .listRowSeparator(.hidden) // unify
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 60)
-        }
     }
 }
 
