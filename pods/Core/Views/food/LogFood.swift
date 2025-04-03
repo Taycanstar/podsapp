@@ -73,6 +73,7 @@ struct LogFood: View {
                     Divider()
                         .background(Color.gray.opacity(0.3))
                 }
+                
                 .background(Color("iosbg2"))
                 .zIndex(1) // Keep header on top
                 
@@ -159,8 +160,6 @@ struct LogFood: View {
                 }
             }
         }
-        .padding(.top, 12)
-        .padding(.bottom, 8)
     }
     
     private var toolbarContent: some ToolbarContent {
@@ -244,6 +243,7 @@ private struct TabButton: View {
                 )
                 .foregroundColor(selectedTab == tab ? .primary : Color.gray.opacity(0.8))
         }
+      
         .buttonStyle(PlainButtonStyle())
     }
 }
@@ -283,6 +283,9 @@ private struct FoodListView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
+                // Add invisible spacing at the top to prevent overlap with header
+                Color.clear.frame(height: 8)
+                
                 // Quick Log Button
                 Button(action: {
                     print("Tapped quick Log")
@@ -303,7 +306,7 @@ private struct FoodListView: View {
                     .cornerRadius(12)
                 }
                 .padding(.horizontal)
-                .padding(.top, 12)
+                .padding(.top, 0)
                 
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
@@ -433,6 +436,7 @@ private struct CreateMealButton: View {
             .cornerRadius(12)
         }
         .padding(.horizontal)
+        .padding(.top, 0)
     }
 }
 
@@ -448,9 +452,13 @@ private struct MealListView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
+                // Add invisible spacing at the top to prevent overlap with header
+                Color.clear.frame(height: 8)
+                
                 // Create Meal Button
                 CreateMealButton(path: $path)
+                    .padding(.top, 0)
                 
                 // Meals Card - Single unified card for all meals
                 if !foodManager.meals.isEmpty {
@@ -531,7 +539,7 @@ private struct CreateRecipeButton: View {
             .cornerRadius(12)
         }
         .padding(.horizontal)
-        // Top padding managed by list row insets instead
+        .padding(.top, 0)
     }
 }
 
@@ -547,9 +555,10 @@ private struct RecipeListView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 // Create Recipe Button
                 CreateRecipeButton(path: $path)
+                    .padding(.top, 0)
                 
                 // Recipes Card - Single unified card for all recipes
                 if !foodManager.recipes.isEmpty {
