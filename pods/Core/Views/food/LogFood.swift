@@ -308,74 +308,67 @@ private struct FoodListView: View {
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
                     VStack(spacing: 0) {
-                        // Filter out invalid logs first
-                        let validLogs = foodManager.combinedLogs.enumerated().filter { _, log in
+                        // Process logs to remove empty/invalid entries
+                        let validLogs = foodManager.combinedLogs.filter { log in
                             if case .food = log.type, log.food != nil { return true }
                             if case .meal = log.type, log.meal != nil { return true }
                             return false
                         }
                         
-                        ForEach(Array(validLogs), id: \.1.id) { index, log in
+                        ForEach(Array(validLogs.enumerated()), id: \.element.id) { index, log in
                             Group {
                                 switch log.type {
                                 case .food:
                                     if let food = log.food {
-                                        VStack(spacing: 0) {
-                                            FoodRow(
-                                                food: food.asFood,
-                                                selectedMeal: $selectedMeal,
-                                                mode: mode,
-                                                selectedFoods: $selectedFoods,
-                                                path: $path,
-                                                onItemAdded: onItemAdded
-                                            )
-                                            .onAppear {
-                                                print("FoodListView: Rendering food row for \(food.displayName) at index \(index)")
-                                                foodManager.loadMoreIfNeeded(log: log)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 12)
-                                            
-                                            if index < validLogs.count - 1 {
-                                                Divider()
-                                                    .padding(.leading, 16)
-                                                    .onAppear {
-                                                        print("FoodListView: Adding divider after food at index \(index)")
-                                                    }
-                                            }
+                                        FoodRow(
+                                            food: food.asFood,
+                                            selectedMeal: $selectedMeal,
+                                            mode: mode,
+                                            selectedFoods: $selectedFoods,
+                                            path: $path,
+                                            onItemAdded: onItemAdded
+                                        )
+                                        .onAppear {
+                                            print("FoodListView: Rendering food row for \(food.displayName) at index \(index)")
+                                            foodManager.loadMoreIfNeeded(log: log)
                                         }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
                                     }
                                 case .meal:
                                     if let meal = log.meal {
-                                        VStack(spacing: 0) {
-                                            CombinedLogMealRow(
-                                                log: log,
-                                                meal: meal,
-                                                selectedMeal: $selectedMeal,
-                                                mode: mode,
-                                                selectedFoods: $selectedFoods,
-                                                path: $path,
-                                                onItemAdded: onItemAdded
-                                            )
-                                            .onAppear {
-                                                print("FoodListView: Rendering meal row for \(meal.title) at index \(index)")
-                                                foodManager.loadMoreIfNeeded(log: log)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 12)
-                                            
-                                            if index < validLogs.count - 1 {
-                                                Divider()
-                                                    .padding(.leading, 16)
-                                                    .onAppear {
-                                                        print("FoodListView: Adding divider after meal at index \(index)")
-                                                    }
-                                            }
+                                        CombinedLogMealRow(
+                                            log: log,
+                                            meal: meal,
+                                            selectedMeal: $selectedMeal,
+                                            mode: mode,
+                                            selectedFoods: $selectedFoods,
+                                            path: $path,
+                                            onItemAdded: onItemAdded
+                                        )
+                                        .onAppear {
+                                            print("FoodListView: Rendering meal row for \(meal.title) at index \(index)")
+                                            foodManager.loadMoreIfNeeded(log: log)
                                         }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
                                     }
                                 case .recipe:
                                     EmptyView()
                                 }
+                            }
+                            
+                            // Add divider after every item except the last one
+                            if index < validLogs.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
+                                    .onAppear {
+                                        if case .food = log.type {
+                                            print("FoodListView: Adding divider after food at index \(index)")
+                                        } else if case .meal = log.type {
+                                            print("FoodListView: Adding divider after meal at index \(index)")
+                                        }
+                                    }
                             }
                         }
                     }
