@@ -454,56 +454,59 @@ private struct MealListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(spacing: 12) {
+                // Create Meal Button
                 CreateMealButton(path: $path)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
-                    .listRowBackground(Color("iosbg2"))
-
-                // Text("History")
-                //     .font(.title2)
-                //     .fontWeight(.bold)
-                //     .padding(.top, 8)
-                //     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                //     .listRowBackground(Color("iosbg2"))
                 
-                ForEach(foodManager.meals.indices, id: \.self) { index in
-                    let meal = foodManager.meals[index]
+                // Meals Card - Single unified card for all meals
+                if !foodManager.meals.isEmpty {
                     VStack(spacing: 0) {
-                        MealRow(
-                            meal: meal,
-                            selectedMeal: $selectedMeal,
-                            mode: mode,
-                            selectedFoods: $selectedFoods,
-                            path: $path,
-                            onItemAdded: onItemAdded
-                        )
-                        .onAppear {
-                            print("MealListView: Rendering meal at index \(index): \(meal.title)")
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color("iosfit"))
-                        
-                        if index < foodManager.meals.count - 1 {
-                            Divider()
-                                .padding(.leading, 16)
-                                .onAppear {
-                                    print("MealListView: Adding divider after index \(index)")
-                                }
+                        ForEach(foodManager.meals.indices, id: \.self) { index in
+                            let meal = foodManager.meals[index]
+                            
+                            MealRow(
+                                meal: meal,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            .onAppear {
+                                print("MealListView: Rendering meal at index \(index): \(meal.title)")
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            
+                            if index < foodManager.meals.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
+                                    .onAppear {
+                                        print("MealListView: Adding divider after index \(index)")
+                                    }
+                            }
                         }
                     }
+                    .background(Color("iosfit"))
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color("iosbg2"))
+                } else if foodManager.isLoadingMeals {
+                    // Loading indicator
+                    ProgressView()
+                        .frame(height: 100)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    // Empty state
+                    Text("No meals found")
+                        .foregroundColor(.secondary)
+                        .frame(height: 100)
+                        .frame(maxWidth: .infinity)
                 }
             }
+            .padding(.bottom, 16)
         }
-        .listStyle(.plain)
         .background(Color("iosbg2"))
-        .listSectionSeparator(.hidden)
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
                 foodManager.refreshMeals()
@@ -550,68 +553,55 @@ private struct RecipeListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        // CHANGED: same approach, unify row separators:
-        List {
-            CreateRecipeButton(path: $path)
-                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color("iosbg2"))
-            
-            RecipeHistorySection(
-                selectedMeal: $selectedMeal,
-                mode: mode,
-                selectedFoods: $selectedFoods,
-                path: $path,
-                onItemAdded: onItemAdded
-            )
-            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-            .listRowBackground(Color("iosbg2"))
-        }
-        .listStyle(.plain)
-        .background(Color("iosbg2"))
-        .listSectionSeparator(.hidden) // Hide section separators
-    }
-}
-
-// Renders all recipe items
-private struct RecipeHistorySection: View {
-    @EnvironmentObject var foodManager: FoodManager
-    @Binding var selectedMeal: String
-    let mode: LogFoodMode
-    @Binding var selectedFoods: [Food]
-    @Binding var path: NavigationPath
-    
-    var onItemAdded: ((Food) -> Void)?
-    
-    var body: some View {
-        Section {
-            Text("History")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.top, 8)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-            
-            // ForEach of your recipes:
-            ForEach(foodManager.recipes.indices, id: \.self) { index in
-                let recipe = foodManager.recipes[index]
-                // RecipeRow placeholder
-                VStack {
-                    // Placeholder content
-                    EmptyView()
-                }
-                .background(Color("iosfit"))
-                .cornerRadius(12)
-                .padding(.horizontal, 16) // Add horizontal padding
-               
-                // Add a manual divider if not last
-                if index < foodManager.recipes.count - 1 {
-                    Divider()
-                        .padding(.leading, 16)
+        ScrollView {
+            VStack(spacing: 12) {
+                // Create Recipe Button
+                CreateRecipeButton(path: $path)
+                
+                // Recipes Card - Single unified card for all recipes
+                if !foodManager.recipes.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(foodManager.recipes.indices, id: \.self) { index in
+                            let recipe = foodManager.recipes[index]
+                            
+                            // Placeholder for RecipeRow
+                            HStack {
+                                Text(recipe.title)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                
+                                Button(action: {}) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .frame(width: 32, height: 32)
+                                        .background(Color("iosfit"))
+                                        .clipShape(Circle())
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            
+                            if index < foodManager.recipes.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
+                            }
+                        }
+                    }
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                } else {
+                    // Empty state
+                    Text("No recipes found")
+                        .foregroundColor(.secondary)
+                        .frame(height: 100)
+                        .frame(maxWidth: .infinity)
                 }
             }
+            .padding(.bottom, 16)
         }
-        .listSectionSeparator(.hidden)
         .background(Color("iosbg2"))
     }
 }
