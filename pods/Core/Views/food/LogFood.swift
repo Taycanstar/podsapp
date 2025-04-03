@@ -64,7 +64,7 @@ struct LogFood: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Add background color for the entire view
-            Color("iosbg").edgesIgnoringSafeArea(.all)
+            Color("iosbg2").edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
                 // Fixed non-transparent header
@@ -73,12 +73,11 @@ struct LogFood: View {
                     Divider()
                         .background(Color.gray.opacity(0.3))
                 }
-                .background(Color("iosbg"))
+                .background(Color("iosbg2"))
                 .zIndex(1) // Keep header on top
                 
                 // Main content
                 mainContentView
-                    .padding(.vertical, 12)
                 Spacer()
             }
             .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
@@ -234,6 +233,7 @@ private struct TabButton: View {
         }) {
             Text(tab.title)
                 .font(.system(size: 15))
+                .fontWeight(.semibold)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
                 .background(
@@ -299,11 +299,11 @@ private struct FoodListView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(UIColor.systemBackground))
+                    .background(Color("iosfit"))
                     .cornerRadius(12)
                 }
                 .padding(.horizontal)
-                .padding(.top, 0)
+                .padding(.top, 12)
                 
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
@@ -382,7 +382,7 @@ private struct FoodListView: View {
                     .onAppear {
                         print("FoodListView: Starting to render combined logs")
                     }
-                    .background(Color(.systemBackground))
+                    .background(Color("iosfit"))
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
                 } else {
@@ -407,7 +407,7 @@ private struct FoodListView: View {
                             }
                         }
                     }
-                    .background(Color(.systemBackground))
+                    .background(Color("iosfit"))
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
                 }
@@ -436,11 +436,10 @@ private struct CreateMealButton: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(Color("iosfit"))
             .cornerRadius(12)
         }
         .padding(.horizontal)
-        .padding(.top)
     }
 }
 
@@ -458,13 +457,15 @@ private struct MealListView: View {
         List {
             Section {
                 CreateMealButton(path: $path)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color("iosbg2"))
 
                 Text("History")
                     .font(.title2)
                     .fontWeight(.bold)
                     .padding(.top, 8)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowBackground(Color("iosbg2"))
                 
                 ForEach(foodManager.meals.indices, id: \.self) { index in
                     let meal = foodManager.meals[index]
@@ -482,6 +483,7 @@ private struct MealListView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
+                        .background(Color("iosfit"))
                         
                         if index < foodManager.meals.count - 1 {
                             Divider()
@@ -493,10 +495,12 @@ private struct MealListView: View {
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color("iosbg2"))
                 }
             }
         }
         .listStyle(.plain)
+        .background(Color("iosbg2"))
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
                 foodManager.refreshMeals()
@@ -524,11 +528,11 @@ private struct CreateRecipeButton: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(Color("iosfit"))
             .cornerRadius(12)
         }
         .padding(.horizontal)
-        .padding(.top)
+        // Top padding managed by list row insets instead
     }
 }
 
@@ -546,8 +550,9 @@ private struct RecipeListView: View {
         // CHANGED: same approach, unify row separators:
         List {
             CreateRecipeButton(path: $path)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
                 .listRowSeparator(.hidden)
+                .listRowBackground(Color("iosbg2"))
             
             RecipeHistorySection(
                 selectedMeal: $selectedMeal,
@@ -557,9 +562,10 @@ private struct RecipeListView: View {
                 onItemAdded: onItemAdded
             )
             .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            .listRowBackground(Color("iosbg2"))
         }
         .listStyle(.plain)
-        .listRowSeparator(.hidden) // unify
+        .background(Color("iosbg2"))
     }
 }
 
@@ -605,6 +611,7 @@ private struct RecipeHistorySection: View {
             }
         }
         .listSectionSeparator(.hidden)
+        .background(Color("iosbg2"))
     }
 }
 
