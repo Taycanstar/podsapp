@@ -460,12 +460,12 @@ private struct MealListView: View {
                     .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
                     .listRowBackground(Color("iosbg2"))
 
-                Text("History")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .padding(.top, 8)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .listRowBackground(Color("iosbg2"))
+                // Text("History")
+                //     .font(.title2)
+                //     .fontWeight(.bold)
+                //     .padding(.top, 8)
+                //     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                //     .listRowBackground(Color("iosbg2"))
                 
                 ForEach(foodManager.meals.indices, id: \.self) { index in
                     let meal = foodManager.meals[index]
@@ -493,6 +493,8 @@ private struct MealListView: View {
                                 }
                         }
                     }
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color("iosbg2"))
@@ -501,6 +503,7 @@ private struct MealListView: View {
         }
         .listStyle(.plain)
         .background(Color("iosbg2"))
+        .listSectionSeparator(.hidden)
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
                 foodManager.refreshMeals()
@@ -566,6 +569,7 @@ private struct RecipeListView: View {
         }
         .listStyle(.plain)
         .background(Color("iosbg2"))
+        .listSectionSeparator(.hidden) // Hide section separators
     }
 }
 
@@ -591,18 +595,15 @@ private struct RecipeHistorySection: View {
             // ForEach of your recipes:
             ForEach(foodManager.recipes.indices, id: \.self) { index in
                 let recipe = foodManager.recipes[index]
-                // RecipeRow(
-                //     recipe: recipe,
-                //     selectedMeal: $selectedMeal,
-                //     mode: mode,
-                //     selectedFoods: $selectedFoods,
-                //     path: $path,
-                //     onItemAdded: onItemAdded
-                // )
-                //  .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                EmptyView()
+                // RecipeRow placeholder
+                VStack {
+                    // Placeholder content
+                    EmptyView()
+                }
+                .background(Color("iosfit"))
+                .cornerRadius(12)
+                .padding(.horizontal, 16) // Add horizontal padding
                
-                
                 // Add a manual divider if not last
                 if index < foodManager.recipes.count - 1 {
                     Divider()
@@ -675,7 +676,7 @@ struct FoodRow: View {
                 } else {
                     ZStack {
                         Circle()
-                            .fill(Color(UIColor.secondarySystemBackground))
+                            .fill(Color("iosbg2"))
                             .frame(width: 32, height: 32)
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
@@ -1096,7 +1097,7 @@ struct MealRow: View {
                 } else {
                     ZStack {
                         Circle()
-                            .fill(Color(UIColor.secondarySystemBackground))
+                            .fill(Color("iosfit"))
                             .frame(width: 32, height: 32)
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
