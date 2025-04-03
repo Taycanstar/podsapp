@@ -457,8 +457,9 @@ struct FoodContainerView: View {
             }
         }
         .environmentObject(navState)
-        .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
+        .edgesIgnoringSafeArea(.all)  // Ignore all safe areas
         .transition(.move(edge: .bottom))
+        .background(Color("iosbg"))  // Add background color to entire container
         .onChange(of: path) { newPath in
             // Check if we were editing a meal before and now we're no longer in that flow
             if newPath.isEmpty && currentlyEditingMealId != nil {

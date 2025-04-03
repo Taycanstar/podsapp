@@ -63,18 +63,22 @@ struct LogFood: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Add background color for the entire view
+            Color("iosbg").edgesIgnoringSafeArea(.all)
+            
             VStack(spacing: 0) {
                 // Fixed non-transparent header
                 VStack(spacing: 0) {
                     tabHeaderView
                     Divider()
+                        .background(Color.gray.opacity(0.3))
                 }
-                .background(Color(.systemBackground))
+                .background(Color("iosbg"))
                 .zIndex(1) // Keep header on top
                 
                 // Main content
                 mainContentView
-                    .padding(.top, 8) // Add a little spacing between header and content
+                    .padding(.vertical, 12)
                 Spacer()
             }
             .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
@@ -119,14 +123,14 @@ struct LogFood: View {
     
     private var tabHeaderView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 35) {
+            HStack(spacing: 10) {
                 ForEach(foodTabs, id: \.self) { tab in
                     TabButton(tab: tab, selectedTab: $selectedFoodTab)
                 }
             }
             .padding(.horizontal)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
     
     private var mainContentView: some View {
@@ -156,6 +160,8 @@ struct LogFood: View {
                 }
             }
         }
+        .padding(.top, 12)
+        .padding(.bottom, 8)
     }
     
     private var toolbarContent: some ToolbarContent {
@@ -218,22 +224,27 @@ struct LogFood: View {
 private struct TabButton: View {
     let tab: LogFood.FoodTab
     @Binding var selectedTab: LogFood.FoodTab
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        VStack(spacing: 8) {
-            Text(tab.title)
-                .font(.system(size: 17))
-                .fontWeight(.semibold)
-                .foregroundColor(selectedTab == tab ? .primary : .gray)
-            Rectangle()
-                .frame(height: 2)
-                .foregroundColor(selectedTab == tab ? .accentColor : .clear)
-        }
-        .onTapGesture {
+        Button(action: {
             withAnimation(.easeInOut) {
                 selectedTab = tab
             }
+        }) {
+            Text(tab.title)
+                .font(.system(size: 15))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(selectedTab == tab 
+                              ? (colorScheme == .dark ? Color.white.opacity(0.2) : Color.black.opacity(0.06))
+                              : Color.clear)
+                )
+                .foregroundColor(selectedTab == tab ? .primary : Color.gray.opacity(0.8))
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -271,7 +282,7 @@ private struct FoodListView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 // Quick Log Button
                 Button(action: {
                     print("Tapped quick Log")
@@ -292,7 +303,7 @@ private struct FoodListView: View {
                     .cornerRadius(12)
                 }
                 .padding(.horizontal)
-                .padding(.top)
+                .padding(.top, 0)
                 
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
@@ -402,7 +413,6 @@ private struct FoodListView: View {
                 }
             }
         }
-        .background(Color("iosbg"))
     }
 }
 
