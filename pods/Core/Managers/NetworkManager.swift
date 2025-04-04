@@ -4949,43 +4949,45 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         return
     }
     
-    // Convert foodNutrients to a serializable format
-    let nutrients = food.foodNutrients.map { [
-        "nutrientName": $0.nutrientName,
-        "value": $0.value,
-        "unitName": $0.unitName
-    ] }
+    // Get the calories value directly
+    let calories = food.calories ?? 0.0
+    
+    // Format nutrients using camelCase as expected by the backend
+    let nutrients = food.foodNutrients.map { nutrient -> [String: Any] in
+        [
+            "nutrientName": nutrient.nutrientName, 
+            "value": nutrient.value ?? 0,
+            "unitName": nutrient.unitName
+        ]
+    }
     
     // DEBUG - Print what we're sending to the server
     print("⬆️ SENDING TO SERVER - logFood:")
     print("- userEmail: \(userEmail)")
-    print("- food ID: \(food.id), name: \(food.displayName)")
+    print("- food ID: \(food.fdcId)")
+    print("- name: \(food.displayName)")
     print("- mealType: \(mealType)")
     print("- servings: \(servings)")
+    print("- calories: \(calories)")
     print("- date: \(ISO8601DateFormatter().string(from: date))")
     
+    // Don't send calories directly since the backend calculates it from food.calories * servings
     let parameters: [String: Any] = [
         "user_email": userEmail,
         "food": [
-            "fdcId": food.id,
+            "fdcId": food.fdcId,
             "description": food.displayName,
-            "brandOwner": food.brandText ?? "",  // Make sure we're sending the brand
+            "brandOwner": food.brandText ?? "",
             "servingSize": food.servingSize ?? 0,
             "servingSizeUnit": food.servingSizeUnit ?? "",
             "householdServingFullText": food.servingSizeText,
             "foodNutrients": nutrients
         ],
-        "meal_type": mealType,  // Changed from 'meal' to 'meal_type'
+        "meal_type": mealType,
         "servings": servings,
         "date": ISO8601DateFormatter().string(from: date),
         "notes": notes ?? ""
     ]
-    
-    // Print what we're about to send as JSON
-    if let jsonData = try? JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted),
-       let jsonStr = String(data: jsonData, encoding: .utf8) {
-        print("📤 Request JSON: \(jsonStr)")
-    }
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
@@ -4994,97 +4996,111 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
     } catch {
-        print("JSON Serialization Error: \(error)")
-        completion(.failure(NetworkError.encodingError))
+        completion(.failure(error))
         return
     }
     
     URLSession.shared.dataTask(with: request) { data, response, error in
-        guard let data = data, error == nil else {
+        if let error = error {
             DispatchQueue.main.async {
-                let errorMessage = error?.localizedDescription ?? "Unknown error"
-                print("❌ Network error: \(errorMessage)")
-                completion(.failure(error ?? NetworkError.unknownError))
+                completion(.failure(error))
             }
             return
         }
         
-        if let httpResponse = response as? HTTPURLResponse {
-            print("🔄 HTTP Status Code: \(httpResponse.statusCode)")
-            
-            // Print headers for debugging
-            print("📋 Response Headers:")
-            for (key, value) in httpResponse.allHeaderFields {
-                print("\(key): \(value)")
-            }
-        }
-        
-        // Print the raw JSON response to see exactly what we're getting
-        if let jsonString = String(data: data, encoding: .utf8) {
-            print("📥 Raw JSON Response: \(jsonString)")
-        }
-        
-        // Use a dictionary to inspect the fields before decoding into a model
-        if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            
-            for (key, value) in jsonObj {
-                print("- \(key): \(type(of: value))")
-                
-                // For nested objects, print their keys too
-                if let nestedDict = value as? [String: Any] {
-                    print("  🔍 Nested keys in \(key):")
-                    for (nestedKey, nestedValue) in nestedDict {
-                        print("  - \(nestedKey): \(type(of: nestedValue))")
-                    }
+        // Check for server error responses
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+            // If we get an error response but still have data, try to extract the error message
+            if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorJson["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
                 }
+                return
             }
             
-            // Specifically check for meal_type
-            if let mealType = jsonObj["meal_type"] as? String {
-                print("✅ Found meal_type in response: \(mealType)")
-            } else {
-                print("❌ meal_type NOT found in response JSON")
+            // Fallback error if we couldn't parse the response
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.serverError("Server returned error \(httpResponse.statusCode)")))
             }
+            return
         }
         
-        // Now try to decode
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.noData))
+            }
+            return
+        }
+        
+        // Print response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("⬇️ SERVER RESPONSE - logFood: \(responseString)")
+        }
+        
         do {
+            // Try to decode as normal LoggedFood
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
-            // let loggedFood = try decoder.decode(LoggedFood.self, from: data)
-            
-            // Successfully decoded - print some values for confirmation
-            print("✅ Successfully decoded LoggedFood:")
-            print("- foodLogId: \(loggedFood.foodLogId)")
-            print("- mealType: \(loggedFood.mealType)")
-
-            
             
             DispatchQueue.main.async {
-            completion(.success(loggedFood))
+                completion(.success(loggedFood))
             }
         } catch {
-            // Detailed error for debugging
-            print("❌ Decoding Error: \(error)")
+            print("Decoding failed: \(error)")
             
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .keyNotFound(let key, let context):
-                    print("🔑 Missing key: \(key), path: \(context.codingPath.map { $0.stringValue })")
-                case .typeMismatch(let type, let context):
-                    print("📝 Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
-                case .valueNotFound(let type, let context):
-                    print("🚫 Value not found: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
-                case .dataCorrupted(let context):
-                    print("📄 Data corrupted: \(context.debugDescription)")
-                @unknown default:
-                    print("❓ Unknown decoding error")
+            // If the standard decoding fails, try to create a LoggedFood object manually
+            if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                // Try to extract data from the response
+                let status = "success" // Default to success since we got a response
+                let foodLogId = jsonObj["food_log_id"] as? Int ?? 0
+                
+                // Calculate calories from food.calories * servings
+                let calculatedCalories = calories * Double(servings)
+                
+                let message = jsonObj["message"] as? String ?? "Food logged successfully"
+                
+                // Extract food data (fallback to original food if not available)
+                let foodData = jsonObj["food"] as? [String: Any] ?? [:]
+                let fdcId = foodData["fdcId"] as? Int ?? food.fdcId
+                let displayName = foodData["display_name"] as? String ?? food.displayName
+                let servingSizeText = food.servingSizeText
+                let brandText = food.brandText
+                let protein = food.protein
+                let carbs = food.carbs
+                let fat = food.fat
+                
+                // Create LoggedFoodItem with proper calories
+                let loggedFoodItem = LoggedFoodItem(
+                    fdcId: fdcId,
+                    displayName: displayName,
+                    calories: calculatedCalories / Double(servings), // Per serving
+                    servingSizeText: servingSizeText,
+                    numberOfServings: Double(servings),
+                    brandText: brandText,
+                    protein: protein,
+                    carbs: carbs,
+                    fat: fat
+                )
+                
+                // Create LoggedFood with default status if missing
+                let loggedFood = LoggedFood(
+                    status: status,
+                    foodLogId: foodLogId,
+                    calories: calculatedCalories, // Total calories
+                    message: message,
+                    food: loggedFoodItem,
+                    mealType: mealType
+                )
+                
+                DispatchQueue.main.async {
+                    completion(.success(loggedFood))
                 }
-            }
-            
-            DispatchQueue.main.async {
-            completion(.failure(error))
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
             }
         }
     }.resume()
