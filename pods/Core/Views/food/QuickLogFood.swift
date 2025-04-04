@@ -78,11 +78,20 @@ struct QuickLogFood: View {
                             quickLogFood()
                         }
                         .fontWeight(.semibold)
-                    .disabled(foodTitle.isEmpty || selectedFoods.isEmpty)
+                    .disabled(foodCalories.isEmpty)
                     .foregroundColor(
-                        (foodTitle.isEmpty || selectedFoods.isEmpty) ? .gray : .blue
+                        foodCalories.isEmpty ? .gray : .blue
                     )
-                }
+                    }
+                    
+                    // Add keyboard toolbar with Done button
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
+                    }
+                
             }
         }
         .accentColor(.blue)
@@ -119,20 +128,19 @@ struct QuickLogFood: View {
                 .fill(Color("iosnp"))
             
             // Content
-            VStack(spacing: 10) {
+            VStack(spacing: 16) {
                 // Title
                 TextField("Title", text: $foodTitle)
-                    
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
-                    .padding(.top)
+                    .padding(.top, 16)
                     
                 
                 // Divider that extends fully across
                 Divider()
                 .padding(.leading, 16)
                 TextField("Calories*", text: $foodCalories)
-                    
+                    .keyboardType(.decimalPad)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                   
@@ -140,8 +148,8 @@ struct QuickLogFood: View {
                 // Divider that extends fully across
                 Divider()
                 .padding(.leading, 16)
-                TextField("Protein", text: $foodProtein)
-                    
+                TextField("Protein(g)", text: $foodProtein)
+                    .keyboardType(.decimalPad)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                    
@@ -149,8 +157,8 @@ struct QuickLogFood: View {
                 // Divider that extends fully across
                 Divider()
                 .padding(.leading, 16)
-                TextField("Carbs", text: $foodCarbs)
-                    
+                TextField("Carbs(g)", text: $foodCarbs)
+                    .keyboardType(.decimalPad)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                    
@@ -158,11 +166,11 @@ struct QuickLogFood: View {
                 // Divider that extends fully across
                 Divider()
                 .padding(.leading, 16)
-                TextField("Fats", text: $foodFats)
-                    
+                TextField("Fats(g)", text: $foodFats)
+                    .keyboardType(.decimalPad)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
-                    .padding(.bottom)
+                    .padding(.bottom, 16)
                 
                
                 
@@ -302,37 +310,36 @@ struct QuickLogFood: View {
     }
 
     private func quickLogFood() {
-        guard !foodTitle.isEmpty else {
-            errorMessage = "Food title is required."
-            return
-        }
-        
-        guard !selectedFoods.isEmpty else {
-            errorMessage = "Please add at least one ingredient."
+        guard !foodCalories.isEmpty else {
+            errorMessage = "Calories are required."
             return
         }
         
         // Show loading state
         isLogging = true
         
-        // Calculate nutritional totals
-        let totals = calculateTotalMacros(selectedFoods)
+        // Get food details from text fields
+        let title = foodTitle.isEmpty ? "Unnamed Food" : foodTitle
+        let calories = Double(foodCalories) ?? 0
+        let protein = Double(foodProtein) ?? 0
+        let carbs = Double(foodCarbs) ?? 0
+        let fat = Double(foodFats) ?? 0
         
-        // Create a food item with the calculated nutritional info
+        // Create a food item with the entered nutritional info
         let quickLoggedFood = Food(
             fdcId: Int.random(in: 1000000...9999999), // Generate a random ID for the custom food
-            description: foodTitle,
+            description: title,
             brandOwner: nil,
-            brandName: "Custom",
+            brandName: nil,
             servingSize: 1.0,
-            numberOfServings: 1.0,
+            numberOfServings: nil,
             servingSizeUnit: "serving",
             householdServingFullText: "1 serving",
             foodNutrients: [
-                Nutrient(nutrientName: "Energy", value: totals.calories, unitName: "kcal"),
-                Nutrient(nutrientName: "Protein", value: totals.protein, unitName: "g"),
-                Nutrient(nutrientName: "Carbohydrate, by difference", value: totals.carbs, unitName: "g"),
-                Nutrient(nutrientName: "Total lipid (fat)", value: totals.fat, unitName: "g")
+                Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"),
+                Nutrient(nutrientName: "Protein", value: protein, unitName: "g"),
+                Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"),
+                Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g")
             ],
             foodMeasures: []
         )
