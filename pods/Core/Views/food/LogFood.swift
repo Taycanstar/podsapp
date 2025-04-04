@@ -17,12 +17,14 @@ struct LogFood: View {
     @Binding var path: NavigationPath
     @FocusState private var isSearchFieldFocused: Bool
     @State private var activateSearch = false
+    
 
     var mode: LogFoodMode = .logFood 
     @Binding var selectedFoods: [Food]  
     
     // Add callback that will be called when an item is added
     var onItemAdded: ((Food) -> Void)?
+    @State private var showQuickLogSheet = false
     
     enum FoodTab: Hashable {
         case all, meals, foods
@@ -125,6 +127,9 @@ struct LogFood: View {
             .background(
                 SearchActivator(isActivated: $activateSearch)
             )
+            .sheet(isPresented: $showQuickLogSheet) {
+                QuickLogFood(isPresented: $showQuickLogSheet)
+            }
 
             toastMessages
         }
@@ -155,7 +160,7 @@ struct LogFood: View {
                     mode: mode,
                     selectedFoods: $selectedFoods,
                     path: $path,
-                    onItemAdded: onItemAdded
+                    showQuickLogSheet: $showQuickLogSheet, onItemAdded: onItemAdded
                 )
             } else {
                 switch selectedFoodTab {
@@ -289,6 +294,7 @@ private struct FoodListView: View {
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
+    @Binding var showQuickLogSheet: Bool
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -301,13 +307,15 @@ private struct FoodListView: View {
                 // Quick Log Button
                 Button(action: {
                     print("Tapped quick Log")
+                    HapticFeedback.generateLigth()
+                    showQuickLogSheet = true
                 }) {
                     HStack(spacing: 16) {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 24))
                             .foregroundColor(.accentColor)
                         Text("Quick Log")
-                            .font(.system(size: 16))
+                            .font(.system(size: 15))
                             .foregroundColor(.accentColor)
                         Spacer()
                     }
