@@ -109,86 +109,95 @@ struct QuickLogFood: View {
     }
     
     private var titleSection: some View {
-        VStack(spacing: 16) {
-            // Title
-            TextField("Title", text: $foodTitle)
-                .font(.headline)
-                .textFieldStyle(.plain)
-
-            Divider()
+        ZStack(alignment: .top) {
+            // Background with rounded corners
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color("iosnp"))
             
-    
-            // Get the totals
-            let totals = calculateTotalMacros(selectedFoods)
-            
-            // Create a unique identifier string based on the selectedFoods
-            let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
-            
-            HStack(spacing: 40) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-                        .frame(width: 80, height: 80)
+            // Content
+            VStack(spacing: 16) {
+                // Title
+                TextField("Title", text: $foodTitle)
                     
-                    // Draw the circle segments with actual percentages
-                    Circle()
-                        .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
-                        .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(-90))
-                    
-                    Circle()
-                        .trim(from: CGFloat(totals.carbsPercentage) / 100,
-                              to: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100)
-                        .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(-90))
-                    
-                    Circle()
-                        .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
-                              to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
-                        .stroke(Color.purple, style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(-90))
-                    
-                    VStack(spacing: 0) {
-                        Text("\(Int(totals.calories))").font(.system(size: 20, weight: .bold))
-                        Text("Cal").font(.system(size: 14))
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                // Divider that extends fully across
+                Divider()
+                .padding(.leading, 16)
+                
+                // Get the totals
+                let totals = calculateTotalMacros(selectedFoods)
+                
+                // Create a unique identifier string based on the selectedFoods
+                let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
+                
+                HStack(spacing: 40) {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                            .frame(width: 80, height: 80)
+                        
+                        // Draw the circle segments with actual percentages
+                        Circle()
+                            .trim(from: 0, to: CGFloat(totals.carbsPercentage) / 100)
+                            .stroke(Color("teal"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                            .frame(width: 80, height: 80)
+                            .rotationEffect(.degrees(-90))
+                        
+                        Circle()
+                            .trim(from: CGFloat(totals.carbsPercentage) / 100,
+                                  to: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100)
+                            .stroke(Color("pinkRed"), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                            .frame(width: 80, height: 80)
+                            .rotationEffect(.degrees(-90))
+                        
+                        Circle()
+                            .trim(from: CGFloat(totals.carbsPercentage + totals.fatPercentage) / 100,
+                                  to: CGFloat(totals.carbsPercentage + totals.fatPercentage + totals.proteinPercentage) / 100)
+                            .stroke(Color.purple, style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                            .frame(width: 80, height: 80)
+                            .rotationEffect(.degrees(-90))
+                        
+                        VStack(spacing: 0) {
+                            Text("\(Int(totals.calories))").font(.system(size: 20, weight: .bold))
+                            Text("Cal").font(.system(size: 14))
+                        }
                     }
+                    
+                    Spacer()
+                    
+                    // Carbs
+                    MacroView(
+                        value: totals.carbs,
+                        percentage: totals.carbsPercentage,
+                        label: "Carbs",
+                        percentageColor: Color("teal")
+                    )
+                    
+                    // Fat
+                    MacroView(
+                        value: totals.fat,
+                        percentage: totals.fatPercentage,
+                        label: "Fat",
+                        percentageColor: Color("pinkRed")
+                    )
+                    
+                    // Protein
+                    MacroView(
+                        value: totals.protein,
+                        percentage: totals.proteinPercentage,
+                        label: "Protein",
+                        percentageColor: Color.purple
+                    )
                 }
-                
-                Spacer()
-                
-                // Carbs
-                MacroView(
-                    value: totals.carbs,
-                    percentage: totals.carbsPercentage,
-                    label: "Carbs",
-                    percentageColor: Color("teal")
-                )
-                
-                // Fat
-                MacroView(
-                    value: totals.fat,
-                    percentage: totals.fatPercentage,
-                    label: "Fat",
-                    percentageColor: Color("pinkRed")
-                )
-                
-                // Protein
-                MacroView(
-                    value: totals.protein,
-                    percentage: totals.proteinPercentage,
-                    label: "Protein",
-                    percentageColor: Color.purple
-                )
+                .padding(.horizontal)
+                .padding(.bottom)
+                // Force redraw when foods change by using the foodsSignature as an id
+                .id(foodsSignature)
             }
-            // Force redraw when foods change by using the foodsSignature as an id
-            .id(foodsSignature)
         }
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
     }
     
     private var ingredientsSection: some View {
@@ -230,8 +239,9 @@ struct QuickLogFood: View {
                         .background(Color("iosnp"))
                         
                         if index < aggregatedFoods.count - 1 {
-                            Divider()
-                                .padding(.horizontal)
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundColor(.gray.opacity(0.2))
                         }
                     }
                 }
