@@ -40,11 +40,8 @@ struct QuickLogFood: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Title Input
+                        // Title and Macros
                         titleSection
-                        
-                        // Macros
-                        macroCircleAndStats
                         
                         // Ingredients
                         ingredientsSection
@@ -62,21 +59,21 @@ struct QuickLogFood: View {
                     ProgressView()
                         .scaleEffect(1.5)
                 }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("Quick Log")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        isPresented = false
-                    }
-                    .foregroundColor(.blue)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        quickLogFood()
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Quick Log")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            isPresented = false
+                        }
+                        .foregroundColor(.blue)
                     }
-                    .fontWeight(.semibold)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            quickLogFood()
+                        }
+                        .fontWeight(.semibold)
                     .disabled(foodTitle.isEmpty || selectedFoods.isEmpty)
                     .foregroundColor(
                         (foodTitle.isEmpty || selectedFoods.isEmpty) ? .gray : .blue
@@ -112,117 +109,20 @@ struct QuickLogFood: View {
     }
     
     private var titleSection: some View {
-        VStack {
-            TextField("Food Title", text: $foodTitle)
-                .font(.title3)
-                .padding()
-                .background(Color("iosnp"))
-                .cornerRadius(12)
+        VStack(spacing: 16) {
+            // Title
+            TextField("Title", text: $foodTitle)
+                .font(.headline)
+                .textFieldStyle(.plain)
+
+            Divider()
             
-            // Meal type picker
-            HStack {
-                Text("Meal Type")
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Menu {
-                    ForEach(mealTypes, id: \.self) { mealType in
-                        Button(mealType) {
-                            selectedMeal = mealType
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(selectedMeal)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color("iosbtn"))
-                    .cornerRadius(8)
-                }
-            }
-            .padding()
-            .background(Color("iosnp"))
-            .cornerRadius(12)
-        }
-    }
     
-    private var ingredientsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ingredients")
-                .font(.title2)
-                .fontWeight(.bold)
+            // Get the totals
+            let totals = calculateTotalMacros(selectedFoods)
             
-            if !selectedFoods.isEmpty {
-                // Group foods by fdcId to avoid duplicates
-                let aggregatedFoods = aggregateFoodsByFdcId(selectedFoods)
-                
-                VStack(spacing: 0) {
-                    ForEach(Array(aggregatedFoods.enumerated()), id: \.element.id) { index, food in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(food.displayName)
-                                    .font(.headline)
-                                
-                                HStack {
-                                    Text(food.servingSizeText)
-                                    if let servings = food.numberOfServings,
-                                       servings > 1 {
-                                        Text("×\(Int(servings))")
-                                    }
-                                }
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            
-                            if let calories = food.calories {
-                                Text("\(Int(calories * (food.numberOfServings ?? 1)))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding()
-                        .background(Color("iosnp"))
-                        
-                        if index < aggregatedFoods.count - 1 {
-                            Divider()
-                                .padding(.horizontal)
-                        }
-                    }
-                }
-                .background(Color("iosnp"))
-                .cornerRadius(12)
-            }
-            
-            Button {
-                showAddIngredientsSheet = true
-            } label: {
-                Text("Add ingredient")
-                    .foregroundColor(.accentColor)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color("iosnp"))
-                    .cornerRadius(12)
-            }
-        }
-    }
-    
-    private var macroCircleAndStats: some View {
-        // Get the totals
-        let totals = calculateTotalMacros(selectedFoods)
-        
-        // Create a unique identifier string based on the selectedFoods
-        let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
-        
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Nutrition")
-                .font(.title2)
-                .fontWeight(.bold)
+            // Create a unique identifier string based on the selectedFoods
+            let foodsSignature = selectedFoods.map { "\($0.fdcId)-\($0.numberOfServings ?? 1)" }.joined(separator: ",")
             
             HStack(spacing: 40) {
                 ZStack {
@@ -283,11 +183,72 @@ struct QuickLogFood: View {
                     percentageColor: Color.purple
                 )
             }
-            .padding()
-            .background(Color("iosnp"))
-            .cornerRadius(12)
             // Force redraw when foods change by using the foodsSignature as an id
             .id(foodsSignature)
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+    
+    private var ingredientsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ingredients")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            if !selectedFoods.isEmpty {
+                // Group foods by fdcId to avoid duplicates
+                let aggregatedFoods = aggregateFoodsByFdcId(selectedFoods)
+                
+                VStack(spacing: 0) {
+                    ForEach(Array(aggregatedFoods.enumerated()), id: \.element.id) { index, food in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(food.displayName)
+                                    .font(.headline)
+                                
+                                HStack {
+                                    Text(food.servingSizeText)
+                                    if let servings = food.numberOfServings,
+                                       servings > 1 {
+                                        Text("×\(Int(servings))")
+                                    }
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            
+                            if let calories = food.calories {
+                                Text("\(Int(calories * (food.numberOfServings ?? 1)))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color("iosnp"))
+                        
+                        if index < aggregatedFoods.count - 1 {
+                            Divider()
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+                .background(Color("iosnp"))
+                .cornerRadius(12)
+            }
+            
+            Button {
+                showAddIngredientsSheet = true
+            } label: {
+                Text("Add ingredient")
+                    .foregroundColor(.accentColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color("iosnp"))
+                    .cornerRadius(12)
+            }
         }
     }
 
