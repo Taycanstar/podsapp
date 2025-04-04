@@ -15,6 +15,8 @@ struct LogFood: View {
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
     @Binding var path: NavigationPath
+    @FocusState private var isSearchFieldFocused: Bool
+    @State private var activateSearch = false
 
     var mode: LogFoodMode = .logFood 
     @Binding var selectedFoods: [Food]  
@@ -87,6 +89,7 @@ struct LogFood: View {
                 placement: .navigationBarDrawer(displayMode: .always), 
                 prompt: selectedFoodTab.searchPrompt
             )
+            .focused($isSearchFieldFocused)
             .onChange(of: searchText) { _ in
                 Task {
                     try? await Task.sleep(nanoseconds: 500_000_000)
@@ -105,6 +108,12 @@ struct LogFood: View {
                 }
                 
                 foodManager.refresh()
+                
+                // Set focus to the search field after a slight delay
+                DispatchQueue.main.asyncAfter(deadline: .now()) {
+                    isSearchFieldFocused = true
+                    activateSearch = true
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -113,6 +122,9 @@ struct LogFood: View {
             } message: {
                 Text(errorMessage)
             }
+            .background(
+                SearchActivator(isActivated: $activateSearch)
+            )
 
             toastMessages
         }
@@ -1162,5 +1174,97 @@ struct MealRow: View {
                 path.removeLast()
             }
         }
+    }
+}
+
+// MARK: - UIKit Integration for Search Focus
+struct SearchActivator: UIViewRepresentable {
+    @Binding var isActivated: Bool
+    
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard isActivated else { return }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+               let rootViewController = window.rootViewController {
+                
+                // Find the search controller
+                findAndActivateSearchController(in: rootViewController)
+                
+                // Reset the activation flag
+                DispatchQueue.main.async {
+                    isActivated = false
+                }
+            }
+        }
+    }
+    
+    private func findAndActivateSearchController(in viewController: UIViewController) {
+        // Try to find the search controller in the navigation controller
+        if let navigationController = viewController as? UINavigationController {
+            for child in navigationController.viewControllers {
+                findAndActivateSearchController(in: child)
+            }
+        }
+        
+        // Check presented view controllers
+        if let presented = viewController.presentedViewController {
+            findAndActivateSearchController(in: presented)
+        }
+        
+        // Search in child view controllers
+        for child in viewController.children {
+            findAndActivateSearchController(in: child)
+        }
+        
+        // Look for UISearchController in the view hierarchy
+        if let searchController = findSearchController(in: viewController) {
+            searchController.isActive = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                searchController.searchBar.becomeFirstResponder()
+            }
+        }
+    }
+    
+    private func findSearchController(in viewController: UIViewController) -> UISearchController? {
+        // Check if viewController is a UISearchController
+        if let searchController = viewController as? UISearchController {
+            return searchController
+        }
+        
+        // Check if it has a search controller property
+        if let searchController = viewController.navigationItem.searchController {
+            return searchController
+        }
+        
+        // Check in the view hierarchy for a UISearchBar
+        if let searchBar = findSearchBar(in: viewController.view) {
+            searchBar.becomeFirstResponder()
+        }
+        
+        return nil
+    }
+    
+    private func findSearchBar(in view: UIView) -> UISearchBar? {
+        // Check if this view is a search bar
+        if let searchBar = view as? UISearchBar {
+            return searchBar
+        }
+        
+        // Check in subviews
+        for subview in view.subviews {
+            if let searchBar = findSearchBar(in: subview) {
+                return searchBar
+            }
+        }
+        
+        return nil
     }
 }
