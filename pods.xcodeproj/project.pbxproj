@@ -57,6 +57,7 @@
 		364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */; };
 		364A83BA2D8F6C6A009D2620 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */; };
 		364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C02D9F8B71009D2620 /* QuickLogFood.swift */; };
+		364A83C32DA09344009D2620 /* AddIngredientsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C22DA09344009D2620 /* AddIngredientsView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -217,6 +218,7 @@
 		364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonWithIcon.swift; sourceTree = "<group>"; };
 		364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		364A83C02D9F8B71009D2620 /* QuickLogFood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLogFood.swift; sourceTree = "<group>"; };
+		364A83C22DA09344009D2620 /* AddIngredientsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIngredientsView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
@@ -642,6 +644,7 @@
 				364A83AF2D87D21E009D2620 /* EditRecipeView.swift */,
 				364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */,
 				364A83C02D9F8B71009D2620 /* QuickLogFood.swift */,
+				364A83C22DA09344009D2620 /* AddIngredientsView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -983,6 +986,7 @@
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				363AF9FB2D2095AA00C91A14 /* SingularColumnActivityView.swift in Sources */,
+				364A83C32DA09344009D2620 /* AddIngredientsView.swift in Sources */,
 				3696B9652B999B3A00D211D7 /* WelcomeView.swift in Sources */,
 				3696B9612B99939600D211D7 /* OnboardingViewModel.swift in Sources */,
 				363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */,

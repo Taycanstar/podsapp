@@ -367,48 +367,61 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
 
     // MARK: - Subviews
     private var mealDetailsSection: some View {
-        VStack(spacing: 16) {
-            // Title
-            TextField("Title", text: $navState.createMealName)
-                .focused($focusedField, equals: .mealName)
-                .textFieldStyle(.plain)
-                // .padding(.vertical, 8)
-
-                  Divider()
+        ZStack(alignment: .top) {
+            // Background with rounded corners
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color("iosnp"))
             
-            // Share-with row
-            HStack {
-                Text("Share with")
-                    .foregroundColor(.primary)
-                    
-                Spacer()
-                Menu {
-                    ForEach(shareOptions, id: \.self) { option in
-                        Button(option) {
-                            navState.createMealShareWith = option
+            // Content
+            VStack(spacing: 16) {
+                // Title
+                TextField("Title", text: $navState.createMealName)
+                    .focused($focusedField, equals: .mealName)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                // Divider that extends fully across
+                Divider()
+                .padding(.leading, 16)
+                
+                // Share-with row
+                HStack {
+                    Text("Share with")
+                        .foregroundColor(.primary)
+                        
+                    Spacer()
+                    Menu {
+                        ForEach(shareOptions, id: \.self) { option in
+                            Button(option) {
+                                navState.createMealShareWith = option
+                            }
                         }
+                    } label: {
+                        HStack {
+                            Text(navState.createMealShareWith)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color("iosbtn"))
+                        .cornerRadius(8)
                     }
-                } label: {
-                    HStack {
-                        Text(navState.createMealShareWith)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color("iosbtn"))
-                    .cornerRadius(8)
                 }
+                .padding(.horizontal)
+                
+                // Divider that extends fully across
+                Divider()
+                .padding(.leading, 16)
+                
+                // Macros
+                macroCircleAndStats
+                    .padding(.horizontal)
+                    .padding(.bottom)
             }
-                 Divider()
-            
-            // Macros
-            macroCircleAndStats
         }
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
         .padding(.horizontal)
     }
 
