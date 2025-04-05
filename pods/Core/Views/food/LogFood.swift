@@ -156,6 +156,8 @@ struct LogFood: View {
                 FoodListView(
                     searchResults: searchResults,
                     isSearching: isSearching,
+                    searchText: searchText,
+                    selectedFoodTab: selectedFoodTab,
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
@@ -290,6 +292,8 @@ private struct FoodListView: View {
     @EnvironmentObject var foodManager: FoodManager
     let searchResults: [Food]
     let isSearching: Bool
+    let searchText: String
+    let selectedFoodTab: LogFood.FoodTab
     @Binding var selectedMeal: String
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
@@ -304,29 +308,60 @@ private struct FoodListView: View {
                 // Add invisible spacing at the top to prevent overlap with header
                 Color.clear.frame(height: 6)
                 
-                // Quick Log Button
-                Button(action: {
-                    print("Tapped quick Log")
-                    HapticFeedback.generateLigth()
-                    showQuickLogSheet = true
-                }) {
-                    HStack(spacing: 16) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 24))
-                            .foregroundColor(.accentColor)
-                        Text("Quick Log")
-                            .font(.system(size: 15))
-                            .foregroundColor(.accentColor)
-                        Spacer()
+                // Show Quick Log button when there's no search text
+                if searchText.isEmpty {
+                    // Quick Log Button
+                    Button(action: {
+                        print("Tapped quick Log")
+                        HapticFeedback.generateLigth()
+                        showQuickLogSheet = true
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "pencil.and.outline")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Quick Log")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    .padding(.top, 0)
+                } 
+                // Show AI Generate Macros button when there's search text in the .all tab
+                else if selectedFoodTab == .all {
+                    Button(action: {
+                        print("AI tapped for: \(searchText)")
+                        HapticFeedback.generateLigth()
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Generate Macros with AI")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 0)
                 }
-                .padding(.horizontal)
-                .padding(.top, 0)
                 
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
