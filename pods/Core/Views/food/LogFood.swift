@@ -302,7 +302,7 @@ private struct FoodListView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Add invisible spacing at the top to prevent overlap with header
-                Color.clear.frame(height: 8)
+                Color.clear.frame(height: 6)
                 
                 // Quick Log Button
                 Button(action: {
@@ -474,7 +474,7 @@ private struct MealListView: View {
         ScrollView {
             VStack(spacing: 8) {
                 // Add invisible spacing at the top to prevent overlap with header
-                Color.clear.frame(height: 8)
+                Color.clear.frame(height: 6)
                 
                 // Create Meal Button
                 CreateMealButton(path: $path)
@@ -658,13 +658,20 @@ struct FoodRow: View {
                         Text("\(Int(calories)) cal")
                             .foregroundColor(.secondary)
                     }
-                    if !food.servingSizeText.isEmpty {
+                    
+                    // Check if the serving size text is meaningful (not just a default value)
+                    // This helps hide the serving info for quick-logged foods
+                    let isDefaultServing = food.servingSizeText.isEmpty || 
+                                          food.servingSizeText.trimmingCharacters(in: .whitespaces) == "1.0" ||
+                                          food.servingSizeText.trimmingCharacters(in: .whitespaces) == "1"
+                    
+                    if !food.servingSizeText.isEmpty && !isDefaultServing {
                         Text("•")
                             .foregroundColor(.secondary)
                         Text(food.servingSizeText)
                             .foregroundColor(.secondary)
                     }
-                    if let brand = food.brandText {
+                    if let brand = food.brandText, !brand.isEmpty {
                         Text("•")
                             .foregroundColor(.secondary)
                         Text(brand)

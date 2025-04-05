@@ -333,8 +333,8 @@ struct QuickLogFood: View {
             brandName: nil,
             servingSize: 1.0,
             numberOfServings: nil,
-            servingSizeUnit: "serving",
-            householdServingFullText: "1 serving",
+            servingSizeUnit: nil,
+            householdServingFullText: nil,
             foodNutrients: [
                 Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"),
                 Nutrient(nutrientName: "Protein", value: protein, unitName: "g"),
