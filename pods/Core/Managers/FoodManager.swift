@@ -227,7 +227,7 @@ func loadMoreFoods(refresh: Bool = false) {
     }
 }
 
-private func loadMoreLogs(refresh: Bool = false) {
+ func loadMoreLogs(refresh: Bool = false) {
     guard let email = userEmail else {
         print("❌ FoodManager.loadMoreLogs() - No user email available")
         return
@@ -238,7 +238,7 @@ private func loadMoreLogs(refresh: Bool = false) {
     }
     
     let pageToLoad = refresh ? 1 : currentPage
-    print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email)")
+    print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email), currentPage: \(currentPage)")
     isLoadingLogs = true
     error = nil
 
@@ -249,13 +249,16 @@ private func loadMoreLogs(refresh: Bool = false) {
          
             switch result {
             case .success(let response):
+                print("✅ FoodManager.loadMoreLogs() - Received response for page \(pageToLoad): \(response.logs.count) logs, hasMore: \(response.hasMore), totalPages: \(response.totalPages)")
                 
                 if refresh {
                     // When refreshing, replace all logs with the new ones
+                    print("🔄 FoodManager.loadMoreLogs() - Refresh mode: replacing \(self.combinedLogs.count) logs with \(response.logs.count) new logs")
                     withAnimation(.easeOut(duration: 0.3)) {
                         self.combinedLogs = response.logs
                     }
                     self.currentPage = 2
+                    print("⏭️ FoodManager.loadMoreLogs() - Set currentPage to 2 after refresh")
                 } else {
                     // For pagination, append new logs at the end
                     let startCount = self.combinedLogs.count
@@ -273,16 +276,22 @@ private func loadMoreLogs(refresh: Bool = false) {
                         }
                     }
                     
+                    print("🔍 FoodManager.loadMoreLogs() - Filtered \(response.logs.count) logs to \(newLogs.count) new unique logs")
+                    
                     if !newLogs.isEmpty {
                         withAnimation(.easeOut(duration: 0.3)) {
                             self.combinedLogs.append(contentsOf: newLogs)
                         }
-                        print("📈 Added \(newLogs.count) new logs (from page \(pageToLoad))")
+                        print("📈 FoodManager.loadMoreLogs() - Added \(newLogs.count) new logs, total now: \(self.combinedLogs.count)")
+                    } else {
+                        print("ℹ️ FoodManager.loadMoreLogs() - No new unique logs to add")
                     }
                     
+                    print("⏭️ FoodManager.loadMoreLogs() - Incrementing currentPage from \(self.currentPage) to \(self.currentPage + 1)")
                     self.currentPage += 1
                 }
                 
+                print("🚩 FoodManager.loadMoreLogs() - Setting hasMore to \(response.hasMore)")
                 self.hasMore = response.hasMore
                 self.cacheLogs(response, forPage: pageToLoad)
                 
@@ -306,19 +315,40 @@ private func loadMoreLogs(refresh: Bool = false) {
             return
         }
         
-        // Always fetch when explicitly asked
-        print("🔄 FoodManager.refresh() - Fetching fresh logs from server")
-        
-        // Start from page 1
+        // Reset the pagination state
         currentPage = 1
+        hasMore = true
         
-        // Fetch logs without clearing existing ones first (they'll be replaced once we get response)
+        // Clear the logs cache to ensure we get fresh data
+        print("🧹 FoodManager.refresh() - Clearing logs cache")
+        clearLogsCache()
+        
+        // Force UI update before fetching new data
+        objectWillChange.send()
+        
+        print("🔄 FoodManager.refresh() - Fetching fresh logs from server")
+        // Fetch logs with refresh flag to replace existing ones
         loadMoreLogs(refresh: true)
+        
+        // Force another UI update after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.objectWillChange.send()
+        }
         
         // Update refresh timestamp
         lastRefreshTime = Date()
     }
     
+    // Helper method to clear all logs cache
+    private func clearLogsCache() {
+        guard let userEmail = userEmail else { return }
+        
+        // Clear all pages of logs cache
+        for page in 1...10 { // Assuming we won't have more than 10 pages
+            let cacheKey = "combined_logs_\(userEmail)_page_\(page)"
+            UserDefaults.standard.removeObject(forKey: cacheKey)
+        }
+    }
 
     func logFood(
     email: String,
@@ -461,12 +491,49 @@ private func updateCombinedLogsCache() {
     }
     // Update the existing function to handle CombinedLog
 func loadMoreIfNeeded(log: CombinedLog) {
-    guard let index = combinedLogs.firstIndex(where: { $0.id == log.id }),
-          index == combinedLogs.count - 5,
-          hasMore else {
-        return
+    // Try to find the log's index
+    let index = combinedLogs.firstIndex(where: { $0.id == log.id })
+    
+    // Debug output to track why loadMoreIfNeeded might not be triggering
+    if let idx = index {
+        // The problem with just checking if index is >= count - 10 is that
+        // we might trigger loading on logs in the middle of the list if logs
+        // are added/removed. We should check both:
+        // 1. If this is a high-numbered index (near the end)
+        // 2. If there are few logs after this one
+        let isNearEndByNumber = idx >= combinedLogs.count - 10
+        let isNearEndByPosition = (combinedLogs.count - idx) <= 10
+        let shouldLoadMore = isNearEndByNumber || isNearEndByPosition
+        
+        print("🔍 FoodManager.loadMoreIfNeeded - Log at index \(idx) of \(combinedLogs.count)")
+        print("  - Near end by number: \(isNearEndByNumber)")
+        print("  - Near end by position: \(isNearEndByPosition)")
+        print("  - Should load more: \(shouldLoadMore)")
+        print("  - hasMore: \(hasMore)")
+        
+        // Check if we're near the end AND there are more logs to load
+        if shouldLoadMore && hasMore && !isLoadingLogs {
+            print("🎯 FoodManager.loadMoreIfNeeded - Triggering loadMoreLogs() at index \(idx)")
+            loadMoreLogs()
+        } else if !hasMore {
+            print("⚠️ FoodManager.loadMoreIfNeeded - Not loading more because hasMore is false")
+        } else if isLoadingLogs {
+            print("⏳ FoodManager.loadMoreIfNeeded - Not loading more because already loading")
+        } else {
+            print("⏱️ FoodManager.loadMoreIfNeeded - Not near end yet (\(combinedLogs.count - idx) items remaining)")
+        }
+    } else {
+        print("❓ FoodManager.loadMoreIfNeeded - Log not found in combinedLogs (id: \(log.id))")
     }
-    loadMoreLogs()
+    
+    // Add a fallback check - if we're at least 2/3 through the list,
+    // check if we should load more regardless of exact index
+    if combinedLogs.count >= 9 && hasMore && !isLoadingLogs {
+        // As a safety measure, trigger loading more logs if we're getting near the end
+        // even if the specific index check didn't pass
+        print("🔄 FoodManager.loadMoreIfNeeded - Safety check: ensuring we have enough logs")
+        loadMoreLogs()
+    }
 }
 func createMeal(
     title: String,

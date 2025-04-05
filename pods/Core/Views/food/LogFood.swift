@@ -506,6 +506,66 @@ private struct FoodListView: View {
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
                 }
+
+                // Add a loading indicator at the bottom when we have logs and hasMore is true
+                if !foodManager.combinedLogs.isEmpty && foodManager.hasMore {
+                    VStack {
+                        ProgressView()
+                            .padding()
+                        Text("Loading more logs...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 8)
+                    .onAppear {
+                        print("🔄 End of list reached - explicitly triggering loadMoreLogs()")
+                        // Explicitly trigger loading more logs when this view appears
+                        foodManager.loadMoreLogs()
+                    }
+                }
+
+                // Add a loading indicator at the bottom when we have logs and hasMore is true
+                if !foodManager.combinedLogs.isEmpty {
+                    if foodManager.isLoadingLogs {
+                        VStack {
+                            ProgressView()
+                                .padding(.vertical, 8)
+                            Text("Loading more logs...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 8)
+                    } else if foodManager.hasMore {
+                        Button(action: {
+                            print("🔄 Manual load more triggered")
+                            HapticFeedback.generateLigth()
+                            foodManager.loadMoreLogs()
+                        }) {
+                            HStack {
+                                Spacer()
+                                Text("Load More")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(.accentColor)
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .background(Color("iosfit"))
+                            .cornerRadius(10)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                        }
+                        .onAppear {
+                            print("🔄 End of list reached - explicitly triggering loadMoreLogs()")
+                            // Explicitly trigger loading more logs when this view appears
+                            foodManager.loadMoreLogs()
+                        }
+                    } else {
+                        Text("No more logs to load")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 8)
+                    }
+                }
             }
         }
         .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
