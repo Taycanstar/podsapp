@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct LogFood: View {
     @Environment(\.dismiss) private var dismiss
@@ -162,7 +163,7 @@ struct LogFood: View {
                     mode: mode,
                     selectedFoods: $selectedFoods,
                     path: $path,
-                    showQuickLogSheet: $showQuickLogSheet, onItemAdded: onItemAdded
+                    showQuickLogSheet: $showQuickLogSheet
                 )
             } else {
                 switch selectedFoodTab {
@@ -300,6 +301,11 @@ private struct FoodListView: View {
     @Binding var path: NavigationPath
     @Binding var showQuickLogSheet: Bool
     
+    // Add states for AI generation
+    @State private var isGeneratingMacros = false
+    @State private var showAIErrorAlert = false
+    @State private var aiErrorMessage = ""
+    
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
@@ -341,6 +347,33 @@ private struct FoodListView: View {
                     Button(action: {
                         print("AI tapped for: \(searchText)")
                         HapticFeedback.generateLigth()
+                        
+                        // Show loading indicator
+                        isGeneratingMacros = true
+                        
+                        // Call the FoodManager to generate macros with AI
+                        foodManager.generateMacrosWithAI(
+                            foodDescription: searchText,
+                            mealType: selectedMeal
+                        ) { result in
+                            // Hide loading indicator
+                            isGeneratingMacros = false
+                            
+                            switch result {
+                            case .success(_):
+                                // Success is handled by FoodManager (shows toast, updates lists)
+                                print("Successfully generated macros with AI")
+                                
+                            case .failure(let error):
+                                // Show error alert
+                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                    aiErrorMessage = message
+                                } else {
+                                    aiErrorMessage = error.localizedDescription
+                                }
+                                showAIErrorAlert = true
+                            }
+                        }
                     }) {
                         HStack(spacing: 6) {
                             Spacer()
@@ -361,9 +394,20 @@ private struct FoodListView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 0)
+                    .disabled(isGeneratingMacros) // Disable button while loading
+                    .overlay(
+                        isGeneratingMacros ? 
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .padding()
+                            .background(Color.black.opacity(0.2))
+                            .cornerRadius(8)
+                         : nil
+                    )
                 }
                 
                 // Main content card
+                
                 if searchResults.isEmpty && !isSearching {
                     VStack(spacing: 0) {
                         // Process logs to remove empty/invalid entries
@@ -463,6 +507,11 @@ private struct FoodListView: View {
                     .padding(.horizontal, 16)
                 }
             }
+        }
+        .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
+            Button("OK", role: .cancel) { showAIErrorAlert = false }
+        } message: {
+            Text(aiErrorMessage)
         }
     }
 }

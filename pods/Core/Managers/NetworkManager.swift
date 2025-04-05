@@ -6897,169 +6897,101 @@ func updateRecipeWithFoods(
     }.resume()
 }
 
-
-// func updateRecipeWithFoods(
-//     userEmail: String,
-//     recipeId: Int,
-//     title: String,
-//     description: String,
-//     instructions: String,
-//     privacy: String,
-//     servings: Int,
-//     foods: [Food],
-//     image: String?,
-//     prepTime: Int?,
-//     cookTime: Int?,
-//     totalCalories: Double,
-//     totalProtein: Double,
-//     totalCarbs: Double,
-//     totalFat: Double,
-//     completion: @escaping (Result<Recipe, Error>) -> Void
-// ) {
-//     guard let url = URL(string: "\(baseUrl)/update-recipe/") else {
-//         completion(.failure(NetworkError.invalidURL))
-//         return
-//     }
-    
-//     // Convert Food to the expected format for the API
-//     let foodItems = foods.map { food -> [String: Any] in
-//         var item: [String: Any] = [
-//             "external_id": "\(food.fdcId)",
-//             "name": food.displayName,
-//             "number_of_servings": food.numberOfServings ?? 1
-//         ]
+    func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "food_description": foodDescription,
+            "meal_type": mealType
+        ]
         
-//         if let brandText = food.brandText {
-//             item["brand"] = brandText
-//         }
+        let urlString = "\(baseUrl)/generate-ai-macros/"
         
-//         if let servingSize = food.servingSize {
-//             item["serving_size"] = servingSize
-//         }
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
         
-//         if let servingSizeUnit = food.servingSizeUnit {
-//             item["serving_unit"] = servingSizeUnit
-//         }
+        // Create and configure request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-//         item["serving_text"] = food.servingSizeText
-//         item["calories"] = food.calories ?? 0
-//         item["protein"] = food.protein ?? 0
-//         item["carbs"] = food.carbs ?? 0
-//         item["fat"] = food.fat ?? 0
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
         
-//         return item
-//     }
-    
-//     // Create the request body
-//     var parameters: [String: Any] = [
-//         "user_email": userEmail,
-//         "recipe_id": recipeId,
-//         "title": title,
-//         "description": description,
-//         "instructions": instructions,
-//         "privacy": privacy,
-//         "servings": servings,
-//         "food_items": foodItems,
-//         "total_calories": totalCalories,
-//         "total_protein": totalProtein,
-//         "total_carbs": totalCarbs,
-//         "total_fat": totalFat
-//     ]
-    
-//     if let image = image {
-//         parameters["image"] = image
-//     }
-    
-//     if let prepTime = prepTime {
-//         parameters["prep_time"] = prepTime
-//     }
-    
-//     if let cookTime = cookTime {
-//         parameters["cook_time"] = cookTime
-//     }
-    
-//     // DEBUG - Print what we're sending to the server
-//     print("⬆️ SENDING TO SERVER - updateRecipeWithFoods:")
-//     print("- userEmail: \(userEmail)")
-//     print("- recipeId: \(recipeId)")
-//     print("- title: \(title)")
-//     print("- description: \(description)")
-//     print("- instructions: \(instructions)")
-//     print("- privacy: \(privacy)")
-//     print("- servings: \(servings)")
-//     print("- image: \(image ?? "none")")
-//     print("- prepTime: \(prepTime ?? 0)")
-//     print("- cookTime: \(cookTime ?? 0)")
-//     print("- totalCalories: \(totalCalories)")
-//     print("- totalProtein: \(totalProtein)")
-//     print("- totalCarbs: \(totalCarbs)")
-//     print("- totalFat: \(totalFat)")
-//     print("- food_items: \(foodItems.count) items")
-    
-//     // Create the actual request body
-//     let jsonData: Data
-//     do {
-//         jsonData = try JSONSerialization.data(withJSONObject: parameters)
-//     } catch {
-//         print("JSON Serialization Error: \(error)")
-//         completion(.failure(NetworkError.jsonEncodingFailed))
-//         return
-//     }
-    
-//     var request = URLRequest(url: url)
-//     request.httpMethod = "POST"
-//     request.httpBody = jsonData
-//     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-//     request.addValue("application/json", forHTTPHeaderField: "Accept")
-    
-//     URLSession.shared.dataTask(with: request) { data, response, error in
-//         if let error = error {
-//             completion(.failure(error))
-//             return
-//         }
+        // DEBUG - Print what we're sending to the server
+        print("⬆️ SENDING TO SERVER - generateMacrosWithAI:")
+        print("- food description: \(foodDescription)")
+        print("- meal type: \(mealType)")
         
-//         guard let data = data else {
-//             completion(.failure(NetworkError.noData))
-//             return
-//         }
-        
-//         // Print response for debugging
-//         if let responseString = String(data: data, encoding: .utf8) {
-//             print("⬇️ RECEIVED FROM SERVER - updateRecipeWithFoods response:")
-//             print(responseString)
-//         }
-        
-//         do {
-//             let decoder = JSONDecoder()
-//             decoder.keyDecodingStrategy = .convertFromSnakeCase
-//             decoder.dateDecodingStrategy = .iso8601
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
             
-//             let recipe = try decoder.decode(Recipe.self, from: data)
-//             print("✅ Successfully updated recipe with foods: \(recipe.title) (ID: \(recipe.id))")
-//             completion(.success(recipe))
-//         } catch {
-//             print("❌ Decoding error when updating recipe with foods: \(error)")
+            // Check for server error responses
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+                if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = errorJson["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError("Server returned error \(httpResponse.statusCode)")))
+                }
+                return
+            }
             
-//             // More detailed error analysis
-//             if let decodingError = error as? DecodingError {
-//                 switch decodingError {
-//                 case .keyNotFound(let key, let context):
-//                     print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
-//                 case .valueNotFound(let type, let context):
-//                     print("❌ Value of type \(type) not found: \(context.debugDescription)")
-//                 case .typeMismatch(let type, let context):
-//                     print("❌ Type mismatch for type \(type): \(context.debugDescription)")
-//                 case .dataCorrupted(let context):
-//                     print("❌ Data corrupted: \(context.debugDescription)")
-//                 @unknown default:
-//                     print("❌ Unknown decoding error")
-//                 }
-//             }
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
             
-//             print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
-//             completion(.failure(NetworkError.decodingFailed(error)))
-//         }
-//     }.resume()
-// }
-
+            // Print response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("⬇️ SERVER RESPONSE - generateMacrosWithAI: \(responseString)")
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let loggedFood = try decoder.decode(LoggedFood.self, from: data)
+                
+                DispatchQueue.main.async {
+                    completion(.success(loggedFood))
+                }
+            } catch {
+                print("Decoding error: \(error)")
+                // If standard decoding fails, see if there's an error message
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = json["error"] as? String {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.serverError(errorMessage)))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.decodingError))
+                        }
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            }
+        }.resume()
+    }
 }
