@@ -1607,6 +1607,16 @@ func updateRecipe(
                     self.showToast = false
                 }
                 
+                // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        // Only clear if it still matches the food we logged
+                        if self.lastLoggedFoodId == loggedFood.food.fdcId {
+                            self.lastLoggedFoodId = nil
+                        }
+                    }
+                }
+                
                 // Call completion handler with success
                 completion(.success(loggedFood))
                 
