@@ -318,6 +318,12 @@ struct QuickLogFood: View {
         // Show loading state
         isLogging = true
         
+        // First immediately close the sheet to return to the main view
+        isPresented = false
+        
+        // Also set viewModel.isShowingFoodContainer to false to ensure we return to DashboardView
+        viewModel.isShowingFoodContainer = false
+        
         // Get food details from text fields
         let title = foodTitle.isEmpty ? "Unnamed Food" : foodTitle
         let calories = Double(foodCalories) ?? 0
@@ -352,15 +358,16 @@ struct QuickLogFood: View {
             food: quickLoggedFood,
             meal: selectedMeal,
             servings: 1,
-            date: Date()
+            date: Date(),
+            notes: nil
         ) { result in
             DispatchQueue.main.async { [self] in
                 isLogging = false
                 
                 switch result {
-                case .success:
-                    // Close the sheet
-                    isPresented = false
+                case .success(_):
+                    // Success is handled by FoodManager (shows toast in Dashboard)
+                    break
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
