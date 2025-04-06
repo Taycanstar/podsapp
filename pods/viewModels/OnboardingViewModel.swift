@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 class OnboardingViewModel: ObservableObject {
@@ -21,6 +20,9 @@ class OnboardingViewModel: ObservableObject {
     @Published var profileInitial: String = ""
     @Published var profileColor: String = ""
     @Published var userId: Int?
+    
+    // Food container visibility control
+    @Published var isShowingFoodContainer: Bool = false
     
     // Add these new properties for subscription information
     @Published var subscriptionStatus: String = "none"
@@ -45,6 +47,15 @@ class OnboardingViewModel: ObservableObject {
         UserDefaults.standard.set(self.subscriptionExpiresAt, forKey: "subscriptionExpiresAt")
         UserDefaults.standard.set(self.subscriptionRenews, forKey: "subscriptionRenews")
         UserDefaults.standard.set(self.subscriptionSeats, forKey: "subscriptionSeats")
+    }
+    
+    // Helper methods to show/hide food container
+    func showFoodContainer() {
+        isShowingFoodContainer = true
+    }
+    
+    func hideFoodContainer() {
+        isShowingFoodContainer = false
     }
     
     func getCurrentSubscriptionTier() -> SubscriptionTier {

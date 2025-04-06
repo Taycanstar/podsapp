@@ -11,6 +11,7 @@ import PhotosUI
 struct RecipeDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
 
     let recipe: Recipe
     @Binding var path: NavigationPath
@@ -495,6 +496,11 @@ struct RecipeDetailView: View {
             statusCompletion: { success in
                 if success {
                     showLoggingSuccess = true
+                    
+                    // Dismiss the food container after a short delay for feedback
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        viewModel.hideFoodContainer()
+                    }
                 }
             }
         )

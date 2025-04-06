@@ -909,10 +909,10 @@ struct FoodRow: View {
                 withAnimation { 
                     checkmarkVisible = true 
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation { 
-                        checkmarkVisible = false
-                    }
+                
+                // Dismiss the food container after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    viewModel.hideFoodContainer()
                 }
                 
             case .failure(let error):
@@ -978,6 +978,7 @@ struct HistoryRow: View {
 // New row that shows displayCalories from the combined log
 struct CombinedLogMealRow: View {
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     let log: CombinedLog
     let meal: MealSummary
     @Binding var selectedMeal: String
@@ -1045,7 +1046,12 @@ struct CombinedLogMealRow: View {
                         mealTime: selectedMeal,
                         calories: log.displayCalories,
                         statusCompletion: { success in
-                            if !success {
+                            if success {
+                                // Dismiss the food container after a short delay
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                    viewModel.hideFoodContainer()
+                                }
+                            } else {
                                 withAnimation {
                                     if self.foodManager.lastLoggedMealId == self.meal.id {
                                         self.foodManager.lastLoggedMealId = nil
@@ -1165,6 +1171,7 @@ struct CombinedLogMealRow: View {
 
 struct MealRow: View {
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     let meal: Meal
     @Binding var selectedMeal: String
     
@@ -1240,7 +1247,12 @@ struct MealRow: View {
                         mealTime: selectedMeal,
                         calories: displayCalories
                     ) { success in
-                        if !success {
+                        if success {
+                            // Dismiss the food container after a short delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                viewModel.hideFoodContainer()
+                            }
+                        } else {
                             withAnimation {
                                 if self.foodManager.lastLoggedMealId == self.meal.id {
                                     self.foodManager.lastLoggedMealId = nil

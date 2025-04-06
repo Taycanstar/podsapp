@@ -13,6 +13,7 @@ struct NewSheetView: View {
     @Binding var showingVideoCreationScreen: Bool
     @Binding var showQuickPodView: Bool
     @Binding var selectedTab: Int 
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
 
     let options = [
@@ -60,7 +61,7 @@ struct NewSheetView: View {
                           showQuickPodView = true
                       case "Log Food":
                         isPresented = false
-                        selectedTab = 5
+                        viewModel.showFoodContainer()
                       default:
                           break
                       }

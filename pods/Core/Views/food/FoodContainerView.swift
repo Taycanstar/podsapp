@@ -133,16 +133,15 @@ enum FoodNavigationDestination: Hashable {
 
 struct FoodContainerView: View {
     @State private var path = NavigationPath()
-    @Binding var selectedTab: Int
     @State private var selectedMeal: String
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     // Add the observable state object
     @StateObject private var navState = FoodNavigationState()
     
     // Separate state arrays for different contexts to prevent state bleeding
     @State private var logFoodSelectedFoods: [Food] = []
-    // Use the observable object's array instead of local state
-    // @State private var createMealSelectedFoods: [Food] = []
     
     // Replace editMealSelectedFoods with a dictionary to store foods per meal ID
     @State private var editMealSelectedFoodsByMealId: [Int: [Food]] = [:]
@@ -150,14 +149,23 @@ struct FoodContainerView: View {
     @State private var originalMealFoodsByMealId: [Int: [Food]] = [:]
     @State private var currentlyEditingMealId: Int? = nil
     
-    // @State private var createRecipeSelectedFoods: [Food] = []
     @State private var editRecipeSelectedFoods: [Food] = []
     
     // Add a state variable to track the currently editing recipe ID, similar to currentlyEditingMealId
     @State private var currentlyEditingRecipeId: Int? = nil
     
-    init(selectedTab: Binding<Int>) {
-        _selectedTab = selectedTab
+    // For compatibility with views that expect selectedTab
+    private var selectedTabBinding: Binding<Int> {
+        Binding<Int>(
+            get: { 0 }, // Default to dashboard tab
+            set: { _ in 
+                // When a view tries to change the tab, dismiss this view instead
+                viewModel.hideFoodContainer()
+            }
+        )
+    }
+    
+    init() {
         // Set initial meal based on time of day
         let hour = Calendar.current.component(.hour, from: Date())
         let defaultMeal: String
@@ -171,6 +179,15 @@ struct FoodContainerView: View {
             defaultMeal = "Dinner"
         }
         _selectedMeal = State(initialValue: defaultMeal)
+    }
+    
+    // Helper method to dismiss container and navigate to dashboard
+    func dismissAndNavigateToDashboard() {
+        // Reset state
+        path = NavigationPath()
+        
+        // Dismiss the container view
+        viewModel.hideFoodContainer()
     }
     
     // Helper method to initialize meal items outside of the View body
@@ -230,7 +247,7 @@ struct FoodContainerView: View {
     var body: some View {
         NavigationStack(path: $path) {
             LogFood(
-                selectedTab: $selectedTab,
+                selectedTab: selectedTabBinding,
                 selectedMeal: $selectedMeal,
                 path: $path,
                 mode: .logFood, 
@@ -240,7 +257,7 @@ struct FoodContainerView: View {
                 switch destination {
                 case .logFood:
                     LogFood(
-                        selectedTab: $selectedTab,
+                        selectedTab: selectedTabBinding,
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .logFood,
@@ -289,7 +306,7 @@ struct FoodContainerView: View {
                     )
                     
                     LogFood(
-                        selectedTab: $selectedTab,
+                        selectedTab: selectedTabBinding,
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .addToMeal,
@@ -410,7 +427,7 @@ struct FoodContainerView: View {
                     )
                     
                     LogFood(
-                        selectedTab: $selectedTab,
+                        selectedTab: selectedTabBinding,
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .addToRecipe,
@@ -514,6 +531,15 @@ struct FoodContainerView: View {
                     // Update the original foods to match the saved state
                     originalMealFoodsByMealId[mealId] = foods
                 }
+            }
+            
+            // Handle DismissFoodContainer notification for legacy compatibility
+            NotificationCenter.default.addObserver(
+                forName: Notification.Name("DismissFoodContainer"),
+                object: nil,
+                queue: .main
+            ) { _ in
+                dismissAndNavigateToDashboard()
             }
         }
     }

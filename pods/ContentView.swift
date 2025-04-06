@@ -69,14 +69,6 @@ struct ContentView: View {
                                FriendsView()
                             case 4:
                                 ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
-                            case 5:  // Add new case without adding tab
-                                ZStack {
-                                    if selectedTab == 5 {
-                                        FoodContainerView(selectedTab: $selectedTab)
-                                            .transition(.move(edge: .bottom))
-                                    }
-                                }
-                                .animation(.spring(response: 0.35, dampingFraction: 0.86), value: selectedTab)
                             default:
                                 EmptyView()
                             }
@@ -86,16 +78,6 @@ struct ContentView: View {
                         .onChange(of: selectedTab) {_, newValue in
                             if newValue == 1 {
                                 showingVideoCreationScreen = true
-                            }
-                            
-                            if newValue == 5 {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                                    isTabBarVisible = false
-                                }
-                            } else if selectedTab == 5 && newValue != 5 {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                                    isTabBarVisible = true
-                                }
                             }
                         }
                         .onDisappear {
@@ -123,10 +105,9 @@ struct ContentView: View {
         .task {
             await versionManager.checkVersion()
         }
-                    if isTabBarVisible {
-                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
-                            .ignoresSafeArea(.keyboard)
-                    }
+                    
+                    CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
+                        .ignoresSafeArea(.keyboard)
                 }
                 .ignoresSafeArea(.keyboard)
 
@@ -134,6 +115,12 @@ struct ContentView: View {
                     CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                         .background(Color.black.edgesIgnoringSafeArea(.all))
                 }
+                
+                // Food container as a fullScreenCover
+                .fullScreenCover(isPresented: $viewModel.isShowingFoodContainer) {
+                    FoodContainerView()
+                }
+                
                 .sheet(isPresented: $showQuickPodView) {
                     QuickPodView(isPresented: $showQuickPodView) { newPod in
                         self.newPodId = newPod.id

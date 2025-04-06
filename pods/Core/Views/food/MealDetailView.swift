@@ -293,6 +293,11 @@ struct MealDetailView: View {
             statusCompletion: { success in
                 if success {
                     showLoggingSuccess = true
+                    
+                    // Dismiss the food container after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        NotificationCenter.default.post(name: Notification.Name("DismissFoodContainer"), object: nil)
+                    }
                 }
             }
         )
