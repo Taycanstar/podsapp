@@ -18,6 +18,7 @@ struct RecipeDetailView: View {
 
     @State private var selectedMealTime: String = "Breakfast"
     @State private var showLoggingSuccess = false
+    @State private var showLoggingError = false
     
     @State private var isShowingEditRecipe = false
     @State private var isShowingDeleteAlert = false
@@ -39,6 +40,9 @@ struct RecipeDetailView: View {
         guard let imageURL = recipe.image else { return false }
         return !imageURL.isEmpty
     }
+    
+    // Add the missing state variable
+    @State private var isLoggingRecipe = false
     
     // MARK: - Initializer
     init(recipe: Recipe, path: Binding<NavigationPath>) {
@@ -483,6 +487,11 @@ struct RecipeDetailView: View {
     
     /// Fire a "logRecipe" call in your `FoodManager`.
     private func logRecipe() {
+        isLoggingRecipe = true
+        
+        // First, close the food container immediately
+        viewModel.isShowingFoodContainer = false
+        
         // Calculate the scaled calories based on serving count
         let baseCalories = recipe.calories
         let scaledCalories = baseCalories * Double(servingsCount) / Double(recipe.servings)
@@ -494,14 +503,11 @@ struct RecipeDetailView: View {
             notes: nil,
             calories: scaledCalories,
             statusCompletion: { success in
+                isLoggingRecipe = false
                 if success {
                     showLoggingSuccess = true
-                    
-                    // Dismiss the food container after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        // Close the fullScreenCover directly
-                        viewModel.isShowingFoodContainer = false
-                    }
+                } else {
+                    showLoggingError = true
                 }
             }
         )

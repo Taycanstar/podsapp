@@ -88,19 +88,27 @@ struct DashboardView: View {
             }
             
             // AI Generation Success Toast
-                if foodManager.showAIGenerationSuccess, let food = foodManager.aiGeneratedFood {
-                    VStack{
-                        Spacer ()
-                        BottomPopup(message: "Food logged")
-                                     .padding(.bottom, 0)
-                    }
-            
-              .zIndex(100)
-              .transition(.opacity)
-                .animation(.spring(), value: foodManager.showAIGenerationSuccess)
-
+            if foodManager.showAIGenerationSuccess, let food = foodManager.aiGeneratedFood {
+                VStack{
+                    Spacer()
+                    BottomPopup(message: "Food logged")
+                        .padding(.bottom, 0)
                 }
-        
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showAIGenerationSuccess)
+            }
+            // Regular Log Success Toast 
+            else if foodManager.showLogSuccess, let item = foodManager.lastLoggedItem {
+                VStack{
+                    Spacer()
+                    BottomPopup(message: "\(item.name) logged")
+                        .padding(.bottom, 0)
+                }
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showLogSuccess)
+            }
         }
         .onAppear {
             isTabBarVisible.wrappedValue = true

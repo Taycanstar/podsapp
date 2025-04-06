@@ -894,6 +894,9 @@ struct FoodRow: View {
     }
     
     private func logFood() {
+        // First, close the food container immediately
+        viewModel.isShowingFoodContainer = false
+        
         foodManager.logFood(
             email: viewModel.email,
             food: food,
@@ -905,15 +908,7 @@ struct FoodRow: View {
             switch result {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
-                withAnimation { 
-                    checkmarkVisible = true 
-                }
-                
-                // Dismiss the food container after a short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    // Close the fullScreenCover directly
-                    viewModel.isShowingFoodContainer = false
-                }
+                // Success is handled by FoodManager (shows toast, updates lists)
                 
             case .failure(let error):
                 print("Error logging food: \(error)")
@@ -922,7 +917,6 @@ struct FoodRow: View {
                     if self.foodManager.lastLoggedFoodId == self.food.fdcId {
                         self.foodManager.lastLoggedFoodId = nil
                     }
-                    self.checkmarkVisible = false
                 }
                 self.showLoggingErrorAlert = true
             }
@@ -1028,6 +1022,9 @@ struct CombinedLogMealRow: View {
                 HapticFeedback.generate()
                 switch mode {
                 case .logFood:
+                    // First, close the food container immediately
+                    viewModel.isShowingFoodContainer = false
+                    
                     foodManager.logMeal(
                         meal: Meal(
                             id: meal.id,
@@ -1047,13 +1044,7 @@ struct CombinedLogMealRow: View {
                         mealTime: selectedMeal,
                         calories: log.displayCalories,
                         statusCompletion: { success in
-                            if success {
-                                // Dismiss the food container after a short delay
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    // Close the fullScreenCover directly
-                                    viewModel.isShowingFoodContainer = false
-                                }
-                            } else {
+                            if !success {
                                 withAnimation {
                                     if self.foodManager.lastLoggedMealId == self.meal.id {
                                         self.foodManager.lastLoggedMealId = nil
@@ -1245,18 +1236,15 @@ struct MealRow: View {
                 HapticFeedback.generate()
                 switch mode {
                 case .logFood:
+                    // First, close the food container immediately
+                    viewModel.isShowingFoodContainer = false
+                    
                     foodManager.logMeal(
                         meal: meal, 
                         mealTime: selectedMeal,
                         calories: displayCalories
                     ) { success in
-                        if success {
-                            // Dismiss the food container after a short delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                // Close the fullScreenCover directly
-                                viewModel.isShowingFoodContainer = false
-                            }
-                        } else {
+                        if !success {
                             withAnimation {
                                 if self.foodManager.lastLoggedMealId == self.meal.id {
                                     self.foodManager.lastLoggedMealId = nil

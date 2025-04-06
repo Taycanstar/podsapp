@@ -215,6 +215,10 @@ struct FoodDetailsView: View {
     ToolbarItem(placement: .navigationBarTrailing) {
         Button {
             isLoading = true
+            
+            // First, close the food container immediately
+            viewModel.isShowingFoodContainer = false
+            
             foodManager.logFood(
                 email: viewModel.email,
                 food: food,
@@ -227,7 +231,6 @@ struct FoodDetailsView: View {
                 switch result {
                 case .success(let loggedFood):
                     print("Food logged successfully: \(loggedFood)")
-                    viewModel.isShowingFoodContainer = false
                 case .failure(let error):
                     print("Error logging food: \(error)")
                     errorMessage = "An error occurred while logging"

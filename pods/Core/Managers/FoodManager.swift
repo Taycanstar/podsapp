@@ -45,6 +45,8 @@ class FoodManager: ObservableObject {
     @Published var analysisStage = 0
     @Published var showAIGenerationSuccess = false
     @Published var aiGeneratedFood: LoggedFoodItem?
+    @Published var showLogSuccess = false
+    @Published var lastLoggedItem: (name: String, calories: Double)?
     
     init() {
         self.networkManager = NetworkManager()
@@ -425,14 +427,17 @@ func loadMoreFoods(refresh: Bool = false) {
                     }
                 }
                 
-                // Show toast notification
-                withAnimation {
-                    self.showToast = true
+                // Set data for success toast in dashboard
+                self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
+                self.showLogSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showLogSuccess = false
                 }
                 
-                // Clear the toast after 2 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation {
+                // Show the local toast if the food was added manually (not AI generated)
+                if !self.isAnalyzingFood {
+                    self.showToast = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         self.showToast = false
                     }
                 }
@@ -876,9 +881,17 @@ func logMeal(
                     }
                 }
                 
-                // Show toast notification
-                withAnimation {
-                    self.showMealLoggedToast = true
+                // Set data for success toast in dashboard
+                self.lastLoggedItem = (name: meal.title, calories: calories)
+                self.showLogSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showLogSuccess = false
+                }
+                
+                // Show the local toast
+                self.showToast = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.showToast = false
                 }
                 
                 // Clear the flag and toast after 2 seconds
@@ -1464,17 +1477,11 @@ func logRecipe(
                 // Update last logged recipe ID for UI feedback
                 self.lastLoggedRecipeId = recipe.id
                 
-                // Show toast
-                self.showRecipeLoggedToast = true
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation {
-                        if self.lastLoggedRecipeId == recipe.id {
-                            self.lastLoggedRecipeId = nil
-                        }
-                          self.showRecipeLoggedToast = false
-                    }
-                  
+                // Set data for success toast in dashboard
+                self.lastLoggedItem = (name: recipe.title, calories: calories)
+                self.showLogSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showLogSuccess = false
                 }
 
                 self.updateCombinedLogsCache()

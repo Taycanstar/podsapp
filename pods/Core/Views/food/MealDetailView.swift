@@ -287,6 +287,9 @@ struct MealDetailView: View {
         let baseCalories = meal.calories
         let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
         
+        // First, close the food container immediately
+        viewModel.isShowingFoodContainer = false
+        
         foodManager.logMeal(
             meal: meal,
             mealTime: selectedMealTime,
@@ -294,11 +297,6 @@ struct MealDetailView: View {
             statusCompletion: { success in
                 if success {
                     showLoggingSuccess = true
-                    
-                    // Dismiss the food container directly
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        viewModel.isShowingFoodContainer = false
-                    }
                 }
             }
         )
