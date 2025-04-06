@@ -1633,65 +1633,65 @@ func updateRecipe(
 }
 
 // Add this method to the FoodManager class
-    func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+    
+    networkManager.generateMacrosWithAI(foodDescription: foodDescription, mealType: mealType) { [weak self] result in
+        guard let self = self else { return }
         
-        networkManager.generateMacrosWithAI(foodDescription: foodDescription, mealType: mealType) { [weak self] result in
-            guard let self = self else { return }
+        switch result {
+        case .success(let loggedFood):
+            // Add to the beginning of the list
+            let combinedLog = CombinedLog(
+                type: .food,
+                status: loggedFood.status,
+                calories: loggedFood.calories,
+                message: loggedFood.message,
+                foodLogId: loggedFood.foodLogId,
+                food: loggedFood.food,
+                mealType: loggedFood.mealType,
+                mealLogId: nil,
+                meal: nil,
+                mealTime: nil,
+                scheduledAt: nil,
+                recipeLogId: nil,
+                recipe: nil,
+                servingsConsumed: nil
+            )
             
-            switch result {
-            case .success(let loggedFood):
-                // Add to the beginning of the list
-                let combinedLog = CombinedLog(
-                    type: .food,
-                    status: loggedFood.status,
-                    calories: loggedFood.calories,
-                    message: loggedFood.message,
-                    foodLogId: loggedFood.foodLogId,
-                    food: loggedFood.food,
-                    mealType: loggedFood.mealType,
-                    mealLogId: nil,
-                    meal: nil,
-                    mealTime: nil,
-                    scheduledAt: nil,
-                    recipeLogId: nil,
-                    recipe: nil,
-                    servingsConsumed: nil
-                )
-                
-                if self.combinedLogs.isEmpty {
-                    self.combinedLogs = [combinedLog]
-                } else {
-                    self.combinedLogs.insert(combinedLog, at: 0)
-                }
-                
-                // Track the recently added food
-                self.lastLoggedFoodId = loggedFood.food.fdcId
-                self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
-                
-                // Show success toast
-                self.showToast = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    self.showToast = false
-                }
-                
-                // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation {
-                        // Only clear if it still matches the food we logged
-                        if self.lastLoggedFoodId == loggedFood.food.fdcId {
-                            self.lastLoggedFoodId = nil
-                        }
+            if self.combinedLogs.isEmpty {
+                self.combinedLogs = [combinedLog]
+            } else {
+                self.combinedLogs.insert(combinedLog, at: 0)
+            }
+            
+            // Track the recently added food
+            self.lastLoggedFoodId = loggedFood.food.fdcId
+            self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
+            
+            // Show success toast
+            self.showToast = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                self.showToast = false
+            }
+            
+            // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    // Only clear if it still matches the food we logged
+                    if self.lastLoggedFoodId == loggedFood.food.fdcId {
+                        self.lastLoggedFoodId = nil
                     }
                 }
-                
-                // Call completion handler with success
-                completion(.success(loggedFood))
-                
-            case .failure(let error):
-                // Handle error and pass it along
-                completion(.failure(error))
             }
+            
+            // Call completion handler with success
+            completion(.success(loggedFood))
+            
+        case .failure(let error):
+            // Handle error and pass it along
+            completion(.failure(error))
         }
     }
+}
 
 }

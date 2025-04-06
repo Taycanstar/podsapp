@@ -20,6 +20,7 @@ import PhotosUI
 struct MealDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     // MARK: - Properties
     let meal: Meal
@@ -294,9 +295,9 @@ struct MealDetailView: View {
                 if success {
                     showLoggingSuccess = true
                     
-                    // Dismiss the food container after a short delay
+                    // Dismiss the food container directly
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        NotificationCenter.default.post(name: Notification.Name("DismissFoodContainer"), object: nil)
+                        viewModel.isShowingFoodContainer = false
                     }
                 }
             }

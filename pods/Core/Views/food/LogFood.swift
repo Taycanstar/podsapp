@@ -291,6 +291,7 @@ private struct MealPickerMenu: View {
 
 private struct FoodListView: View {
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     let searchResults: [Food]
     let isSearching: Bool
     let searchText: String
@@ -363,6 +364,11 @@ private struct FoodListView: View {
                             case .success(_):
                                 // Success is handled by FoodManager (shows toast, updates lists)
                                 print("Successfully generated macros with AI")
+                                
+                                // Close the food container after successful generation
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                    viewModel.isShowingFoodContainer = false
+                                }
                                 
                             case .failure(let error):
                                 // Show error alert
@@ -776,6 +782,7 @@ private struct RecipeListView: View {
 struct FoodRow: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.dismiss) private var dismiss
     let food: Food
     let selectedMeal: Binding<String>
     @State private var checkmarkVisible: Bool = false
@@ -911,8 +918,9 @@ struct FoodRow: View {
                 }
                 
                 // Dismiss the food container after a short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    viewModel.hideFoodContainer()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Close the fullScreenCover directly
+                    viewModel.isShowingFoodContainer = false
                 }
                 
             case .failure(let error):
@@ -979,6 +987,7 @@ struct HistoryRow: View {
 struct CombinedLogMealRow: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.dismiss) private var dismiss
     let log: CombinedLog
     let meal: MealSummary
     @Binding var selectedMeal: String
@@ -1048,8 +1057,9 @@ struct CombinedLogMealRow: View {
                         statusCompletion: { success in
                             if success {
                                 // Dismiss the food container after a short delay
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                    viewModel.hideFoodContainer()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    // Close the fullScreenCover directly
+                                    viewModel.isShowingFoodContainer = false
                                 }
                             } else {
                                 withAnimation {
@@ -1172,6 +1182,7 @@ struct CombinedLogMealRow: View {
 struct MealRow: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.dismiss) private var dismiss
     let meal: Meal
     @Binding var selectedMeal: String
     
@@ -1249,8 +1260,9 @@ struct MealRow: View {
                     ) { success in
                         if success {
                             // Dismiss the food container after a short delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                viewModel.hideFoodContainer()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                // Close the fullScreenCover directly
+                                viewModel.isShowingFoodContainer = false
                             }
                         } else {
                             withAnimation {

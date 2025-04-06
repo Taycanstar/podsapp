@@ -30,7 +30,6 @@ struct FoodDetailsView: View {
         print("Food Measures:", food.foodMeasures)
         print("Selected Meal:", selectedMeal)
         self.food = food
-        // self.selectedMeal = selectedMeal
         _selectedMeal = selectedMeal 
         _servingSize = State(initialValue: food.servingSizeText)
     }
@@ -228,7 +227,7 @@ struct FoodDetailsView: View {
                 switch result {
                 case .success(let loggedFood):
                     print("Food logged successfully: \(loggedFood)")
-                    dismiss()
+                    viewModel.isShowingFoodContainer = false
                 case .failure(let error):
                     print("Error logging food: \(error)")
                     errorMessage = "An error occurred while logging"

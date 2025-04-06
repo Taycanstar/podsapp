@@ -497,9 +497,10 @@ struct RecipeDetailView: View {
                 if success {
                     showLoggingSuccess = true
                     
-                    // Dismiss the food container after a short delay for feedback
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        viewModel.hideFoodContainer()
+                    // Dismiss the food container after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // Close the fullScreenCover directly
+                        viewModel.isShowingFoodContainer = false
                     }
                 }
             }

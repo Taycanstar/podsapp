@@ -119,6 +119,7 @@ struct ContentView: View {
                 // Food container as a fullScreenCover
                 .fullScreenCover(isPresented: $viewModel.isShowingFoodContainer) {
                     FoodContainerView()
+                        .environmentObject(viewModel)
                 }
                 
                 .sheet(isPresented: $showQuickPodView) {

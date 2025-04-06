@@ -186,8 +186,8 @@ struct FoodContainerView: View {
         // Reset state
         path = NavigationPath()
         
-        // Dismiss the container view
-        viewModel.hideFoodContainer()
+        // Dismiss the container view directly
+        viewModel.isShowingFoodContainer = false
     }
     
     // Helper method to initialize meal items outside of the View body
@@ -263,8 +263,8 @@ struct FoodContainerView: View {
                         mode: .logFood,
                         selectedFoods: $logFoodSelectedFoods
                     )
-                case .foodDetails(let food, _):
-                    FoodDetailsView(food: food, selectedMeal: $selectedMeal)
+                case .foodDetails(let food, let selectedMeal):
+                    FoodDetailsView(food: food, selectedMeal: selectedMeal)
                 case .createMeal:
                     CreateMealView(
                         path: $path,
