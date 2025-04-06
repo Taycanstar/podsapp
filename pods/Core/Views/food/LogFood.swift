@@ -349,26 +349,18 @@ private struct FoodListView: View {
                         print("AI tapped for: \(searchText)")
                         HapticFeedback.generateLigth()
                         
-                        // Show loading indicator
-                        isGeneratingMacros = true
+                        // First, close the food container immediately
+                        viewModel.isShowingFoodContainer = false
                         
-                        // Call the FoodManager to generate macros with AI
+                        // Then start the AI analysis process
                         foodManager.generateMacrosWithAI(
                             foodDescription: searchText,
                             mealType: selectedMeal
                         ) { result in
-                            // Hide loading indicator
-                            isGeneratingMacros = false
-                            
                             switch result {
                             case .success(_):
                                 // Success is handled by FoodManager (shows toast, updates lists)
                                 print("Successfully generated macros with AI")
-                                
-                                // Close the food container after successful generation
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                    viewModel.isShowingFoodContainer = false
-                                }
                                 
                             case .failure(let error):
                                 // Show error alert
