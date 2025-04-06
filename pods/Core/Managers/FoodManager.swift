@@ -43,6 +43,8 @@ class FoodManager: ObservableObject {
     // Add this property to the FoodManager class
     @Published var isAnalyzingFood = false
     @Published var analysisStage = 0
+    @Published var showAIGenerationSuccess = false
+    @Published var aiGeneratedFood: LoggedFoodItem?
     
     init() {
         self.networkManager = NetworkManager()
@@ -1641,6 +1643,7 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
     // Set analyzing flag
     isAnalyzingFood = true
     analysisStage = 0
+    showAIGenerationSuccess = false
     
     // Create a timer to cycle through analysis stages for UI feedback
     let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -1692,10 +1695,19 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
             
-            // Show success toast
-            self.showToast = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self.showToast = false
+            // Save the generated food for the toast
+            self.aiGeneratedFood = loggedFood.food
+            
+            // Reset analysis state and show success toast in dashboard
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isAnalyzingFood = false
+                self.analysisStage = 0
+                
+                // Show success toast
+                self.showAIGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showAIGenerationSuccess = false
+                }
             }
             
             // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
@@ -1706,12 +1718,6 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
                         self.lastLoggedFoodId = nil
                     }
                 }
-            }
-            
-            // Reset analysis state
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isAnalyzingFood = false
-                self.analysisStage = 0
             }
             
             // Call completion handler with success

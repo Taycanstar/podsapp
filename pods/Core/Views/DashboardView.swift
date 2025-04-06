@@ -14,80 +14,93 @@ struct DashboardView: View {
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Dashboard")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .padding(.horizontal)
-                
-                
-                
-                // Log Food button
-                Button(action: {
-                    viewModel.showFoodContainer()
-                }) {
-                    HStack {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Log Food")
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.accentColor)
-                    .cornerRadius(10)
-                }
-                .padding(.horizontal)
-
-
-                
-                // Recent logs section
-                if !foodManager.combinedLogs.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recent Logs")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                            // Show food analysis card if analysis is in progress
-                if foodManager.isAnalyzingFood {
-                    FoodAnalysisCard()
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Dashboard")
+                        .font(.title)
+                        .fontWeight(.bold)
                         .padding(.horizontal)
-                        .transition(.opacity)
-                }
-                        
-                        ForEach(Array(foodManager.combinedLogs.prefix(5)), id: \.id) { log in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(getLogName(log))
-                                        .fontWeight(.medium)
-                                    if let date = getLogDate(log) {
-                                        Text(formatDate(date))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                HStack {
-                                    Image(systemName: "flame.fill")
-                                        .foregroundColor(.orange)
-                                    Text("\(Int(log.displayCalories)) cal")
-                                }
-                                .font(.subheadline)
+                    
+                    // Log Food button
+                    Button(action: {
+                        viewModel.showFoodContainer()
+                    }) {
+                        HStack {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Log Food")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.accentColor)
+                        .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Recent logs section
+                    if !foodManager.combinedLogs.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Recent Logs")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            // Show food analysis card if analysis is in progress
+                            if foodManager.isAnalyzingFood {
+                                FoodAnalysisCard()
+                                    .padding(.horizontal)
+                                    .transition(.opacity)
                             }
-                            .padding()
-                            .background(Color("iosnp"))
-                            .cornerRadius(10)
-                            .padding(.horizontal)
+                            
+                            ForEach(Array(foodManager.combinedLogs.prefix(5)), id: \.id) { log in
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(getLogName(log))
+                                            .fontWeight(.medium)
+                                        if let date = getLogDate(log) {
+                                            Text(formatDate(date))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    HStack {
+                                        Image(systemName: "flame.fill")
+                                            .foregroundColor(.orange)
+                                        Text("\(Int(log.displayCalories)) cal")
+                                    }
+                                    .font(.subheadline)
+                                }
+                                .padding()
+                                .background(Color("iosnp"))
+                                .cornerRadius(10)
+                                .padding(.horizontal)
+                            }
                         }
                     }
                 }
+                .padding(.vertical)
+                .animation(.default, value: foodManager.isAnalyzingFood)
             }
-            .padding(.vertical)
-            .animation(.default, value: foodManager.isAnalyzingFood)
+            
+            // AI Generation Success Toast
+                if foodManager.showAIGenerationSuccess, let food = foodManager.aiGeneratedFood {
+                    VStack{
+                        Spacer ()
+                        BottomPopup(message: "Food logged")
+                                     .padding(.bottom, 0)
+                    }
+            
+              .zIndex(100)
+              .transition(.opacity)
+                .animation(.spring(), value: foodManager.showAIGenerationSuccess)
+
+                }
+        
         }
         .onAppear {
             isTabBarVisible.wrappedValue = true
