@@ -26,10 +26,10 @@ struct CustomTabBar: View {
                    
                    Spacer() 
                     
-                    TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
-                        .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
+                    // TabBarButton(iconName: "folder", label: "Pods", isSelected: selectedTab == 2, iconSize: 16) { selectedTab = 2 }
+                    //     .foregroundColor(selectedTab == 2 ? selectedIconColor : .gray)
                     
-                    Spacer() 
+                    // Spacer() 
 
                     TabBarButton(iconName: "plus.circle.fill", isSelected: selectedTab == 1, iconSize: 30) {
                         HapticFeedback.generate()
@@ -41,17 +41,17 @@ struct CustomTabBar: View {
                     
                     Spacer() 
 
-                   TabBarButton(iconName: "person.2", label: "Friends", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
-                       .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
+                //    TabBarButton(iconName: "person.2", label: "Friends", isSelected: selectedTab == 3, iconSize: 16) { selectedTab = 3 }
+                //        .foregroundColor(selectedTab == 3 ? selectedIconColor : .gray)
 
-                   Spacer() 
+                //    Spacer() 
 
                     TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
                         .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
 
                 }
-               .padding(.horizontal, 26)
-                // .padding(.horizontal, 46)
+            //    .padding(.horizontal, 26)
+                .padding(.horizontal, 46)
                 .padding(.top, 11)
                 .background(Material.ultraThin)
 

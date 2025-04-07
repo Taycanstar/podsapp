@@ -309,6 +309,8 @@ private struct FoodListView: View {
     
     var onItemAdded: ((Food) -> Void)?
     
+    @State private var isShowingMinimumLoader = false
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -432,9 +434,10 @@ private struct FoodListView: View {
                                             print("FoodListView: Rendering food row for \(food.displayName) at index \(index)")
                                             
                                             // If we're close to the end of the list, automatically load more
-                                            if index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                            if index >= validLogs.count - 1 && foodManager.hasMore && !foodManager.isLoadingLogs {
                                                 print("🔄 Auto-loading more logs at index \(index)")
                                                 HapticFeedback.generateLigth()
+                                                showMinimumLoader()
                                                 foodManager.loadMoreLogs()
                                             }
                                         }
@@ -456,9 +459,10 @@ private struct FoodListView: View {
                                             print("FoodListView: Rendering meal row for \(meal.title) at index \(index)")
                                             
                                             // If we're close to the end of the list, automatically load more
-                                            if index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                            if index >= validLogs.count - 1 && foodManager.hasMore && !foodManager.isLoadingLogs {
                                                 print("🔄 Auto-loading more logs at index \(index)")
                                                 HapticFeedback.generateLigth()
+                                                showMinimumLoader()
                                                 foodManager.loadMoreLogs()
                                             }
                                         }
@@ -482,13 +486,11 @@ private struct FoodListView: View {
                     .padding(.horizontal, 16)
                     
                     // Show a single loader at the bottom when loading more logs
-                    if foodManager.isLoadingLogs && foodManager.hasMore {
+                    if foodManager.isLoadingLogs && foodManager.hasMore || isShowingMinimumLoader {
                         VStack {
                             ProgressView()
                                 .padding(.vertical, 8)
-                            Text("Loading more logs...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            
                         }
                         .padding(.top, 8)
                     }
@@ -524,6 +526,13 @@ private struct FoodListView: View {
             Button("OK", role: .cancel) { showAIErrorAlert = false }
         } message: {
             Text(aiErrorMessage)
+        }
+    }
+    
+    private func showMinimumLoader() {
+        isShowingMinimumLoader = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isShowingMinimumLoader = false
         }
     }
 }
