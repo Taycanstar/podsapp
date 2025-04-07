@@ -407,7 +407,7 @@ private struct FoodListView: View {
                 // Main content card
                 
                 if searchResults.isEmpty && !isSearching {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
                         // Process logs to remove empty/invalid entries
                         let validLogs = foodManager.combinedLogs.filter { log in
                             if case .food = log.type, log.food != nil { return true }
@@ -430,7 +430,13 @@ private struct FoodListView: View {
                                         )
                                         .onAppear {
                                             print("FoodListView: Rendering food row for \(food.displayName) at index \(index)")
-                                            foodManager.loadMoreIfNeeded(log: log)
+                                            
+                                            // If we're close to the end of the list, automatically load more
+                                            if index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                                print("🔄 Auto-loading more logs at index \(index)")
+                                                HapticFeedback.generateLigth()
+                                                foodManager.loadMoreLogs()
+                                            }
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
@@ -448,7 +454,13 @@ private struct FoodListView: View {
                                         )
                                         .onAppear {
                                             print("FoodListView: Rendering meal row for \(meal.title) at index \(index)")
-                                            foodManager.loadMoreIfNeeded(log: log)
+                                            
+                                            // If we're close to the end of the list, automatically load more
+                                            if index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                                print("🔄 Auto-loading more logs at index \(index)")
+                                                HapticFeedback.generateLigth()
+                                                foodManager.loadMoreLogs()
+                                            }
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
@@ -462,24 +474,26 @@ private struct FoodListView: View {
                             if index < validLogs.count - 1 {
                                 Divider()
                                     .padding(.leading, 16)
-                                    .onAppear {
-                                        if case .food = log.type {
-                                            print("FoodListView: Adding divider after food at index \(index)")
-                                        } else if case .meal = log.type {
-                                            print("FoodListView: Adding divider after meal at index \(index)")
-                                        }
-                                    }
                             }
                         }
-                    }
-                    .onAppear {
-                        print("FoodListView: Starting to render combined logs")
                     }
                     .background(Color("iosfit"))
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
+                    
+                    // Show a single loader at the bottom when loading more logs
+                    if foodManager.isLoadingLogs && foodManager.hasMore {
+                        VStack {
+                            ProgressView()
+                                .padding(.vertical, 8)
+                            Text("Loading more logs...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 8)
+                    }
                 } else {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
                         ForEach(searchResults.indices, id: \.self) { index in
                             let food = searchResults[index]
                             
@@ -503,66 +517,6 @@ private struct FoodListView: View {
                     .background(Color("iosfit"))
                     .cornerRadius(12)
                     .padding(.horizontal, 16)
-                }
-
-                // Add a loading indicator at the bottom when we have logs and hasMore is true
-                if !foodManager.combinedLogs.isEmpty && foodManager.hasMore {
-                    VStack {
-                        ProgressView()
-                            .padding()
-                        Text("Loading more logs...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, 8)
-                    .onAppear {
-                        print("🔄 End of list reached - explicitly triggering loadMoreLogs()")
-                        // Explicitly trigger loading more logs when this view appears
-                        foodManager.loadMoreLogs()
-                    }
-                }
-
-                // Add a loading indicator at the bottom when we have logs and hasMore is true
-                if !foodManager.combinedLogs.isEmpty {
-                    if foodManager.isLoadingLogs {
-                        VStack {
-                            ProgressView()
-                                .padding(.vertical, 8)
-                            Text("Loading more logs...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 8)
-                    } else if foodManager.hasMore {
-                        Button(action: {
-                            print("🔄 Manual load more triggered")
-                            HapticFeedback.generateLigth()
-                            foodManager.loadMoreLogs()
-                        }) {
-                            HStack {
-                                Spacer()
-                                Text("Load More")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(.accentColor)
-                                Spacer()
-                            }
-                            .padding(.vertical, 12)
-                            .background(Color("iosfit"))
-                            .cornerRadius(10)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                        }
-                        .onAppear {
-                            print("🔄 End of list reached - explicitly triggering loadMoreLogs()")
-                            // Explicitly trigger loading more logs when this view appears
-                            foodManager.loadMoreLogs()
-                        }
-                    } else {
-                        Text("No more logs to load")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.top, 8)
-                    }
                 }
             }
         }
