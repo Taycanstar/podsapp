@@ -173,6 +173,7 @@ struct LogFood: View {
                         mode: mode,
                         selectedFoods: $selectedFoods,
                         path: $path,
+                        searchText: searchText,
                         onItemAdded: onItemAdded
                     )
                 default:
@@ -405,6 +406,32 @@ private struct FoodListView: View {
                          : nil
                     )
                 }
+                // Show Generate Meal with AI button when there's search text in the .meals tab
+                else if selectedFoodTab == .meals && !searchText.isEmpty {
+                    Button(action: {
+                        print("generating meal with ai...")
+                        HapticFeedback.generateLigth()
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Generate Meal with AI")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 0)
+                }
                 
                 // Main content card
                 
@@ -601,6 +628,7 @@ private struct MealListView: View {
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
+    let searchText: String
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -610,9 +638,38 @@ private struct MealListView: View {
                 // Add invisible spacing at the top to prevent overlap with header
                 Color.clear.frame(height: 6)
                 
-                // Create Meal Button
-                CreateMealButton(path: $path)
+                // Show "Generate Meal with AI" button when search text is not empty
+                if !searchText.isEmpty {
+                    Button(action: {
+                        print("generating meal with ai...")
+                        HapticFeedback.generateLigth()
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Generate Meal with AI")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
                     .padding(.top, 0)
+                } 
+                // Show Create Meal button when no search text
+                else {
+                    // Create Meal Button
+                    CreateMealButton(path: $path)
+                        .padding(.top, 0)
+                }
                 
                 // Meals Card - Single unified card for all meals
                 if !foodManager.meals.isEmpty {
