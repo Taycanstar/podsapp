@@ -541,27 +541,56 @@ private struct CreateMealButton: View {
     @Binding var path: NavigationPath
     
     var body: some View {
-        Button(action: {
-            path.append(FoodNavigationDestination.createMeal)
-        }) {
-            HStack(spacing: 16) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.accentColor)
-                Text("Create Meal")
-                    .font(.system(size: 16))
-                    .foregroundColor(.accentColor)
+        // Button(action: {
+        //     path.append(FoodNavigationDestination.createMeal)
+        // }) {
+        //     HStack(spacing: 16) {
+        //         Image(systemName: "plus.circle.fill")
+        //             .font(.system(size: 24))
+        //             .foregroundColor(.accentColor)
+        //         Text("Create Meal")
+        //             .font(.system(size: 16))
+        //             .foregroundColor(.accentColor)
                 
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color("iosfit"))
-            .cornerRadius(12)
-        }
-        .padding(.horizontal)
-        .padding(.top, 0)
+        //         Spacer()
+        //     }
+        //     .padding(.horizontal, 16)
+        //     .padding(.vertical, 12)
+        //     .frame(maxWidth: .infinity, alignment: .leading)
+        //     .background(Color("iosfit"))
+        //     .cornerRadius(12)
+        // }
+        // .padding(.horizontal)
+        // .padding(.top, 0)
+
+
+        
+                    // Quick Log Button
+                    Button(action: {
+                        print("Tapped Create Meal")
+                        HapticFeedback.generateLigth()
+                         path.append(FoodNavigationDestination.createMeal)
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Create Meal")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 0)
+                
     }
 }
 

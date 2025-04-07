@@ -51,7 +51,7 @@ struct CustomTabBar: View {
 
                 }
             //    .padding(.horizontal, 26)
-                .padding(.horizontal, 46)
+                .padding(.horizontal, 56)
                 .padding(.top, 11)
                 .background(Material.ultraThin)
 
