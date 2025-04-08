@@ -16,10 +16,6 @@ class FoodNavigationState: ObservableObject {
     // Add state for CreateMealView
     @Published var createMealName: String = ""
     @Published var createMealShareWith: String = "Everyone"
-    @Published var createMealInstructions: String = ""
-    @Published var createMealImageURL: URL? = nil
-    @Published var createMealUIImage: UIImage? = nil
-    @Published var createMealImage: Image? = nil
     
     // Add state for CreateRecipeView
     @Published var createRecipeName: String = ""
@@ -37,10 +33,6 @@ class FoodNavigationState: ObservableObject {
         createMealSelectedFoods = []
         createMealName = ""
         createMealShareWith = "Everyone"
-        createMealInstructions = ""
-        createMealImageURL = nil
-        createMealUIImage = nil
-        createMealImage = nil
     }
     
     // Method to reset all create recipe state

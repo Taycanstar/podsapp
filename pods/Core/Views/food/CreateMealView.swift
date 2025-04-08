@@ -21,29 +21,10 @@ struct CreateMealView: View {
     // Get navigation state to persist between views
     @EnvironmentObject private var navState: FoodNavigationState
     
-    // Replace local state with binding to navState
-    // @State private var mealName = ""
-    // @State private var shareWith = "Everyone"
-    // @State private var instructions = ""
     @State private var showingShareOptions = false
-    
-    @State private var selectedItem: PhotosPickerItem? = nil
-    // @State private var selectedImage: Image? = nil
-    @State private var showImagePicker = false
-    @State private var showOptionsSheet = false
-    @State private var sourceType: UIImagePickerController.SourceType = .camera
-    
-    // ADDED: These must exist in the parent if we reference them in Coordinator
-    // @State private var imageURL: URL? = nil
-    @State private var uploadProgress: Double = 0
-    @State private var isUploading = false
-    @State private var uploadError: Error?
-    @State private var showUploadError = false
     
     // Add states for name validation
     @State private var showNameTakenAlert = false
-
-    // @State private var uiImage: UIImage? = nil
 
     // Add this state variable with your other @State properties
     @FocusState private var focusedField: Field?
@@ -66,9 +47,6 @@ private var isCreateButtonDisabled: Bool {
 
     // Example share options
     let shareOptions = ["Everyone", "Friends", "Only You"]
-    
-    // Adjust how tall you want the banner/collapsing area to be
-    let headerHeight: CGFloat = 400
 
     // Replace the hardcoded macroPercentages with this:
 private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
@@ -81,166 +59,48 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
 }
 
     var body: some View {
-        GeometryReader { outerGeo in
-            ScrollView(showsIndicators: false) {
-                ZStack(alignment: .top) {
-                    // A) Collapsing / Stretchy Header
-                    GeometryReader { headerGeo in
-                        let offset = headerGeo.frame(in: .global).minY
-                        let height = offset > 0
-                            ? (headerHeight + offset)
-                            : headerHeight
-                        
-                        // The banner image (if selected), else a placeholder
-                        if let selectedImage = navState.createMealImage {
-                            selectedImage
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: outerGeo.size.width, height: height)
-                                .clipped()
-                                // Shift upward if scrolled up
-                                .offset(y: offset > 0 ? -offset : 0)
-                                .overlay(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .ignoresSafeArea(edges: .top)
-                                .onTapGesture {
-                                    showOptionsSheet = true
-                                }
-                        } else {
-                            ZStack {
-                                Color("iosnp")
-                                Image(systemName: "camera.circle.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.accentColor)
-                            }
-                            .frame(width: outerGeo.size.width, height: height)
-                            .offset(y: offset > 0 ? -offset : 0)
-                            .onTapGesture {
-                                showOptionsSheet = true
-                            }
-                            .ignoresSafeArea(edges: .top)
-                        }
-                    }
-                    .frame(height: headerHeight)
-                    
-                    // B) Main Scrollable Content
-                    VStack(spacing: 16) {
-                        Spacer().frame(height: headerHeight) // leave space for header
-                        
-                        mealDetailsSection
-                        mealItemsSection
-                        directionsSection
-                        
-                        Spacer().frame(height: 40) // extra bottom space
-                    }
-                }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                mealDetailsSection
+                mealItemsSection
+                
+                Spacer().frame(height: 40) // extra bottom space
             }
-            .ignoresSafeArea(edges: .top)
+            .padding(.top, 16)
         }
-          .background(Color("iosbg"))
-        // Transparent nav bar so we see banner behind it
+        .background(Color("iosbg"))
+        // Normal nav bar since we don't have an image banner
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.clear, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("New Meal")
-                    .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Create") {
                     // Handle create action
-                    
-                     saveNewMeal()
-                     
+                    saveNewMeal()
                 }
                 .disabled(isCreateButtonDisabled)
-                .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                 .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
                     resetFields()
-                     dismiss()
-                      }) {
+                    dismiss()
+                }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(navState.createMealImage != nil ? .white : .primary)
                 }
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    focusedField = nil
-                }
-            }
+            // ToolbarItemGroup(placement: .keyboard) {
+            //     Spacer()
+            //     Button("Done") {
+            //         focusedField = nil
+            //     }
+            // }
         }
         .navigationBarBackButtonHidden(true)
         
-        // Full screen cover for ImagePicker
-      .fullScreenCover(isPresented: $showImagePicker) {
-    ImagePicker(
-        uiImage: Binding(
-            get: { navState.createMealUIImage },
-            set: { navState.createMealUIImage = $0 }
-        ),
-        image: Binding(
-            get: { navState.createMealImage },
-            set: { navState.createMealImage = $0 }
-        ),
-        sourceType: sourceType
-    )
-}
-.onChange(of: navState.createMealUIImage) { newUIImage in
-    guard let picked = newUIImage else { return }
-    // Use your existing `uploadMealImage(_:, completion:)`
-    // For example:
-    NetworkManager().uploadMealImage(picked) { result in
-        switch result {
-        case .success(let url):
-            print("Upload success. URL: \(url)")
-            // Store in navState
-            if let imageUrl = URL(string: url) {
-                DispatchQueue.main.async {
-                    self.navState.createMealImageURL = imageUrl
-                }
-            }
-        case .failure(let error):
-            print("Upload failed:", error)
-            // show alert if you like
-        }
-    }
-}
-
-        
-        // Photo selection dialog
-        .confirmationDialog("Choose Photo", isPresented: $showOptionsSheet) {
-            Button("Take Photo") {
-                sourceType = .camera
-                showImagePicker = true
-            }
-            Button("Choose from Library") {
-                sourceType = .photoLibrary
-                showImagePicker = true
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        // Add error alert
-        .alert("Upload Error", isPresented: $showUploadError) {
-            Button("Retry") {
-                // implement retry if needed
-            }
-            Button("Cancel", role: .cancel) {
-                uploadError = nil
-            }
-        } message: {
-            Text(uploadError?.localizedDescription ?? "Unknown error")
-        }
-
         // Add error alert
         .alert("Error Saving Meal", isPresented: $showSaveError) {
             Button("OK", role: .cancel) { }
@@ -305,35 +165,8 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         }
         
         isSaving = true
-        
-        // First upload image if exists
-        if let uiImage = navState.createMealUIImage {
-            NetworkManager().uploadMealImage(uiImage) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let urlString):
-                        // Convert the string URL to a URL object
-                        if let url = URL(string: urlString) {
-                            self.navState.createMealImageURL = url
-                            self.createMeal()
-                            self.resetFields()
-                        } else {
-                            // Handle invalid URL
-                            self.isSaving = false
-                            self.errorMessage = "Invalid image URL format"
-                            self.showSaveError = true
-                        }
-                    case .failure(let error):
-                        self.isSaving = false
-                        self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
-                        self.showSaveError = true
-                    }
-                }
-            }
-        } else {
-            createMeal()
-            resetFields()
-        }
+        createMeal()
+        resetFields()
     }
 
     private func createMeal() {
@@ -349,11 +182,11 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         foodManager.createMeal(
             title: navState.createMealName,
             description: nil,
-            directions: navState.createMealInstructions,
+            directions: nil, // Remove directions
             privacy: navState.createMealShareWith.lowercased(),
             servings: 1,
             foods: selectedFoods,
-            image: navState.createMealImageURL?.absoluteString,
+            image: nil, // Remove image
             totalCalories: totals.calories,
             totalProtein: totals.protein,
             totalCarbs: totals.carbs,
@@ -625,23 +458,6 @@ private func removeAllItems(withFdcId fdcId: Int) {
 
 
     
-    private var directionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Directions")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            TextField("Add instructions for making this meal", text: $navState.createMealInstructions, axis: .vertical)
-                .focused($focusedField, equals: .instructions)
-                .textFieldStyle(.plain)
-                .padding()
-                .background(Color("iosnp"))
-                .cornerRadius(12)
-        }
-        .padding(.horizontal)
-        .padding(.bottom)
-    }
-
     private var macroCircleAndStats: some View {
     // Get the totals
     let totals = calculateTotalMacros(selectedFoods)
