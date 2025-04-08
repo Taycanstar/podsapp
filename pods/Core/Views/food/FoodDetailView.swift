@@ -78,34 +78,34 @@ struct FoodDetailsView: View {
                         }
                         
                         // Time Row
-                        HStack {
-                            Text("Time")
-                            Spacer()
-                            DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-                                .labelsHidden()
-                        }
+                        // HStack {
+                        //     Text("Time")
+                        //     Spacer()
+                        //     DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                        //         .labelsHidden()
+                        // }
                         
                         // Meal Row
-                        HStack {
-                            Text("Meal")
-                            Spacer()
-                            Menu {
-                                Button("Breakfast") { selectedMeal = "Breakfast" }
-                                Button("Lunch") { selectedMeal = "Lunch" }
-                                Button("Dinner") { selectedMeal = "Dinner" }
-                            } label: {
-                                HStack {
-                                    Text(selectedMeal)
-                                        .foregroundColor(.primary)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding(8)
-                            .background(Color(.tertiarySystemFill))
-                            .cornerRadius(8)
-                        }
+                        // HStack {
+                        //     Text("Meal")
+                        //     Spacer()
+                        //     Menu {
+                        //         Button("Breakfast") { selectedMeal = "Breakfast" }
+                        //         Button("Lunch") { selectedMeal = "Lunch" }
+                        //         Button("Dinner") { selectedMeal = "Dinner" }
+                        //     } label: {
+                        //         HStack {
+                        //             Text(selectedMeal)
+                        //                 .foregroundColor(.primary)
+                        //             Image(systemName: "chevron.up.chevron.down")
+                        //                 .font(.system(size: 10))
+                        //                 .foregroundColor(.gray)
+                        //         }
+                        //     }
+                        //     .padding(8)
+                        //     .background(Color(.tertiarySystemFill))
+                        //     .cornerRadius(8)
+                        // }
                         
                         // Macros section with the circular progress
                         HStack(spacing: 40) {
@@ -178,17 +178,17 @@ struct FoodDetailsView: View {
                 .cornerRadius(10)
                 
                 // Daily Goals Section
-                Text("Daily Goals")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .padding(.bottom, -5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                VStack {
-                    DailyGoalsSection(food: food)
-                }
-                .padding()
-                .background(Color("iosnp"))
-                .cornerRadius(10)
+                // Text("Daily Goals")
+                //     .font(.title2)
+                //     .fontWeight(.bold)
+                //     .padding(.bottom, -5)
+                //     .frame(maxWidth: .infinity, alignment: .leading)
+                // VStack {
+                //     DailyGoalsSection(food: food)
+                // }
+                // .padding()
+                // .background(Color("iosnp"))
+                // .cornerRadius(10)
                 
                 // Nutrition Facts Section
                 Text("Nutrition Facts")
