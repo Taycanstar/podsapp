@@ -15,7 +15,6 @@ import SwiftUI
 //
 
 import SwiftUI
-import PhotosUI
 
 struct MealDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -33,7 +32,6 @@ struct MealDetailView: View {
     @State private var servingsCount: Int
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
-    @State private var imageURL: URL?
     
     // Add a real @State for selectedFoods
     @State private var selectedFoods: [Food] = []
@@ -43,14 +41,6 @@ struct MealDetailView: View {
     
     // Flag to track if meal was saved
     @State private var mealWasSaved = false
-    
-    // Adjust how tall you want the banner/collapsing area to be
-    private let headerHeight: CGFloat = 400
-    
-    // Add a computed property to determine if we should show white text
-    private var hasImage: Bool {
-        return (meal.image != nil && !meal.image!.isEmpty)
-    }
     
     // MARK: - Initializer
     init(meal: Meal, path: Binding<NavigationPath>) {
@@ -86,200 +76,138 @@ struct MealDetailView: View {
     
     // MARK: - Body
     var body: some View {
-        GeometryReader { outerGeo in
-            ScrollView(showsIndicators: false) {
-                ZStack(alignment: .top) {
-                    // A) Collapsing / Stretchy Header
-                    GeometryReader { headerGeo in
-                        let offset = headerGeo.frame(in: .global).minY
-                        let height = offset > 0
-                            ? (headerHeight + offset)
-                            : headerHeight
-                        
-                        // The banner image from meal
-                        if let imageUrlString = meal.image, !imageUrlString.isEmpty, let url = URL(string: imageUrlString) {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: outerGeo.size.width, height: height)
-                                        .clipped()
-                                        .offset(y: offset > 0 ? -offset : 0)
-                                        .overlay(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                case .empty, .failure:
-                                    fallbackImageView(height: height, offset: offset, outerWidth: outerGeo.size.width)
-                                @unknown default:
-                                    fallbackImageView(height: height, offset: offset, outerWidth: outerGeo.size.width)
-                                }
-                            }
-                            .ignoresSafeArea(edges: .top)
-                        } else {
-                            fallbackImageView(height: height, offset: offset, outerWidth: outerGeo.size.width)
-                        }
-                    }
-                    .frame(height: headerHeight)
-                    
-                    // B) Main Scrollable Content
-                    VStack(spacing: 16) {
-                        Spacer().frame(height: headerHeight) // leave space for header
-                        
-                        mealDetailsSection
-                        
-                        if !meal.mealItems.isEmpty {
-                            mealItemsSection
-                        }
-                        
-                        if let directions = meal.directions, !directions.isEmpty {
-                            directionsSection
-                        }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                mealDetailsSection
+                
+                if !meal.mealItems.isEmpty {
+                    mealItemsSection
+                }
+                
+                // if let directions = meal.directions, !directions.isEmpty {
+                //     directionsSection
+                // }
 
-                        ButtonWithIcon(
-                            label: "Edit Meal",
-                            iconName: "square.and.pencil",
-                            action: {
-                                isShowingEditMeal = true
-                            },
-                            bgColor: Color("iosnp"),
-                            textColor: .accentColor
-                        )
-                        
-                        Spacer().frame(height: 80) // extra bottom space
-                    }
-                }
-            }
-            .ignoresSafeArea(edges: .top)
-            .background(Color("iosbg"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.clear, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Meal Details")
-                        .foregroundColor(hasImage ? .white : .primary)
-                        .fontWeight(.semibold)
-                }
+                ButtonWithIcon(
+                    label: "Edit Meal",
+                    iconName: "square.and.pencil",
+                    action: {
+                        isShowingEditMeal = true
+                    },
+                    bgColor: Color("iosnp"),
+                    textColor: .accentColor
+                )
+                .padding(.top, -16)
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
-                        Menu {
-                            Button {
-                                isShowingEditMeal = true
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            
-                            Button(role: .destructive) {
-                                isShowingDeleteAlert = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
+                Spacer().frame(height: 40) // extra bottom space
+            }
+            .padding(.top, 16)
+        }
+        .background(Color("iosbg"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Meal Details")
+                    .fontWeight(.semibold)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    Menu {
+                        Button {
+                            isShowingEditMeal = true
                         } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .foregroundColor(hasImage ? .white : .primary)
+                            Label("Edit", systemImage: "pencil")
                         }
                         
-                        Button("Log") {
-                            logMeal()
+                        Button(role: .destructive) {
+                            isShowingDeleteAlert = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
-                        .foregroundColor(hasImage ? .white : .primary)
-                        .fontWeight(.semibold)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
-                }
-                
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(hasImage ? .white : .primary)
+                    
+                    Button("Log") {
+                        logMeal()
                     }
+                    .fontWeight(.semibold)
                 }
             }
-            .navigationBarBackButtonHidden(true)
-            .onAppear {
-                // Initialize selectedFoods on appear
-                initializeSelectedFoods()
-                
-                // Reset servingsCount to meal's original servings
-                self.servingsCount = meal.servings
-            }
-            .onChange(of: isShowingEditMeal) { isShowing in
-                if isShowing {
-                    // Sheet is about to show, make a backup
-                    self.backupFoods = self.selectedFoods
-                    // Reset the saved flag
-                    self.mealWasSaved = false
-                }
-            }
-            .sheet(isPresented: $isShowingEditMeal, onDismiss: {
-                print("🔍 EditMeal dismissed, checking if saved: \(mealWasSaved)")
-                
-                if mealWasSaved {
-                    // If saved, update the UI with the edited values
-                    // we get from userInfo dictionary
-                    let updatedMeal = meal
-                    imageURL = (updatedMeal.image != nil) ? URL(string: updatedMeal.image!) : nil
-                    servingsCount = updatedMeal.servings
-                    selectedPrivacy = updatedMeal.privacy.capitalized
-                }
-                
-                // If the meal wasn't saved (user tapped X), restore from backup
-                if !mealWasSaved {
-                    print("📝 Restoring original foods - meal was not saved")
-                    selectedFoods = backupFoods
-                }
-            }) {
-                NavigationView {
-                    EditMealView(
-                        meal: meal,
-                        path: $path,
-                        selectedFoods: $selectedFoods,
-                        onSave: {
-                            // Mark as saved when Done is tapped
-                            mealWasSaved = true
-                        }
-                    )
-                }
-            }
-            .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    deleteMeal()
-                }
-            } message: {
-                Text("Are you sure you want to delete this meal?")
-            }
-            .alert("Success", isPresented: $showLoggingSuccess) {
-                Button("OK", role: .cancel) {
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
                     dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
                 }
-            } message: {
-                Text("Meal logged successfully")
             }
+        }
+        .navigationBarBackButtonHidden(true)
+        .onAppear {
+            // Initialize selectedFoods on appear
+            initializeSelectedFoods()
+            
+            // Reset servingsCount to meal's original servings
+            self.servingsCount = meal.servings
+        }
+        .onChange(of: isShowingEditMeal) { isShowing in
+            if isShowing {
+                // Sheet is about to show, make a backup
+                self.backupFoods = self.selectedFoods
+                // Reset the saved flag
+                self.mealWasSaved = false
+            }
+        }
+        .sheet(isPresented: $isShowingEditMeal, onDismiss: {
+            print("🔍 EditMeal dismissed, checking if saved: \(mealWasSaved)")
+            
+            if mealWasSaved {
+                // If saved, update the UI with the edited values
+                // we get from userInfo dictionary
+                let updatedMeal = meal
+                servingsCount = updatedMeal.servings
+                selectedPrivacy = updatedMeal.privacy.capitalized
+            }
+            
+            // If the meal wasn't saved (user tapped X), restore from backup
+            if !mealWasSaved {
+                print("📝 Restoring original foods - meal was not saved")
+                selectedFoods = backupFoods
+            }
+        }) {
+            NavigationView {
+                EditMealView(
+                    meal: meal,
+                    path: $path,
+                    selectedFoods: $selectedFoods,
+                    onSave: {
+                        // Mark as saved when Done is tapped
+                        mealWasSaved = true
+                    }
+                )
+            }
+        }
+        .alert("Delete Meal", isPresented: $isShowingDeleteAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteMeal()
+            }
+        } message: {
+            Text("Are you sure you want to delete this meal?")
+        }
+        .alert("Success", isPresented: $showLoggingSuccess) {
+            Button("OK", role: .cancel) {
+                dismiss()
+            }
+        } message: {
+            Text("Meal logged successfully")
         }
         .onChange(of: selectedPrivacy) { _ in
             // Don't update the meal - this should only happen in EditMealView
             // Just update the local UI
         }
-    }
-    
-    private func fallbackImageView(height: CGFloat, offset: CGFloat, outerWidth: CGFloat) -> some View {
-        ZStack {
-            Color("iosnp")
-            Image(systemName: "photo")
-                .font(.system(size: 40))
-                .foregroundColor(.gray)
-        }
-        .frame(width: outerWidth, height: height)
-        .offset(y: offset > 0 ? -offset : 0)
-        .ignoresSafeArea(edges: .top)
     }
     
     private func logMeal() {
@@ -315,8 +243,6 @@ struct MealDetailView: View {
         VStack(spacing: 8) {
             // Title (non-editable)
             Text(meal.title)
-                .font(.title2)
-                .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
@@ -334,32 +260,32 @@ struct MealDetailView: View {
             Divider()
             
             // Meal time row
-            HStack {
-                Text("Meal")
-                    .foregroundColor(.primary)
+            // HStack {
+            //     Text("Meal")
+            //         .foregroundColor(.primary)
                 
-                Spacer()
+            //     Spacer()
                 
-                Menu {
-                    Button("Breakfast") { selectedMealTime = "Breakfast" }
-                    Button("Lunch") { selectedMealTime = "Lunch" }
-                    Button("Dinner") { selectedMealTime = "Dinner" }
-                    Button("Snack") { selectedMealTime = "Snack" }
-                } label: {
-                    HStack {
-                        Text(selectedMealTime)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color("iosbtn"))
-                    .cornerRadius(8)
-                }
-            }
+            //     Menu {
+            //         Button("Breakfast") { selectedMealTime = "Breakfast" }
+            //         Button("Lunch") { selectedMealTime = "Lunch" }
+            //         Button("Dinner") { selectedMealTime = "Dinner" }
+            //         Button("Snack") { selectedMealTime = "Snack" }
+            //     } label: {
+            //         HStack {
+            //             Text(selectedMealTime)
+            //             Image(systemName: "chevron.up.chevron.down")
+            //                 .font(.system(size: 12))
+            //         }
+            //         .foregroundColor(.primary)
+            //         .padding(.horizontal, 12)
+            //         .padding(.vertical, 8)
+            //         .background(Color("iosbtn"))
+            //         .cornerRadius(8)
+            //     }
+            // }
             
-            Divider()
+            // Divider()
             
             // Share-with row
             HStack {

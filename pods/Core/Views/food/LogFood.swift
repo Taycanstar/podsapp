@@ -396,15 +396,15 @@ private struct FoodListView: View {
                     .padding(.horizontal)
                     .padding(.top, 0)
                     .disabled(isGeneratingMacros) // Disable button while loading
-                    .overlay(
-                        isGeneratingMacros ? 
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .padding()
-                            .background(Color.black.opacity(0.2))
-                            .cornerRadius(8)
-                         : nil
-                    )
+                    // .overlay(
+                    //     isGeneratingMacros ? 
+                    //     ProgressView()
+                    //         .progressViewStyle(CircularProgressViewStyle())
+                    //         .padding()
+                    //         .background(Color.black.opacity(0.2))
+                    //         .cornerRadius(8)
+                    //      : nil
+                    // )
                 }
                 // Show Generate Meal with AI button when there's search text in the .meals tab
                 else if selectedFoodTab == .meals && !searchText.isEmpty {
@@ -679,15 +679,15 @@ private struct MealListView: View {
                     .padding(.horizontal)
                     .padding(.top, 0)
                     .disabled(foodManager.isGeneratingMeal) // Disable button while loading
-                    .overlay(
-                        foodManager.isGeneratingMeal ? 
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .padding()
-                            .background(Color.black.opacity(0.2))
-                            .cornerRadius(8)
-                         : nil
-                    )
+                    // .overlay(
+                    //     foodManager.isGeneratingMeal ? 
+                    //     ProgressView()
+                    //         .progressViewStyle(CircularProgressViewStyle())
+                    //         .padding()
+                    //         .background(Color.black.opacity(0.2))
+                    //         .cornerRadius(8)
+                    //      : nil
+                    // )
                 } 
                 // Show Create Meal button when no search text
                 else {

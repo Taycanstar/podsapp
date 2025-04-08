@@ -103,7 +103,7 @@ struct DashboardView: View {
                 VStack{
                     Spacer()
                     BottomPopup(message: "\(item.name) logged")
-                        .padding(.bottom, 0)
+                        .padding(.bottom, 55) //bot 
                 }
                 .zIndex(100)
                 .transition(.opacity)

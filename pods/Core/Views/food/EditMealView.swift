@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 
 struct EditMealView: View {
     @Environment(\.dismiss) private var dismiss
@@ -26,19 +25,6 @@ struct EditMealView: View {
     @State private var servings: Int
     @State private var mealTime: String = "Breakfast"
     @State private var scheduledDate: Date?
-    
-    @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: Image? = nil
-    @State private var showImagePicker = false
-    @State private var showOptionsSheet = false
-    @State private var sourceType: UIImagePickerController.SourceType = .camera
-    
-    @State private var imageURL: URL? = nil
-    @State private var uploadProgress: Double = 0
-    @State private var isUploading = false
-    @State private var uploadError: Error?
-    @State private var showUploadError = false
-    @State private var uiImage: UIImage? = nil
     
     // Track if the meal has been modified
     @State private var hasChanges: Bool = false
@@ -73,9 +59,6 @@ struct EditMealView: View {
     // Available meal times
     private let mealTimes = ["Breakfast", "Lunch", "Dinner", "Snack"]
     
-    // Adjust how tall you want the banner/collapsing area to be
-    private let headerHeight: CGFloat = 400
-    
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         let totals = calculateTotalMacros(selectedFoods)
         return (
@@ -83,11 +66,6 @@ struct EditMealView: View {
             carbs: totals.carbsPercentage,
             fat: totals.fatPercentage
         )
-    }
-    
-    // Add a computed property to determine if we should show white text
-    private var hasImage: Bool {
-        return selectedImage != nil || (meal.image != nil && !meal.image!.isEmpty)
     }
     
     // Check if the meal name is already taken
@@ -126,221 +104,60 @@ struct EditMealView: View {
         self._servings = State(initialValue: meal.servings)
         self._scheduledDate = State(initialValue: meal.scheduledAt)
         
-        // Set image URL if available
-        if let imageStr = meal.image, !imageStr.isEmpty {
-            self._imageURL = State(initialValue: URL(string: imageStr))
-        } else {
-            self._imageURL = State(initialValue: nil)
-        }
-        
-        // Food initialization is now handled in FoodContainerView
         print("📦 EditMealView: Initialized for meal ID: \(meal.id) - '\(meal.title)'")
     }
 
-
-    
     // MARK: - Body
     var body: some View {
-        GeometryReader { outerGeo in
-            ScrollView(showsIndicators: false) {
-                ZStack(alignment: .top) {
-                    // A) Collapsing / Stretchy Header
-                    GeometryReader { headerGeo in
-                        let offset = headerGeo.frame(in: .global).minY
-                        let height = offset > 0
-                            ? (headerHeight + offset)
-                            : headerHeight
-                        
-                        // The banner image (if selected or from meal)
-                        if let selectedImage {
-                            selectedImage
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: outerGeo.size.width, height: height)
-                                .clipped()
-                                .offset(y: offset > 0 ? -offset : 0)
-                                .overlay(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .ignoresSafeArea(edges: .top)
-                                .onTapGesture {
-                                    showOptionsSheet = true
-                                }
-                        } else if let imageUrlString = meal.image, !imageUrlString.isEmpty, let url = URL(string: imageUrlString) {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .empty:
-                                    ProgressView()
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: outerGeo.size.width, height: height)
-                                        .clipped()
-                                        .offset(y: offset > 0 ? -offset : 0)
-                                        .overlay(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [.clear, .black.opacity(0.3)]),
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                case .failure:
-                                    ZStack {
-                                        Color("iosnp")
-                                        Image(systemName: "camera.circle.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.accentColor)
-                                    }
-                                    .frame(width: outerGeo.size.width, height: height)
-                                    .offset(y: offset > 0 ? -offset : 0)
-                                @unknown default:
-                                    EmptyView()
-                                }
-                            }
-                            .ignoresSafeArea(edges: .top)
-                            .onTapGesture {
-                                showOptionsSheet = true
-                            }
-                        } else {
-                            ZStack {
-                                Color("iosnp")
-                                Image(systemName: "camera.circle.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.accentColor)
-                            }
-                            .frame(width: outerGeo.size.width, height: height)
-                            .offset(y: offset > 0 ? -offset : 0)
-                            .onTapGesture {
-                                showOptionsSheet = true
-                            }
-                            .ignoresSafeArea(edges: .top)
-                        }
-                    }
-                    .frame(height: headerHeight)
-                    
-                    // Custom nav bar overlay
-                    VStack {
-                        HStack {
-                            Button(action: {
-                                // When X is tapped, just dismiss without calling onSave
-                                dismiss()
-                            }) {
-                                Image(systemName: "xmark")
-                                    .foregroundColor(hasImage ? .white : .primary)
-                                    .padding()
-                            }
-                            
-                            Spacer()
-                            
-                            Text("Edit Meal")
-                                .font(.headline)
-                                .foregroundColor(hasImage ? .white : .primary)
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                saveUpdatedMeal()
-                            }) {
-                                Text("Done")
-                                    .foregroundColor(hasImage ? .white : .primary)
-                                    .fontWeight(.semibold)
-                                    .padding()
-                            }
-                            .disabled(isDoneButtonDisabled)
-                        }
-                        .padding(.top)
-                        .background(Color.clear)
-                        
-                        Spacer()
-                    }
-                    
-                    // B) Main Scrollable Content
-                    VStack(spacing: 16) {
-                        Spacer().frame(height: headerHeight) // leave space for header
-                        
-                        mealDetailsSection
-                        mealItemsSection
-                        directionsSection
-                        
-                        Spacer().frame(height: 40) // extra bottom space
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                mealDetailsSection
+                mealItemsSection
+                // directionsSection
+                
+                Spacer().frame(height: 40) // extra bottom space
+            }
+            .padding(.top, 16)
+        }
+        .background(Color("iosbg"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Edit Meal")
+                    .fontWeight(.semibold)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    saveUpdatedMeal()
+                }
+                .disabled(isDoneButtonDisabled)
+                .fontWeight(.semibold)
+            }
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
                 }
             }
-            .ignoresSafeArea(edges: .top)
-
-        }
-        .navigationBarHidden(true) // Hide the default navigation bar
-        .background(Color("iosbg"))
-       
-        // Keep keyboard toolbar
-        .toolbar {
+            
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") {
                     focusedField = nil
                 }
-                  .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
             }
         }
+        .navigationBarBackButtonHidden(true)
         
         // Add name taken alert
         .alert("Name Taken", isPresented: $showNameTakenAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Please choose a different name.")
-        }
-        
-        // Full screen cover for ImagePicker
-        .fullScreenCover(isPresented: $showImagePicker) {
-            ImagePicker(
-                uiImage: $uiImage,
-                image: $selectedImage,
-                sourceType: sourceType
-            )
-        }
-        .onChange(of: uiImage) { newUIImage in
-            if let picked = newUIImage {
-                hasChanges = true
-                NetworkManager().uploadMealImage(picked) { result in
-                    switch result {
-                    case .success(let url):
-                        self.imageURL = URL(string: url)
-                    case .failure(let error):
-                        self.uploadError = error
-                        self.showUploadError = true
-                    }
-                }
-            }
-        }
-        
-        // Photo selection dialog
-        .confirmationDialog("Choose Photo", isPresented: $showOptionsSheet) {
-            Button("Take Photo") {
-                sourceType = .camera
-                showImagePicker = true
-            }
-            Button("Choose from Library") {
-                sourceType = .photoLibrary
-                showImagePicker = true
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        
-        // Add error alert
-        .alert("Upload Error", isPresented: $showUploadError) {
-            Button("Retry") {
-                // implement retry if needed
-            }
-            Button("Cancel", role: .cancel) {
-                uploadError = nil
-            }
-        } message: {
-            Text(uploadError?.localizedDescription ?? "Unknown error")
         }
         
         // Add error alert
@@ -424,31 +241,7 @@ struct EditMealView: View {
         }
         
         isSaving = true
-        
-        // First upload image if exists
-        if let uiImage = uiImage, imageURL == nil {
-            NetworkManager().uploadMealImage(uiImage) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let urlString):
-                        if let url = URL(string: urlString) {
-                            self.imageURL = url
-                            self.updateMeal()
-                        } else {
-                            self.isSaving = false
-                            self.errorMessage = "Invalid image URL format"
-                            self.showSaveError = true
-                        }
-                    case .failure(let error):
-                        self.isSaving = false
-                        self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
-                        self.showSaveError = true
-                    }
-                }
-            }
-        } else {
-            updateMeal()
-        }
+        updateMeal()
     }
     
     private func updateMeal() {
@@ -466,7 +259,7 @@ struct EditMealView: View {
             privacy: shareWith.lowercased(),
             servings: Int(servings),
             mealItems: [],  // Original meal items (will be replaced by selectedFoods)
-            image: imageURL?.absoluteString,
+            image: meal.image, // Preserve existing image if any
             totalCalories: totals.calories,
             totalProtein: totals.protein,
             totalCarbs: totals.carbs,
@@ -533,55 +326,55 @@ struct EditMealView: View {
             
             Divider()
             
-            // Meal time row
-            HStack {
-                Text("Meal")
-                    .foregroundColor(.primary)
+            // // Meal time row
+            // HStack {
+            //     Text("Meal")
+            //         .foregroundColor(.primary)
                 
-                Spacer()
+            //     Spacer()
                 
-                Menu {
-                    ForEach(mealTimes, id: \.self) { option in
-                        Button(option) {
-                            mealTime = option
-                            hasChanges = true
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(mealTime)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color("iosbtn"))
-                    .cornerRadius(8)
-                }
-            }
+            //     Menu {
+            //         ForEach(mealTimes, id: \.self) { option in
+            //             Button(option) {
+            //                 mealTime = option
+            //                 hasChanges = true
+            //             }
+            //         }
+            //     } label: {
+            //         HStack {
+            //             Text(mealTime)
+            //             Image(systemName: "chevron.up.chevron.down")
+            //                 .font(.system(size: 12))
+            //         }
+            //         .foregroundColor(.primary)
+            //         .padding(.horizontal, 12)
+            //         .padding(.vertical, 8)
+            //         .background(Color("iosbtn"))
+            //         .cornerRadius(8)
+            //     }
+            // }
             
-            Divider()
+            // Divider()
             
-            // Scheduled time row
-            HStack {
-                Text("Time")
-                    .foregroundColor(.primary)
+            // // Scheduled time row
+            // HStack {
+            //     Text("Time")
+            //         .foregroundColor(.primary)
                 
-                Spacer()
+            //     Spacer()
                 
-                DatePicker(
-                    "",
-                    selection: Binding(
-                        get: { self.scheduledDate ?? Date() },
-                        set: { self.scheduledDate = $0 }
-                    ),
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-            }
+            //     DatePicker(
+            //         "",
+            //         selection: Binding(
+            //             get: { self.scheduledDate ?? Date() },
+            //             set: { self.scheduledDate = $0 }
+            //         ),
+            //         displayedComponents: [.date, .hourAndMinute]
+            //     )
+            //     .labelsHidden()
+            // }
             
-            Divider()
+            // Divider()
             
             // Share-with row
             HStack {
