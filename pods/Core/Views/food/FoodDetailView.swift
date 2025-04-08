@@ -244,7 +244,7 @@ struct FoodDetailsView: View {
                     .frame(width: 45, height: 20)  // Match "Done" text size
                     .contentShape(Rectangle())
             } else {
-                Text("Done")
+                Text("Log")
             }
         }
         .fontWeight(.semibold)
