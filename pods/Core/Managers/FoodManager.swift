@@ -48,6 +48,14 @@ class FoodManager: ObservableObject {
     @Published var showLogSuccess = false
     @Published var lastLoggedItem: (name: String, calories: Double)?
     
+    // Add these properties for meal generation with AI
+    @Published var isGeneratingMeal = false
+    @Published var mealGenerationStage = 0
+    @Published var lastGeneratedMeal: Meal? = nil
+    
+    // Add this property for meal generation success
+    @Published var showMealGenerationSuccess = false
+    
     init() {
         self.networkManager = NetworkManager()
     }
@@ -1742,12 +1750,16 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
 }
 
 func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
-    // Set analyzing flag
-    isAnalyzingFood = true
-    analysisStage = 0
-    showAIGenerationSuccess = false
+    guard let email = userEmail else {
+        completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+        return
+    }
     
-    // Create a timer to cycle through analysis stages for UI feedback
+    // Set generating meal flag and reset stage
+    isGeneratingMeal = true
+    mealGenerationStage = 0
+    
+    // Create a timer to cycle through stages for UI feedback
     let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
         guard let self = self else { 
             timer.invalidate()
@@ -1755,49 +1767,50 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
         }
         
         // Cycle through stages 0-3
-        self.analysisStage = (self.analysisStage + 1) % 4
+        self.mealGenerationStage = (self.mealGenerationStage + 1) % 4
     }
     
+    // Make the API request
     networkManager.generateMealWithAI(mealDescription: mealDescription, mealType: mealType) { [weak self] result in
         guard let self = self else {
             timer.invalidate()
             return
         }
         
-        // Stop the analysis animation timer
+        // Stop the stage cycling timer
         timer.invalidate()
         
-        switch result {
-        case .success(let meal):
-            // Add the generated meal to the meals list
-            if self.meals.isEmpty {
-                self.meals = [meal]
-            } else {
-                self.meals.insert(meal, at: 0)
-            }
+        // Reset generating meal flag
+        DispatchQueue.main.async {
+            self.isGeneratingMeal = false
             
-            // Reset analysis state and show success toast
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isAnalyzingFood = false
-                self.analysisStage = 0
+            switch result {
+            case .success(let meal):
+                // Store the generated meal
+                self.lastGeneratedMeal = meal
+                
+                // Add the meal to the meals list
+                if self.meals.isEmpty {
+                    self.meals = [meal]
+                } else {
+                    self.meals.insert(meal, at: 0)
+                }
                 
                 // Show success toast
-                self.showAIGenerationSuccess = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.showAIGenerationSuccess = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.showMealGenerationSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showMealGenerationSuccess = false
+                    }
                 }
+                
+                // Call the completion handler
+                completion(.success(meal))
+                
+            case .failure(let error):
+                // Just forward the error
+                completion(.failure(error))
             }
-            
-            // Call completion handler with success
-            completion(.success(meal))
-            
-        case .failure(let error):
-            // Reset analysis state
-            self.isAnalyzingFood = false
-            self.analysisStage = 0
-            
-            // Handle error and pass it along
-            completion(.failure(error))
         }
     }
 }

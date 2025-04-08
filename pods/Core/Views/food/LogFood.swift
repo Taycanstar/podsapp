@@ -644,24 +644,23 @@ private struct MealListView: View {
                 // Add invisible spacing at the top to prevent overlap with header
                 Color.clear.frame(height: 6)
                 
+              
+                
                 // Show "Generate Meal with AI" button when search text is not empty
                 if !searchText.isEmpty {
                     Button(action: {
                         print("generating meal with ai...")
                         HapticFeedback.generateLigth()
                         
-                        // Set loading state
-                        isGeneratingMeal = true
-                        
-                        // First, close the food container immediately
-                        viewModel.isShowingFoodContainer = false
+                        // Set loading state in FoodManager
+                        foodManager.isGeneratingMeal = true
                         
                         // Then start the AI meal generation process
                         foodManager.generateMealWithAI(
                             mealDescription: searchText,
                             mealType: selectedMeal
                         ) { result in
-                            isGeneratingMeal = false
+                            // Reset is no longer needed as FoodManager handles it
                             
                             switch result {
                             case .success(_):
@@ -698,9 +697,9 @@ private struct MealListView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 0)
-                    .disabled(isGeneratingMeal) // Disable button while loading
+                    .disabled(foodManager.isGeneratingMeal) // Disable button while loading
                     .overlay(
-                        isGeneratingMeal ? 
+                        foodManager.isGeneratingMeal ? 
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
                             .padding()
@@ -714,6 +713,13 @@ private struct MealListView: View {
                     // Create Meal Button
                     CreateMealButton(path: $path)
                         .padding(.top, 0)
+                }
+
+                  // Show meal generation card if analysis is in progress
+                if foodManager.isGeneratingMeal {
+                    MealGenerationCard()
+                        .padding(.horizontal)
+                        .transition(.opacity)
                 }
                 
                 // Meals Card - Single unified card for all meals
@@ -769,6 +775,24 @@ private struct MealListView: View {
                 foodManager.refreshMeals()
             }
         }
+        .overlay(
+            // Show success toast when a meal is generated
+            Group {
+                if foodManager.showMealGenerationSuccess, let meal = foodManager.lastGeneratedMeal {
+                    VStack {
+                        Spacer()
+                        Text("\(meal.title) created")
+                            .padding()
+                            .background(Color.black.opacity(0.7))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                            .padding(.bottom, 20)
+                    }
+                    .transition(.opacity)
+                    .animation(.easeInOut, value: foodManager.showMealGenerationSuccess)
+                }
+            }
+        )
         .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
             Button("OK", role: .cancel) { showAIErrorAlert = false }
         } message: {
@@ -1530,3 +1554,67 @@ struct SearchActivator: UIViewRepresentable {
         return nil
     }
 }
+
+// Add the MealGenerationCard struct after MealListView
+struct MealGenerationCard: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @State private var animateProgress = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(getStageTitle())
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            
+            }
+            .padding(.bottom, 4)
+            
+            VStack(spacing: 12) {
+                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
+                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
+                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+            }
+
+                Text("We'll notify you when done!")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 10)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .onAppear {
+            startAnimation()
+        }
+    }
+    
+    private func getStageTitle() -> String {
+        switch foodManager.analysisStage {
+        case 0:
+            return "Analyzing meal description..."
+        case 1:
+            return "Finding matching ingredients..."
+        case 2:
+            return "Calculating portions..."
+        case 3:
+            return "Finalizing meal creation..."
+        default:
+            return "Processing..."
+        }
+    }
+    
+    private func startAnimation() {
+        // Reset animation state
+        animateProgress = false
+        
+        // Animate with delay
+        withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            animateProgress = true
+        }
+    }
+}
+
+
