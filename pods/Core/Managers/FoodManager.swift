@@ -1741,4 +1741,65 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
     }
 }
 
+func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
+    // Set analyzing flag
+    isAnalyzingFood = true
+    analysisStage = 0
+    showAIGenerationSuccess = false
+    
+    // Create a timer to cycle through analysis stages for UI feedback
+    let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+        guard let self = self else { 
+            timer.invalidate()
+            return 
+        }
+        
+        // Cycle through stages 0-3
+        self.analysisStage = (self.analysisStage + 1) % 4
+    }
+    
+    networkManager.generateMealWithAI(mealDescription: mealDescription, mealType: mealType) { [weak self] result in
+        guard let self = self else {
+            timer.invalidate()
+            return
+        }
+        
+        // Stop the analysis animation timer
+        timer.invalidate()
+        
+        switch result {
+        case .success(let meal):
+            // Add the generated meal to the meals list
+            if self.meals.isEmpty {
+                self.meals = [meal]
+            } else {
+                self.meals.insert(meal, at: 0)
+            }
+            
+            // Reset analysis state and show success toast
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isAnalyzingFood = false
+                self.analysisStage = 0
+                
+                // Show success toast
+                self.showAIGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showAIGenerationSuccess = false
+                }
+            }
+            
+            // Call completion handler with success
+            completion(.success(meal))
+            
+        case .failure(let error):
+            // Reset analysis state
+            self.isAnalyzingFood = false
+            self.analysisStage = 0
+            
+            // Handle error and pass it along
+            completion(.failure(error))
+        }
+    }
+}
+
 }

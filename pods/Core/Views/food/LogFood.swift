@@ -624,11 +624,17 @@ private struct CreateMealButton: View {
 // MEAL LIST VIEW -- CHANGED to unify divider usage
 private struct MealListView: View {
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @Binding var selectedMeal: String
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     let searchText: String
+    
+    // Add states for AI generation
+    @State private var isGeneratingMeal = false
+    @State private var showAIErrorAlert = false
+    @State private var aiErrorMessage = ""
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -643,6 +649,35 @@ private struct MealListView: View {
                     Button(action: {
                         print("generating meal with ai...")
                         HapticFeedback.generateLigth()
+                        
+                        // Set loading state
+                        isGeneratingMeal = true
+                        
+                        // First, close the food container immediately
+                        viewModel.isShowingFoodContainer = false
+                        
+                        // Then start the AI meal generation process
+                        foodManager.generateMealWithAI(
+                            mealDescription: searchText,
+                            mealType: selectedMeal
+                        ) { result in
+                            isGeneratingMeal = false
+                            
+                            switch result {
+                            case .success(_):
+                                // Success is handled by FoodManager (shows toast, updates lists)
+                                print("Successfully generated meal with AI")
+                                
+                            case .failure(let error):
+                                // Show error alert
+                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                    aiErrorMessage = message
+                                } else {
+                                    aiErrorMessage = error.localizedDescription
+                                }
+                                showAIErrorAlert = true
+                            }
+                        }
                     }) {
                         HStack(spacing: 6) {
                             Spacer()
@@ -663,6 +698,16 @@ private struct MealListView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 0)
+                    .disabled(isGeneratingMeal) // Disable button while loading
+                    .overlay(
+                        isGeneratingMeal ? 
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .padding()
+                            .background(Color.black.opacity(0.2))
+                            .cornerRadius(8)
+                         : nil
+                    )
                 } 
                 // Show Create Meal button when no search text
                 else {
@@ -723,6 +768,11 @@ private struct MealListView: View {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
                 foodManager.refreshMeals()
             }
+        }
+        .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
+            Button("OK", role: .cancel) { showAIErrorAlert = false }
+        } message: {
+            Text(aiErrorMessage)
         }
     }
 }

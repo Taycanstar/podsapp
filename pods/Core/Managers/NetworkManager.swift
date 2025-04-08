@@ -6994,4 +6994,86 @@ func updateRecipeWithFoods(
             }
         }.resume()
     }
+
+    func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "meal_description": mealDescription,
+            "meal_type": mealType
+        ]
+        
+        let urlString = "\(baseUrl)/generate-ai-meal/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Create and configure request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        // DEBUG - Print what we're sending to the server
+        print("⬆️ SENDING TO SERVER - generateMealWithAI:")
+        print("- meal description: \(mealDescription)")
+        print("- meal type: \(mealType)")
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // DEBUG - Print response from server
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("⬇️ SERVER RESPONSE - generateMealWithAI:")
+                print(jsonString.prefix(300)) // First 300 chars
+            }
+            
+            do {
+                // Check if there's an error message from server
+                if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = errorResponse["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+                
+                // Create a decoder with snake_case to camelCase conversion
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                // Parse the meal response
+                let meal = try decoder.decode(Meal.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(meal))
+                }
+            } catch {
+                print("⚠️ Error parsing meal data: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+        
+        task.resume()
+    }
 }
