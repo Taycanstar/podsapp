@@ -69,6 +69,8 @@ enum FoodNavigationDestination: Hashable {
     case editRecipe(Recipe)   // Added case for editing a recipe
     case mealDetails(Meal)    // Added case for viewing a meal      
     case recipeDetails(Recipe) // Added case for viewing a recipe
+    case addFoodToMeal   // Added case for using the AddFoodView for meals
+    case addFoodToRecipe // Added case for using the AddFoodView for recipes
 
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
@@ -93,6 +95,10 @@ enum FoodNavigationDestination: Hashable {
             return meal1.id == meal2.id
         case let (.recipeDetails(recipe1), .recipeDetails(recipe2)):
             return recipe1.id == recipe2.id
+        case (.addFoodToMeal, .addFoodToMeal):
+            return true
+        case (.addFoodToRecipe, .addFoodToRecipe):
+            return true
         default:
             return false
         }
@@ -126,6 +132,10 @@ enum FoodNavigationDestination: Hashable {
         case .recipeDetails(let recipe):
             hasher.combine(9)
             hasher.combine(recipe.id)
+        case .addFoodToMeal:
+            hasher.combine(10)
+        case .addFoodToRecipe:
+            hasher.combine(11)
         }
     }
 }
@@ -469,7 +479,55 @@ struct FoodContainerView: View {
                             }
                             // Otherwise we're returning from adding items, so keep the existing selectedFoods array
                         }
-                         
+                case .addFoodToMeal:
+                    // Use the same binding approach as for the addMealItems case
+                    let binding = Binding<[Food]>(
+                        get: {
+                            if let mealId = currentlyEditingMealId {
+                                return editMealSelectedFoodsByMealId[mealId] ?? []
+                            } else {
+                                return navState.createMealSelectedFoods
+                            }
+                        },
+                        set: { newValue in
+                            if let mealId = currentlyEditingMealId {
+                                editMealSelectedFoodsByMealId[mealId] = Array(newValue)
+                            } else {
+                                navState.createMealSelectedFoods = Array(newValue)
+                            }
+                        }
+                    )
+                    
+                    AddFoodView(
+                        path: $path,
+                        selectedFoods: binding,
+                        mode: .addToMeal
+                    )
+                
+                case .addFoodToRecipe:
+                    // Use the same binding approach as for the addRecipeIngredients case
+                    let recipeBinding = Binding<[Food]>(
+                        get: {
+                            if currentlyEditingRecipeId != nil {
+                                return editRecipeSelectedFoods
+                            } else {
+                                return navState.createRecipeSelectedFoods
+                            }
+                        },
+                        set: { newValue in
+                            if currentlyEditingRecipeId != nil {
+                                editRecipeSelectedFoods = Array(newValue)
+                            } else {
+                                navState.createRecipeSelectedFoods = Array(newValue)
+                            }
+                        }
+                    )
+                    
+                    AddFoodView(
+                        path: $path,
+                        selectedFoods: recipeBinding,
+                        mode: .addToRecipe
+                    )
                 }
             }
         }

@@ -58,6 +58,7 @@
 		364A83BA2D8F6C6A009D2620 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */; };
 		364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C02D9F8B71009D2620 /* QuickLogFood.swift */; };
 		364A83C32DA09344009D2620 /* AddIngredientsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C22DA09344009D2620 /* AddIngredientsView.swift */; };
+		364A83C52DA59627009D2620 /* AddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C42DA59627009D2620 /* AddFoodView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -219,6 +220,7 @@
 		364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		364A83C02D9F8B71009D2620 /* QuickLogFood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLogFood.swift; sourceTree = "<group>"; };
 		364A83C22DA09344009D2620 /* AddIngredientsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIngredientsView.swift; sourceTree = "<group>"; };
+		364A83C42DA59627009D2620 /* AddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
@@ -645,6 +647,7 @@
 				364A83B92D8F6C6A009D2620 /* RecipeDetailView.swift */,
 				364A83C02D9F8B71009D2620 /* QuickLogFood.swift */,
 				364A83C22DA09344009D2620 /* AddIngredientsView.swift */,
+				364A83C42DA59627009D2620 /* AddFoodView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1004,6 +1007,7 @@
 				363AFA172D4746A900C91A14 /* PodsView.swift in Sources */,
 				3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */,
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,
+				364A83C52DA59627009D2620 /* AddFoodView.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,
 				36CB03412D66CDD3006A74E9 /* CreateMealView.swift in Sources */,

@@ -470,10 +470,7 @@ struct EditMealView: View {
             }
             
             Button {
-                // Store the current food count before showing the sheet
-                foodCountBeforeSheet = selectedFoods.count
-                print("📊 Storing food count before opening sheet: \(foodCountBeforeSheet)")
-                isShowingAddItems = true
+                path.append(FoodNavigationDestination.addFoodToMeal)
             } label: {
                 Text("Add item to meal")
                     .foregroundColor(.accentColor)

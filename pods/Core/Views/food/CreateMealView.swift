@@ -335,7 +335,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         }
         
         Button {
-            path.append(FoodNavigationDestination.addMealItems)
+            path.append(FoodNavigationDestination.addFoodToMeal)
         } label: {
             Text("Add item to meal")
                 .foregroundColor(.accentColor)
