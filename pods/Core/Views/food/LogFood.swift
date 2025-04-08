@@ -316,7 +316,7 @@ private struct FoodListView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Add invisible spacing at the top to prevent overlap with header
-                Color.clear.frame(height: 6)
+                Color.clear.frame(height: 4)
                 
                 // Show Quick Log button when there's no search text
                 if searchText.isEmpty {
@@ -568,27 +568,7 @@ private struct CreateMealButton: View {
     @Binding var path: NavigationPath
     
     var body: some View {
-        // Button(action: {
-        //     path.append(FoodNavigationDestination.createMeal)
-        // }) {
-        //     HStack(spacing: 16) {
-        //         Image(systemName: "plus.circle.fill")
-        //             .font(.system(size: 24))
-        //             .foregroundColor(.accentColor)
-        //         Text("Create Meal")
-        //             .font(.system(size: 16))
-        //             .foregroundColor(.accentColor)
-                
-        //         Spacer()
-        //     }
-        //     .padding(.horizontal, 16)
-        //     .padding(.vertical, 12)
-        //     .frame(maxWidth: .infinity, alignment: .leading)
-        //     .background(Color("iosfit"))
-        //     .cornerRadius(12)
-        // }
-        // .padding(.horizontal)
-        // .padding(.top, 0)
+       
 
 
         
@@ -617,6 +597,7 @@ private struct CreateMealButton: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 0)
+                    .padding(.bottom, 4)
                 
     }
 }
