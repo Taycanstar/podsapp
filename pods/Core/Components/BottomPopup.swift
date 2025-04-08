@@ -26,7 +26,7 @@ struct BottomPopup: View {
                     .stroke(Color(.label).opacity(0.7), lineWidth: 1)  // Add a border for contrast
             ) 
             .padding(.horizontal, 16)
-            .padding(.bottom, 65)
+            .padding(.bottom, 22)
             .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

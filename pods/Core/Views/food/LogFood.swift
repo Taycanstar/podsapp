@@ -43,7 +43,7 @@ struct LogFood: View {
             case .all, .foods:
                 return "Describe what you ate"
             case .meals:
-                return "Search Meals"
+                return "Describe your meal"
             }
         }
     }
