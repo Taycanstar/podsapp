@@ -950,6 +950,14 @@ struct FoodRow: View {
             .buttonStyle(.plain)
         }
         .contentShape(Rectangle())
+        .onTapGesture {
+            // Only navigate if in logFood mode
+            if mode == .logFood {
+                // Navigate to food details view with the proper binding
+                HapticFeedback.generate()
+                path.append(FoodNavigationDestination.foodDetails(food, selectedMeal))
+            }
+        }
         .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
