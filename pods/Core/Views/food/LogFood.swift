@@ -781,15 +781,12 @@ private struct MealListView: View {
                 if foodManager.showMealGenerationSuccess, let meal = foodManager.lastGeneratedMeal {
                     VStack {
                         Spacer()
-                        Text("\(meal.title) created")
-                            .padding()
-                            .background(Color.black.opacity(0.7))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .padding(.bottom, 20)
+                        BottomPopup(message: "\(meal.title) created")
+                            .padding(.bottom, 0)
                     }
+                    .zIndex(100)
                     .transition(.opacity)
-                    .animation(.easeInOut, value: foodManager.showMealGenerationSuccess)
+                    .animation(.spring(), value: foodManager.showMealGenerationSuccess)
                 }
             }
         )

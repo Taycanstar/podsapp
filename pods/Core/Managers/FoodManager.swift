@@ -1796,12 +1796,10 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
                     self.meals.insert(meal, at: 0)
                 }
                 
-                // Show success toast
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.showMealGenerationSuccess = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showMealGenerationSuccess = false
-                    }
+                // Show success toast immediately
+                self.showMealGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showMealGenerationSuccess = false
                 }
                 
                 // Call the completion handler
