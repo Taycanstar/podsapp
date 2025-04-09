@@ -57,8 +57,8 @@ struct AddFoodView: View {
     @State private var errorMessage = ""
     // Add loading state for AI generation
     @State private var isGeneratingFood = false
-    // Add state to store temporary AI generated results
-    @State private var generatedFood: Food? = nil
+    // Change from a single generated food to an array of generated foods
+    @State private var generatedFoods: [Food] = []
     
     let foodTabs: [AddFoodTab] = [.all, .myFoods, .savedScans]
     
@@ -183,8 +183,8 @@ struct AddFoodView: View {
                                 
                                 switch result {
                                 case .success(let food):
-                                    // Store the generated food
-                                    generatedFood = food
+                                    // Add to generated foods collection instead of replacing
+                                    generatedFoods.append(food)
                                     
                                     // Mark as selected in the UI (but don't add to meal yet)
                                     selectedFoodIds.insert(food.fdcId)
@@ -232,8 +232,8 @@ struct AddFoodView: View {
                                 .padding(.horizontal)
                             
                             VStack(spacing: 0) {
-                                // First show the generated food if it exists and is selected
-                                if let genFood = generatedFood, selectedFoodIds.contains(genFood.fdcId) {
+                                // First show all generated foods that are still selected
+                                ForEach(generatedFoods.filter { selectedFoodIds.contains($0.fdcId) }, id: \.id) { genFood in
                                     FoodItem(
                                         food: genFood,
                                         isSelected: true,
@@ -242,9 +242,13 @@ struct AddFoodView: View {
                                     Divider()
                                 }
                                 
-                                // Show all other selected foods
-                                let displayFoods = getDisplayFoods().filter { selectedFoodIds.contains($0.fdcId) }
-                                ForEach(displayFoods.filter { $0.fdcId != generatedFood?.fdcId }, id: \.id) { food in
+                                // Show all other selected foods that aren't in generated foods
+                                let otherSelectedFoods = getDisplayFoods().filter { food in
+                                    selectedFoodIds.contains(food.fdcId) && 
+                                    !generatedFoods.contains { genFood in genFood.fdcId == food.fdcId }
+                                }
+                                
+                                ForEach(otherSelectedFoods, id: \.id) { food in
                                     FoodItem(
                                         food: food,
                                         isSelected: true,
@@ -275,9 +279,9 @@ struct AddFoodView: View {
                         } else {
                             VStack(spacing: 0) {
                                 // Show unselected foods
-                                let unselectedFoods = getDisplayFoods().filter { 
-                                    !selectedFoodIds.contains($0.fdcId) && 
-                                    $0.fdcId != generatedFood?.fdcId 
+                                let unselectedFoods = getDisplayFoods().filter { food in 
+                                    !selectedFoodIds.contains(food.fdcId) && 
+                                    !generatedFoods.contains { genFood in genFood.fdcId == food.fdcId }
                                 }
                                 
                                 ForEach(unselectedFoods, id: \.id) { food in
@@ -381,11 +385,6 @@ struct AddFoodView: View {
             // Remove food ID from selected list
             selectedFoodIds.remove(food.fdcId)
             
-            // If this was our generated food and we're deselecting it, clear it
-            if generatedFood?.fdcId == food.fdcId {
-                generatedFood = nil
-            }
-            
             // Only remove from selectedFoods (actual meal items) if it was already there
             selectedFoods.removeAll(where: { $0.fdcId == food.fdcId })
         } else {
@@ -412,12 +411,14 @@ struct AddFoodView: View {
                 continue
             }
             
-            // Find the food in our display results
-            if let food = generatedFood, food.fdcId == foodId {
+            // Find the food in our generated foods first
+            if let food = generatedFoods.first(where: { $0.fdcId == foodId }) {
                 var newFood = food
                 newFood.numberOfServings = 1
                 selectedFoods.append(newFood)
-            } else if let food = (getDisplayFoods().first { $0.fdcId == foodId }) {
+            }
+            // Then check in the display foods
+            else if let food = (getDisplayFoods().first { $0.fdcId == foodId }) {
                 var newFood = food
                 newFood.numberOfServings = 1
                 selectedFoods.append(newFood)
