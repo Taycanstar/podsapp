@@ -56,6 +56,12 @@ class FoodManager: ObservableObject {
     // Add this property for meal generation success
     @Published var showMealGenerationSuccess = false
     
+    // Add state for food generation
+    @Published var isGeneratingFood = false
+    @Published var foodGenerationStage = 0
+    @Published var showFoodGenerationSuccess = false
+    @Published var lastGeneratedFood: Food? = nil
+    
     init() {
         self.networkManager = NetworkManager()
     }
@@ -1804,6 +1810,62 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
                 
                 // Call the completion handler
                 completion(.success(meal))
+                
+            case .failure(let error):
+                // Just forward the error
+                completion(.failure(error))
+            }
+        }
+    }
+}
+
+func generateFoodWithAI(
+    foodDescription: String,
+    completion: @escaping (Result<Food, Error>) -> Void
+) {
+    // Set generating food flag and reset stage
+    isGeneratingFood = true
+    foodGenerationStage = 0
+    showFoodGenerationSuccess = false
+    
+    // Create a timer to cycle through stages for UI feedback
+    let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+        guard let self = self else { 
+            timer.invalidate()
+            return 
+        }
+        
+        // Cycle through stages 0-3
+        self.foodGenerationStage = (self.foodGenerationStage + 1) % 4
+    }
+    
+    // Make the API request
+    networkManager.generateFoodWithAI(foodDescription: foodDescription) { [weak self] result in
+        guard let self = self else {
+            timer.invalidate()
+            return
+        }
+        
+        // Stop the stage cycling timer
+        timer.invalidate()
+        
+        // Reset generating food flag
+        DispatchQueue.main.async {
+            self.isGeneratingFood = false
+            
+            switch result {
+            case .success(let food):
+                // Store the generated food
+                self.lastGeneratedFood = food
+                
+                // Show success toast
+                self.showFoodGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showFoodGenerationSuccess = false
+                }
+                
+                // Call the completion handler
+                completion(.success(food))
                 
             case .failure(let error):
                 // Just forward the error

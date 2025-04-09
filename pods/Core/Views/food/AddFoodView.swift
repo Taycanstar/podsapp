@@ -21,7 +21,7 @@ enum AddFoodTab: Hashable {
     var searchPrompt: String {
         switch self {
         case .all, .myFoods, .savedScans:
-            return "Describe what you ate"
+            return "Search"
         }
     }
 }
@@ -52,6 +52,10 @@ struct AddFoodView: View {
     // Track selected food IDs for UI
     @State private var selectedFoodIds = Set<Int>()
     
+    // Add state for food generation
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
+    
     let foodTabs: [AddFoodTab] = [.all, .myFoods, .savedScans]
     
     // MARK: - Body
@@ -75,33 +79,6 @@ struct AddFoodView: View {
                     VStack(spacing: 12) {
                         // Add invisible spacing at the top to prevent overlap with header
                         Color.clear.frame(height: 4)
-                        
-                        // Show AI Generate Food button when there's search text in the .all tab
-                        if !searchText.isEmpty && selectedTab == .all {
-                            Button(action: {
-                                print("tapped gen food")
-                                HapticFeedback.generateLigth()
-                            }) {
-                                HStack(spacing: 6) {
-                                    Spacer()
-                                    Image(systemName: "sparkle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(.accentColor)
-                                    Text("Generate Food with AI")
-                                        .font(.system(size: 17))
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.accentColor)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color("iosfit"))
-                                .cornerRadius(12)
-                            }
-                            .padding(.horizontal)
-                            .padding(.top, 0)
-                        }
                         
                         foodListContent
                     }
@@ -184,26 +161,84 @@ struct AddFoodView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
-            } else if getDisplayFoods().isEmpty {
-                Text(getNoResultsMessage())
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(getDisplayFoods(), id: \.id) { food in
-                        FoodItem(
-                            food: food,
-                            isSelected: selectedFoodIds.contains(food.fdcId),
-                            onTap: { toggleFoodSelection(food) }
-                        )
-                        Divider()
+                VStack(spacing: 12) {
+                    // Show Generate Food with AI button when there's search text
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            print("AI tapped for: \(searchText)")
+                            HapticFeedback.generateLigth()
+                            
+                            // Generate food with AI
+                            foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                                switch result {
+                                case .success(let food):
+                                    // Add to selection
+                                    selectedFoodIds.insert(food.fdcId)
+                                    selectedFoods.append(food)
+                                    
+                                    // Track as recently added
+                                    foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                                    
+                                case .failure(let error):
+                                    // Show error alert
+                                    if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                        errorMessage = message
+                                    } else {
+                                        errorMessage = error.localizedDescription
+                                    }
+                                    showErrorAlert = true
+                                }
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Spacer()
+                                Image(systemName: "sparkle")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.accentColor)
+                                Text("Generate Food with AI")
+                                    .font(.system(size: 17))
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.accentColor)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color("iosfit"))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 0)
+                    }
+                    
+                    if getDisplayFoods().isEmpty {
+                        Text(getNoResultsMessage())
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(getDisplayFoods(), id: \.id) { food in
+                                FoodItem(
+                                    food: food,
+                                    isSelected: selectedFoodIds.contains(food.fdcId),
+                                    onTap: { toggleFoodSelection(food) }
+                                )
+                                Divider()
+                            }
+                        }
+                        .background(Color("iosnp"))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
                 }
-                .background(Color("iosnp"))
-                .cornerRadius(12)
-                .padding(.horizontal)
             }
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
     }
     

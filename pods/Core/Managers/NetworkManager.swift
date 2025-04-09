@@ -7076,4 +7076,90 @@ func updateRecipeWithFoods(
         
         task.resume()
     }
+
+    func generateFoodWithAI(
+        foodDescription: String,
+        completion: @escaping (Result<Food, Error>) -> Void
+    ) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "food_description": foodDescription
+        ]
+        
+        let urlString = "\(baseUrl)/generate-ai-food/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+            
+            // Print formatted JSON for better debugging
+            if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                print("📤 GENERATE FOOD REQUEST JSON:")
+                print(jsonString)
+            }
+        } catch {
+            print("JSON Serialization Error: \(error)")
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            // Check for server error responses
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+                if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = errorJson["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError("Server returned error \(httpResponse.statusCode)")))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Print response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("⬇️ SERVER RESPONSE - generateFoodWithAI: \(responseString)")
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let food = try decoder.decode(Food.self, from: data)
+                
+                DispatchQueue.main.async {
+                    completion(.success(food))
+                }
+            } catch {
+                print("Decoding Error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
 }
