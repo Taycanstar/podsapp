@@ -55,6 +55,10 @@ struct AddFoodView: View {
     // Add state for food generation
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
+    // Add loading state for AI generation
+    @State private var isGeneratingFood = false
+    // Add state to store temporary AI generated results
+    @State private var generatedFood: Food? = nil
     
     let foodTabs: [AddFoodTab] = [.all, .myFoods, .savedScans]
     
@@ -122,7 +126,7 @@ struct AddFoodView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        dismiss()
+                        addSelectedFoodsToMeal()
                     }
                     .fontWeight(.semibold)
                 }
@@ -157,7 +161,7 @@ struct AddFoodView: View {
     
     private var foodListContent: some View {
         Group {
-            if isSearching {
+            if isSearching || isGeneratingFood {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
@@ -169,13 +173,21 @@ struct AddFoodView: View {
                             print("AI tapped for: \(searchText)")
                             HapticFeedback.generateLigth()
                             
+                            // Set loading state to true
+                            isGeneratingFood = true
+                            
                             // Generate food with AI
                             foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                                // Set loading state to false
+                                isGeneratingFood = false
+                                
                                 switch result {
                                 case .success(let food):
-                                    // Add to selection
+                                    // Store the generated food
+                                    generatedFood = food
+                                    
+                                    // Mark as selected in the UI (but don't add to meal yet)
                                     selectedFoodIds.insert(food.fdcId)
-                                    selectedFoods.append(food)
                                     
                                     // Track as recently added
                                     foodManager.trackRecentlyAdded(foodId: food.fdcId)
@@ -212,25 +224,75 @@ struct AddFoodView: View {
                         .padding(.top, 0)
                     }
                     
-                    if getDisplayFoods().isEmpty {
-                        Text(getNoResultsMessage())
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
-                    } else {
-                        VStack(spacing: 0) {
-                            ForEach(getDisplayFoods(), id: \.id) { food in
-                                FoodItem(
-                                    food: food,
-                                    isSelected: selectedFoodIds.contains(food.fdcId),
-                                    onTap: { toggleFoodSelection(food) }
-                                )
-                                Divider()
+                    // Display selected foods section if we have any selections
+                    if !selectedFoodIds.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Selected Foods")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            VStack(spacing: 0) {
+                                // First show the generated food if it exists and is selected
+                                if let genFood = generatedFood, selectedFoodIds.contains(genFood.fdcId) {
+                                    FoodItem(
+                                        food: genFood,
+                                        isSelected: true,
+                                        onTap: { toggleFoodSelection(genFood) }
+                                    )
+                                    Divider()
+                                }
+                                
+                                // Show all other selected foods
+                                let displayFoods = getDisplayFoods().filter { selectedFoodIds.contains($0.fdcId) }
+                                ForEach(displayFoods.filter { $0.fdcId != generatedFood?.fdcId }, id: \.id) { food in
+                                    FoodItem(
+                                        food: food,
+                                        isSelected: true,
+                                        onTap: { toggleFoodSelection(food) }
+                                    )
+                                    Divider()
+                                }
                             }
+                            .background(Color("iosnp"))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
                         }
-                        .background(Color("iosnp"))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
+                    }
+                    
+                    // Show "all foods" section
+                    VStack(alignment: .leading, spacing: 8) {
+                        if !selectedFoodIds.isEmpty {
+                            Text("All Foods")
+                                .font(.headline)
+                                .padding(.horizontal)
+                        }
+                        
+                        if getDisplayFoods().filter({ !selectedFoodIds.contains($0.fdcId) }).isEmpty && searchResults.filter({ !selectedFoodIds.contains($0.fdcId) }).isEmpty {
+                            Text(getNoResultsMessage())
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
+                        } else {
+                            VStack(spacing: 0) {
+                                // Show unselected foods
+                                let unselectedFoods = getDisplayFoods().filter { 
+                                    !selectedFoodIds.contains($0.fdcId) && 
+                                    $0.fdcId != generatedFood?.fdcId 
+                                }
+                                
+                                ForEach(unselectedFoods, id: \.id) { food in
+                                    FoodItem(
+                                        food: food,
+                                        isSelected: false,
+                                        onTap: { toggleFoodSelection(food) }
+                                    )
+                                    Divider()
+                                }
+                            }
+                            .background(Color("iosnp"))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        }
                     }
                 }
             }
@@ -316,21 +378,53 @@ struct AddFoodView: View {
     
     private func toggleFoodSelection(_ food: Food) {
         if selectedFoodIds.contains(food.fdcId) {
-            // Remove food
+            // Remove food ID from selected list
             selectedFoodIds.remove(food.fdcId)
+            
+            // If this was our generated food and we're deselecting it, clear it
+            if generatedFood?.fdcId == food.fdcId {
+                generatedFood = nil
+            }
+            
+            // Only remove from selectedFoods (actual meal items) if it was already there
             selectedFoods.removeAll(where: { $0.fdcId == food.fdcId })
         } else {
-            // Add food
+            // Add food ID to selected list
             selectedFoodIds.insert(food.fdcId)
             
-            // Create a copy with numberOfServings = 1
-            var newFood = food
-            newFood.numberOfServings = 1
-            selectedFoods.append(newFood)
+            // Don't add to meal until "Done" is tapped
+            // This line is commented out to change the behavior
+            // selectedFoods.append(food)
         }
         
         // Haptic feedback
         HapticFeedback.generate()
+    }
+    
+    // Add function to handle the Done button
+    // This will add all selected foods to the meal when Done is tapped
+    private func addSelectedFoodsToMeal() {
+        // For each selected food ID, create a copy with numberOfServings = 1
+        // and add it to selectedFoods if it's not already there
+        for foodId in selectedFoodIds {
+            // Skip if already in selectedFoods
+            if selectedFoods.contains(where: { $0.fdcId == foodId }) {
+                continue
+            }
+            
+            // Find the food in our display results
+            if let food = generatedFood, food.fdcId == foodId {
+                var newFood = food
+                newFood.numberOfServings = 1
+                selectedFoods.append(newFood)
+            } else if let food = (getDisplayFoods().first { $0.fdcId == foodId }) {
+                var newFood = food
+                newFood.numberOfServings = 1
+                selectedFoods.append(newFood)
+            }
+        }
+        
+        dismiss()
     }
 }
 
