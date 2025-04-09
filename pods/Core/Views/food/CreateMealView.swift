@@ -149,9 +149,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
     
     // Validate name before saving
     private func validateMealName() -> Bool {
-        // Check if name is already taken
         if isNameAlreadyTaken() {
-            // Show the alert
             showNameTakenAlert = true
             return false
         }
