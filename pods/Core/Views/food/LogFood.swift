@@ -305,8 +305,11 @@ private struct FoodListView: View {
     
     // Add states for AI generation
     @State private var isGeneratingMacros = false
+    @State private var isGeneratingFood = false
     @State private var showAIErrorAlert = false
     @State private var aiErrorMessage = ""
+    @State private var showFoodCreatedToast = false
+    @State private var generatedFood: Food? = nil
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -396,28 +399,54 @@ private struct FoodListView: View {
                     .padding(.horizontal)
                     .padding(.top, 0)
                     .disabled(isGeneratingMacros) // Disable button while loading
-                    // .overlay(
-                    //     isGeneratingMacros ? 
-                    //     ProgressView()
-                    //         .progressViewStyle(CircularProgressViewStyle())
-                    //         .padding()
-                    //         .background(Color.black.opacity(0.2))
-                    //         .cornerRadius(8)
-                    //      : nil
-                    // )
                 }
-                // Show Generate Meal with AI button when there's search text in the .meals tab
-                else if selectedFoodTab == .meals && !searchText.isEmpty {
+                // Show Generate Food with AI button when there's search text in the .foods tab
+                else if selectedFoodTab == .foods && !searchText.isEmpty {
                     Button(action: {
-                        print("generating meal with ai...")
+                        print("Generating food with AI: \(searchText)")
                         HapticFeedback.generateLigth()
+                        
+                        // Set loading state
+                        isGeneratingFood = true
+                        
+                        // Generate food with AI
+                        foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                            // Set loading state to false
+                            isGeneratingFood = false
+                            
+                            switch result {
+                            case .success(let food):
+                                // Store the generated food
+                                generatedFood = food
+                                
+                                // Track as recently added
+                                foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                                
+                                // Show success toast
+                                showFoodCreatedToast = true
+                                
+                                // Hide the toast after a delay
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                    showFoodCreatedToast = false
+                                }
+                                
+                            case .failure(let error):
+                                // Show error alert
+                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                    aiErrorMessage = message
+                                } else {
+                                    aiErrorMessage = error.localizedDescription
+                                }
+                                showAIErrorAlert = true
+                            }
+                        }
                     }) {
                         HStack(spacing: 6) {
                             Spacer()
                             Image(systemName: "sparkle")
                                 .font(.system(size: 24))
                                 .foregroundColor(.accentColor)
-                            Text("Generate Meal with AI")
+                            Text("Generate Food with AI")
                                 .font(.system(size: 17))
                                 .fontWeight(.semibold)
                                 .foregroundColor(.accentColor)
@@ -431,17 +460,47 @@ private struct FoodListView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 0)
+                    .disabled(isGeneratingFood) // Disable button while loading
+                }
+                
+                // Show food generation loading card if generating food
+                if isGeneratingFood {
+                    FoodGenerationCard()
+                        .padding(.horizontal)
+                        .transition(.opacity)
                 }
                 
                 // Main content card
-                
                 if searchResults.isEmpty && !isSearching {
                     LazyVStack(spacing: 0) {
                         // Process logs to remove empty/invalid entries
                         let validLogs = foodManager.combinedLogs.filter { log in
-                            if case .food = log.type, log.food != nil { return true }
-                            if case .meal = log.type, log.meal != nil { return true }
+                            if case .food = log.type, log.food != nil { 
+                                return selectedFoodTab != .foods || generatedFood != nil || true
+                            }
+                            if case .meal = log.type, log.meal != nil { 
+                                return selectedFoodTab != .foods 
+                            }
                             return false
+                        }
+                        
+                        // Show generated food at the top of the list if in foods tab
+                        if selectedFoodTab == .foods, let genFood = generatedFood {
+                            FoodRow(
+                                food: genFood,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            
+                            if !validLogs.isEmpty {
+                                Divider()
+                                    .padding(.leading, 16)
+                            }
                         }
                         
                         ForEach(Array(validLogs.enumerated()), id: \.element.id) { index, log in
@@ -472,7 +531,7 @@ private struct FoodListView: View {
                                         .padding(.vertical, 12)
                                     }
                                 case .meal:
-                                    if let meal = log.meal {
+                                    if let meal = log.meal, selectedFoodTab != .foods {
                                         CombinedLogMealRow(
                                             log: log,
                                             meal: meal,
@@ -523,6 +582,25 @@ private struct FoodListView: View {
                     }
                 } else {
                     LazyVStack(spacing: 0) {
+                        // Show generated food at the top of the search results if it exists
+                        if selectedFoodTab == .foods, let genFood = generatedFood {
+                            FoodRow(
+                                food: genFood,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            
+                            if !searchResults.isEmpty {
+                                Divider()
+                                    .padding(.leading, 16)
+                            }
+                        }
+                        
                         ForEach(searchResults.indices, id: \.self) { index in
                             let food = searchResults[index]
                             
@@ -554,6 +632,21 @@ private struct FoodListView: View {
         } message: {
             Text(aiErrorMessage)
         }
+        .overlay(
+            // Show the food created toast when needed
+            Group {
+                if showFoodCreatedToast {
+                    VStack {
+                        Spacer()
+                        BottomPopup(message: "Food created")
+                            .padding(.bottom, 0)
+                    }
+                    .zIndex(100)
+                    .transition(.opacity)
+                    .animation(.spring(), value: showFoodCreatedToast)
+                }
+            }
+        )
     }
     
     private func showMinimumLoader() {
@@ -1589,6 +1682,51 @@ struct MealGenerationCard: View {
             return "Finalizing meal creation..."
         default:
             return "Processing..."
+        }
+    }
+    
+    private func startAnimation() {
+        // Reset animation state
+        animateProgress = false
+        
+        // Animate with delay
+        withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            animateProgress = true
+        }
+    }
+}
+
+// Add the FoodGenerationCard struct after MealGenerationCard
+struct FoodGenerationCard: View {
+    @State private var animateProgress = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Generating food item...")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+            
+            VStack(spacing: 12) {
+                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
+                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
+                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+            }
+
+            Text("We'll notify you when done!")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 10)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .onAppear {
+            startAnimation()
         }
     }
     
