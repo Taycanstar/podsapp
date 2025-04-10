@@ -161,7 +161,7 @@ struct AddFoodView: View {
     
     private var foodListContent: some View {
         Group {
-            if isSearching || isGeneratingFood {
+            if isSearching {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
@@ -183,7 +183,7 @@ struct AddFoodView: View {
                                 
                                 switch result {
                                 case .success(let food):
-                                    // Add to generated foods collection instead of replacing
+                                    // Store the generated food
                                     generatedFoods.append(food)
                                     
                                     // Mark as selected in the UI (but don't add to meal yet)
@@ -222,6 +222,14 @@ struct AddFoodView: View {
                         }
                         .padding(.horizontal)
                         .padding(.top, 0)
+                        .disabled(isGeneratingFood) // Disable button while loading
+                    }
+                    
+                    // Show food generation loading card if generating
+                    if isGeneratingFood {
+                        FoodGenerationCard()
+                            .padding(.horizontal)
+                            .transition(.opacity)
                     }
                     
                     // Display selected foods section if we have any selections
@@ -539,13 +547,4 @@ private struct TabButton: View {
     }
 }
 
-// MARK: - Preview
-#Preview {
-    AddFoodView(
-        path: .constant(NavigationPath()),
-        selectedFoods: .constant([]),
-        mode: .addToMeal
-    )
-    .environmentObject(FoodManager())
-    .environmentObject(FoodNavigationState())
-}
+
