@@ -17,8 +17,7 @@ struct CreateFoodView: View {
     // Basic food info
     @State private var title: String = ""
     @State private var servingSize: String = ""
-    @State private var servingUnit: String = "cup"
-    @State private var numberOfServings: Double = 1
+    @State private var numberOfServings: Int = 1
     @State private var calories: String = ""
     
     // Basic nutrition facts
@@ -134,33 +133,18 @@ struct CreateFoodView: View {
                 TextField("Title", text: $title)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
-                    .padding(.top, 16)
+                    .padding(.vertical, 16)
                 
                 // Divider
                 Divider()
                     .padding(.leading, 16)
                 
-                // Serving Size Row
-                HStack {
-                    TextField("Serving Size", text: $servingSize)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                    
-                    Picker("Unit", selection: $servingUnit) {
-                        Text("cup").tag("cup")
-                        Text("tbsp").tag("tbsp")
-                        Text("tsp").tag("tsp")
-                        Text("oz").tag("oz")
-                        Text("g").tag("g")
-                        Text("ml").tag("ml")
-                        Text("slice").tag("slice")
-                        Text("serving").tag("serving")
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .frame(width: 120)
-                    .padding(.trailing)
-                }
+                // Serving Size Row - single text field
+                TextField("Serving Size (e.g., 1 cup, 2 tbsp)", text: $servingSize)
+                    .keyboardType(.asciiCapable)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 
                 // Divider
                 Divider()
@@ -173,10 +157,10 @@ struct CreateFoodView: View {
                     
                     Spacer()
                     
-                    Stepper("\(numberOfServings, specifier: "%.1f")", value: $numberOfServings, in: 0.5...10, step: 0.5)
+                    Stepper("\(numberOfServings)", value: $numberOfServings, in: 1...20)
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.vertical, 16)
             }
         }
         .padding(.horizontal)
@@ -201,7 +185,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
-                        .padding(.top, 16)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -212,6 +196,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -222,6 +207,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -232,7 +218,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
-                        .padding(.bottom, 16)
+                        .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)
@@ -251,7 +237,7 @@ struct CreateFoodView: View {
                         .foregroundColor(.accentColor)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 10)
+                .padding(.vertical, 14)
                 .background(Color("iosnp"))
                 .cornerRadius(12)
             }
@@ -273,7 +259,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
-                        .padding(.top, 16)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -283,6 +269,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -292,6 +279,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -301,6 +289,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -310,6 +299,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -319,6 +309,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -328,6 +319,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -337,6 +329,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -346,6 +339,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -355,6 +349,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -364,6 +359,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -373,6 +369,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -382,7 +379,7 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
-                        .padding(.bottom, 16)
+                        .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)
@@ -408,8 +405,7 @@ struct CreateFoodView: View {
         isCreating = true
         
         // Format serving text
-        let servingSizeValue = servingSize.isEmpty ? "1" : servingSize
-        let servingText = "\(servingSizeValue) \(servingUnit)"
+        let servingText = servingSize.isEmpty ? "1 serving" : servingSize
         
         // Create a list of nutrients
         var nutrients: [Nutrient] = [
@@ -444,6 +440,9 @@ struct CreateFoodView: View {
         addNutrientIfPresent(name: "Calcium", value: calcium, unit: "%", to: &nutrients)
         addNutrientIfPresent(name: "Iron", value: iron, unit: "%", to: &nutrients)
         
+        // Extract serving unit if possible (default to "serving")
+        let servingUnit = "serving"
+        
         // Create food measure
         let foodMeasure = FoodMeasure(
             disseminationText: servingText,
@@ -460,8 +459,8 @@ struct CreateFoodView: View {
             description: title,
             brandOwner: "Custom",
             brandName: "Custom",
-            servingSize: Double(servingSize) ?? 1.0,
-            numberOfServings: numberOfServings,
+            servingSize: 1.0,
+            numberOfServings: Double(numberOfServings),
             servingSizeUnit: servingUnit,
             householdServingFullText: servingText,
             foodNutrients: nutrients,
