@@ -1998,7 +1998,7 @@ func generateFoodWithAI(
                 completion(.success(food))
                 
             case .failure(let error):
-                // Just forward the error
+                // Forward the error
                 completion(.failure(error))
             }
         }

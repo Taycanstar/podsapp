@@ -677,10 +677,48 @@ private struct FoodListView: View {
     }
     
     private func getFilteredLogs() -> [CombinedLog] {
+        // If we're on the foods tab, we should show user foods instead of food logs
+        if selectedFoodTab == .foods {
+            // Convert userFoods to CombinedLog format for display
+            return foodManager.userFoods.map { food in
+                // Create a LoggedFoodItem from the Food
+                let loggedFoodItem = LoggedFoodItem(
+                    fdcId: food.fdcId,
+                    displayName: food.displayName,
+                    calories: food.calories ?? 0,
+                    servingSizeText: food.servingSizeText,
+                    numberOfServings: food.numberOfServings ?? 1,
+                    brandText: food.brandText,
+                    protein: food.protein,
+                    carbs: food.carbs,
+                    fat: food.fat
+                )
+                
+                // Create a CombinedLog for the LoggedFoodItem
+                return CombinedLog(
+                    type: .food,
+                    status: "success",
+                    calories: food.calories ?? 0,
+                    message: "\(food.displayName) - Custom Food",
+                    foodLogId: food.fdcId, // Use fdcId as the log ID
+                    food: loggedFoodItem,
+                    mealType: "Custom",
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: nil,
+                    scheduledAt: nil,
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil
+                )
+            }
+        }
+        
+        // Otherwise, filter the combinedLogs as usual
         return foodManager.combinedLogs.filter { log in
             switch log.type {
             case .food:
-                return log.food != nil && (selectedFoodTab == .foods || selectedFoodTab == .all)
+                return log.food != nil && selectedFoodTab == .all
             
             case .meal:
                 return log.meal != nil && selectedFoodTab == .meals
