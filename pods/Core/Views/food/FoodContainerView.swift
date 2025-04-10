@@ -71,6 +71,7 @@ enum FoodNavigationDestination: Hashable {
     case recipeDetails(Recipe) // Added case for viewing a recipe
     case addFoodToMeal   // Added case for using the AddFoodView for meals
     case addFoodToRecipe // Added case for using the AddFoodView for recipes
+    case createFood      // Added case for manually creating a food item
 
     
     static func == (lhs: FoodNavigationDestination, rhs: FoodNavigationDestination) -> Bool {
@@ -98,6 +99,8 @@ enum FoodNavigationDestination: Hashable {
         case (.addFoodToMeal, .addFoodToMeal):
             return true
         case (.addFoodToRecipe, .addFoodToRecipe):
+            return true
+        case (.createFood, .createFood):
             return true
         default:
             return false
@@ -136,6 +139,8 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(10)
         case .addFoodToRecipe:
             hasher.combine(11)
+        case .createFood:
+            hasher.combine(12)
         }
     }
 }
@@ -528,6 +533,9 @@ struct FoodContainerView: View {
                         selectedFoods: recipeBinding,
                         mode: .addToRecipe
                     )
+                case .createFood:
+                    // Implementation for creating a food item
+                    CreateFoodView(path: $path)
                 }
             }
         }

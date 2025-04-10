@@ -312,6 +312,8 @@ private struct FoodListView: View {
     @State private var aiErrorMessage = ""
     @State private var showFoodCreatedToast = false
     @State private var generatedFood: Food? = nil
+    // Add state to show CreateFoodView
+    @State private var showCreateFoodView = false
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -323,8 +325,38 @@ private struct FoodListView: View {
                 // Add invisible spacing at the top to prevent overlap with header
                 Color.clear.frame(height: 4)
                 
-                // Show Quick Log button when there's no search text
-                if searchText.isEmpty {
+                // Show Create Food button in Foods tab when there's no search text
+                if searchText.isEmpty && selectedFoodTab == .foods {
+        
+
+                    //create food btn
+                         Button(action: {
+                       print("Tapped Create Food")
+                        HapticFeedback.generateLigth()
+                        path.append(FoodNavigationDestination.createFood)
+                    }) {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.accentColor)
+                            Text("Create Food")
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("iosfit"))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 0)
+                }
+                // Show Quick Log button when there's no search text in .all tab
+                else if searchText.isEmpty && selectedFoodTab == .all {
                     // Quick Log Button
                     Button(action: {
                         print("Tapped quick Log")
@@ -475,16 +507,8 @@ private struct FoodListView: View {
                 // Main content card
                 if searchResults.isEmpty && !isSearching {
                     LazyVStack(spacing: 0) {
-                        // Process logs to remove empty/invalid entries
-                        let validLogs = foodManager.combinedLogs.filter { log in
-                            if case .food = log.type, log.food != nil { 
-                                return selectedFoodTab != .foods || generatedFood != nil || true
-                            }
-                            if case .meal = log.type, log.meal != nil { 
-                                return selectedFoodTab != .foods 
-                            }
-                            return false
-                        }
+                        // Use the helper function to get filtered logs
+                        let validLogs = getFilteredLogs()
                         
                         // Show generated food at the top of the list if in foods tab
                         if selectedFoodTab == .foods, let genFood = generatedFood {
@@ -649,6 +673,22 @@ private struct FoodListView: View {
                 }
             }
         )
+
+    }
+    
+    private func getFilteredLogs() -> [CombinedLog] {
+        return foodManager.combinedLogs.filter { log in
+            switch log.type {
+            case .food:
+                return log.food != nil && (selectedFoodTab == .foods || selectedFoodTab == .all)
+            
+            case .meal:
+                return log.meal != nil && selectedFoodTab == .meals
+            
+            case .recipe:
+                return log.recipe != nil
+            }
+        }
     }
     
     private func showMinimumLoader() {
@@ -666,8 +706,7 @@ private struct CreateMealButton: View {
        
 
 
-        
-                    // Quick Log Button
+      
                     Button(action: {
                         print("Tapped Create Meal")
                         HapticFeedback.generateLigth()

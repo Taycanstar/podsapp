@@ -1875,4 +1875,52 @@ func generateFoodWithAI(
     }
 }
 
+// Add the createManualFood function after the generateFoodWithAI function
+// This is around line 1879 after the last function in the file
+
+func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
+    // Set generating food flag
+    isGeneratingFood = true
+    showFoodGenerationSuccess = false
+    
+    guard let email = userEmail else {
+        completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+        return
+    }
+    
+    // Make the API request
+    networkManager.createManualFood(userEmail: email, food: food) { [weak self] result in
+        guard let self = self else {
+            return
+        }
+        
+        // Reset generating food flag
+        DispatchQueue.main.async {
+            self.isGeneratingFood = false
+            
+            switch result {
+            case .success(let food):
+                // Store the created food
+                self.lastGeneratedFood = food
+                
+                // Show success toast
+                self.showFoodGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showFoodGenerationSuccess = false
+                }
+                
+                // Refresh food data
+                self.refresh()
+                
+                // Call the completion handler
+                completion(.success(food))
+                
+            case .failure(let error):
+                // Forward the error
+                completion(.failure(error))
+            }
+        }
+    }
+}
+
 }

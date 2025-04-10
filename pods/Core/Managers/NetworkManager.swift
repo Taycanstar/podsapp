@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.3:8000"
 
     
 
@@ -7158,6 +7158,114 @@ func updateRecipeWithFoods(
                 print("Decoding Error: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
+    // Add the createManualFood function to the NetworkManager class
+    // This should be added with the other food-related API functions
+
+    func createManualFood(userEmail: String, food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
+        let urlString = "\(baseUrl)/create-food/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Extract nutrients from the food object
+        var nutrientsArray: [[String: Any]] = []
+        for nutrient in food.foodNutrients {
+            nutrientsArray.append([
+                "nutrient_name": nutrient.nutrientName,
+                "value": nutrient.value,
+                "unit_name": nutrient.unitName
+            ])
+        }
+        
+        // Create measures array
+        var measuresArray: [[String: Any]] = []
+        for measure in food.foodMeasures {
+            measuresArray.append([
+                "dissemination_text": measure.disseminationText,
+                "gram_weight": measure.gramWeight,
+                "id": measure.id,
+                "modifier": measure.modifier ?? "",
+                "measure_unit_name": measure.measureUnitName,
+                "rank": measure.rank
+            ])
+        }
+        
+        // Format the request body
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "name": food.description,
+            "brand": food.brandText ?? "Custom",
+            "serving_size": food.servingSize ?? 1.0,
+            "serving_unit": food.servingSizeUnit ?? "serving",
+            "serving_text": food.servingSizeText,
+            "calories": food.calories ?? 0,
+            "protein": food.protein ?? 0,
+            "carbs": food.carbs ?? 0,
+            "fat": food.fat ?? 0,
+            "number_of_servings": food.numberOfServings ?? 1.0,
+            "nutrients": nutrientsArray,
+            "measures": measuresArray
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                // Check if there's an error response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+                
+                // Try to parse the food response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Food creation JSON response: \(json)")
+                }
+                
+                let createdFood = try decoder.decode(Food.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(createdFood))
+                }
+            } catch {
+                print("Decoding error in createManualFood: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
