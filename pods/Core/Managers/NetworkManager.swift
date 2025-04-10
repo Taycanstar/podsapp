@@ -7270,4 +7270,66 @@ func updateRecipeWithFoods(
             }
         }.resume()
     }
+    
+    // MARK: - Get User Foods
+    func getUserFoods(userEmail: String, page: Int = 1, completion: @escaping (Result<FoodResponse, Error>) -> Void) {
+        guard var urlComponents = URLComponents(string: "\(baseUrl)/get-user-foods/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        urlComponents.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "page", value: String(page))
+        ]
+        
+        guard let url = urlComponents.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                // Check if there's an error response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+                
+                let foodResponse = try decoder.decode(FoodResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(foodResponse))
+                }
+            } catch {
+                print("Decoding error in getUserFoods: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
 }

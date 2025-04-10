@@ -19,6 +19,13 @@ class FoodManager: ObservableObject {
 
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
+    
+    // Add properties for user-created foods
+    @Published var userFoods: [Food] = []
+    @Published var isLoadingUserFoods = false
+    private var hasMoreUserFoods = true
+    private var currentUserFoodsPage = 1
+    
     private let networkManager: NetworkManager
     private var userEmail: String?
     private var currentPage = 1
@@ -77,6 +84,7 @@ class FoodManager: ObservableObject {
         resetAndFetchMeals()
         resetAndFetchRecipes()
         resetAndFetchLogs()
+        resetAndFetchUserFoods()
     }
 
     func trackRecentlyAdded(foodId: Int) {
@@ -332,7 +340,7 @@ func loadMoreFoods(refresh: Bool = false) {
         print("🔄 FoodManager.refresh() called")
         
         // Don't interrupt any active loading operations
-        if isLoadingLogs || isLoadingFood || isLoadingMeals || isLoadingMeal {
+        if isLoadingLogs || isLoadingFood || isLoadingMeals || isLoadingMeal || isLoadingUserFoods {
             print("⏸️ FoodManager.refresh() - Skipping refresh - another operation is in progress")
             return
         }
@@ -341,9 +349,14 @@ func loadMoreFoods(refresh: Bool = false) {
         currentPage = 1
         hasMore = true
         
+        // Reset user foods pagination
+        currentUserFoodsPage = 1
+        hasMoreUserFoods = true
+        
         // Clear the logs cache to ensure we get fresh data
         print("🧹 FoodManager.refresh() - Clearing logs cache")
         clearLogsCache()
+        clearUserFoodsCache()
         
         // Force UI update before fetching new data
         objectWillChange.send()
@@ -352,6 +365,9 @@ func loadMoreFoods(refresh: Bool = false) {
         // Fetch logs with refresh flag to replace existing ones
         loadMoreLogs(refresh: true)
         
+        // Fetch user-created foods
+        loadUserFoods(refresh: true)
+        
         // Force another UI update after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.objectWillChange.send()
@@ -359,6 +375,18 @@ func loadMoreFoods(refresh: Bool = false) {
         
         // Update refresh timestamp
         lastRefreshTime = Date()
+    }
+    
+    // MARK: - User Foods Methods
+    
+    private func clearUserFoodsCache() {
+        guard let userEmail = userEmail else { return }
+        
+        // Clear all pages of user foods cache
+        for page in 1...10 { // Assuming we won't have more than 10 pages
+            let cacheKey = "user_foods_\(userEmail)_page_\(page)"
+            UserDefaults.standard.removeObject(forKey: cacheKey)
+        }
     }
     
     // Helper method to clear all logs cache
@@ -370,6 +398,108 @@ func loadMoreFoods(refresh: Bool = false) {
             let cacheKey = "combined_logs_\(userEmail)_page_\(page)"
             UserDefaults.standard.removeObject(forKey: cacheKey)
         }
+    }
+    
+    // Load cached user foods
+    private func loadCachedUserFoods() {
+        guard let userEmail = userEmail else { return }
+        if let cached = UserDefaults.standard.data(forKey: "user_foods_\(userEmail)_page_1") {
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let decodedResponse = try decoder.decode(FoodResponse.self, from: cached)
+                self.userFoods = decodedResponse.foods
+                self.hasMoreUserFoods = decodedResponse.hasMore
+            } catch {
+                print("Error decoding cached user foods: \(error)")
+            }
+        }
+    }
+    
+    // Cache user foods
+    private func cacheUserFoods(_ response: FoodResponse, forPage page: Int) {
+        guard let userEmail = userEmail else { return }
+        if let encoded = try? JSONEncoder().encode(response) {
+            UserDefaults.standard.set(encoded, forKey: "user_foods_\(userEmail)_page_\(page)")
+        }
+    }
+    
+    // Load user foods with pagination
+    func loadUserFoods(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        guard let email = userEmail else {
+            completion?(false)
+            return
+        }
+        
+        guard !isLoadingUserFoods else {
+            completion?(false)
+            return
+        }
+        
+        let pageToLoad = refresh ? 1 : currentUserFoodsPage
+        isLoadingUserFoods = true
+        
+        networkManager.getUserFoods(userEmail: email, page: pageToLoad) { [weak self] result in
+            guard let self = self else {
+                DispatchQueue.main.async {
+                    completion?(false)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.isLoadingUserFoods = false
+                
+                switch result {
+                case .success(let response):
+                    if refresh {
+                        withAnimation {
+                            self.userFoods = response.foods
+                        }
+                        self.currentUserFoodsPage = 2
+                    } else {
+                        // Append new foods to existing list
+                        withAnimation {
+                            self.userFoods.append(contentsOf: response.foods)
+                        }
+                        self.currentUserFoodsPage += 1
+                    }
+                    
+                    self.hasMoreUserFoods = response.hasMore
+                    self.cacheUserFoods(response, forPage: pageToLoad)
+                    completion?(true)
+                    
+                case .failure(let error):
+                    print("❌ Failed to load user foods: \(error)")
+                    completion?(false)
+                }
+            }
+        }
+    }
+    
+    // Method to reset user foods and fetch fresh
+    func resetAndFetchUserFoods() {
+        print("🍎 FoodManager: Reset and fetch user foods called")
+        currentUserFoodsPage = 1
+        hasMoreUserFoods = true
+        
+        // Store existing foods to allow smooth transitions
+        let oldFoods = userFoods
+        
+        // Clear foods with animation if we had previous foods
+        if !oldFoods.isEmpty {
+            withAnimation(.easeOut(duration: 0.2)) {
+                userFoods = []
+            }
+        } else {
+            userFoods = []
+        }
+        
+        // Try loading from cache first
+        loadCachedUserFoods()
+        
+        // Then fetch from server with animation
+        loadUserFoods(refresh: true)
     }
 
     func logFood(

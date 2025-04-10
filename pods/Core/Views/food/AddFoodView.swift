@@ -349,42 +349,68 @@ struct AddFoodView: View {
         }
     }
     
-    // Helper method to get recent foods from logged foods
+    // Helper method to get foods based on the selected tab
     private func getRecentFoods() -> [Food] {
-        // Get food items from the combinedLogs to match what's shown in the Foods tab
-        let foodLogs = foodManager.combinedLogs.filter { log in
-            if case .food = log.type, log.food != nil {
-                return true
-            }
-            return false
-        }
-        
-        // Convert the food logs to Food objects
-        let recentFoods = foodLogs.compactMap { log -> Food? in
-            guard case .food = log.type, let loggedFood = log.food else {
-                return nil
+        switch selectedTab {
+        case .all:
+            // For the "All" tab, use search results when searching, 
+            // or a combination of recently logged foods and user foods when not searching
+            if !searchText.isEmpty {
+                return searchResults
+            } else {
+                // Get food items from the combinedLogs for recently logged foods
+                let foodLogs = foodManager.combinedLogs.filter { log in
+                    if case .food = log.type, log.food != nil {
+                        return true
+                    }
+                    return false
+                }
+                
+                // Convert the food logs to Food objects
+                let recentLoggedFoods = foodLogs.compactMap { log -> Food? in
+                    guard case .food = log.type, let loggedFood = log.food else {
+                        return nil
+                    }
+                    
+                    return Food(
+                        fdcId: loggedFood.fdcId,
+                        description: loggedFood.displayName,
+                        brandOwner: nil,
+                        brandName: loggedFood.brandText,
+                        servingSize: nil,
+                        numberOfServings: loggedFood.numberOfServings,
+                        servingSizeUnit: nil,
+                        householdServingFullText: loggedFood.servingSizeText,
+                        foodNutrients: [
+                            Nutrient(nutrientName: "Energy", value: loggedFood.calories, unitName: "kcal"),
+                            Nutrient(nutrientName: "Protein", value: loggedFood.protein ?? 0, unitName: "g"),
+                            Nutrient(nutrientName: "Carbohydrate, by difference", value: loggedFood.carbs ?? 0, unitName: "g"),
+                            Nutrient(nutrientName: "Total lipid (fat)", value: loggedFood.fat ?? 0, unitName: "g")
+                        ],
+                        foodMeasures: []
+                    )
+                }
+                
+                // Combine recent logged foods with user foods (avoiding duplicates)
+                let uniqueFoods = Array(Set(recentLoggedFoods + foodManager.userFoods)).sorted { 
+                    $0.fdcId > $1.fdcId // Show newest first based on ID
+                }
+                
+                return uniqueFoods
             }
             
-            return Food(
-                fdcId: loggedFood.fdcId,
-                description: loggedFood.displayName,
-                brandOwner: nil,
-                brandName: loggedFood.brandText,
-                servingSize: nil,
-                numberOfServings: loggedFood.numberOfServings,
-                servingSizeUnit: nil,
-                householdServingFullText: loggedFood.servingSizeText,
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: loggedFood.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: loggedFood.protein ?? 0, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: loggedFood.carbs ?? 0, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: loggedFood.fat ?? 0, unitName: "g")
-                ],
-                foodMeasures: []
-            )
+        case .myFoods:
+            // Use the userFoods array that contains all created foods
+            if foodManager.userFoods.isEmpty && !foodManager.isLoadingUserFoods {
+                // Try to load them if they're not already loaded
+                foodManager.loadUserFoods(refresh: false)
+            }
+            return foodManager.userFoods
+            
+        case .savedScans:
+            // This will be implemented later
+            return []
         }
-        
-        return Array(recentFoods)
     }
     
     private func getNoResultsMessage() -> String {

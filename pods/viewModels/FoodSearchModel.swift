@@ -68,6 +68,13 @@ struct Food: Codable, Identifiable, Hashable{
     }
 }
 
+  struct FoodResponse: Codable {
+        let foods: [Food]
+        let hasMore: Bool
+        let totalPages: Int
+        let currentPage: Int
+    }
+
 struct Nutrient: Codable {
     let nutrientName: String
     let value: Double?
