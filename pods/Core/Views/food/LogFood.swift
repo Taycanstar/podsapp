@@ -682,13 +682,18 @@ private struct FoodListView: View {
             // Convert userFoods to CombinedLog format for display
             return foodManager.userFoods.map { food in
                 // Create a LoggedFoodItem from the Food
+                // Filter out empty or default brand texts
+                let brandText = food.brandText
+                let cleanBrandText: String? = (brandText == nil || brandText!.isEmpty || 
+                                             brandText == "Custom" || brandText == "Generic") ? nil : brandText
+                
                 let loggedFoodItem = LoggedFoodItem(
                     fdcId: food.fdcId,
                     displayName: food.displayName,
                     calories: food.calories ?? 0,
                     servingSizeText: food.servingSizeText,
                     numberOfServings: food.numberOfServings ?? 1,
-                    brandText: food.brandText,
+                    brandText: cleanBrandText,
                     protein: food.protein,
                     carbs: food.carbs,
                     fat: food.fat
@@ -699,10 +704,10 @@ private struct FoodListView: View {
                     type: .food,
                     status: "success",
                     calories: food.calories ?? 0,
-                    message: "\(food.displayName) - Custom Food",
+                    message: "\(food.displayName)" + (cleanBrandText != nil ? " - \(cleanBrandText!)" : ""),
                     foodLogId: food.fdcId, // Use fdcId as the log ID
                     food: loggedFoodItem,
-                    mealType: "Custom",
+                    mealType: "",  // No meal type for user foods
                     mealLogId: nil,
                     meal: nil,
                     mealTime: nil,

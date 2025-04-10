@@ -457,8 +457,8 @@ struct CreateFoodView: View {
         let food = Food(
             fdcId: Int.random(in: 1000000..<9999999), // Generate a random ID
             description: title,
-            brandOwner: "Custom",
-            brandName: "Custom",
+            brandOwner: nil,
+            brandName: nil,
             servingSize: 1.0,
             numberOfServings: Double(numberOfServings),
             servingSizeUnit: servingUnit,

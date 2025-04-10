@@ -7198,10 +7198,9 @@ func updateRecipeWithFoods(
         }
         
         // Format the request body
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "user_email": userEmail,
             "name": food.description,
-            "brand": food.brandText ?? "Custom",
             "serving_size": food.servingSize ?? 1.0,
             "serving_unit": food.servingSizeUnit ?? "serving",
             "serving_text": food.servingSizeText,
@@ -7213,6 +7212,12 @@ func updateRecipeWithFoods(
             "nutrients": nutrientsArray,
             "measures": measuresArray
         ]
+        
+        // Only add brand if it's explicitly set and meaningful
+        if let brandText = food.brandText, !brandText.isEmpty, 
+           brandText != "Custom" && brandText != "Generic" {
+            body["brand"] = brandText
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
