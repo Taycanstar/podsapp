@@ -343,22 +343,34 @@ struct AddFoodView: View {
     
     // Helper method to get recent foods from logged foods
     private func getRecentFoods() -> [Food] {
-        // Get unique recent foods from the loggedFoods
-        let recentFoods = foodManager.loggedFoods.prefix(10).map { loggedFood -> Food in
-            Food(
-                fdcId: loggedFood.food.fdcId,
-                description: loggedFood.food.displayName,
+        // Get food items from the combinedLogs to match what's shown in the Foods tab
+        let foodLogs = foodManager.combinedLogs.filter { log in
+            if case .food = log.type, log.food != nil {
+                return true
+            }
+            return false
+        }
+        
+        // Convert the food logs to Food objects
+        let recentFoods = foodLogs.compactMap { log -> Food? in
+            guard case .food = log.type, let loggedFood = log.food else {
+                return nil
+            }
+            
+            return Food(
+                fdcId: loggedFood.fdcId,
+                description: loggedFood.displayName,
                 brandOwner: nil,
-                brandName: loggedFood.food.brandText,
+                brandName: loggedFood.brandText,
                 servingSize: nil,
-                numberOfServings: loggedFood.food.numberOfServings,
+                numberOfServings: loggedFood.numberOfServings,
                 servingSizeUnit: nil,
-                householdServingFullText: loggedFood.food.servingSizeText,
+                householdServingFullText: loggedFood.servingSizeText,
                 foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: loggedFood.food.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: loggedFood.food.protein ?? 0, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: loggedFood.food.carbs ?? 0, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: loggedFood.food.fat ?? 0, unitName: "g")
+                    Nutrient(nutrientName: "Energy", value: loggedFood.calories, unitName: "kcal"),
+                    Nutrient(nutrientName: "Protein", value: loggedFood.protein ?? 0, unitName: "g"),
+                    Nutrient(nutrientName: "Carbohydrate, by difference", value: loggedFood.carbs ?? 0, unitName: "g"),
+                    Nutrient(nutrientName: "Total lipid (fat)", value: loggedFood.fat ?? 0, unitName: "g")
                 ],
                 foodMeasures: []
             )
