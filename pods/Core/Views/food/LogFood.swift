@@ -726,10 +726,10 @@ private struct FoodListView: View {
                 return log.food != nil && selectedFoodTab == .all
             
             case .meal:
-                return log.meal != nil && selectedFoodTab == .meals
+                return log.meal != nil && (selectedFoodTab == .meals || selectedFoodTab == .all)
             
             case .recipe:
-                return log.recipe != nil
+                return log.recipe != nil && selectedFoodTab == .all
             }
         }
     }
