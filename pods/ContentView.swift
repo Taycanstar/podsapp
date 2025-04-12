@@ -27,14 +27,15 @@ struct ContentView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
     @StateObject private var subscriptionManager = SubscriptionManager()
-        @State private var subscriptionStatus: String = "none"
-        @State private var subscriptionPlan: String?
-        @State private var subscriptionExpiresAt: Date?
+    @State private var subscriptionStatus: String = "none"
+    @State private var subscriptionPlan: String?
+    @State private var subscriptionExpiresAt: Date?
     @State private var forceRefresh: Bool = false
 
     @State private var showAddSheet = false
     @State private var showNewSheet = false
     @State private var showQuickPodView = false
+    @State private var showFoodScanner = false
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -137,10 +138,17 @@ struct ContentView: View {
                 .sheet(isPresented: $showNewSheet) {
                     NewSheetView(isPresented: $showNewSheet,
                                  showingVideoCreationScreen: $showingVideoCreationScreen,
-                                 showQuickPodView: $showQuickPodView, selectedTab: $selectedTab)
+                                 showQuickPodView: $showQuickPodView, 
+                                 selectedTab: $selectedTab,
+                                 showFoodScanner: $showFoodScanner)
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
+                }
+
+                .sheet(isPresented: $showFoodScanner) {
+                    FoodScannerView(isPresented: $showFoodScanner)
+                        .edgesIgnoringSafeArea(.all)
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in

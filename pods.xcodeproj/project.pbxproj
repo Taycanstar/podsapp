@@ -60,6 +60,7 @@
 		364A83C32DA09344009D2620 /* AddIngredientsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C22DA09344009D2620 /* AddIngredientsView.swift */; };
 		364A83C52DA59627009D2620 /* AddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C42DA59627009D2620 /* AddFoodView.swift */; };
 		364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C72DA7738B009D2620 /* CreateFoodView.swift */; };
+		364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C92DAB0F82009D2620 /* FoodScannerView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -223,6 +224,7 @@
 		364A83C22DA09344009D2620 /* AddIngredientsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIngredientsView.swift; sourceTree = "<group>"; };
 		364A83C42DA59627009D2620 /* AddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodView.swift; sourceTree = "<group>"; };
 		364A83C72DA7738B009D2620 /* CreateFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateFoodView.swift; path = Pods/Core/Views/food/CreateFoodView.swift; sourceTree = SOURCE_ROOT; };
+		364A83C92DAB0F82009D2620 /* FoodScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodScannerView.swift; path = Pods/Core/Views/food/FoodScannerView.swift; sourceTree = SOURCE_ROOT; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
@@ -651,6 +653,7 @@
 				364A83C22DA09344009D2620 /* AddIngredientsView.swift */,
 				364A83C42DA59627009D2620 /* AddFoodView.swift */,
 				364A83C72DA7738B009D2620 /* CreateFoodView.swift */,
+				364A83C92DAB0F82009D2620 /* FoodScannerView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1039,6 +1042,7 @@
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
+				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,

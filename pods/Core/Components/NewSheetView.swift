@@ -13,6 +13,7 @@ struct NewSheetView: View {
     @Binding var showingVideoCreationScreen: Bool
     @Binding var showQuickPodView: Bool
     @Binding var selectedTab: Int 
+    @Binding var showFoodScanner: Bool
     @EnvironmentObject var viewModel: OnboardingViewModel
     
 
@@ -62,6 +63,9 @@ struct NewSheetView: View {
                       case "Log Food":
                         isPresented = false
                         viewModel.showFoodContainer()
+                      case "Scan Food":
+                        isPresented = false
+                        showFoodScanner = true
                       default:
                           break
                       }
@@ -78,5 +82,10 @@ struct NewSheetView: View {
             Spacer()
         }
         .padding(.horizontal, 0)
+        .background(
+            RoundedRectangle(cornerRadius: 25)
+                .foregroundColor(Color(.systemBackground))
+                .ignoresSafeArea()
+        )
     }
 }
