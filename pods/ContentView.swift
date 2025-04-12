@@ -138,8 +138,9 @@ struct ContentView: View {
                     NewSheetView(isPresented: $showNewSheet,
                                  showingVideoCreationScreen: $showingVideoCreationScreen,
                                  showQuickPodView: $showQuickPodView, selectedTab: $selectedTab)
-                        
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                        .presentationCornerRadius(25)
+                        .presentationBackground(Color(.systemBackground))
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in

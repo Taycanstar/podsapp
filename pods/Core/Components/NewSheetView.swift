@@ -17,10 +17,9 @@ struct NewSheetView: View {
     
 
     let options = [
-        ("Pod", "plus.circle"),
-        ("Pod from template", "goforward.plus"),
         ("Log Food", "magnifyingglass"),
-        ("Voice Log", "mic")
+        ("Voice Log", "mic"),
+        ("Scan Food", "barcode.viewfinder")
     ]
 
     var body: some View {
@@ -38,13 +37,13 @@ struct NewSheetView: View {
             Divider()
             
             ForEach(options, id: \.0) { option in
-                HStack(spacing: 15) {
-                    HStack(spacing: 15) {
+                HStack(spacing: 0) {
+                    HStack(spacing: 12) {
                         Image(systemName: option.1)
-                            .font(.system(size: 20))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.primary)
                             .frame(width: 30)
-                            .padding(.leading, 20)
+                            .padding(.leading)
                         
                         Text(option.0)
                             .font(.system(size: 15))
@@ -72,10 +71,12 @@ struct NewSheetView: View {
                     Divider()
                         .frame(height: 0.5)
                         .padding(.leading, 65)
+                        .opacity(0.5)
                 }
             }
             
             Spacer()
         }
+        .padding(.horizontal, 0)
     }
 }
