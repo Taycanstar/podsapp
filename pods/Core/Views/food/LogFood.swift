@@ -455,6 +455,14 @@ private struct FoodListView: View {
                             // Track as recently added
                             foodManager.trackRecentlyAdded(foodId: food.fdcId)
                             
+                            // IMPORTANT: Add the food to userFoods so it appears in MyFoods tab immediately
+                            // Check if it's not already in the userFoods array
+                            if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                                DispatchQueue.main.async {
+                                    foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
+                                }
+                            }
+                            
                             // Show success toast
                             showFoodCreatedToast = true
                             
