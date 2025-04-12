@@ -320,296 +320,199 @@ private struct FoodListView: View {
     @State private var isShowingMinimumLoader = false
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Add invisible spacing at the top to prevent overlap with header
-                Color.clear.frame(height: 4)
-                
-                // Show Create Food button in Foods tab when there's no search text
-                if searchText.isEmpty && selectedFoodTab == .foods {
+        VStack(spacing: 12) {
+            // Add invisible spacing at the top to prevent overlap with header
+            Color.clear.frame(height: 4)
+            
+            // Show Create Food button in Foods tab when there's no search text
+            if searchText.isEmpty && selectedFoodTab == .foods {
         
 
-                    //create food btn
-                         Button(action: {
-                       print("Tapped Create Food")
-                        HapticFeedback.generateLigth()
-                        path.append(FoodNavigationDestination.createFood)
-                    }) {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Create Food")
-                                .font(.system(size: 17))
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
-                        .cornerRadius(12)
+                //create food btn
+                     Button(action: {
+                   print("Tapped Create Food")
+                    HapticFeedback.generateLigth()
+                    path.append(FoodNavigationDestination.createFood)
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Create Food")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 0)
-                }
-                // Show Quick Log button when there's no search text in .all tab
-                else if searchText.isEmpty && selectedFoodTab == .all {
-                    // Quick Log Button
-                    Button(action: {
-                        print("Tapped quick Log")
-                        HapticFeedback.generateLigth()
-                        showQuickLogSheet = true
-                    }) {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "pencil.and.outline")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Quick Log")
-                                .font(.system(size: 17))
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 0)
-                } 
-                // Show AI Generate Macros button when there's search text in the .all tab
-                else if selectedFoodTab == .all {
-                    Button(action: {
-                        print("AI tapped for: \(searchText)")
-                        HapticFeedback.generateLigth()
-                        
-                        // First, close the food container immediately
-                        viewModel.isShowingFoodContainer = false
-                        
-                        // Then start the AI analysis process
-                        foodManager.generateMacrosWithAI(
-                            foodDescription: searchText,
-                            mealType: selectedMeal
-                        ) { result in
-                            switch result {
-                            case .success(_):
-                                // Success is handled by FoodManager (shows toast, updates lists)
-                                print("Successfully generated macros with AI")
-                                
-                            case .failure(let error):
-                                // Show error alert
-                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                                    aiErrorMessage = message
-                                } else {
-                                    aiErrorMessage = error.localizedDescription
-                                }
-                                showAIErrorAlert = true
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "sparkle")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Generate Macros with AI")
-                                .font(.system(size: 17))
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 0)
-                    .disabled(isGeneratingMacros) // Disable button while loading
-                }
-                // Show Generate Food with AI button when there's search text in the .foods tab
-                else if selectedFoodTab == .foods && !searchText.isEmpty {
-                    Button(action: {
-                        print("Generating food with AI: \(searchText)")
-                        HapticFeedback.generateLigth()
-                        
-                        // Set loading state
-                        isGeneratingFood = true
-                        
-                        // Generate food with AI
-                        foodManager.generateFoodWithAI(foodDescription: searchText) { result in
-                            // Set loading state to false
-                            isGeneratingFood = false
-                            
-                            switch result {
-                            case .success(let food):
-                                // Store the generated food
-                                generatedFood = food
-                                
-                                // Track as recently added
-                                foodManager.trackRecentlyAdded(foodId: food.fdcId)
-                                
-                                // Show success toast
-                                showFoodCreatedToast = true
-                                
-                                // Hide the toast after a delay
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                    showFoodCreatedToast = false
-                                }
-                                
-                            case .failure(let error):
-                                // Show error alert
-                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                                    aiErrorMessage = message
-                                } else {
-                                    aiErrorMessage = error.localizedDescription
-                                }
-                                showAIErrorAlert = true
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "sparkle")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Generate Food with AI")
-                                .font(.system(size: 17))
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 0)
-                    .disabled(isGeneratingFood) // Disable button while loading
-                }
-                
-                // Show food generation loading card if generating food
-                if isGeneratingFood {
-                    FoodGenerationCard()
-                        .padding(.horizontal)
-                        .transition(.opacity)
-                }
-                
-                // Main content card
-                if searchResults.isEmpty && !isSearching {
-                    LazyVStack(spacing: 0) {
-                        // Use the helper function to get filtered logs
-                        let validLogs = getFilteredLogs()
-                        
-                        // Show generated food at the top of the list if in foods tab
-                        if selectedFoodTab == .foods, let genFood = generatedFood {
-                            FoodRow(
-                                food: genFood,
-                                selectedMeal: $selectedMeal,
-                                mode: mode,
-                                selectedFoods: $selectedFoods,
-                                path: $path,
-                                onItemAdded: onItemAdded
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            
-                            if !validLogs.isEmpty {
-                                Divider()
-                                    .padding(.leading, 16)
-                            }
-                        }
-                        
-                        ForEach(Array(validLogs.enumerated()), id: \.element.id) { index, log in
-                            Group {
-                                switch log.type {
-                                case .food:
-                                    if let food = log.food {
-                                        FoodRow(
-                                            food: food.asFood,
-                                            selectedMeal: $selectedMeal,
-                                            mode: mode,
-                                            selectedFoods: $selectedFoods,
-                                            path: $path,
-                                            onItemAdded: onItemAdded
-                                        )
-                                        .onAppear {
-                                            print("FoodListView: Rendering food row for \(food.displayName) at index \(index)")
-                                            
-                                            // If we're close to the end of the list, automatically load more
-                                            if index >= validLogs.count - 1 && foodManager.hasMore && !foodManager.isLoadingLogs {
-                                                print("🔄 Auto-loading more logs at index \(index)")
-                                                HapticFeedback.generateLigth()
-                                                showMinimumLoader()
-                                                foodManager.loadMoreLogs()
-                                            }
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                    }
-                                case .meal:
-                                    if let meal = log.meal, selectedFoodTab != .foods {
-                                        CombinedLogMealRow(
-                                            log: log,
-                                            meal: meal,
-                                            selectedMeal: $selectedMeal,
-                                            mode: mode,
-                                            selectedFoods: $selectedFoods,
-                                            path: $path,
-                                            onItemAdded: onItemAdded
-                                        )
-                                        .onAppear {
-                                            print("FoodListView: Rendering meal row for \(meal.title) at index \(index)")
-                                            
-                                            // If we're close to the end of the list, automatically load more
-                                            if index >= validLogs.count - 1 && foodManager.hasMore && !foodManager.isLoadingLogs {
-                                                print("🔄 Auto-loading more logs at index \(index)")
-                                                HapticFeedback.generateLigth()
-                                                showMinimumLoader()
-                                                foodManager.loadMoreLogs()
-                                            }
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                    }
-                                case .recipe:
-                                    EmptyView()
-                                }
-                            }
-                            
-                            // Add divider after every item except the last one
-                            if index < validLogs.count - 1 {
-                                Divider()
-                                    .padding(.leading, 16)
-                            }
-                        }
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color("iosfit"))
                     .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+            }
+            // Show Quick Log button when there's no search text in .all tab
+            else if searchText.isEmpty && selectedFoodTab == .all {
+                // Quick Log Button
+                Button(action: {
+                    print("Tapped quick Log")
+                    HapticFeedback.generateLigth()
+                    showQuickLogSheet = true
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "pencil.and.outline")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Quick Log")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
                     .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+            } 
+            // Show AI Generate Macros button when there's search text in the .all tab
+            else if selectedFoodTab == .all {
+                Button(action: {
+                    print("AI tapped for: \(searchText)")
+                    HapticFeedback.generateLigth()
                     
-                    // Show a single loader at the bottom when loading more logs
-                    if foodManager.isLoadingLogs && foodManager.hasMore || isShowingMinimumLoader {
-                        VStack {
-                            ProgressView()
-                                .padding(.vertical, 8)
+                    // First, close the food container immediately
+                    viewModel.isShowingFoodContainer = false
+                    
+                    // Then start the AI analysis process
+                    foodManager.generateMacrosWithAI(
+                        foodDescription: searchText,
+                        mealType: selectedMeal
+                    ) { result in
+                        switch result {
+                        case .success(_):
+                            // Success is handled by FoodManager (shows toast, updates lists)
+                            print("Successfully generated macros with AI")
                             
+                        case .failure(let error):
+                            // Show error alert
+                            if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                aiErrorMessage = message
+                            } else {
+                                aiErrorMessage = error.localizedDescription
+                            }
+                            showAIErrorAlert = true
                         }
-                        .padding(.top, 8)
                     }
-                } else {
-                    LazyVStack(spacing: 0) {
-                        // Show generated food at the top of the search results if it exists
-                        if selectedFoodTab == .foods, let genFood = generatedFood {
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Generate Macros with AI")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+                .disabled(isGeneratingMacros) // Disable button while loading
+            }
+            // Show Generate Food with AI button when there's search text in the .foods tab
+            else if selectedFoodTab == .foods && !searchText.isEmpty {
+                Button(action: {
+                    print("Generating food with AI: \(searchText)")
+                    HapticFeedback.generateLigth()
+                    
+                    // Set loading state
+                    isGeneratingFood = true
+                    
+                    // Generate food with AI
+                    foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                        // Set loading state to false
+                        isGeneratingFood = false
+                        
+                        switch result {
+                        case .success(let food):
+                            // Store the generated food
+                            generatedFood = food
+                            
+                            // Track as recently added
+                            foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                            
+                            // Show success toast
+                            showFoodCreatedToast = true
+                            
+                            // Hide the toast after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                showFoodCreatedToast = false
+                            }
+                            
+                        case .failure(let error):
+                            // Show error alert
+                            if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                aiErrorMessage = message
+                            } else {
+                                aiErrorMessage = error.localizedDescription
+                            }
+                            showAIErrorAlert = true
+                        }
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Generate Food with AI")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+                .disabled(isGeneratingFood) // Disable button while loading
+            }
+            
+            // Show food generation loading card if generating food
+            if isGeneratingFood {
+                FoodGenerationCard()
+                    .padding(.horizontal)
+                    .transition(.opacity)
+            }
+            
+            // Main content card
+            if searchResults.isEmpty && !isSearching {
+                // Main content for All/Foods tabs
+                VStack(spacing: 0) {
+                    // Use the helper function to get filtered logs
+                    let validLogs = getFilteredLogs()
+                    
+                    // Generate food item at top (outside the List)
+                    if selectedFoodTab == .foods, let genFood = generatedFood {
+                        VStack {
                             FoodRow(
                                 food: genFood,
                                 selectedMeal: $selectedMeal,
@@ -620,18 +523,112 @@ private struct FoodListView: View {
                             )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            
-                            if !searchResults.isEmpty {
-                                Divider()
-                                    .padding(.leading, 16)
-                            }
                         }
-                        
-                        ForEach(searchResults.indices, id: \.self) { index in
-                            let food = searchResults[index]
+                        .background(Color("bg"))
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                    }
+                    
+                    // Main content List with native swipe-to-delete
+                    if !validLogs.isEmpty {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color("bg"))
                             
+                            List {
+                                ForEach(validLogs) { log in
+                                    Group {
+                                        switch log.type {
+                                        case .food:
+                                            if let food = log.food {
+                                                FoodRow(
+                                                    food: food.asFood,
+                                                    selectedMeal: $selectedMeal,
+                                                    mode: mode,
+                                                    selectedFoods: $selectedFoods,
+                                                    path: $path,
+                                                    onItemAdded: onItemAdded
+                                                )
+                                                .onAppear {
+                                                    // If we're close to the end of the list, automatically load more
+                                                    if let index = validLogs.firstIndex(where: { $0.id == log.id }),
+                                                    index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                                        showMinimumLoader()
+                                                        foodManager.loadMoreLogs()
+                                                    }
+                                                }
+                                            }
+                                        case .meal:
+                                            if let meal = log.meal, selectedFoodTab != .foods {
+                                                CombinedLogMealRow(
+                                                    log: log,
+                                                    meal: meal,
+                                                    selectedMeal: $selectedMeal,
+                                                    mode: mode,
+                                                    selectedFoods: $selectedFoods,
+                                                    path: $path,
+                                                    onItemAdded: onItemAdded
+                                                )
+                                                .onAppear {
+                                                    // If we're close to the end of the list, automatically load more
+                                                    if let index = validLogs.firstIndex(where: { $0.id == log.id }),
+                                                    index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
+                                                        showMinimumLoader()
+                                                        foodManager.loadMoreLogs()
+                                                    }
+                                                }
+                                            }
+                                        case .recipe:
+                                            EmptyView()
+                                        }
+                                    }
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                }
+                                .onDelete { indexSet in
+                                    deleteItems(from: validLogs, at: indexSet)
+                                }
+                            }
+                            .listStyle(PlainListStyle())
+                            .scrollContentBackground(.hidden)
+                        }
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                    } else if foodManager.isLoadingLogs {
+                        ProgressView()
+                            .frame(height: 100)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 20)
+                    } else {
+                        // Empty state with proper styling
+                        Text(selectedFoodTab == .foods ? "No foods found" : "No items found")
+                            .foregroundColor(.secondary)
+                            .frame(height: 100)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 20)
+                    }
+                    
+                    // Show a loader at the bottom when loading more logs
+                    if foodManager.isLoadingLogs && foodManager.hasMore || isShowingMinimumLoader {
+                        ProgressView()
+                            .padding()
+                    }
+                }
+            } else if searchResults.isEmpty && isSearching && selectedFoodTab != .all {
+                ProgressView()
+                    .padding()
+            } else {
+                // Search results - using List for native swipe-to-delete
+                VStack(spacing: 0) {
+                    // Show generated food at the top if it exists
+                    if selectedFoodTab == .foods, let genFood = generatedFood {
+                        VStack {
                             FoodRow(
-                                food: food,
+                                food: genFood,
                                 selectedMeal: $selectedMeal,
                                 mode: mode,
                                 selectedFoods: $selectedFoods,
@@ -640,19 +637,56 @@ private struct FoodListView: View {
                             )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            
-                            if index < searchResults.count - 1 {
-                                Divider()
-                                    .padding(.leading, 16)
-                            }
                         }
+                        .background(Color("bg"))
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
                     }
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 16)
+                    
+                    // Meals list
+                    if !searchResults.isEmpty {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color("bg"))
+                            
+                            List {
+                                ForEach(searchResults, id: \.fdcId) { food in
+                                    FoodRow(
+                                        food: food,
+                                        selectedMeal: $selectedMeal,
+                                        mode: mode,
+                                        selectedFoods: $selectedFoods,
+                                        path: $path,
+                                        onItemAdded: onItemAdded
+                                    )
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                }
+                                .onDelete { indexSet in
+                                    deleteSearchResults(at: indexSet)
+                                }
+                            }
+                            .listStyle(PlainListStyle())
+                            .scrollContentBackground(.hidden)
+                        }
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                    } else {
+                        Text("No results found")
+                            .foregroundColor(.secondary)
+                            .frame(height: 100)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 20)
+                    }
                 }
             }
         }
+        .padding(.bottom, 16)
+        .background(Color("iosbg2"))
         .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
             Button("OK", role: .cancel) { showAIErrorAlert = false }
         } message: {
@@ -673,7 +707,6 @@ private struct FoodListView: View {
                 }
             }
         )
-
     }
     
     private func getFilteredLogs() -> [CombinedLog] {
@@ -740,6 +773,61 @@ private struct FoodListView: View {
             isShowingMinimumLoader = false
         }
     }
+    
+    private func deleteSearchResults(at indexSet: IndexSet) {
+        print("Deleting search results at indices: \(indexSet)")
+        // For now, just print the indices being deleted
+        
+        // The actual implementation would look something like this:
+        // let itemsToDelete = indexSet.map { searchResults[$0] }
+        // for item in itemsToDelete {
+        //     print("Would delete item: \(item.displayName)")
+        // }
+    }
+    
+    private func deleteItems(from logs: [CombinedLog], at indexSet: IndexSet) {
+        print("Deleting items at indices: \(indexSet)")
+        
+        // Get the logs that should be deleted
+        let logsToDelete = indexSet.map { logs[$0] }
+        
+        // Log information about what would be deleted
+        for log in logsToDelete {
+            switch log.type {
+            case .food:
+                if let food = log.food {
+                    print("Would delete food: \(food.displayName)")
+                }
+            case .meal:
+                if let meal = log.meal {
+                    print("Would delete meal: \(meal.title)")
+                }
+            case .recipe:
+                if let recipe = log.recipe {
+                    print("Would delete recipe: \(recipe.title)")
+                }
+            }
+        }
+        
+        // Actual implementation would call appropriate delete methods on foodManager
+        // For example:
+        // for log in logsToDelete {
+        //     switch log.type {
+        //     case .food:
+        //         if let foodLogId = log.foodLogId {
+        //             foodManager.deleteFoodLog(id: foodLogId)
+        //         }
+        //     case .meal:
+        //         if let mealLogId = log.mealLogId {
+        //             foodManager.deleteMealLog(id: mealLogId)
+        //         }
+        //     case .recipe:
+        //         if let recipeLogId = log.recipeLogId {
+        //             foodManager.deleteRecipeLog(id: recipeLogId)
+        //         }
+        //     }
+        // }
+    }
 }
 
 private struct CreateMealButton: View {
@@ -797,95 +885,85 @@ private struct MealListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                // Add invisible spacing at the top to prevent overlap with header
-                Color.clear.frame(height: 6)
-                
-              
-                
-                // Show "Generate Meal with AI" button when search text is not empty
-                if !searchText.isEmpty {
-                    Button(action: {
-                        print("generating meal with ai...")
-                        HapticFeedback.generateLigth()
+        VStack(spacing: 8) {
+            // Add invisible spacing at the top to prevent overlap with header
+            Color.clear.frame(height: 6)
+            
+            // Show "Generate Meal with AI" button when search text is not empty
+            if !searchText.isEmpty {
+                Button(action: {
+                    print("generating meal with ai...")
+                    HapticFeedback.generateLigth()
+                    
+                    // Set loading state in FoodManager
+                    foodManager.isGeneratingMeal = true
+                    
+                    // Then start the AI meal generation process
+                    foodManager.generateMealWithAI(
+                        mealDescription: searchText,
+                        mealType: selectedMeal
+                    ) { result in
+                        // Reset is no longer needed as FoodManager handles it
                         
-                        // Set loading state in FoodManager
-                        foodManager.isGeneratingMeal = true
-                        
-                        // Then start the AI meal generation process
-                        foodManager.generateMealWithAI(
-                            mealDescription: searchText,
-                            mealType: selectedMeal
-                        ) { result in
-                            // Reset is no longer needed as FoodManager handles it
+                        switch result {
+                        case .success(_):
+                            // Success is handled by FoodManager (shows toast, updates lists)
+                            print("Successfully generated meal with AI")
                             
-                            switch result {
-                            case .success(_):
-                                // Success is handled by FoodManager (shows toast, updates lists)
-                                print("Successfully generated meal with AI")
-                                
-                            case .failure(let error):
-                                // Show error alert
-                                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                                    aiErrorMessage = message
-                                } else {
-                                    aiErrorMessage = error.localizedDescription
-                                }
-                                showAIErrorAlert = true
+                        case .failure(let error):
+                            // Show error alert
+                            if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                aiErrorMessage = message
+                            } else {
+                                aiErrorMessage = error.localizedDescription
                             }
+                            showAIErrorAlert = true
                         }
-                    }) {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "sparkle")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Generate Meal with AI")
-                                .font(.system(size: 17))
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
-                        .cornerRadius(12)
                     }
-                    .padding(.horizontal)
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Generate Meal with AI")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+                .disabled(foodManager.isGeneratingMeal) // Disable button while loading
+            } 
+            // Show Create Meal button when no search text
+            else {
+                // Create Meal Button
+                CreateMealButton(path: $path)
                     .padding(.top, 0)
-                    .disabled(foodManager.isGeneratingMeal) // Disable button while loading
-                    // .overlay(
-                    //     foodManager.isGeneratingMeal ? 
-                    //     ProgressView()
-                    //         .progressViewStyle(CircularProgressViewStyle())
-                    //         .padding()
-                    //         .background(Color.black.opacity(0.2))
-                    //         .cornerRadius(8)
-                    //      : nil
-                    // )
-                } 
-                // Show Create Meal button when no search text
-                else {
-                    // Create Meal Button
-                    CreateMealButton(path: $path)
-                        .padding(.top, 0)
-                }
-
-                  // Show meal generation card if analysis is in progress
-                if foodManager.isGeneratingMeal {
-                    MealGenerationCard()
-                        .padding(.horizontal)
-                        .transition(.opacity)
-                }
-                
-                // Meals Card - Single unified card for all meals
-                if !foodManager.meals.isEmpty {
-                    VStack(spacing: 0) {
-                        ForEach(foodManager.meals.indices, id: \.self) { index in
-                            let meal = foodManager.meals[index]
-                            
+            }
+            
+            // Show meal generation card if analysis is in progress
+            if foodManager.isGeneratingMeal {
+                MealGenerationCard()
+                    .padding(.horizontal)
+                    .transition(.opacity)
+            }
+            
+            // Meals Card - Single unified card for all meals
+            if !foodManager.meals.isEmpty {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color("bg"))
+                    
+                    List {
+                        ForEach(foodManager.meals) { meal in
                             MealRow(
                                 meal: meal,
                                 selectedMeal: $selectedMeal,
@@ -894,39 +972,36 @@ private struct MealListView: View {
                                 path: $path,
                                 onItemAdded: onItemAdded
                             )
-                            .onAppear {
-                                print("MealListView: Rendering meal at index \(index): \(meal.title)")
-                            }
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            
-                            if index < foodManager.meals.count - 1 {
-                                Divider()
-                                    .padding(.leading, 16)
-                                    .onAppear {
-                                        print("MealListView: Adding divider after index \(index)")
-                                    }
-                            }
+                        }
+                        .onDelete { indexSet in
+                            deleteMeals(at: indexSet)
                         }
                     }
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 16)
-                } else if foodManager.isLoadingMeals {
-                    // Loading indicator
-                    ProgressView()
-                        .frame(height: 100)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    // Empty state
-                    Text("No meals found")
-                        .foregroundColor(.secondary)
-                        .frame(height: 100)
-                        .frame(maxWidth: .infinity)
+                    .listStyle(PlainListStyle())
+                    .scrollContentBackground(.hidden)
                 }
+                .frame(minHeight: min(CGFloat(foodManager.meals.count * 70), 400))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+            } else if foodManager.isLoadingMeals {
+                // Loading indicator
+                ProgressView()
+                    .frame(height: 100)
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Empty state
+                Text("No meals found")
+                    .foregroundColor(.secondary)
+                    .frame(height: 100)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.bottom, 16)
         }
+        .padding(.bottom, 16)
         .background(Color("iosbg2"))
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
@@ -953,6 +1028,24 @@ private struct MealListView: View {
         } message: {
             Text(aiErrorMessage)
         }
+    }
+    
+    private func deleteMeals(at indexSet: IndexSet) {
+        print("Deleting meals at indices: \(indexSet)")
+        
+        // Get the meals to delete
+        let mealsToDelete = indexSet.map { foodManager.meals[$0] }
+        
+        // Log information about what would be deleted
+        for meal in mealsToDelete {
+            print("Would delete meal: \(meal.title) (ID: \(meal.id))")
+        }
+        
+        // Actual implementation would call delete method on foodManager
+        // For example:
+        // for meal in mealsToDelete {
+        //     foodManager.deleteMeal(id: meal.id)
+        // }
     }
 }
 
