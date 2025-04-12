@@ -7337,4 +7337,224 @@ func updateRecipeWithFoods(
             }
         }.resume()
     }
+
+    // Add these functions to the NetworkManager class to handle deletion
+
+    // Delete food log
+    func deleteFoodLog(logId: Int, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        let urlString = "\(baseUrl)/delete-food-log/\(logId)/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                    DispatchQueue.main.async {
+                        completion(.success(()))
+                    }
+                } else {
+                    var errorMessage = "Server error with status code: \(httpResponse.statusCode)"
+                    
+                    if let data = data, let serverError = try? JSONSerialization.jsonObject(with: data) as? [String: Any], 
+                       let message = serverError["error"] as? String {
+                        errorMessage = message
+                    }
+                    
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                }
+            }
+        }
+        
+        task.resume()
+    }
+    
+    // Delete meal
+    func deleteMeal(mealId: Int, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        let urlString = "\(baseUrl)/delete-meal/\(mealId)/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                    DispatchQueue.main.async {
+                        completion(.success(()))
+                    }
+                } else {
+                    if let data = data,
+                       let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorResponse["error"] as? String {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.serverError(errorMessage)))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.serverError("Failed with status code: \(httpResponse.statusCode)")))
+                        }
+                    }
+                }
+            }
+        }
+        
+        task.resume()
+    }
+    
+    // Delete food
+    func deleteFood(foodId: Int, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        let urlString = "\(baseUrl)/delete-food/\(foodId)/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                    DispatchQueue.main.async {
+                        completion(.success(()))
+                    }
+                } else {
+                    if let data = data,
+                       let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorResponse["error"] as? String {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.serverError(errorMessage)))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(.failure(NetworkError.serverError("Failed with status code: \(httpResponse.statusCode)")))
+                        }
+                    }
+                }
+            }
+        }
+        
+        task.resume()
+    }
+
+    // Delete meal log
+    func deleteMealLog(logId: Int, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        let urlString = "\(baseUrl)/delete-meal-log/\(logId)/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                    DispatchQueue.main.async {
+                        completion(.success(()))
+                    }
+                } else {
+                    var errorMessage = "Server error with status code: \(httpResponse.statusCode)"
+                    
+                    if let data = data, let serverError = try? JSONSerialization.jsonObject(with: data) as? [String: Any], 
+                       let message = serverError["error"] as? String {
+                        errorMessage = message
+                    }
+                    
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                }
+            }
+        }
+        
+        task.resume()
+    }
 }

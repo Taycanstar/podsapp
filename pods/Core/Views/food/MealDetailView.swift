@@ -33,6 +33,11 @@ struct MealDetailView: View {
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
     
+    // Alert states for error handling
+    @State private var showAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
+    
     // Add a real @State for selectedFoods
     @State private var selectedFoods: [Food] = []
     
@@ -208,6 +213,11 @@ struct MealDetailView: View {
             // Don't update the meal - this should only happen in EditMealView
             // Just update the local UI
         }
+        .alert(alertTitle, isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
     }
     
     private func logMeal() {
@@ -231,11 +241,25 @@ struct MealDetailView: View {
     }
     
     private func deleteMeal() {
-        // Since we don't have a direct deleteMeal method in FoodManager,
-        // we would need to use networkManager or another approach.
-        // For now, just display a message and dismiss the view.
-        print("Deleting meal with ID: \(meal.id)")
-        dismiss()
+        // Call FoodManager's deleteMeal method
+        foodManager.deleteMeal(id: meal.id) { result in
+            switch result {
+            case .success:
+                print("✅ Successfully deleted meal with ID: \(self.meal.id)")
+                // Dismiss the view after successful deletion
+                DispatchQueue.main.async {
+                    self.dismiss()
+                }
+            case .failure(let error):
+                print("❌ Failed to delete meal: \(error)")
+                // Show error alert
+                DispatchQueue.main.async {
+                    self.alertTitle = "Delete Failed"
+                    self.alertMessage = "Could not delete this meal. Please try again."
+                    self.showAlert = true
+                }
+            }
+        }
     }
     
     // MARK: - Subviews

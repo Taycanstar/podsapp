@@ -744,13 +744,18 @@ private struct FoodListView: View {
     
     private func deleteSearchResults(at indexSet: IndexSet) {
         print("Deleting search results at indices: \(indexSet)")
-        // For now, just print the indices being deleted
         
-        // The actual implementation would look something like this:
-        // let itemsToDelete = indexSet.map { searchResults[$0] }
-        // for item in itemsToDelete {
-        //     print("Would delete item: \(item.displayName)")
-        // }
+        // Get the foods to delete
+        let foodsToDelete = indexSet.map { searchResults[$0] }
+        
+        // Log information about what will be deleted
+        for food in foodsToDelete {
+            print("Deleting food from search results: \(food.displayName) (ID: \(food.fdcId))")
+        }
+        
+        // No actual deletion here since these are search results, not user foods
+        // If the user wants to delete one of these items, they would need to tap into it
+        // and then delete from the detail view
     }
     
     private func deleteItems(from logs: [CombinedLog], at indexSet: IndexSet) {
@@ -759,42 +764,99 @@ private struct FoodListView: View {
         // Get the logs that should be deleted
         let logsToDelete = indexSet.map { logs[$0] }
         
-        // Log information about what would be deleted
+        // Log detailed information about the logs to be deleted
+        for log in logsToDelete {
+            print("🔍 Log to delete - ID: \(log.id), Type: \(log.type)")
+            
+            // More detailed info based on type
+            switch log.type {
+            case .food:
+                print("  • Food log details:")
+                print("    - Food log ID: \(log.foodLogId ?? -1)")
+                if let food = log.food {
+                    print("    - Food ID: \(food.fdcId)")
+                    print("    - Food name: \(food.displayName)")
+                }
+            case .meal:
+                print("  • Meal log details:")
+                print("    - Meal log ID: \(log.mealLogId ?? -1)")
+                if let meal = log.meal {
+                    print("    - Meal ID: \(meal.id)")
+                    print("    - Meal title: \(meal.title)")
+                }
+            case .recipe:
+                print("  • Recipe log details:")
+                print("    - Recipe log ID: \(log.recipeLogId ?? -1)")
+            }
+            print("  • Current tab: \(selectedFoodTab)")
+        }
+        
+        // Actually delete the items
         for log in logsToDelete {
             switch log.type {
             case .food:
-                if let food = log.food {
-                    print("Would delete food: \(food.displayName)")
+                if selectedFoodTab == .foods {
+                    // In My Foods tab, we're deleting the actual food
+                    if let food = log.food {
+                        // fdcId is likely already an Int, no need to convert
+                        let foodId = Int(food.fdcId) ?? 0
+                        if foodId > 0 {
+                            foodManager.deleteFood(id: foodId) { result in
+                                switch result {
+                                case .success:
+                                    print("Successfully deleted food: \(food.displayName)")
+                                case .failure(let error):
+                                    print("Failed to delete food: \(error)")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // In All tab, we're deleting a food log
+                    if let foodLogId = log.foodLogId {
+                        // foodLogId is likely already an Int or can be directly converted
+                        foodManager.deleteFoodLog(id: foodLogId) { result in
+                            switch result {
+                            case .success:
+                                print("Successfully deleted food log ID: \(foodLogId)")
+                            case .failure(let error):
+                                print("Failed to delete food log: \(error)")
+                            }
+                        }
+                    }
                 }
             case .meal:
-                if let meal = log.meal {
-                    print("Would delete meal: \(meal.title)")
+                // Delete the meal log if we're in All tab
+                if selectedFoodTab == .all, let mealLogId = log.mealLogId {
+                    // mealLogId is likely already an Int
+                    foodManager.deleteMealLog(id: mealLogId) { result in
+                        switch result {
+                        case .success:
+                            print("Successfully deleted meal log ID: \(mealLogId)")
+                        case .failure(let error):
+                            print("Failed to delete meal log: \(error)")
+                        }
+                    }
+                }
+                // Delete the actual meal if in Meals tab
+                else if selectedFoodTab == .meals, let meal = log.meal {
+                    // meal.id is already an Int
+                    foodManager.deleteMeal(id: meal.id) { result in
+                        switch result {
+                        case .success:
+                            print("Successfully deleted meal: \(meal.title)")
+                        case .failure(let error):
+                            print("Failed to delete meal: \(error)")
+                        }
+                    }
                 }
             case .recipe:
-                if let recipe = log.recipe {
-                    print("Would delete recipe: \(recipe.title)")
+                if let recipeLogId = log.recipeLogId {
+                    // recipeLogId is likely already an Int
+                    print("Recipe log deletion not yet implemented for ID: \(recipeLogId)")
                 }
             }
         }
-        
-        // Actual implementation would call appropriate delete methods on foodManager
-        // For example:
-        // for log in logsToDelete {
-        //     switch log.type {
-        //     case .food:
-        //         if let foodLogId = log.foodLogId {
-        //             foodManager.deleteFoodLog(id: foodLogId)
-        //         }
-        //     case .meal:
-        //         if let mealLogId = log.mealLogId {
-        //             foodManager.deleteMealLog(id: mealLogId)
-        //         }
-        //     case .recipe:
-        //         if let recipeLogId = log.recipeLogId {
-        //             foodManager.deleteRecipeLog(id: recipeLogId)
-        //         }
-        //     }
-        // }
     }
 }
 
@@ -1004,16 +1066,17 @@ private struct MealListView: View {
         // Get the meals to delete
         let mealsToDelete = indexSet.map { foodManager.meals[$0] }
         
-        // Log information about what would be deleted
+        // Actually delete the meals
         for meal in mealsToDelete {
-            print("Would delete meal: \(meal.title) (ID: \(meal.id))")
+            foodManager.deleteMeal(id: meal.id) { result in
+                switch result {
+                case .success:
+                    print("Successfully deleted meal: \(meal.title)")
+                case .failure(let error):
+                    print("Failed to delete meal: \(error)")
+                }
+            }
         }
-        
-        // Actual implementation would call delete method on foodManager
-        // For example:
-        // for meal in mealsToDelete {
-        //     foodManager.deleteMeal(id: meal.id)
-        // }
     }
 }
 
