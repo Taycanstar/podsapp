@@ -583,6 +583,7 @@ private struct FoodListView: View {
                             }
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
+                            .scrollIndicators(.hidden)
                         }
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
@@ -640,6 +641,7 @@ private struct FoodListView: View {
                             }
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
+                            .scrollIndicators(.hidden)
                         }
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
@@ -1014,6 +1016,7 @@ private struct MealListView: View {
                     }
                     .listStyle(PlainListStyle())
                     .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
                 }
                 .frame(minHeight: min(CGFloat(foodManager.meals.count * 70), 400))
                 .cornerRadius(12)
