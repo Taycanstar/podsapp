@@ -14,6 +14,7 @@ struct FoodScannerView: View {
     @State private var selectedMode: ScanMode = .food
     @State private var showPhotosPicker = false
     @State private var selectedImage: UIImage?
+    @State private var flashEnabled = false
     
     enum ScanMode {
         case food, barcode, gallery
@@ -21,81 +22,152 @@ struct FoodScannerView: View {
     
     var body: some View {
         ZStack {
+
             // Camera view
-            CameraPreviewView()
+            CameraPreviewView(flashEnabled: flashEnabled)
                 .edgesIgnoringSafeArea(.all)
             
-            // Close button
+            // UI Overlay
             VStack {
+                // Top controls
                 HStack {
+                    
+                    
+                    
+                    
+                    // Close button
                     Button(action: {
                         isPresented = false
                     }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(12)
                             .background(Color.black.opacity(0.6))
                             .clipShape(Circle())
                     }
-                    .padding(.leading, 16)
-                    .padding(.top, 50)
-                    
+                    .padding(.leading)
+
                     Spacer()
+
+                    // Flash toggle button
+                    Button(action: {
+                        flashEnabled.toggle()
+                    }) {
+                        Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing)
                 }
+                .padding(.top, 50)
                 
                 Spacer()
                 
-                // Bottom buttons
-                HStack(spacing: 20) {
-                    Spacer()
+                // Bottom controls
+                VStack(spacing: 30) {
+                    // Mode selection buttons
+                    HStack(spacing: 20) {
+                        // Food Scan Button
+                        ScanOptionButton(
+                            icon: "text.viewfinder",
+                            title: "Food",
+                            isSelected: selectedMode == .food,
+                            action: { selectedMode = .food }
+                        )
+                        
+                        // Barcode Button
+                        ScanOptionButton(
+                            icon: "barcode.viewfinder",
+                            title: "Barcode",
+                            isSelected: selectedMode == .barcode,
+                            action: { selectedMode = .barcode }
+                        )
+                        
+                        // Gallery Button
+                        ScanOptionButton(
+                            icon: "photo",
+                            title: "Gallery",
+                            isSelected: selectedMode == .gallery,
+                            action: {
+                                selectedMode = .gallery
+                                showPhotosPicker = true
+                            }
+                        )
+                    }
+                    .padding(.horizontal, 20)
                     
-                    // Scan Food Button
-                    ScanButton(
-                        icon: "text.viewfinder",
-                        title: "Food",
-                        isSelected: selectedMode == .food,
-                        action: { selectedMode = .food }
-                    )
-                    
-                    // Barcode Button
-                    ScanButton(
-                        icon: "barcode.viewfinder",
-                        title: "Barcode",
-                        isSelected: selectedMode == .barcode,
-                        action: { selectedMode = .barcode }
-                    )
-                    
-                    // Gallery Button
-                    ScanButton(
-                        icon: "photo",
-                        title: "Gallery",
-                        isSelected: selectedMode == .gallery,
-                        action: {
-                            selectedMode = .gallery
-                            showPhotosPicker = true
+                    // Shutter button
+                    Button(action: {
+                        takePhoto()
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 70, height: 70)
+                            
+                            Circle()
+                                .stroke(Color.white, lineWidth: 4)
+                                .frame(width: 80, height: 80)
                         }
-                    )
-                    
-                    Spacer()
+                    }
+                    .padding(.bottom, 40)
                 }
-                .padding(.bottom, 40)
-                .background(
-                    Rectangle()
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: [Color.black.opacity(0), Color.black.opacity(0.5)]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ))
-                        .frame(height: 120)
-                        .edgesIgnoringSafeArea(.bottom)
-                )
+
             }
         }
         .sheet(isPresented: $showPhotosPicker) {
             PhotosPicker(selection: $selectedImage) {
                 Text("Select a photo")
             }
+        }
+    }
+    
+    private func takePhoto() {
+        switch selectedMode {
+        case .food:
+            print("Food scanned")
+        case .barcode:
+            print("Barcode scanned")
+        case .gallery:
+            print("Gallery searched")
+        }
+    }
+}
+
+struct ScanOptionButton: View {
+    let icon: String
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    // Fixed dimensions for consistent sizing
+    private let buttonWidth: CGFloat = 90
+    private let buttonHeight: CGFloat = 60
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(isSelected ? Color.black : Color.white)
+                
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? Color.black : Color.white)
+            }
+            .frame(width: buttonWidth, height: buttonHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? Color.white.opacity(0.3) : Color.black.opacity(0.4))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.white : Color.white.opacity(0.3), lineWidth: 1)
+            )
         }
     }
 }
@@ -144,6 +216,7 @@ struct PhotosPicker: UIViewControllerRepresentable {
 
 struct CameraPreviewView: UIViewRepresentable {
     let captureSession = AVCaptureSession()
+    var flashEnabled: Bool
     
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
@@ -161,7 +234,22 @@ struct CameraPreviewView: UIViewRepresentable {
         return view
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {
+        updateFlashMode()
+    }
+    
+    private func updateFlashMode() {
+        guard let device = AVCaptureDevice.default(for: .video),
+              device.hasTorch else { return }
+        
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = flashEnabled ? .on : .off
+            device.unlockForConfiguration()
+        } catch {
+            print("Error setting torch mode: \(error)")
+        }
+    }
     
     private func checkCameraAuthorization(completion: @escaping () -> Void) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -189,34 +277,6 @@ struct CameraPreviewView: UIViewRepresentable {
         
         DispatchQueue.global(qos: .userInitiated).async {
             self.captureSession.startRunning()
-        }
-    }
-}
-
-struct ScanButton: View {
-    let icon: String
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 22))
-                    .foregroundColor(.white)
-                
-                Text(title)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-            }
-            .padding(12)
-            .background(isSelected ? Color.accentColor : Color.black.opacity(0.6))
-            .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-            )
         }
     }
 } 

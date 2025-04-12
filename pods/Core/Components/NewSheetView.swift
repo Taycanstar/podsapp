@@ -61,9 +61,12 @@ struct NewSheetView: View {
                           isPresented = false  
                           showQuickPodView = true
                       case "Log Food":
+                        HapticFeedback.generate()
                         isPresented = false
                         viewModel.showFoodContainer()
                       case "Scan Food":
+                                                HapticFeedback.generate()
+
                         isPresented = false
                         showFoodScanner = true
                       default:
