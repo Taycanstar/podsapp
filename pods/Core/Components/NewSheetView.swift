@@ -28,11 +28,12 @@ struct NewSheetView: View {
             RoundedRectangle(cornerRadius: 2.5)
                 .frame(width: 36, height: 2)
                 .foregroundColor(Color("grabber"))
-                .padding(.top, 8)
+                .padding(.top, 12)
             
             Text("New")
                 .font(.system(size: 16, weight: .semibold))
-                .padding(.vertical, 16)
+                .padding(.top, 24)
+                .padding(.bottom, 8)
             
             Divider()
             
@@ -40,14 +41,14 @@ struct NewSheetView: View {
                 HStack(spacing: 15) {
                     HStack(spacing: 15) {
                         Image(systemName: option.1)
-                            .font(.system(size: 22))
+                            .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 30)
                             .padding(.leading, 20)
                         
                         Text(option.0)
-                            .font(.system(size: 16))
-                            .padding(.vertical, 12)
+                            .font(.system(size: 15))
+                            .padding(.vertical, 16)
                             .foregroundColor(.primary)
                     }
                     Spacer()
