@@ -510,26 +510,6 @@ private struct FoodListView: View {
                     // Use the helper function to get filtered logs
                     let validLogs = getFilteredLogs()
                     
-                    // Generate food item at top (outside the List)
-                    if selectedFoodTab == .foods, let genFood = generatedFood {
-                        VStack {
-                            FoodRow(
-                                food: genFood,
-                                selectedMeal: $selectedMeal,
-                                mode: mode,
-                                selectedFoods: $selectedFoods,
-                                path: $path,
-                                onItemAdded: onItemAdded
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                        }
-                        .background(Color("bg"))
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                    }
-                    
                     // Main content List with native swipe-to-delete
                     if !validLogs.isEmpty {
                         ZStack {
@@ -624,27 +604,7 @@ private struct FoodListView: View {
             } else {
                 // Search results - using List for native swipe-to-delete
                 VStack(spacing: 0) {
-                    // Show generated food at the top if it exists
-                    if selectedFoodTab == .foods, let genFood = generatedFood {
-                        VStack {
-                            FoodRow(
-                                food: genFood,
-                                selectedMeal: $selectedMeal,
-                                mode: mode,
-                                selectedFoods: $selectedFoods,
-                                path: $path,
-                                onItemAdded: onItemAdded
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                        }
-                        .background(Color("bg"))
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                    }
-                    
-                    // Meals list
+                    // Main content List with native swipe-to-delete
                     if !searchResults.isEmpty {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
