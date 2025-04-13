@@ -2293,33 +2293,47 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         analysisStage = 0
         isLoading = true
         
-        // Simulate upload progress - but only up to 95% before API response
-        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
+        // Start time to calculate elapsed time
+        let startTime = Date()
+        
+        // Estimated typical response time (in seconds)
+        // This is used to calibrate the progress curve
+        let expectedDuration: TimeInterval = 8.0
+        
+        // Use a smooth continuous animation with frequent updates
+        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
             }
             
-            // Only increment if we're below 95%
-            if self.uploadProgress < 0.95 {
-                self.uploadProgress += 0.05
-                
-                // Update loading messages based on progress
-                if self.uploadProgress > 0.3 && self.analysisStage == 0 {
-                    self.analysisStage = 1
-                    self.loadingMessage = "Identifying Food Items"
-                } else if self.uploadProgress > 0.6 && self.analysisStage == 1 {
-                    self.analysisStage = 2
-                    self.loadingMessage = "Calculating Nutrition"
-                } else if self.uploadProgress > 0.85 && self.analysisStage == 2 {
-                    self.analysisStage = 3
-                    self.loadingMessage = "Finalizing Results"
-                }
-                
-                // Cap progress at 95% until API returns
-                if self.uploadProgress >= 0.95 {
-                    self.uploadProgress = 0.95
-                }
+            // Calculate current progress as a function of elapsed time
+            let elapsedTime = Date().timeIntervalSince(startTime)
+            
+            // Non-linear curve that approaches but never reaches 1.0 until complete
+            // f(x) = 1 - e^(-k*x) where k controls the rate
+            // This creates a realistic loading curve that starts fast and slows down
+            let k = 3.0 / expectedDuration  // Tuning parameter
+            let calculatedProgress = 1.0 - exp(-k * elapsedTime)
+            
+            // Cap at 95% until we get actual server response
+            self.uploadProgress = min(0.95, calculatedProgress)
+            
+            // Update loading messages based on progress thresholds
+            if calculatedProgress > 0.25 && self.analysisStage < 1 {
+                self.analysisStage = 1
+                self.loadingMessage = "Identifying Food Items"
+            } else if calculatedProgress > 0.5 && self.analysisStage < 2 {
+                self.analysisStage = 2
+                self.loadingMessage = "Calculating Nutrition"
+            } else if calculatedProgress > 0.75 && self.analysisStage < 3 {
+                self.analysisStage = 3
+                self.loadingMessage = "Finalizing Results"
+            }
+            
+            // Safety stop if taking too long (3x expected duration)
+            if elapsedTime > expectedDuration * 3 {
+                timer.invalidate()
             }
         }
         
@@ -2330,6 +2344,11 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         ) { [weak self] success, data, errorMessage in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                
+                // Calculate actual response time for data collection
+                // This could be stored to adjust future expectedDuration values
+                let actualDuration = Date().timeIntervalSince(startTime)
+                print("📊 Food scan analysis took \(String(format: "%.2f", actualDuration)) seconds")
                 
                 // Stop the progress timer
                 progressTimer.invalidate()
@@ -2343,12 +2362,13 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 self.isLoading = false
                 
                 if success, let responseData = data {
-                    // Food was successfully logged
+                    // Check if we got actual food data (not just a success with no food)
                     if let food = responseData["food"] as? [String: Any],
                        let displayName = food["displayName"] as? String,
+                       !displayName.isEmpty,
                        let calories = food["calories"] as? Double {
                         
-                        // Use the correct tuple format: (name: String, calories: Double)
+                        // We have valid food data - show success and log
                         self.lastLoggedItem = (name: displayName, calories: calories)
                         self.showLogSuccess = true
                         
@@ -2363,17 +2383,18 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         
                         completion(true, nil)
                     } else {
-                        // Could not extract food details
-                        self.scanningFoodError = "Failed to process food details"
+                        // Got a response but no usable food data - show as an error
+                        self.scanningFoodError = "No food identified in the image"
                         self.scannedImage = nil
-                        completion(false, "Failed to process food details")
+                        completion(false, "No food identified in the image")
                     }
                 } else {
                     // Show error in dashboard
-                    print("Food scan error: \(errorMessage ?? "Unknown error")")
-                    self.scanningFoodError = errorMessage ?? "Failed to analyze food image"
+                    let errorMsg = errorMessage ?? "Failed to analyze food image"
+                    print("Food scan error: \(errorMsg)")
+                    self.scanningFoodError = errorMsg
                     self.scannedImage = nil
-                    completion(false, errorMessage)
+                    completion(false, errorMsg)
                 }
             }
         }
