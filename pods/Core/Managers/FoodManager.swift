@@ -2353,47 +2353,51 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 // Stop the progress timer
                 progressTimer.invalidate()
                 
-                // Only set to 100% if successful
-                if success {
-                    self.uploadProgress = 1.0
-                }
-                
+                // Reset loading state
                 self.isScanningFood = false
                 self.isLoading = false
                 
-                if success, let responseData = data {
-                    // Check if we got actual food data (not just a success with no food)
-                    if let food = responseData["food"] as? [String: Any],
-                       let displayName = food["displayName"] as? String,
-                       !displayName.isEmpty,
-                       let calories = food["calories"] as? Double {
-                        
-                        // We have valid food data - show success and log
-                        self.lastLoggedItem = (name: displayName, calories: calories)
-                        self.showLogSuccess = true
-                        
-                        // Auto-hide the success message after 3 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            self.showLogSuccess = false
-                            self.scannedImage = nil
-                        }
-                        
-                        // Refresh logs to show the new food
-                        self.refresh()
-                        
-                        completion(true, nil)
-                    } else {
-                        // Got a response but no usable food data - show as an error
-                        self.scanningFoodError = "No food identified in the image"
+                if success, let responseData = data, 
+                   let food = responseData["food"] as? [String: Any],
+                   let displayName = food["displayName"] as? String,
+                   !displayName.isEmpty,
+                   let calories = food["calories"] as? Double {
+                    
+                    // Only in case of successful food identification:
+                    // 1. Set progress to 100%
+                    self.uploadProgress = 1.0
+                    
+                    // 2. Set success data for toast
+                    self.lastLoggedItem = (name: displayName, calories: calories)
+                    self.showLogSuccess = true
+                    
+                    // 3. Auto-hide the success message after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showLogSuccess = false
                         self.scannedImage = nil
-                        completion(false, "No food identified in the image")
                     }
+                    
+                    // 4. Refresh logs to show the new food
+                    self.refresh()
+                    
+                    completion(true, nil)
                 } else {
-                    // Show error in dashboard
-                    let errorMsg = errorMessage ?? "Failed to analyze food image"
+                    // For any failure case (including "No food identified"):
+                    // Clear the scanned image
+                    self.scannedImage = nil
+                    
+                    // Set error message - do NOT set showLogSuccess
+                    let errorMsg: String
+                    if success {
+                        // This means we got a successful API response but no valid food data
+                        errorMsg = "No food identified in the image"
+                    } else {
+                        // Network or server error
+                        errorMsg = errorMessage ?? "Failed to analyze food image"
+                    }
+                    
                     print("Food scan error: \(errorMsg)")
                     self.scanningFoodError = errorMsg
-                    self.scannedImage = nil
                     completion(false, errorMsg)
                 }
             }
