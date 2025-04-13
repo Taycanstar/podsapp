@@ -75,6 +75,8 @@ class FoodManager: ObservableObject {
     // Food Scanning
     @Published var isScanningFood = false
     @Published var scanningFoodError: String? = nil
+    @Published var scannedImage: UIImage? = nil
+    @Published var uploadProgress: Double = 0.0
     
     init() {
         self.networkManager = NetworkManager()
@@ -2285,9 +2287,37 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     func analyzeFoodImage(image: UIImage, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
         // Update state to show loading in dashboard
         isScanningFood = true
-        loadingMessage = "Analyzing food image..."
+        scannedImage = image
+        uploadProgress = 0.0
+        loadingMessage = "Analyzing Scan"
         analysisStage = 0
         isLoading = true
+        
+        // Simulate upload progress
+        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            self.uploadProgress += 0.05
+            if self.uploadProgress >= 1.0 {
+                timer.invalidate()
+                self.uploadProgress = 1.0
+            }
+            
+            // Update loading messages based on progress
+            if self.uploadProgress > 0.3 && self.analysisStage == 0 {
+                self.analysisStage = 1
+                self.loadingMessage = "Identifying Food Items"
+            } else if self.uploadProgress > 0.6 && self.analysisStage == 1 {
+                self.analysisStage = 2
+                self.loadingMessage = "Calculating Nutrition"
+            } else if self.uploadProgress > 0.9 && self.analysisStage == 2 {
+                self.analysisStage = 3
+                self.loadingMessage = "Finalizing Results"
+            }
+        }
         
         // Call the API to analyze the image
         networkManager.analyzeFoodImage(
@@ -2296,6 +2326,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         ) { [weak self] success, data, errorMessage in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                
+                // Stop the progress timer
+                progressTimer.invalidate()
+                self.uploadProgress = 1.0
                 
                 self.isScanningFood = false
                 self.isLoading = false
@@ -2313,6 +2347,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         // Auto-hide the success message after 3 seconds
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                             self.showLogSuccess = false
+                            self.scannedImage = nil
                         }
                         
                         // Refresh logs to show the new food
@@ -2322,12 +2357,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     } else {
                         // Could not extract food details
                         self.scanningFoodError = "Failed to process food details"
+                        self.scannedImage = nil
                         completion(false, "Failed to process food details")
                     }
                 } else {
                     // Show error in dashboard
                     print("Food scan error: \(errorMessage ?? "Unknown error")")
                     self.scanningFoodError = errorMessage ?? "Failed to analyze food image"
+                    self.scannedImage = nil
                     completion(false, errorMessage)
                 }
             }

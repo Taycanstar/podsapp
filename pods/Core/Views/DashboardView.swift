@@ -47,6 +47,7 @@ struct DashboardView: View {
                         FoodGenerationCard()
                             .padding(.horizontal)
                             .transition(.opacity)
+                            .environmentObject(foodManager)
                     }
                     
                     // Regular food analysis card (for AI generation)
