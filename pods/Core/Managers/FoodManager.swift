@@ -69,8 +69,16 @@ class FoodManager: ObservableObject {
     @Published var showFoodGenerationSuccess = false
     @Published var lastGeneratedFood: Food? = nil
     
+    // Add these properties for food image analysis
+    @Published var loadingMessage: String = ""
+    
+    // Food Scanning
+    @Published var isScanningFood = false
+    @Published var scanningFoodError: String? = nil
+    
     init() {
         self.networkManager = NetworkManager()
+        
     }
 
     
@@ -2273,4 +2281,56 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
 
+    // Function to analyze food image and log it
+    func analyzeFoodImage(image: UIImage, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+        // Update state to show loading in dashboard
+        isScanningFood = true
+        loadingMessage = "Analyzing food image..."
+        analysisStage = 0
+        isLoading = true
+        
+        // Call the API to analyze the image
+        networkManager.analyzeFoodImage(
+            image: image, 
+            userEmail: userEmail
+        ) { [weak self] success, data, errorMessage in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                self.isScanningFood = false
+                self.isLoading = false
+                
+                if success, let responseData = data {
+                    // Food was successfully logged
+                    if let food = responseData["food"] as? [String: Any],
+                       let displayName = food["displayName"] as? String,
+                       let calories = food["calories"] as? Double {
+                        
+                        // Use the correct tuple format: (name: String, calories: Double)
+                        self.lastLoggedItem = (name: displayName, calories: calories)
+                        self.showLogSuccess = true
+                        
+                        // Auto-hide the success message after 3 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.showLogSuccess = false
+                        }
+                        
+                        // Refresh logs to show the new food
+                        self.refresh()
+                        
+                        completion(true, nil)
+                    } else {
+                        // Could not extract food details
+                        self.scanningFoodError = "Failed to process food details"
+                        completion(false, "Failed to process food details")
+                    }
+                } else {
+                    // Show error in dashboard
+                    print("Food scan error: \(errorMessage ?? "Unknown error")")
+                    self.scanningFoodError = errorMessage ?? "Failed to analyze food image"
+                    completion(false, errorMessage)
+                }
+            }
+        }
+    }
 }

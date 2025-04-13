@@ -13,6 +13,8 @@ struct DashboardView: View {
     @EnvironmentObject var foodManager: FoodManager
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
+    @State private var showScanningErrorAlert = false
+    
     var body: some View {
         ZStack {
             ScrollView {
@@ -40,19 +42,26 @@ struct DashboardView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Show food scanning card if analysis is in progress
+                    if foodManager.isScanningFood {
+                        FoodGenerationCard()
+                            .padding(.horizontal)
+                            .transition(.opacity)
+                    }
+                    
+                    // Regular food analysis card (for AI generation)
+                    else if foodManager.isLoading {
+                        FoodAnalysisCard()
+                            .padding(.horizontal)
+                            .transition(.opacity)
+                    }
+                    
                     // Recent logs section
                     if !foodManager.combinedLogs.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Recent Logs")
                                 .font(.headline)
                                 .padding(.horizontal)
-                            
-                            // Show food analysis card if analysis is in progress
-                            if foodManager.isAnalyzingFood {
-                                FoodAnalysisCard()
-                                    .padding(.horizontal)
-                                    .transition(.opacity)
-                            }
                             
                             ForEach(Array(foodManager.combinedLogs.prefix(5)), id: \.id) { log in
                                 HStack {
@@ -84,7 +93,8 @@ struct DashboardView: View {
                     }
                 }
                 .padding(.vertical)
-                .animation(.default, value: foodManager.isAnalyzingFood)
+                .animation(.default, value: foodManager.isLoading)
+                .animation(.default, value: foodManager.isScanningFood)
             }
             
             // AI Generation Success Toast
@@ -122,6 +132,18 @@ struct DashboardView: View {
                 foodManager.refresh()
             }
         }
+        .onChange(of: foodManager.scanningFoodError) { error in
+            if let _ = error {
+                showScanningErrorAlert = true
+            }
+        }
+        .alert("Food Scan Error", isPresented: $showScanningErrorAlert) {
+            Button("OK", role: .cancel) { 
+                foodManager.scanningFoodError = nil
+            }
+        } message: {
+            Text(foodManager.scanningFoodError ?? "Failed to analyze food image")
+        }
     }
     
     // Helper function to get the display name for a log
@@ -156,6 +178,10 @@ struct FoodAnalysisCard: View {
     @State private var animateProgress = false
     
     var analysisTitle: String {
+        if !foodManager.loadingMessage.isEmpty {
+            return foodManager.loadingMessage
+        }
+        
         switch foodManager.analysisStage {
         case 0: return "Analyzing Food..."
         case 1: return "Separating Ingredients..."
