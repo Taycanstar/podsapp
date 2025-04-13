@@ -2293,29 +2293,33 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         analysisStage = 0
         isLoading = true
         
-        // Simulate upload progress
+        // Simulate upload progress - but only up to 95% before API response
         let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
             }
             
-            self.uploadProgress += 0.05
-            if self.uploadProgress >= 1.0 {
-                timer.invalidate()
-                self.uploadProgress = 1.0
-            }
-            
-            // Update loading messages based on progress
-            if self.uploadProgress > 0.3 && self.analysisStage == 0 {
-                self.analysisStage = 1
-                self.loadingMessage = "Identifying Food Items"
-            } else if self.uploadProgress > 0.6 && self.analysisStage == 1 {
-                self.analysisStage = 2
-                self.loadingMessage = "Calculating Nutrition"
-            } else if self.uploadProgress > 0.9 && self.analysisStage == 2 {
-                self.analysisStage = 3
-                self.loadingMessage = "Finalizing Results"
+            // Only increment if we're below 95%
+            if self.uploadProgress < 0.95 {
+                self.uploadProgress += 0.05
+                
+                // Update loading messages based on progress
+                if self.uploadProgress > 0.3 && self.analysisStage == 0 {
+                    self.analysisStage = 1
+                    self.loadingMessage = "Identifying Food Items"
+                } else if self.uploadProgress > 0.6 && self.analysisStage == 1 {
+                    self.analysisStage = 2
+                    self.loadingMessage = "Calculating Nutrition"
+                } else if self.uploadProgress > 0.85 && self.analysisStage == 2 {
+                    self.analysisStage = 3
+                    self.loadingMessage = "Finalizing Results"
+                }
+                
+                // Cap progress at 95% until API returns
+                if self.uploadProgress >= 0.95 {
+                    self.uploadProgress = 0.95
+                }
             }
         }
         
@@ -2329,7 +2333,11 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 
                 // Stop the progress timer
                 progressTimer.invalidate()
-                self.uploadProgress = 1.0
+                
+                // Only set to 100% if successful
+                if success {
+                    self.uploadProgress = 1.0
+                }
                 
                 self.isScanningFood = false
                 self.isLoading = false

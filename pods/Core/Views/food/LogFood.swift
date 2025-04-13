@@ -1913,21 +1913,21 @@ struct FoodGenerationCard: View {
     @State private var animateProgress = false
     
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             // Image thumbnail if scanning food
             if foodManager.isScanningFood, let image = foodManager.scannedImage {
                 ZStack {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 90, height: 140)
                         .cornerRadius(10)
                         .clipped()
                     
                     // Dark overlay
                     Rectangle()
                         .fill(Color.black.opacity(0.4))
-                        .frame(width: 80, height: 80)
+                        .frame(width: 90, height: 140)
                         .cornerRadius(10)
                     
                     // Progress indicator
@@ -1937,13 +1937,13 @@ struct FoodGenerationCard: View {
                             .frame(width: 40, height: 40)
                         
                         Circle()
-                            .trim(from: 0, to: CGFloat(foodManager.uploadProgress))
+                            .trim(from: 0, to: CGFloat(min(foodManager.uploadProgress, 0.99)))
                             .stroke(Color.white, lineWidth: 4)
                             .frame(width: 40, height: 40)
                             .rotationEffect(.degrees(-90))
                         
                         // Percentage text
-                        Text("\(Int(foodManager.uploadProgress * 100))%")
+                        Text("\(Int(min(foodManager.uploadProgress, 0.99) * 100))%")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                     }
