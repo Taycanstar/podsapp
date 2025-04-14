@@ -2388,12 +2388,20 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     
                     // Set error message - do NOT set showLogSuccess
                     let errorMsg: String
-                    if success {
-                        // This means we got a successful API response but no valid food data
-                        errorMsg = "No food identified in the image"
+                    if let error = errorMessage {
+                        // Check if the error is about no food identified
+                        if error.contains("No food identified") || error.contains("Could not determine nutritional information") {
+                            errorMsg = "Food not indentified."
+                        } else if error.starts(with: "Server error: HTTP") {
+                            // Handle HTTP errors, especially 400 which might be "no food identified"
+                            errorMsg = "Food not indentified."
+                        } else {
+                            // Other network or server error
+                            errorMsg = error
+                        }
                     } else {
-                        // Network or server error
-                        errorMsg = errorMessage ?? "Failed to analyze food image"
+                        // Fallback for when no error message is provided
+                        errorMsg = "Failed to analyze food image"
                     }
                     
                     print("Food scan error: \(errorMsg)")

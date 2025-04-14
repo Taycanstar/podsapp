@@ -138,7 +138,7 @@ struct DashboardView: View {
                 showScanningErrorAlert = true
             }
         }
-        .alert("Food Scan Error", isPresented: $showScanningErrorAlert) {
+        .alert("Logging Error", isPresented: $showScanningErrorAlert) {
             Button("OK", role: .cancel) { 
                 foodManager.scanningFoodError = nil
             }
