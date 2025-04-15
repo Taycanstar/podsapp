@@ -152,30 +152,19 @@ struct FoodScannerView: View {
                 // Barcode indicator (when in barcode mode)
                 if selectedMode == .barcode {
                     VStack {
-                        // Visual barcode guide
-                        Rectangle()
-                            .strokeBorder(Color.white, lineWidth: 2)
-                            .frame(width: 280, height: 100)
-                            .background(Color.black.opacity(0.1))
+                        Text("Barcode Scanner")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.bottom, 20)
                         
-                        // Show detected barcode if available
-                        if let barcode = scannedBarcode {
-                            Text("Detected: \(barcode)")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(8)
-                                .background(Color.green.opacity(0.7))
-                                .cornerRadius(8)
-                                .padding(.top, 8)
-                        } else {
-                            Text("Center barcode in view")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .background(Color.black.opacity(0.6))
-                                .cornerRadius(8)
-                        }
+                        // Just show a clearly defined border for the scanning area
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.white, lineWidth: 3)
+                            .frame(width: 280, height: 160)
+                            .background(Color.clear)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
                 
                 Spacer()
@@ -213,21 +202,30 @@ struct FoodScannerView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Shutter button
-                    Button(action: {
-                        takePhoto()
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 70, height: 70)
-                            
-                            Circle()
-                                .stroke(Color.white, lineWidth: 4)
-                                .frame(width: 80, height: 80)
+                    // Shutter button - hidden when in barcode mode
+                    if selectedMode != .barcode {
+                        Button(action: {
+                            takePhoto()
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 70, height: 70)
+                                
+                                Circle()
+                                    .stroke(Color.white, lineWidth: 4)
+                                    .frame(width: 80, height: 80)
+                            }
                         }
+                        .padding(.bottom, 40)
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.3), value: selectedMode)
+                    } else {
+                        // Empty spacer with the same size to maintain layout
+                        Color.clear
+                            .frame(width: 80, height: 80)
+                            .padding(.bottom, 40)
                     }
-                    .padding(.bottom, 40)
                 }
             }
             

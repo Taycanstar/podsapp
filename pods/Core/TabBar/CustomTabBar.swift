@@ -21,7 +21,7 @@ struct CustomTabBar: View {
 
                 HStack {
                 
-                   TabBarButton(iconName: "house", label: "Home", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
+                   TabBarButton(iconName: "house", isSelected: selectedTab == 0, iconSize: 16) { selectedTab = 0 }
                        .foregroundColor(selectedTab == 0 ? selectedIconColor : .gray)
                    
                    Spacer() 
@@ -46,7 +46,7 @@ struct CustomTabBar: View {
 
                 //    Spacer() 
 
-                    TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
+                    TabBarButton(iconName: "ellipsis.circle", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
                         .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
 
                 }
