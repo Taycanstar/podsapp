@@ -276,7 +276,7 @@ struct VoiceLogView: View {
         // Create a timer to smoothly update the audio level
         Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { timer in
             // Update animation phase for subtle continuous movement
-            animationPhase += 0.003  // Slower movement for stability
+            animationPhase += 0.01  // Faster movement for rotation
             
             // Smoothly update the audio level with interpolation
             let difference = targetAudioLevel - audioLevel
@@ -292,7 +292,12 @@ struct VoiceLogView: View {
                 targetAudioLevel = pow(thresholdedLevel * 1.2, 1.0) * 2.5
             }
             
-            // Update dot positions with subtle breathing/pulsing movement
+            // Set up rotation matrix for counter-clockwise movement
+            let rotationAngle = animationPhase * 0.3 // Control rotation speed
+            let cosAngle = cos(rotationAngle)
+            let sinAngle = sin(rotationAngle)
+            
+            // Update dot positions with rotation and subtle breathing/pulsing movement
             for i in 0..<dots.count {
                 let dot = dots[i]
                 
@@ -301,12 +306,16 @@ struct VoiceLogView: View {
                 let breatheAmount = sin(animationPhase + CGFloat(i % 10) * 0.1) * 0.01
                 let pulseAmount = dot.isBorder ? (audioLevel * 0.05) : (audioLevel * 0.03)
                 
-                // Border dots move more with audio to emphasize the edge
+                // Combined scale factor
                 let scaleFactor = 1.0 + breatheAmount + pulseAmount
                 
-                // Apply the scaling uniformly to preserve sphere shape
-                dots[i].x = dot.baseX * scaleFactor
-                dots[i].y = dot.baseY * scaleFactor
+                // Apply rotation (counter-clockwise) first
+                let rotatedX = dot.baseX * cosAngle - dot.baseY * sinAngle
+                let rotatedY = dot.baseX * sinAngle + dot.baseY * cosAngle
+                
+                // Then apply scaling
+                dots[i].x = rotatedX * scaleFactor
+                dots[i].y = rotatedY * scaleFactor
             }
         }
     }
