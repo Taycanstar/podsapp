@@ -572,7 +572,8 @@ private struct FoodListView: View {
                                         }
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    .listRowBackground(Color.clear)
+                                    // .listRowBackground(Color.clear)
+                                     .listRowBackground(Color("iosfit"))
                                     .listRowSeparator(.hidden)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -618,6 +619,7 @@ private struct FoodListView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
+                              
                             
                             List {
                                 ForEach(searchResults, id: \.fdcId) { food in
@@ -630,7 +632,8 @@ private struct FoodListView: View {
                                         onItemAdded: onItemAdded
                                     )
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    .listRowBackground(Color.clear)
+                                    // .listRowBackground(Color.clear)
+                                    .listRowBackground(Color("iosfit"))
                                     .listRowSeparator(.hidden)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -657,6 +660,8 @@ private struct FoodListView: View {
         }
         .padding(.bottom, 16)
         .background(Color("iosbg2"))
+       
+          
         .alert("AI Generation Error", isPresented: $showAIErrorAlert) {
             Button("OK", role: .cancel) { showAIErrorAlert = false }
         } message: {
@@ -1005,7 +1010,8 @@ private struct MealListView: View {
                                 onItemAdded: onItemAdded
                             )
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(Color.clear)
+                            // .listRowBackground(Color.clear)
+                             .listRowBackground(Color("iosfit"))
                             .listRowSeparator(.hidden)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
