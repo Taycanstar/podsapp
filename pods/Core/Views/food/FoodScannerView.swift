@@ -25,6 +25,7 @@ struct FoodScannerView: View {
     @State private var cameraPermissionDenied = false
     @State private var isProcessingBarcode = false
     @State private var lastProcessedBarcode: String?
+    @State private var isGalleryImageLoaded = false
     @EnvironmentObject var foodManager: FoodManager
     
     enum ScanMode {
@@ -195,8 +196,7 @@ struct FoodScannerView: View {
                             title: "Gallery",
                             isSelected: selectedMode == .gallery,
                             action: {
-                                selectedMode = .gallery
-                                showPhotosPicker = true
+                                openGallery()
                             }
                         )
                     }
@@ -250,8 +250,13 @@ struct FoodScannerView: View {
         .sheet(isPresented: $showPhotosPicker) {
             PhotosPickerView(selectedImage: $selectedImage)
                 .onDisappear {
+                    print("📥 PhotoPicker disappeared - Image selected: \(selectedImage != nil)")
+                    
                     if let image = selectedImage {
-                        analyzeImage(image)
+                        // Use a slight delay to ensure any async operations complete
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            analyzeImage(image)
+                        }
                     } else {
                         // Reset to Food mode if no image was selected
                         selectedMode = .food
@@ -277,6 +282,8 @@ struct FoodScannerView: View {
             print("User email not found")
             return
         }
+        
+        print("📊 Analyzing image: \(image.size.width)x\(image.size.height) - Mode: \(selectedMode)")
         
         // Close the scanner view immediately
         isPresented = false
@@ -304,13 +311,16 @@ struct FoodScannerView: View {
                 }
             }
         } else {
-            // Regular food image analysis
+            // Regular food image analysis (from camera or gallery)
+            print("🍽️ Starting food analysis for \(selectedMode == .gallery ? "gallery" : "camera") image")
             isAnalyzing = true
             foodManager.analyzeFoodImage(image: image, userEmail: userEmail) { success, message in
                 self.isAnalyzing = false
                 
                 if !success {
                     print("❌ Food analysis failed: \(message ?? "Unknown error")")
+                } else {
+                    print("✅ Food analysis succeeded")
                 }
             }
         }
@@ -401,6 +411,14 @@ struct FoodScannerView: View {
             }
         }
     }
+    
+    private func openGallery() {
+        // Reset selection state to prevent using old images
+        selectedImage = nil
+        selectedMode = .gallery
+        showPhotosPicker = true
+        print("🖼️ Gallery opened - awaiting image selection")
+    }
 }
 
 // PhotosPickerView replacement for the PhotosPicker
@@ -431,14 +449,26 @@ struct PhotosPickerView: UIViewControllerRepresentable {
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
+            guard let result = results.first else {
+                // No image selected, dismiss immediately
+                picker.dismiss(animated: true)
+                return
+            }
             
-            guard let result = results.first else { return }
-            
+            // Load the image before dismissing
             result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
-                guard let image = object as? UIImage else { return }
+                guard let image = object as? UIImage else {
+                    // Failed to load image, dismiss on main thread
+                    DispatchQueue.main.async {
+                        picker.dismiss(animated: true)
+                    }
+                    return
+                }
+                
+                // Successfully loaded image, update binding and dismiss
                 DispatchQueue.main.async {
                     self?.parent.selectedImage = image
+                    picker.dismiss(animated: true)
                 }
             }
         }
