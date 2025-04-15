@@ -62,6 +62,7 @@
 		364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C72DA7738B009D2620 /* CreateFoodView.swift */; };
 		364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83C92DAB0F82009D2620 /* FoodScannerView.swift */; };
 		364A83CC2DACA02F009D2620 /* NetworkManagerTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83CB2DACA02F009D2620 /* NetworkManagerTwo.swift */; };
+		364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83CD2DAEC017009D2620 /* VoiceLogView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -227,6 +228,7 @@
 		364A83C72DA7738B009D2620 /* CreateFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateFoodView.swift; path = Pods/Core/Views/food/CreateFoodView.swift; sourceTree = SOURCE_ROOT; };
 		364A83C92DAB0F82009D2620 /* FoodScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodScannerView.swift; path = Pods/Core/Views/food/FoodScannerView.swift; sourceTree = SOURCE_ROOT; };
 		364A83CB2DACA02F009D2620 /* NetworkManagerTwo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManagerTwo.swift; path = Pods/Core/Managers/NetworkManagerTwo.swift; sourceTree = SOURCE_ROOT; };
+		364A83CD2DAEC017009D2620 /* VoiceLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceLogView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
@@ -657,6 +659,7 @@
 				364A83C42DA59627009D2620 /* AddFoodView.swift */,
 				364A83C72DA7738B009D2620 /* CreateFoodView.swift */,
 				364A83C92DAB0F82009D2620 /* FoodScannerView.swift */,
+				364A83CD2DAEC017009D2620 /* VoiceLogView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1031,6 +1034,7 @@
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
+				364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */,
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
 				36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */,
 				363AFA112D3C258200C91A14 /* EditActivityItemView.swift in Sources */,

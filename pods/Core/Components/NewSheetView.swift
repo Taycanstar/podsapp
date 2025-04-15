@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 
 struct NewSheetView: View {
@@ -14,6 +15,7 @@ struct NewSheetView: View {
     @Binding var showQuickPodView: Bool
     @Binding var selectedTab: Int 
     @Binding var showFoodScanner: Bool
+    @Binding var showVoiceLog: Bool
     @EnvironmentObject var viewModel: OnboardingViewModel
     
 
@@ -64,9 +66,12 @@ struct NewSheetView: View {
                         HapticFeedback.generate()
                         isPresented = false
                         viewModel.showFoodContainer()
+                      case "Voice Log":
+                        HapticFeedback.generate()
+                        isPresented = false
+                        showVoiceLog = true
                       case "Scan Food":
-                                                HapticFeedback.generate()
-
+                        HapticFeedback.generate()
                         isPresented = false
                         showFoodScanner = true
                       default:

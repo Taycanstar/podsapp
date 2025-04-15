@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var showNewSheet = false
     @State private var showQuickPodView = false
     @State private var showFoodScanner = false
+    @State private var showVoiceLog = false
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -140,7 +141,8 @@ struct ContentView: View {
                                  showingVideoCreationScreen: $showingVideoCreationScreen,
                                  showQuickPodView: $showQuickPodView, 
                                  selectedTab: $selectedTab,
-                                 showFoodScanner: $showFoodScanner)
+                                 showFoodScanner: $showFoodScanner,
+                                 showVoiceLog: $showVoiceLog)
                         .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
@@ -149,6 +151,16 @@ struct ContentView: View {
                 .sheet(isPresented: $showFoodScanner) {
                     FoodScannerView(isPresented: $showFoodScanner)
                         .edgesIgnoringSafeArea(.all)
+                }
+
+                .fullScreenCover(isPresented: $showVoiceLog) {
+                    VoiceLogView(isPresented: $showVoiceLog)
+                        .onAppear {
+                            print("VoiceLogView appeared from ContentView")
+                        }
+                        .onDisappear {
+                            print("VoiceLogView disappeared from ContentView")
+                        }
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
