@@ -2411,4 +2411,74 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
+
+    // Add this function to handle the barcode scanning logic
+    func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+        // Set scanning state for UI feedback
+        isScanningFood = true
+        loadingMessage = "Looking up barcode..."
+        uploadProgress = 0.3
+        
+        // Convert image to base64 if available
+        var imageBase64: String? = nil
+        if let image = image {
+            if let imageData = image.jpegData(compressionQuality: 0.7) {
+                imageBase64 = imageData.base64EncodedString()
+            }
+        }
+        
+        // Call NetworkManagerTwo to look up the barcode
+        NetworkManagerTwo.shared.lookupFoodByBarcode(
+            barcode: barcode,
+            userEmail: userEmail,
+            imageData: imageBase64,
+            mealType: "Lunch"
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            // Update progress for UI
+            self.uploadProgress = 1.0
+            
+            switch result {
+            case .success(let food):
+                // Success - show success toast
+                self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
+                self.showLogSuccess = true
+                
+                // Update scanner state
+                self.isScanningFood = false
+                self.scannedImage = nil
+                
+                // Auto-hide the success message after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.showLogSuccess = false
+                }
+                
+                // Refresh logs to show the new food
+                self.refresh()
+                
+                completion(true, nil)
+                
+            case .failure(let error):
+                // Update scanner state on failure
+                self.isScanningFood = false
+                self.scannedImage = nil
+                
+                // Set error message for display
+                let errorMsg: String
+                if let networkError = error as? NetworkManagerTwo.NetworkError,
+                   case .serverError(let message) = networkError {
+                    // Use server error message
+                    errorMsg = message
+                } else {
+                    // General error message
+                    errorMsg = "Could not find food for barcode"
+                }
+                
+                print("Barcode scan error: \(errorMsg)")
+                self.scanningFoodError = errorMsg
+                completion(false, errorMsg)
+            }
+        }
+    }
 }
