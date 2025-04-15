@@ -252,6 +252,9 @@ struct FoodScannerView: View {
                 .onDisappear {
                     if let image = selectedImage {
                         analyzeImage(image)
+                    } else {
+                        // Reset to Food mode if no image was selected
+                        selectedMode = .food
                     }
                 }
         }
