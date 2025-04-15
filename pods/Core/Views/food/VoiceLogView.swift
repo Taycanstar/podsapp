@@ -273,49 +273,37 @@ struct VoiceLogView: View {
     
     // Start the animation for the orb
     private func startOrbAnimation() {
-        // Create a timer to smoothly update the audio level
-        Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { timer in
-            // Update animation phase for subtle continuous movement
-            animationPhase += 0.01  // Faster movement for rotation
+        // Use a standard framerate timer for stability
+        Timer.scheduledTimer(withTimeInterval: 1.0/60.0, repeats: true) { _ in
+            // Update animation phase at a steady rate
+            self.animationPhase += 0.02
             
-            // Smoothly update the audio level with interpolation
-            let difference = targetAudioLevel - audioLevel
-            audioLevel += difference * 0.05  // Gentler interpolation
+            // Smoothly update audio level with minimal interpolation
+            let difference = self.targetAudioLevel - self.audioLevel
+            self.audioLevel += difference * 0.1
             
-            // Calculate the next audio level target
-            if Int.random(in: 0...8) == 0 {
-                // Calculate the average audio level from the samples
-                let avgLevel = audioRecorder.samples.reduce(0, +) / Float(audioRecorder.samples.count)
-                
-                // Convert to CGFloat and apply a very gentle curve
-                let thresholdedLevel = CGFloat(avgLevel) > 0.03 ? CGFloat(avgLevel) : 0.01
-                targetAudioLevel = pow(thresholdedLevel * 1.2, 1.0) * 2.5
+            // Update audio level periodically
+            if Int(self.animationPhase * 10) % 6 == 0 {
+                let avgLevel = self.audioRecorder.samples.reduce(0, +) / Float(self.audioRecorder.samples.count)
+                self.targetAudioLevel = min(0.7, CGFloat(avgLevel) * 2.0)
             }
             
-            // Set up rotation matrix for counter-clockwise movement
-            let rotationAngle = animationPhase * 0.3 // Control rotation speed
+            // Simple rotation matrix for counter-clockwise movement
+            let rotationAngle = self.animationPhase
             let cosAngle = cos(rotationAngle)
             let sinAngle = sin(rotationAngle)
             
-            // Update dot positions with rotation and subtle breathing/pulsing movement
-            for i in 0..<dots.count {
-                let dot = dots[i]
+            // Update all dots at once with the same transformation
+            for i in 0..<self.dots.count {
+                let dot = self.dots[i]
                 
-                // Scale factor based on audio level and animation phase
-                // Different behavior for border vs interior dots
-                let breatheAmount = sin(animationPhase + CGFloat(i % 10) * 0.1) * 0.01
-                let pulseAmount = dot.isBorder ? (audioLevel * 0.05) : (audioLevel * 0.03)
-                
-                // Combined scale factor
-                let scaleFactor = 1.0 + breatheAmount + pulseAmount
-                
-                // Apply rotation (counter-clockwise) first
+                // Pure rotation only - no scaling that could cause jitter
                 let rotatedX = dot.baseX * cosAngle - dot.baseY * sinAngle
                 let rotatedY = dot.baseX * sinAngle + dot.baseY * cosAngle
                 
-                // Then apply scaling
-                dots[i].x = rotatedX * scaleFactor
-                dots[i].y = rotatedY * scaleFactor
+                // Apply the rotation directly with no additional effects
+                self.dots[i].x = rotatedX
+                self.dots[i].y = rotatedY
             }
         }
     }
