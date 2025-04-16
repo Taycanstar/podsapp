@@ -114,25 +114,23 @@ struct VoiceLogView: View {
     @State private var recognizedText: String = ""
     @State private var allowDismissal = false
     
-    // Colors
-    private let waveColor = Color.blue
-    private let backgroundColor = Color.white
-    
+    // Simplified body for cleaner look
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Clean white background
-                backgroundColor.edgesIgnoringSafeArea(.all)
+                // Background that adapts to dark/light mode
+                Color(UIColor.systemBackground)
+                    .edgesIgnoringSafeArea(.all)
                 
                 VStack {
                     Spacer()
                     
                     // Recording visualization
                     VStack(spacing: 24) {
-                        // Status text
-                        Text(audioRecorder.isRecording ? "Recording..." : "Tap to Record")
+                        // Status text - updated to indicate automatic recording
+                        Text(audioRecorder.isRecording ? "Recording..." : "Ready to record")
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
                             .padding(.bottom, 16)
                         
                         // Centered Waveform visualization with fixed width
@@ -143,16 +141,16 @@ struct VoiceLogView: View {
                         // Timer display 
                         Text(formatDuration(seconds: 0))
                             .font(.system(.title, design: .monospaced))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color(UIColor.label))
                             .padding(.top, 16)
                         
                         // Transcribed text display
                         if !recognizedText.isEmpty {
                             Text(recognizedText)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(UIColor.label))
                                 .padding()
-                                .background(Color(.systemGray6))
+                                .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(10)
                                 .padding(.horizontal, 20)
                                 .padding(.top, 24)
@@ -166,7 +164,7 @@ struct VoiceLogView: View {
                     
                     Spacer()
                     
-                    // Bottom controls - simplified to X and checkmark
+                    // Bottom controls - X and checkmark only
                     HStack {
                         // X button (left)
                         Button(action: {
@@ -178,38 +176,10 @@ struct VoiceLogView: View {
                         }) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 22))
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color(UIColor.systemGray))
                                 .frame(width: 44, height: 44)
-                                .background(Color(.systemGray5))
+                                .background(Color(UIColor.secondarySystemFill))
                                 .clipShape(Circle())
-                        }
-                        
-                        Spacer()
-                        
-                        // Record button (center) - only if needed
-                        if recognizedText.isEmpty {
-                            Button(action: {
-                                if audioRecorder.isRecording {
-                                    audioRecorder.stopRecording()
-                                    simulateTranscription()
-                                } else {
-                                    recognizedText = ""
-                                    audioRecorder.startRecording()
-                                }
-                            }) {
-                                ZStack {
-                                    Circle()
-                                        .fill(audioRecorder.isRecording ? .red : .red.opacity(0.9))
-                                        .frame(width: 70, height: 70)
-                                    
-                                    if audioRecorder.isRecording {
-                                        // Square stop button
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(Color.white)
-                                            .frame(width: 20, height: 20)
-                                    }
-                                }
-                            }
                         }
                         
                         Spacer()
@@ -219,14 +189,15 @@ struct VoiceLogView: View {
                             print("tapped checkmark")
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
+                                simulateTranscription()
                             }
                             isPresented = false
                         }) {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 22))
-                                .foregroundColor(.green)
+                                .foregroundColor(Color.green)
                                 .frame(width: 44, height: 44)
-                                .background(Color(.systemGray5))
+                                .background(Color(UIColor.secondarySystemFill))
                                 .clipShape(Circle())
                         }
                     }
@@ -350,7 +321,7 @@ struct WaveBar: View {
         let height = 5 + value * 95 // Scale to reasonable height
         
         Rectangle()
-            .fill(Color.blue.opacity(isRecording ? 1.0 : 0.6))
+            .fill(Color.primary.opacity(isRecording ? 1.0 : 0.6))
             .frame(height: height)
             // Use more recent samples at full opacity, fade older ones
             .opacity(isRecording ? 1.0 - Double(index) / 60.0 * 0.5 : 1.0)
