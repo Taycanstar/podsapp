@@ -342,10 +342,15 @@ struct FoodScannerView: View {
         do {
             try backCamera.lockForConfiguration()
             
-            // Always keep the torch off during preview - we don't want continuous light
+            // Toggle torch mode based on the flashEnabled state
             if backCamera.hasTorch {
-                backCamera.torchMode = .off
-                print("Torch kept OFF during preview")
+                if flashEnabled {
+                    backCamera.torchMode = .on
+                    print("Torch turned ON for preview")
+                } else {
+                    backCamera.torchMode = .off
+                    print("Torch turned OFF for preview")
+                }
             }
             
             backCamera.unlockForConfiguration()
