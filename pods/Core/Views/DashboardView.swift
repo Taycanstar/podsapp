@@ -54,6 +54,7 @@ struct DashboardView: View {
                     else if foodManager.isLoading {
                         FoodAnalysisCard()
                             .padding(.horizontal)
+                            
                             .transition(.opacity)
                     }
                     
@@ -103,7 +104,7 @@ struct DashboardView: View {
                 VStack{
                     Spacer()
                     BottomPopup(message: "Food logged")
-                        .padding(.bottom, 0)
+                        .padding(.bottom, 55)
                 }
                 .zIndex(100)
                 .transition(.opacity)
