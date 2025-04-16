@@ -2481,4 +2481,87 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
+
+    // MARK: - Voice Input Processing
+
+    func processVoiceInput(audioData: Data) {
+        // Set analyzing flag - same as when generating macros with AI
+        isAnalyzingFood = true
+        analysisStage = 0
+        showAIGenerationSuccess = false
+        
+        // Create a timer to cycle through analysis stages for UI feedback
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+            guard let self = self else { 
+                timer.invalidate()
+                return 
+            }
+            
+            // Cycle through stages 0-3
+            self.analysisStage = (self.analysisStage + 1) % 4
+            self.loadingMessage = [
+                "Transcribing your voice...",
+                "Analyzing food description...",
+                "Generating nutritional data...",
+                "Finalizing your food log..."
+            ][self.analysisStage]
+        }
+        
+        // First step: Transcribe the audio using the backend
+        transcribeAudio(audioData: audioData) { [weak self] result in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            switch result {
+            case .success(let transcribedText):
+                print("Voice transcription successful: \(transcribedText)")
+                
+                // Now use the transcribed text to generate macros, same as the text input flow
+                self.generateMacrosWithAI(foodDescription: transcribedText, mealType: "Lunch") { macroResult in
+                    // Stop the analysis animation timer
+                    timer.invalidate()
+                    
+                    // Reset analysis flags
+                    self.isAnalyzingFood = false
+                    
+                    switch macroResult {
+                    case .success(let loggedFood):
+                        print("AI macros generated successfully from voice input")
+                        self.aiGeneratedFood = loggedFood.food
+                        self.lastLoggedItem = (name: loggedFood.food.displayName, calories: loggedFood.food.calories ?? 0)
+                        self.showAIGenerationSuccess = true
+                        
+                        // Automatically dismiss the success indicator after 3 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.showAIGenerationSuccess = false
+                        }
+                        
+                        // Refresh food data to include the new logged item
+                        self.refresh()
+                        
+                    case .failure(let error):
+                        print("Failed to generate AI macros: \(error.localizedDescription)")
+                        self.error = error
+                    }
+                }
+                
+            case .failure(let error):
+                // Stop the timer and reset flags if transcription fails
+                timer.invalidate()
+                self.isAnalyzingFood = false
+                self.error = error
+                print("Voice transcription failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // Helper method to transcribe audio using the NetworkManager
+    private func transcribeAudio(audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        // Use the enhanced transcription endpoint for more accurate food logging
+        NetworkManagerTwo.shared.transcribeAudioForFoodLogging(from: audioData) { result in
+            completion(result)
+        }
+    }
 }

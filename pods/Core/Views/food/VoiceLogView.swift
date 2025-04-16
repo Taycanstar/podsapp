@@ -111,8 +111,8 @@ struct OrbDot: Identifiable {
 struct VoiceLogView: View {
     @Binding var isPresented: Bool
     @StateObject private var audioRecorder = AudioRecorder()
-    @State private var recognizedText: String = ""
     @State private var allowDismissal = false
+    @EnvironmentObject var foodManager: FoodManager
     
     // Simplified body for cleaner look
     var body: some View {
@@ -127,38 +127,34 @@ struct VoiceLogView: View {
                     
                     // Recording visualization
                     VStack(spacing: 24) {
-                        // Status text - updated to indicate automatic recording
-                        Text(audioRecorder.isRecording ? "Recording..." : "Ready to record")
-                            .font(.headline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
-                            .padding(.bottom, 16)
+                        // Status text with processing state
+                        if audioRecorder.isProcessing {
+                            Text("Processing...")
+                                .font(.headline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                                .padding(.bottom, 8)
+                        } else if !audioRecorder.transcribedText.isEmpty {
+                            Text("Transcription:")
+                                .font(.headline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                                .padding(.bottom, 4)
+                            
+                            Text(audioRecorder.transcribedText)
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                                .padding(.bottom, 8)
+                        } else {
+                            Text(audioRecorder.isRecording ? "Recording..." : "Ready to record")
+                                .font(.headline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                                .padding(.bottom, 16)
+                        }
                         
                         // Centered Waveform visualization with fixed width
-                        WaveformView(samples: audioRecorder.samples, isRecording: audioRecorder.isRecording)
+                        WaveformView(samples: audioRecorder.audioSamples, isRecording: audioRecorder.isRecording)
                             .frame(width: geometry.size.width * 0.7, height: 100)
                             .padding(.horizontal)
-                        
-                        // Timer display 
-                        Text(formatDuration(seconds: 0))
-                            .font(.system(.title, design: .monospaced))
-                            .foregroundColor(Color(UIColor.label))
-                            .padding(.top, 16)
-                        
-                        // Transcribed text display
-                        if !recognizedText.isEmpty {
-                            Text(recognizedText)
-                                .font(.body)
-                                .foregroundColor(Color(UIColor.label))
-                                .padding()
-                                .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(10)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 24)
-                                .transition(.opacity)
-                                .animation(.easeInOut, value: recognizedText)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: geometry.size.width * 0.9)
-                        }
                     }
                     .frame(width: geometry.size.width, height: geometry.size.height * 0.6)
                     
@@ -184,22 +180,26 @@ struct VoiceLogView: View {
                         
                         Spacer()
                         
-                        // Checkmark button (right)
+                        // Checkmark button (right) - only enabled when food data is available
                         Button(action: {
                             print("tapped checkmark")
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
-                                simulateTranscription()
+                            } else if let food = audioRecorder.foodData {
+                                // Process the food data and pass it to the food manager
+                                processFoodAndSubmit(food: food)
+                            } else {
+                                isPresented = false
                             }
-                            isPresented = false
                         }) {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 22))
-                                .foregroundColor(Color.green)
+                                .foregroundColor(audioRecorder.foodData != nil ? Color.green : Color.gray)
                                 .frame(width: 44, height: 44)
                                 .background(Color(UIColor.secondarySystemFill))
                                 .clipShape(Circle())
                         }
+                        .disabled(audioRecorder.foodData == nil && audioRecorder.isProcessing)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 40)
@@ -211,6 +211,15 @@ struct VoiceLogView: View {
             
             // Setup without showing a loading screen
             DispatchQueue.main.async {
+                // Inject the FoodManager
+                audioRecorder.foodManager = foodManager
+                
+                // Set up the callback for when food data is ready
+                audioRecorder.foodDataReady = { food in
+                    // Process the food data and pass it to the food manager
+                    self.processFoodAndSubmit(food: food)
+                }
+                
                 // Pre-activate audio session
                 if AudioSessionManager.shared.activateSession() {
                     print("Audio session pre-activated")
@@ -227,19 +236,15 @@ struct VoiceLogView: View {
         .onDisappear {
             print("VoiceLogView disappeared")
             if audioRecorder.isRecording {
-                audioRecorder.stopRecording()
+                _ = audioRecorder.stopRecording()
             }
+            
+            // Clean up callback
+            audioRecorder.foodDataReady = nil
             
             // Clean up audio session
             AudioSessionManager.shared.deactivateSession()
         }
-    }
-    
-    // Helper to format duration as mm:ss
-    private func formatDuration(seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
     }
     
     private func checkMicrophonePermission() {
@@ -279,14 +284,15 @@ struct VoiceLogView: View {
         print("Permission denied - would show alert")
     }
     
-    private func simulateTranscription() {
-        print("Simulating transcription...")
-        // In a real app, you would send the audio file to a speech recognition service
-        // For this example, we'll simulate a response after a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            recognizedText = "I had a chicken salad with grilled vegetables for lunch today."
-            print("Transcription complete")
-        }
+    private func processFoodAndSubmit(food: Food) {
+        // Handle the processed food data
+        print("✅ Processing food: \(food.displayName)")
+        
+        // Close the voice log view
+        isPresented = false
+        
+        // The food has already been processed and logged by generateMacrosWithAI
+        // No need to call another method here
     }
 }
 
@@ -331,120 +337,181 @@ struct WaveBar: View {
 }
 
 // AudioRecorder class to handle voice recording and amplitude tracking
-class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
+class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
-    @Published var samples: [Float] = Array(repeating: 0.01, count: 60) // Keep 60 samples for waveform
+    @Published var audioLevel: CGFloat = 0
+    @Published var audioSamples: [Float] = Array(repeating: 0.0, count: 60) // Store an array of samples
+    @Published var transcribedText: String = ""
+    @Published var isProcessing: Bool = false
+    @Published var foodData: Food?
+    
+    // Callback for when food data is ready
+    var foodDataReady: ((Food) -> Void)?
+    
+    // The FoodManager instance passed from VoiceLogView
+    var foodManager: FoodManager? 
     
     private var audioRecorder: AVAudioRecorder?
     private var timer: Timer?
-    
-    override init() {
-        super.init()
-        print("AudioRecorder initialized")
-    }
-    
-    deinit {
-        print("AudioRecorder deinit called")
-        stopRecording()
-    }
+    private var audioFileURL: URL?
+    private let networkManager = NetworkManagerTwo.shared
     
     func startRecording() {
-        print("Starting recording...")
-        
-        // Stop any existing recording session
-        if isRecording {
-            stopRecording()
-        }
-        
+        // Set up audio session
         do {
-            // Use the shared audio session manager instead of configuring directly
-            if !AudioSessionManager.shared.isActive {
-                if !AudioSessionManager.shared.activateSession() {
-                    print("Failed to activate audio session")
-                    return
-                }
-            }
+            try AudioSessionManager.shared.activateSession()
+            print("AudioSessionManager: audio session activated successfully")
             
-            // Create URL for the recording
-            let documentPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let audioFilename = documentPath.appendingPathComponent("recording.m4a")
-            
-            // Remove existing file if it exists
-            if FileManager.default.fileExists(atPath: audioFilename.path) {
-                try FileManager.default.removeItem(at: audioFilename)
-                print("Removed existing audio file")
-            }
-            
-            // Configure recording settings
-            let settings = [
+            // Define recording settings
+            let settings: [String: Any] = [
                 AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 44100,
+                AVSampleRateKey: 44100.0,
                 AVNumberOfChannelsKey: 1,
                 AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
             ]
             
-            // Create and start recorder
-            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
+            // Create a unique URL for the audio file
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let timestamp = Date().timeIntervalSince1970
+            audioFileURL = documentsDirectory.appendingPathComponent("voiceLog_\(timestamp).m4a")
+            
+            guard let audioFileURL = audioFileURL else {
+                print("Error: Could not create audio file URL")
+                return
+            }
+            
+            print("Recording audio to \(audioFileURL.path)")
+            
+            // Create and start the audio recorder
+            audioRecorder = try AVAudioRecorder(url: audioFileURL, settings: settings)
             audioRecorder?.delegate = self
             audioRecorder?.isMeteringEnabled = true
+            audioRecorder?.prepareToRecord()
+            audioRecorder?.record()
             
-            if audioRecorder?.record() == true {
-                isRecording = true
-                print("Recording started successfully")
-                startMonitoring()
-            } else {
-                print("Failed to start recording")
-            }
+            // Start monitoring audio levels
+            startMonitoringAudio()
         } catch {
-            print("Recording setup error: \(error.localizedDescription)")
+            print("Error setting up audio session: \(error.localizedDescription)")
         }
     }
     
     func stopRecording() {
-        print("Stopping recording...")
+        guard let recorder = audioRecorder, recorder.isRecording else { return }
         
-        if let recorder = audioRecorder {
-            recorder.stop()
-            print("Recording stopped")
-        }
-        
+        recorder.stop()
         timer?.invalidate()
         timer = nil
+        audioRecorder = nil
         
-        // Don't deactivate the audio session here - let the manager handle it
+        print("Audio recording stopped")
         
-        isRecording = false
+        // Process the recorded audio
+        processRecordedAudio()
     }
     
-    private func startMonitoring() {
-        print("Starting audio level monitoring")
-        
-        timer?.invalidate()
-        // Update slower for a more gradual waveform movement
-        timer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-            self?.updateSamples()
+    private func startMonitoringAudio() {
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self, let recorder = self.audioRecorder else { return }
+            
+            recorder.updateMeters()
+            let averagePower = recorder.averagePower(forChannel: 0)
+            let normalizedValue = self.normalizeAudioLevel(averagePower)
+            
+            DispatchQueue.main.async {
+                self.audioLevel = normalizedValue
+                
+                // Update the audioSamples array for the waveform visualization
+                self.audioSamples.removeFirst()
+                self.audioSamples.append(Float(normalizedValue))
+                
+                // Set isRecording flag to true if it's not already
+                if !self.isRecording {
+                    self.isRecording = true
+                }
+            }
         }
     }
     
-    private func updateSamples() {
-        guard let recorder = audioRecorder, isRecording else {
+    private func normalizeAudioLevel(_ power: Float) -> CGFloat {
+        // Convert from dB to a 0-1 scale (dB is typically negative)
+        let minDb: Float = -60.0
+        if power < minDb {
+            return 0.05 // Minimum level for visual feedback
+        }
+        
+        // Normalize between 0 and 1 with a more expressive curve
+        let normalizedValue = CGFloat((power - minDb) / abs(minDb))
+        return min(max(normalizedValue * 1.2, 0.05), 1.0) // Scale up slightly, with limits
+    }
+    
+    private func processRecordedAudio() {
+        guard let audioFileURL = audioFileURL else {
+            print("Error: No audio file to process")
             return
         }
         
-        recorder.updateMeters()
+        DispatchQueue.main.async {
+            self.isProcessing = true
+        }
         
-        // Get the current audio level (in decibels)
-        let currentLevel = recorder.averagePower(forChannel: 0)
-        
-        // Convert decibels to a linear scale (between 0.0 and 1.0)
-        // Audio levels are typically between -160 and 0 dB
-        // We'll normalize to a 0-1 scale for visualization
-        let normalizedLevel = Float(max(0.05, min(1, (currentLevel + 60) / 60)))
-        
-        // Add the new sample and maintain only the most recent samples
-        samples.append(normalizedLevel)
-        if samples.count > 60 { // Keep 60 samples for waveform
-            samples.removeFirst()
+        do {
+            // Read the audio file data
+            let audioData = try Data(contentsOf: audioFileURL)
+            
+            // Step 1: Transcribe the audio
+            networkManager.transcribeAudioForFoodLogging(from: audioData) { [weak self] result in
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let text):
+                    DispatchQueue.main.async {
+                        self.transcribedText = text
+                        print("✅ Audio transcription successful: \(text)")
+                        
+                        // Step 2: Generate AI macros from the transcribed text
+                        self.foodManager?.generateMacrosWithAI(foodDescription: text, mealType: "Lunch") { result in
+                            DispatchQueue.main.async {
+                                self.isProcessing = false
+                                
+                                switch result {
+                                case .success(let loggedFood):
+                                    // Successfully logged the food
+                                    self.foodData = loggedFood.food.asFood
+                                    print("✅ Food logged successfully: \(loggedFood.food.displayName)")
+                                case .failure(let error):
+                                    print("❌ Failed to generate food macros: \(error.localizedDescription)")
+                                }
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    DispatchQueue.main.async {
+                        self.isProcessing = false
+                        print("❌ Audio transcription failed: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } catch {
+            DispatchQueue.main.async {
+                self.isProcessing = false
+                print("Error reading audio file: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - AVAudioRecorderDelegate
+extension AudioRecorder: AVAudioRecorderDelegate {
+    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+        if !flag {
+            print("Recording failed")
+        }
+    }
+    
+    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
+        if let error = error {
+            print("Recording error: \(error.localizedDescription)")
         }
     }
 }
