@@ -114,116 +114,120 @@ struct VoiceLogView: View {
     @State private var recognizedText: String = ""
     @State private var allowDismissal = false
     
-    // Configuration for the orb
-    private let numberOfDots = 2200 // More dots for better sphere definition
-    private let orbRadius: CGFloat = 150 // Radius of the sphere
-    @State private var dots: [OrbDot] = []
-    @State private var audioLevel: CGFloat = 0
-    @State private var targetAudioLevel: CGFloat = 0
-    @State private var animationPhase: CGFloat = 0
+    // Colors
+    private let waveColor = Color.blue
+    private let backgroundColor = Color.white
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 // Clean white background
-                Color.white.edgesIgnoringSafeArea(.all)
+                backgroundColor.edgesIgnoringSafeArea(.all)
                 
                 VStack {
                     Spacer()
                     
-                    // Central orb visualization
-                    ZStack {
-                        // Create the cloud of dots - render interior dots first, then border dots
-                        ForEach(dots.filter { !$0.isBorder }) { dot in
-                            Circle()
-                                .fill(Color.black.opacity(dot.opacity))
-                                .frame(width: dot.size, height: dot.size)
-                                .position(
-                                    x: geometry.size.width / 2 + dot.x,
-                                    y: geometry.size.height / 2.5 + dot.y
-                                )
-                        }
+                    // Recording visualization
+                    VStack(spacing: 24) {
+                        // Status text
+                        Text(audioRecorder.isRecording ? "Recording..." : "Tap to Record")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 16)
                         
-                        // Draw border dots on top
-                        ForEach(dots.filter { $0.isBorder }) { dot in
-                            Circle()
-                                .fill(Color.black.opacity(dot.opacity))
-                                .frame(width: dot.size, height: dot.size)
-                                .position(
-                                    x: geometry.size.width / 2 + dot.x,
-                                    y: geometry.size.height / 2.5 + dot.y
-                                )
-                        }
+                        // Centered Waveform visualization with fixed width
+                        WaveformView(samples: audioRecorder.samples, isRecording: audioRecorder.isRecording)
+                            .frame(width: geometry.size.width * 0.7, height: 100)
+                            .padding(.horizontal)
                         
-                        // Text overlay for recognized speech
+                        // Timer display 
+                        Text(formatDuration(seconds: 0))
+                            .font(.system(.title, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .padding(.top, 16)
+                        
+                        // Transcribed text display
                         if !recognizedText.isEmpty {
-                            VStack {
-                                Spacer(minLength: 280)
-                                Text(recognizedText)
-                                    .font(.body)
-                                    .foregroundColor(.black)
-                                    .padding()
-                                    .background(Color.white.opacity(0.9))
-                                    .cornerRadius(10)
-                                    .padding(.horizontal, 20)
-                                    .transition(.opacity)
-                                    .animation(.easeInOut, value: recognizedText)
-                                    .multilineTextAlignment(.center)
-                                    .frame(maxWidth: geometry.size.width * 0.8)
-                            }
+                            Text(recognizedText)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(10)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 24)
+                                .transition(.opacity)
+                                .animation(.easeInOut, value: recognizedText)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: geometry.size.width * 0.9)
                         }
                     }
-                    .frame(width: geometry.size.width, height: geometry.size.height * 0.7)
+                    .frame(width: geometry.size.width, height: geometry.size.height * 0.6)
                     
                     Spacer()
                     
-                    // Bottom controls
+                    // Bottom controls - simplified to X and checkmark
                     HStack {
-                        // Close button
+                        // X button (left)
                         Button(action: {
-                            print("Close button tapped")
+                            print("X button tapped")
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
-                                // Simulate transcription on stop
-                                simulateTranscription()
                             }
-                            
-                            if allowDismissal {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                    isPresented = false
-                                }
-                            }
+                            isPresented = false
                         }) {
-                            Circle()
-                                .fill(Color(.systemGray5))
-                                .frame(width: 60, height: 60)
-                                .overlay(
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.gray)
-                                )
+                            Image(systemName: "xmark")
+                                .font(.system(size: 22))
+                                .foregroundColor(.gray)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
                         }
                         
                         Spacer()
                         
-                        // Mic toggle button
+                        // Record button (center) - only if needed
+                        if recognizedText.isEmpty {
+                            Button(action: {
+                                if audioRecorder.isRecording {
+                                    audioRecorder.stopRecording()
+                                    simulateTranscription()
+                                } else {
+                                    recognizedText = ""
+                                    audioRecorder.startRecording()
+                                }
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(audioRecorder.isRecording ? .red : .red.opacity(0.9))
+                                        .frame(width: 70, height: 70)
+                                    
+                                    if audioRecorder.isRecording {
+                                        // Square stop button
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(Color.white)
+                                            .frame(width: 20, height: 20)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Checkmark button (right)
                         Button(action: {
+                            print("tapped checkmark")
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
-                                simulateTranscription()
-                            } else {
-                                recognizedText = ""
-                                audioRecorder.startRecording()
                             }
+                            isPresented = false
                         }) {
-                            Circle()
-                                .fill(Color(.systemGray5))
-                                .frame(width: 60, height: 60)
-                                .overlay(
-                                    Image(systemName: audioRecorder.isRecording ? "mic.fill" : "mic")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(audioRecorder.isRecording ? .blue : .gray)
-                                )
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 22))
+                                .foregroundColor(.green)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
                         }
                     }
                     .padding(.horizontal, 24)
@@ -233,9 +237,6 @@ struct VoiceLogView: View {
         }
         .onAppear {
             print("VoiceLogView appeared")
-            
-            // Generate the initial dots for the orb
-            generateOrbDots()
             
             // Setup without showing a loading screen
             DispatchQueue.main.async {
@@ -251,9 +252,6 @@ struct VoiceLogView: View {
                     print("Dismissal now allowed")
                 }
             }
-            
-            // Start the animation timer
-            startOrbAnimation()
         }
         .onDisappear {
             print("VoiceLogView disappeared")
@@ -266,46 +264,11 @@ struct VoiceLogView: View {
         }
     }
     
-    // Generate initial set of dots for the orb
-    private func generateOrbDots() {
-        dots = (0..<numberOfDots).map { _ in OrbDot.random(radius: orbRadius) }
-    }
-    
-    // Start the animation for the orb
-    private func startOrbAnimation() {
-        // Use a standard framerate timer for stability
-        Timer.scheduledTimer(withTimeInterval: 1.0/60.0, repeats: true) { _ in
-            // Update animation phase at a steady rate
-            self.animationPhase += 0.02
-            
-            // Smoothly update audio level with minimal interpolation
-            let difference = self.targetAudioLevel - self.audioLevel
-            self.audioLevel += difference * 0.1
-            
-            // Update audio level periodically
-            if Int(self.animationPhase * 10) % 6 == 0 {
-                let avgLevel = self.audioRecorder.samples.reduce(0, +) / Float(self.audioRecorder.samples.count)
-                self.targetAudioLevel = min(0.7, CGFloat(avgLevel) * 2.0)
-            }
-            
-            // Simple rotation matrix for counter-clockwise movement
-            let rotationAngle = self.animationPhase
-            let cosAngle = cos(rotationAngle)
-            let sinAngle = sin(rotationAngle)
-            
-            // Update all dots at once with the same transformation
-            for i in 0..<self.dots.count {
-                let dot = self.dots[i]
-                
-                // Pure rotation only - no scaling that could cause jitter
-                let rotatedX = dot.baseX * cosAngle - dot.baseY * sinAngle
-                let rotatedY = dot.baseX * sinAngle + dot.baseY * cosAngle
-                
-                // Apply the rotation directly with no additional effects
-                self.dots[i].x = rotatedX
-                self.dots[i].y = rotatedY
-            }
-        }
+    // Helper to format duration as mm:ss
+    private func formatDuration(seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
     }
     
     private func checkMicrophonePermission() {
@@ -356,10 +319,50 @@ struct VoiceLogView: View {
     }
 }
 
+// Waveform visualization component
+struct WaveformView: View {
+    let samples: [Float]
+    let isRecording: Bool
+    
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 2) {
+                ForEach(0..<min(samples.count, 60), id: \.self) { index in
+                    WaveBar(
+                        value: CGFloat(samples[samples.count - 1 - index]),
+                        isRecording: isRecording,
+                        index: index
+                    )
+                }
+            }
+            .frame(width: geometry.size.width)
+        }
+    }
+}
+
+// Individual bar in the waveform
+struct WaveBar: View {
+    let value: CGFloat
+    let isRecording: Bool
+    let index: Int
+    
+    var body: some View {
+        let height = 5 + value * 95 // Scale to reasonable height
+        
+        Rectangle()
+            .fill(Color.blue.opacity(isRecording ? 1.0 : 0.6))
+            .frame(height: height)
+            // Use more recent samples at full opacity, fade older ones
+            .opacity(isRecording ? 1.0 - Double(index) / 60.0 * 0.5 : 1.0)
+            // Round the edges a bit
+            .cornerRadius(2)
+    }
+}
+
 // AudioRecorder class to handle voice recording and amplitude tracking
 class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isRecording = false
-    @Published var samples: [Float] = Array(repeating: 0, count: 30)
+    @Published var samples: [Float] = Array(repeating: 0.01, count: 60) // Keep 60 samples for waveform
     
     private var audioRecorder: AVAudioRecorder?
     private var timer: Timer?
@@ -440,14 +443,14 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         // Don't deactivate the audio session here - let the manager handle it
         
         isRecording = false
-        samples = Array(repeating: 0, count: 30)
     }
     
     private func startMonitoring() {
         print("Starting audio level monitoring")
         
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        // Update slower for a more gradual waveform movement
+        timer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
             self?.updateSamples()
         }
     }
@@ -465,34 +468,13 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         // Convert decibels to a linear scale (between 0.0 and 1.0)
         // Audio levels are typically between -160 and 0 dB
         // We'll normalize to a 0-1 scale for visualization
-        let normalizedLevel = Float(max(0, min(1, (currentLevel + 60) / 60)))
+        let normalizedLevel = Float(max(0.05, min(1, (currentLevel + 60) / 60)))
         
-        // Add the new sample and maintain only the most recent 30 samples
+        // Add the new sample and maintain only the most recent samples
         samples.append(normalizedLevel)
-        if samples.count > 30 {
+        if samples.count > 60 { // Keep 60 samples for waveform
             samples.removeFirst()
         }
-    }
-    
-    func getSample(at index: Int) -> Float {
-        guard index < samples.count else {
-            return 0
-        }
-        return samples[index]
-    }
-    
-    // MARK: - AVAudioRecorderDelegate
-    
-    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-        print("Recording finished, success: \(flag)")
-        isRecording = false
-    }
-    
-    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
-        if let error = error {
-            print("Recording error: \(error.localizedDescription)")
-        }
-        isRecording = false
     }
 }
 
