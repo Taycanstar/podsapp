@@ -1801,8 +1801,9 @@ func updateRecipe(
 
 // Update the generateMacrosWithAI method
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
-    // Set analyzing flag
+    // Set analyzing flag AND isLoading flag to show card in DashboardView
     isAnalyzingFood = true
+    isLoading = true  // THIS was missing - needed to show the loading card!
     analysisStage = 0
     showAIGenerationSuccess = false
     
@@ -1862,6 +1863,7 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.isAnalyzingFood = false
+                self.isLoading = false  // Clear the loading flag
                 self.analysisStage = 0
                 
                 // Show success toast
@@ -1887,6 +1889,7 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         case .failure(let error):
             // Reset analysis state
             self.isAnalyzingFood = false
+            self.isLoading = false  // Clear the loading flag
             self.analysisStage = 0
             
             // Handle error and pass it along
@@ -2568,10 +2571,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
     func processVoiceRecording(audioData: Data) {
-        // Set analyzing flag immediately to show loading UI
-        isAnalyzingFood = true
+        // Set EXACTLY the same flags as generateMacrosWithAI for proper UI display
+        isAnalyzingFood = true  // This is the critical flag used by FoodAnalysisCard
+        isLoading = true  // This is what makes the loading card visible in DashboardView
         analysisStage = 0
         showAIGenerationSuccess = false
+        
+        // Do NOT set isScanningFood - that's for image scanning only!
+        // isScanningFood = true  <- REMOVE this, it's for a different card
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -2603,10 +2610,63 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     switch result {
                     case .success(let loggedFood):
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
-                        // Success is handled by generateMacrosWithAI (UI updates, etc.)
+                        
+                        // Add to the beginning of the list
+                        let combinedLog = CombinedLog(
+                            type: .food,
+                            status: loggedFood.status,
+                            calories: loggedFood.calories,
+                            message: loggedFood.message,
+                            foodLogId: loggedFood.foodLogId,
+                            food: loggedFood.food,
+                            mealType: loggedFood.mealType,
+                            mealLogId: nil,
+                            meal: nil,
+                            mealTime: nil,
+                            scheduledAt: nil,
+                            recipeLogId: nil,
+                            recipe: nil,
+                            servingsConsumed: nil
+                        )
+                        
+                        if self.combinedLogs.isEmpty {
+                            self.combinedLogs = [combinedLog]
+                        } else {
+                            self.combinedLogs.insert(combinedLog, at: 0)
+                        }
+                        
+                        // Track the recently added food
+                        self.lastLoggedFoodId = loggedFood.food.fdcId
+                        self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
+                        
+                        // Save the generated food for the toast
+                        self.aiGeneratedFood = loggedFood.food
+                        
+                        // Reset analysis state and show success toast in dashboard
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.isAnalyzingFood = false
+                            self.analysisStage = 0
+                            
+                            // Show success toast
+                            self.showAIGenerationSuccess = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                self.showAIGenerationSuccess = false
+                            }
+                        }
+                        
+                        // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            withAnimation {
+                                // Only clear if it still matches the food we logged
+                                if self.lastLoggedFoodId == loggedFood.food.fdcId {
+                                    self.lastLoggedFoodId = nil
+                                }
+                            }
+                        }
                         
                     case .failure(let error):
                         // Reset analysis state
+                        self.isScanningFood = false
                         self.isAnalyzingFood = false
                         self.analysisStage = 0
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
