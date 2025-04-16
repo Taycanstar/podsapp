@@ -2564,4 +2564,62 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             completion(result)
         }
     }
+
+    // Add a new method to process voice recordings directly in FoodManager
+    // This ensures the processing continues even if the view disappears
+    func processVoiceRecording(audioData: Data) {
+        // Set analyzing flag immediately to show loading UI
+        isAnalyzingFood = true
+        analysisStage = 0
+        showAIGenerationSuccess = false
+        
+        // Create a timer to cycle through analysis stages for UI feedback
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+            guard let self = self else { 
+                timer.invalidate()
+                return 
+            }
+            
+            // Cycle through stages 0-3
+            self.analysisStage = (self.analysisStage + 1) % 4
+        }
+        
+        // First step: Transcribe the audio
+        NetworkManagerTwo.shared.transcribeAudioForFoodLogging(from: audioData) { [weak self] result in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            switch result {
+            case .success(let text):
+                print("✅ Voice transcription successful: \(text)")
+                
+                // Second step: Generate AI macros from the transcribed text
+                self.generateMacrosWithAI(foodDescription: text, mealType: "Lunch") { result in
+                    // Stop the analysis animation timer no matter what
+                    timer.invalidate()
+                    
+                    switch result {
+                    case .success(let loggedFood):
+                        print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
+                        // Success is handled by generateMacrosWithAI (UI updates, etc.)
+                        
+                    case .failure(let error):
+                        // Reset analysis state
+                        self.isAnalyzingFood = false
+                        self.analysisStage = 0
+                        print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
+                    }
+                }
+                
+            case .failure(let error):
+                // Stop the timer and reset loading state
+                timer.invalidate()
+                self.isAnalyzingFood = false
+                self.analysisStage = 0
+                print("❌ Voice transcription failed: \(error.localizedDescription)")
+            }
+        }
+    }
 }

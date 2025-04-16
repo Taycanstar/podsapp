@@ -182,13 +182,17 @@ struct VoiceLogView: View {
                         
                         // Checkmark button (right) - only enabled when food data is available
                         Button(action: {
-                            print("tapped checkmark")
+                            print("Checkmark button tapped")
                             if audioRecorder.isRecording {
+                                // Stop recording and process in FoodManager (this will show loading UI)
                                 audioRecorder.stopRecording()
+                                // Close immediately after stopping - FoodManager will continue processing
+                                isPresented = false
                             } else if let food = audioRecorder.foodData {
-                                // Process the food data and pass it to the food manager
+                                // We already have transcribed and processed food
                                 processFoodAndSubmit(food: food)
                             } else {
+                                // Just close if there's nothing to process
                                 isPresented = false
                             }
                         }) {
@@ -399,15 +403,40 @@ class AudioRecorder: NSObject, ObservableObject {
     func stopRecording() {
         guard let recorder = audioRecorder, recorder.isRecording else { return }
         
+        // Mark that we're no longer recording
+        isRecording = false
+        
+        // Stop the recorder
         recorder.stop()
         timer?.invalidate()
         timer = nil
-        audioRecorder = nil
         
         print("Audio recording stopped")
         
-        // Process the recorded audio
-        processRecordedAudio()
+        // Check if we have a valid audio file
+        guard let audioFileURL = audioFileURL else {
+            print("Error: No audio file to process")
+            return
+        }
+        
+        do {
+            // Read audio data
+            let audioData = try Data(contentsOf: audioFileURL)
+            
+            // Pass the audio data to FoodManager to process instead of handling it ourselves
+            // This ensures processing continues even after VoiceLogView is dismissed
+            if let foodManager = foodManager {
+                print("🎤 Passing audio data to FoodManager for processing")
+                foodManager.processVoiceRecording(audioData: audioData)
+            } else {
+                print("⚠️ No FoodManager available to process audio")
+            }
+        } catch {
+            print("Error reading audio file: \(error.localizedDescription)")
+        }
+        
+        // Clear references
+        audioRecorder = nil
     }
     
     private func startMonitoringAudio() {
@@ -443,61 +472,6 @@ class AudioRecorder: NSObject, ObservableObject {
         // Normalize between 0 and 1 with a more expressive curve
         let normalizedValue = CGFloat((power - minDb) / abs(minDb))
         return min(max(normalizedValue * 1.2, 0.05), 1.0) // Scale up slightly, with limits
-    }
-    
-    private func processRecordedAudio() {
-        guard let audioFileURL = audioFileURL else {
-            print("Error: No audio file to process")
-            return
-        }
-        
-        DispatchQueue.main.async {
-            self.isProcessing = true
-        }
-        
-        do {
-            // Read the audio file data
-            let audioData = try Data(contentsOf: audioFileURL)
-            
-            // Step 1: Transcribe the audio
-            networkManager.transcribeAudioForFoodLogging(from: audioData) { [weak self] result in
-                guard let self = self else { return }
-                
-                switch result {
-                case .success(let text):
-                    DispatchQueue.main.async {
-                        self.transcribedText = text
-                        print("✅ Audio transcription successful: \(text)")
-                        
-                        // Step 2: Generate AI macros from the transcribed text
-                        self.foodManager?.generateMacrosWithAI(foodDescription: text, mealType: "Lunch") { result in
-                            DispatchQueue.main.async {
-                                self.isProcessing = false
-                                
-                                switch result {
-                                case .success(let loggedFood):
-                                    // Successfully logged the food
-                                    self.foodData = loggedFood.food.asFood
-                                    print("✅ Food logged successfully: \(loggedFood.food.displayName)")
-                                case .failure(let error):
-                                    print("❌ Failed to generate food macros: \(error.localizedDescription)")
-                                }
-                            }
-                        }
-                    }
-                case .failure(let error):
-                    DispatchQueue.main.async {
-                        self.isProcessing = false
-                        print("❌ Audio transcription failed: \(error.localizedDescription)")
-                    }
-                }
-            }
-        } catch {
-            DispatchQueue.main.async {
-                self.isProcessing = false
-                print("Error reading audio file: \(error.localizedDescription)")
-            }
-        }
     }
 }
 
