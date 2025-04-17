@@ -19,7 +19,10 @@ struct LogFood: View {
     @FocusState private var isSearchFieldFocused: Bool
     @State private var activateSearch = false
     
-
+    // Keyboard height tracking
+    @State private var keyboardHeight: CGFloat = 0
+    @State private var safeAreaInset: CGFloat = 0
+    
     var mode: LogFoodMode = .logFood 
     @Binding var selectedFoods: [Food]  
     
@@ -119,6 +122,27 @@ struct LogFood: View {
                     isSearchFieldFocused = true
                     activateSearch = true
                 }
+                
+                // Set up keyboard observers
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    safeAreaInset = window.safeAreaInsets.bottom
+                }
+                
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                    if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                        self.keyboardHeight = keyboardFrame.height - safeAreaInset
+                    }
+                }
+                
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                    self.keyboardHeight = 0
+                }
+            }
+            .onDisappear {
+                // Remove keyboard observers
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -206,18 +230,53 @@ struct LogFood: View {
     }
     
     private var toastMessages: some View {
-        Group {
+        ZStack {
+            // AI Generation Success Toast
             if foodManager.showToast {
-                BottomPopup(message: "Food logged")
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Food logged")
+                        .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
+                }
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showToast)
             }
+            
+            // Meal Created Toast
             if foodManager.showMealToast {
-                BottomPopup(message: "Meal created")
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Meal created")
+                        .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
+                }
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showMealToast)
             }
+            
+            // Meal Logged Toast
             if foodManager.showMealLoggedToast {
-                BottomPopup(message: "Meal logged")
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Meal logged")
+                        .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
+                }
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showMealLoggedToast)
             }
+            
+            // Recipe Logged Toast
             if foodManager.showRecipeLoggedToast {
-                BottomPopup(message: "Recipe logged")
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Recipe logged")
+                        .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
+                }
+                .zIndex(100)
+                .transition(.opacity)
+                .animation(.spring(), value: foodManager.showRecipeLoggedToast)
             }
         }
     }
@@ -438,6 +497,9 @@ private struct FoodListView: View {
                 Button(action: {
                     print("Generating food with AI: \(searchText)")
                     HapticFeedback.generateLigth()
+                    
+                    // Dismiss keyboard
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     
                     // Set loading state
                     isGeneratingFood = true
@@ -931,6 +993,9 @@ private struct MealListView: View {
                 Button(action: {
                     print("generating meal with ai...")
                     HapticFeedback.generateLigth()
+                    
+                    // Dismiss keyboard
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     
                     // Set loading state in FoodManager
                     foodManager.isGeneratingMeal = true
