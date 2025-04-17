@@ -166,13 +166,13 @@ struct VoiceLogView: View {
                         Button(action: {
                             print("X button tapped")
                             if audioRecorder.isRecording {
-                                audioRecorder.stopRecording()
+                                audioRecorder.stopRecording(cancel: true)
                             }
                             isPresented = false
                         }) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 22))
-                                .foregroundColor(Color(UIColor.systemGray))
+                                .foregroundColor(.primary)
                                 .frame(width: 44, height: 44)
                                 .background(Color(UIColor.secondarySystemFill))
                                 .clipShape(Circle())
@@ -185,11 +185,10 @@ struct VoiceLogView: View {
                             print("Checkmark button tapped")
                             if audioRecorder.isRecording {
                                 // Stop recording and process in FoodManager (this will show loading UI)
-                                audioRecorder.stopRecording()
+                                audioRecorder.stopRecording(cancel: false)
                                 // Close immediately after stopping - FoodManager will continue processing
                                 isPresented = false
                             } else if let food = audioRecorder.foodData {
-                                // We already have transcribed and processed food
                                 // The processFoodAndSubmit method is removed to prevent double-processing
                                 // FoodManager.processVoiceRecording already handles the entire workflow
                             } else {
@@ -199,7 +198,7 @@ struct VoiceLogView: View {
                         }) {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 22))
-                                .foregroundColor(audioRecorder.foodData != nil ? Color.green : Color.gray)
+                                .foregroundColor(.primary)
                                 .frame(width: 44, height: 44)
                                 .background(Color(UIColor.secondarySystemFill))
                                 .clipShape(Circle())
@@ -238,7 +237,7 @@ struct VoiceLogView: View {
         .onDisappear {
             print("VoiceLogView disappeared")
             if audioRecorder.isRecording {
-                _ = audioRecorder.stopRecording()
+                _ = audioRecorder.stopRecording(cancel: true)
             }
             
             // Clean up audio session
@@ -381,7 +380,7 @@ class AudioRecorder: NSObject, ObservableObject {
         }
     }
     
-    func stopRecording() {
+    func stopRecording(cancel: Bool = false) {
         guard let recorder = audioRecorder, recorder.isRecording else { return }
         
         // Mark that we're no longer recording
@@ -393,6 +392,13 @@ class AudioRecorder: NSObject, ObservableObject {
         timer = nil
         
         print("Audio recording stopped")
+        
+        // Skip processing if canceling
+        if cancel {
+            print("Recording canceled - not processing audio")
+            audioRecorder = nil
+            return
+        }
         
         // Check if we have a valid audio file
         guard let audioFileURL = audioFileURL else {
