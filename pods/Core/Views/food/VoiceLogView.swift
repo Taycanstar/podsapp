@@ -190,7 +190,8 @@ struct VoiceLogView: View {
                                 isPresented = false
                             } else if let food = audioRecorder.foodData {
                                 // We already have transcribed and processed food
-                                processFoodAndSubmit(food: food)
+                                // The processFoodAndSubmit method is removed to prevent double-processing
+                                // FoodManager.processVoiceRecording already handles the entire workflow
                             } else {
                                 // Just close if there's nothing to process
                                 isPresented = false
@@ -218,11 +219,8 @@ struct VoiceLogView: View {
                 // Inject the FoodManager
                 audioRecorder.foodManager = foodManager
                 
-                // Set up the callback for when food data is ready
-                audioRecorder.foodDataReady = { food in
-                    // Process the food data and pass it to the food manager
-                    self.processFoodAndSubmit(food: food)
-                }
+                // Note: No longer using foodDataReady callback since FoodManager.processVoiceRecording
+                // handles the entire process including logging
                 
                 // Pre-activate audio session
                 if AudioSessionManager.shared.activateSession() {
@@ -242,9 +240,6 @@ struct VoiceLogView: View {
             if audioRecorder.isRecording {
                 _ = audioRecorder.stopRecording()
             }
-            
-            // Clean up callback
-            audioRecorder.foodDataReady = nil
             
             // Clean up audio session
             AudioSessionManager.shared.deactivateSession()
@@ -286,17 +281,6 @@ struct VoiceLogView: View {
     private func showPermissionAlert() {
         // In a real app, you would show an alert here
         print("Permission denied - would show alert")
-    }
-    
-    private func processFoodAndSubmit(food: Food) {
-        // Handle the processed food data
-        print("✅ Processing food: \(food.displayName)")
-        
-        // Close the voice log view
-        isPresented = false
-        
-        // The food has already been processed and logged by generateMacrosWithAI
-        // No need to call another method here
     }
 }
 
@@ -348,9 +332,6 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var transcribedText: String = ""
     @Published var isProcessing: Bool = false
     @Published var foodData: Food?
-    
-    // Callback for when food data is ready
-    var foodDataReady: ((Food) -> Void)?
     
     // The FoodManager instance passed from VoiceLogView
     var foodManager: FoodManager? 

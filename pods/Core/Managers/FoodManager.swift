@@ -2611,6 +2611,23 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     case .success(let loggedFood):
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
                         
+                        // Check if this is an "Unknown food" with no nutritional value
+                        // This happens when the server couldn't identify a food from the transcription
+                        if loggedFood.food.displayName.lowercased().contains("unknown food") || 
+                           (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
+                            loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
+                            
+                            // Handle as error even though server returned success
+                            self.isAnalyzingFood = false
+                            self.isLoading = false
+                            self.analysisStage = 0
+                            
+                            // Set error for user notification
+                            self.scanningFoodError = "Food not identified. Please try again."
+                            print("⚠️ Voice log returned Unknown food with no nutrition data")
+                            return
+                        }
+                        
                         // Add to the beginning of the list
                         let combinedLog = CombinedLog(
                             type: .food,
@@ -2668,7 +2685,16 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         // Reset analysis state
                         self.isScanningFood = false
                         self.isAnalyzingFood = false
+                        self.isLoading = false
                         self.analysisStage = 0
+                        
+                        // Set error message for user notification in DashboardView
+                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                            self.scanningFoodError = message
+                        } else {
+                            self.scanningFoodError = "Failed to process voice input: \(error.localizedDescription)"
+                        }
+                        
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
                     }
                 }
@@ -2677,7 +2703,16 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 // Stop the timer and reset loading state
                 timer.invalidate()
                 self.isAnalyzingFood = false
+                self.isLoading = false
                 self.analysisStage = 0
+                
+                // Set error message for user notification in DashboardView
+                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                    self.scanningFoodError = message
+                } else {
+                    self.scanningFoodError = "Failed to transcribe voice input: \(error.localizedDescription)"
+                }
+                
                 print("❌ Voice transcription failed: \(error.localizedDescription)")
             }
         }
