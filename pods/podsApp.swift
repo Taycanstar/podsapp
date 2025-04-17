@@ -29,7 +29,8 @@ struct podsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // ContentView()
+            GenderView()
                 .environmentObject(onboardingViewModel)
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
