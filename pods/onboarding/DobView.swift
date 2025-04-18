@@ -110,18 +110,20 @@ struct DobView: View {
             
             // Continue button
             VStack {
-                Button(action: {
-                    HapticFeedback.generate()
-                    saveDateOfBirth()
-                    navigateToNextStep = true
-                }) {
-                    Text("Continue")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                NavigationLink(destination: OnboardingGoal(), isActive: $navigateToNextStep) {
+                    Button(action: {
+                        HapticFeedback.generate()
+                        saveDateOfBirth()
+                        navigateToNextStep = true
+                    }) {
+                        Text("Continue")
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 16)

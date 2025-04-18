@@ -111,6 +111,7 @@
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
 		36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDC2DB2BF2000DD4266 /* DobView.swift */; };
 		36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */; };
+		36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -278,6 +279,7 @@
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
 		36A85CDC2DB2BF2000DD4266 /* DobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobView.swift; sourceTree = "<group>"; };
 		36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGoal.swift; sourceTree = "<group>"; };
+		36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesiredWeightView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -532,6 +534,7 @@
 				36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */,
 				36A85CDC2DB2BF2000DD4266 /* DobView.swift */,
 				36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */,
+				36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1067,6 +1070,7 @@
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
+				36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */,
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
