@@ -109,6 +109,8 @@
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
+		36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDC2DB2BF2000DD4266 /* DobView.swift */; };
+		36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -274,6 +276,8 @@
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
+		36A85CDC2DB2BF2000DD4266 /* DobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobView.swift; sourceTree = "<group>"; };
+		36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGoal.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -526,6 +530,8 @@
 				36A85CD62DB182BA00DD4266 /* GenderView.swift */,
 				36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */,
 				36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */,
+				36A85CDC2DB2BF2000DD4266 /* DobView.swift */,
+				36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -981,6 +987,7 @@
 				3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */,
 				369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
+				36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */,
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
@@ -1061,6 +1068,7 @@
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
+				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,

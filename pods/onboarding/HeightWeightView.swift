@@ -10,7 +10,7 @@ import SwiftUI
 struct HeightWeightView: View {
     @Environment(\.dismiss) var dismiss
     @State private var isImperial = true
-    @State private var navigateToNextStep = false
+    @State private var navigateToDob = false
     
     // Imperial measurements
     @State private var selectedFeet = 5
@@ -160,7 +160,7 @@ struct HeightWeightView: View {
                 Button(action: {
                     HapticFeedback.generate()
                     saveHeightAndWeight()
-                    navigateToNextStep = true
+                    navigateToDob = true
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -178,6 +178,14 @@ struct HeightWeightView: View {
         }
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .background(
+            NavigationLink(
+                destination: DobView(),
+                isActive: $navigateToDob
+            ) {
+                EmptyView()
+            }
+        )
     }
     
     private func saveHeightAndWeight() {
