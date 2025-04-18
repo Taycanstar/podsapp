@@ -113,6 +113,7 @@
 		36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */; };
 		36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */; };
 		36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */; };
+		36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -282,6 +283,7 @@
 		36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGoal.swift; sourceTree = "<group>"; };
 		36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesiredWeightView.swift; sourceTree = "<group>"; };
 		36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalInfoView.swift; path = Pods/onboarding/GoalInfoView.swift; sourceTree = SOURCE_ROOT; };
+		36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalTimeView.swift; path = Pods/onboarding/GoalTimeView.swift; sourceTree = SOURCE_ROOT; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -538,6 +540,7 @@
 				36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */,
 				36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */,
 				36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */,
+				36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1084,6 +1087,7 @@
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
+				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
 				364A83CC2DACA02F009D2620 /* NetworkManagerTwo.swift in Sources */,

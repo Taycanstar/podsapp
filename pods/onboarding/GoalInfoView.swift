@@ -72,6 +72,8 @@ struct GoalInfoView: View {
                 
                 ScrollView {
                     VStack(spacing: 64) {
+                        Spacer(minLength: 40)
+                        
                         // Main content
                         VStack(spacing: 30) {
                             // Title with weight goal information
@@ -82,37 +84,32 @@ struct GoalInfoView: View {
                                     
                                     Text("\(Int(weightDifference)) \(weightUnit)")
                                         .font(.system(size: 36, weight: .bold))
-                                        .foregroundColor(Color.orange)
+                                        .foregroundColor(.accentColor)
                                     
                                     Text("is achievable with your plan!")
                                         .font(.system(size: 36, weight: .bold))
                                 } else {
-                                    Text("Maintaining your weight of")
+                                    Text("Maintaining your weight")
                                         .font(.system(size: 36, weight: .bold))
-                                        
-                                    Text("\(Int(targetWeight)) \(weightUnit)")
-                                        .font(.system(size: 36, weight: .bold))
-                                        .foregroundColor(Color.orange)
                                         
                                     Text("is achievable with your plan!")
                                         .font(.system(size: 36, weight: .bold))
                                 }
                             }
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
+                            // .padding(.horizontal)
                             
                             // Motivational text
                             Text("85% of Humuli users report significant changes following their personalized plan and maintaining results long-term.")
-                                .font(.system(size: 18))
+                                .font(.system(size: 15))
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 40)
                         }
-                        .padding(.bottom, 40)
                         
-                        Spacer()
+                        Spacer(minLength: 40)
                     }
-                    .padding(.top, 20)
+                    .frame(minHeight: UIScreen.main.bounds.height - 150)
                 }
                 
                 // Continue button - match other onboarding views
@@ -141,7 +138,7 @@ struct GoalInfoView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: DesiredWeightView(),
+                destination: GoalTimeView(),
                 isActive: $navigateToNextStep,
                 label: { EmptyView() }
             )
