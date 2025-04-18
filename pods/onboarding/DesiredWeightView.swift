@@ -80,7 +80,7 @@ struct DesiredWeightView: View {
             
             // Continue button - match the image
             VStack {
-                Button(action: {
+                     Button(action: {
                     HapticFeedback.generate()
                     saveDesiredWeight()
                     navigateToNextStep = true
@@ -89,9 +89,9 @@ struct DesiredWeightView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color.black) // Black background
+                        .background(Color.accentColor)
                         .foregroundColor(.white)
-                        .cornerRadius(28) // Pill shape
+                        .cornerRadius(12)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 16)
