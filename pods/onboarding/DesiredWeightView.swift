@@ -93,24 +93,26 @@ struct DesiredWeightView: View {
             
             Spacer()
             
-            // Continue button - match the image
+            // Continue button
             VStack {
-                Button(action: {
-                    HapticFeedback.generate()
-                    saveDesiredWeight()
-                    navigateToNextStep = true
-                }) {
-                    Text("Continue")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                NavigationLink(destination: GoalInfoView(), isActive: $navigateToNextStep) {
+                    Button(action: {
+                        HapticFeedback.generate()
+                        saveDesiredWeight()
+                        navigateToNextStep = true
+                    }) {
+                        Text("Continue")
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
             }
+            .padding(.horizontal)
+            .padding(.vertical, 16)
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
