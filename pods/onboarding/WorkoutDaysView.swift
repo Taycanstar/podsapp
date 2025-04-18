@@ -42,7 +42,7 @@ struct WorkoutDaysView: View {
     
     @State private var selectedFrequency: WorkoutFrequency = .medium
     @Environment(\.dismiss) var dismiss
-    @State private var navigateToNextStep = false
+    @State private var navigateToHeightWeight = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -134,7 +134,7 @@ struct WorkoutDaysView: View {
                 Button(action: {
                     HapticFeedback.generate()
                     UserDefaults.standard.set(selectedFrequency.rawValue, forKey: "workoutFrequency")
-                    navigateToNextStep = true
+                    navigateToHeightWeight = true
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -152,6 +152,14 @@ struct WorkoutDaysView: View {
         }
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .background(
+            NavigationLink(
+                destination: HeightWeightView(),
+                isActive: $navigateToHeightWeight
+            ) {
+                EmptyView()
+            }
+        )
     }
 }
 
