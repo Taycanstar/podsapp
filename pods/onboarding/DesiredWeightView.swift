@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct DesiredWeightView: View {
     @Environment(\.dismiss) var dismiss
@@ -67,20 +68,24 @@ struct DesiredWeightView: View {
                 .padding(.bottom, 10)
             
             // Weight display
-            Text("\(String(format: "%.1f", selectedWeight)) lbs")
+            Text(String(format: "%.1f lbs", selectedWeight))
                 .font(.system(size: 44, weight: .bold))
                 .padding(.bottom, 24)
             
             // Weight ruler picker
-            WeightRulerView(selectedWeight: $selectedWeight)
-                .frame(height: 120)
-                .padding(.horizontal)
+            WeightRulerView(
+                selectedWeight: $selectedWeight,
+                range: 100.0...250.0,
+                step: 0.1
+            )
+            .frame(height: 80)
+            .padding(.horizontal)
             
             Spacer()
             
             // Continue button - match the image
             VStack {
-                     Button(action: {
+                Button(action: {
                     HapticFeedback.generate()
                     saveDesiredWeight()
                     navigateToNextStep = true
@@ -109,127 +114,69 @@ struct DesiredWeightView: View {
     }
 }
 
-// Custom ruler for weight selection
+// Custom horizontal ruler with snapping and decimals
 struct WeightRulerView: View {
     @Binding var selectedWeight: Double
-    @State private var startLocation: CGFloat = 0
+    let range: ClosedRange<Double>
+    let step: Double
+    private let tickSpacing: CGFloat = 8
+
+    @State private var baseOffset: CGFloat = 0
     @State private var dragOffset: CGFloat = 0
-    
-    // Weight range and sizing
-    private let minWeight: Double = 100.0
-    private let maxWeight: Double = 250.0
-    private let tickSpacing: CGFloat = 8.0
-    
+
     var body: some View {
         GeometryReader { geometry in
+            let totalSteps = Int((range.upperBound - range.lowerBound) / step)
+            let centerX = geometry.size.width / 2
             ZStack {
-                // Light gray background
+                // Background track
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(UIColor.systemGray6))
-                    .frame(height: 100)
-                
-                // Center indicator line
+                    .frame(height: 60)
+                // Center indicator
                 Rectangle()
-                    .fill(Color.black)
-                    .frame(width: 3, height: 60)
-                    .position(x: geometry.size.width / 2, y: 50)
-                    .zIndex(2)
-                
-                // Ruler with ticks
-                ScrollView(.horizontal, showsIndicators: false) {
-                    ZStack {
-                        // Ticks container
-                        HStack(spacing: 0) {
-                            // Left buffer space
+                    .fill(Color.primary)
+                    .frame(width: 2, height: 60)
+                // Ruler ticks
+                HStack(spacing: tickSpacing) {
+                    ForEach(0...totalSteps, id: \.self) { i in
+                        let weight = range.lowerBound + Double(i) * step
+                        VStack(spacing: 4) {
                             Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: geometry.size.width / 2)
-                            
-                            // All weight ticks
-                            ForEach(Int(minWeight)...Int(maxWeight), id: \.self) { weight in
-                                WeightTick(
-                                    weight: weight,
-                                    isCurrent: abs(Double(weight) - selectedWeight) < 0.5,
-                                    isMajor: weight % 10 == 0
-                                )
+                                .fill(i % Int(1/step) == 0 ? Color.primary : Color.secondary)
+                                .frame(width: i % Int(1/step) == 0 ? 2 : 1,
+                                       height: i % Int(1/step) == 0 ? 40 : 20)
+                            if i % Int(1/step) == 0 {
+                                Text(String(format: "%.0f", weight))
+                                    .font(.caption2)
                             }
-                            
-                            // Right buffer space
-                            Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: geometry.size.width / 2)
                         }
                     }
                 }
-                .content.offset(x: dragOffset)
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 1)
-                        .onChanged { value in
-                            // Update offset for scrolling effect
-                            if abs(value.translation.width) > 0 {
-                                let delta = value.translation.width - startLocation
-                                dragOffset += delta
-                                startLocation = value.translation.width
-                                
-                                // Calculate weight from position
-                                let index = -dragOffset / tickSpacing
-                                let weight = minWeight + index
-                                
-                                // Clamp to valid range
-                                if weight >= minWeight && weight <= maxWeight {
-                                    selectedWeight = Double(Int(weight * 10)) / 10 // Round to 0.1
-                                }
-                                
-                                // Subtle haptic feedback
-                                if Int(selectedWeight * 10) % 10 == 0 {
-                                    let generator = UIImpactFeedbackGenerator(style: .light)
-                                    generator.impactOccurred(intensity: 0.3)
-                                }
-                            }
+                .offset(x: baseOffset + dragOffset + centerX - CGFloat((selectedWeight - range.lowerBound) / step) * tickSpacing)
+                .gesture(
+                    DragGesture()
+                        .onChanged { g in
+                            dragOffset = g.translation.width
+                            let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
+                            let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
+                            selectedWeight = range.lowerBound + Double(round(clamped)) * step
                         }
                         .onEnded { _ in
-                            // Reset start location for next drag
-                            startLocation = 0
-                            
-                            // Snap to nearest value
-                            let targetWeight = round(selectedWeight)
-                            withAnimation(.spring(response: 0.3)) {
-                                selectedWeight = targetWeight
-                                dragOffset = -(targetWeight - minWeight) * tickSpacing
+                            let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                            let newBase = -idx * tickSpacing + centerX
+                            withAnimation(.spring()) {
+                                baseOffset = newBase
+                                dragOffset = 0
                             }
                         }
                 )
                 .onAppear {
-                    // Initialize at the selected weight
-                    dragOffset = -(selectedWeight - minWeight) * tickSpacing
+                    let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                    baseOffset = -idx * tickSpacing + centerX
                 }
             }
         }
-    }
-}
-
-// Individual tick for the weight ruler
-struct WeightTick: View {
-    let weight: Int
-    let isCurrent: Bool
-    let isMajor: Bool
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            // Tick mark
-            Rectangle()
-                .fill(isCurrent ? Color.black : Color.primary.opacity(isMajor ? 0.7 : 0.3))
-                .frame(width: isCurrent ? 2 : 1, height: isMajor ? 40 : 20)
-            
-            // Only show text for major ticks (divisible by 10)
-            if isMajor {
-                Text("\(weight)")
-                    .font(.caption)
-                    .foregroundColor(isCurrent ? .primary : .secondary)
-                    .fontWeight(isCurrent ? .bold : .regular)
-            }
-        }
-        .frame(width: 8)
     }
 }
 
