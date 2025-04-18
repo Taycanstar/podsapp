@@ -10,7 +10,18 @@ import UIKit
 
 struct DesiredWeightView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var selectedWeight: Double = 170.0
+    @State private var selectedWeight: Double = {
+        // Check if user selected imperial or metric
+        let isImperial = UserDefaults.standard.bool(forKey: "isImperial")
+        
+        if isImperial {
+            // Get pounds for imperial
+            return Double(UserDefaults.standard.integer(forKey: "weightPounds"))
+        } else {
+            // Get kilograms for metric
+            return Double(UserDefaults.standard.integer(forKey: "weightKilograms"))
+        }
+    }()
     @State private var navigateToNextStep = false
     
     // Get the selected goal from UserDefaults
@@ -72,14 +83,13 @@ struct DesiredWeightView: View {
                 .font(.system(size: 44, weight: .bold))
                 .padding(.bottom, 24)
             
-            // Weight ruler picker
+            // Weight ruler picker (range: 50.0...500.0)
             WeightRulerView(
                 selectedWeight: $selectedWeight,
-                range: 100.0...250.0,
+                range: 50.0...500.0,
                 step: 0.1
             )
             .frame(height: 80)
-            .padding(.horizontal)
             
             Spacer()
             
@@ -134,7 +144,7 @@ struct WeightRulerView: View {
                     .fill(Color(UIColor.systemBackground))
                     .frame(height: 60)
                 
-                RoundedRectangle(cornerRadius: 8)
+                Rectangle()
                     .fill(Color.secondary)
                     .frame(height: 60)
                     .mask(
