@@ -131,12 +131,23 @@ struct WeightRulerView: View {
             ZStack {
                 // Background track
                 RoundedRectangle(cornerRadius: 8)
-            
+                    .fill(Color(UIColor.systemBackground))
                     .frame(height: 60)
+                
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Color.secondary)
+                        .frame(width: centerX, height: 60)
+                    Spacer()
+                }
+                .frame(height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                
                 // Center indicator
                 Rectangle()
                     .fill(Color.primary)
                     .frame(width: 2, height: 60)
+                
                 // Ruler ticks
                 HStack(spacing: tickSpacing) {
                     ForEach(0...totalSteps, id: \.self) { i in
@@ -162,7 +173,15 @@ struct WeightRulerView: View {
                         dragOffset = g.translation.width
                         let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
                         let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
-                        selectedWeight = range.lowerBound + Double(round(clamped)) * step
+                        let roundedIndex = round(clamped)
+                        selectedWeight = range.lowerBound + Double(roundedIndex) * step
+
+                        // Haptic on major tick (every 1.0 lb)
+                        if Int(roundedIndex) % Int(1.0/step) == 0 {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.prepare()
+                            generator.impactOccurred()
+                        }
                     }
                     .onEnded { _ in
                         let idx = CGFloat((selectedWeight - range.lowerBound) / step)
