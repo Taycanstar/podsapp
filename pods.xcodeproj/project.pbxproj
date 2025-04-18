@@ -112,6 +112,7 @@
 		36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDC2DB2BF2000DD4266 /* DobView.swift */; };
 		36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */; };
 		36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */; };
+		36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -280,6 +281,7 @@
 		36A85CDC2DB2BF2000DD4266 /* DobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobView.swift; sourceTree = "<group>"; };
 		36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGoal.swift; sourceTree = "<group>"; };
 		36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesiredWeightView.swift; sourceTree = "<group>"; };
+		36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalInfoView.swift; path = Pods/onboarding/GoalInfoView.swift; sourceTree = SOURCE_ROOT; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -535,6 +537,7 @@
 				36A85CDC2DB2BF2000DD4266 /* DobView.swift */,
 				36A85CDE2DB2BFEB00DD4266 /* OnboardingGoal.swift */,
 				36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */,
+				36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1033,6 +1036,7 @@
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */,
+				36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */,
 				3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */,
 				3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */,
 				363201332C96257100BC1815 /* TeamInfoView.swift in Sources */,
