@@ -134,14 +134,16 @@ struct WeightRulerView: View {
                     .fill(Color(UIColor.systemBackground))
                     .frame(height: 60)
                 
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.secondary)
-                        .frame(width: centerX, height: 60)
-                    Spacer()
-                }
-                .frame(height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.secondary)
+                    .frame(height: 60)
+                    .mask(
+                        HStack(spacing: 0) {
+                            Rectangle()
+                                .frame(width: centerX)
+                            Spacer()
+                        }
+                    )
                 
                 // Center indicator
                 Rectangle()
@@ -164,7 +166,7 @@ struct WeightRulerView: View {
                         }
                     }
                 }
-                .offset(x: baseOffset + dragOffset + centerX - CGFloat((selectedWeight - range.lowerBound) / step) * tickSpacing)
+                .offset(x: baseOffset + dragOffset)
             }
             .contentShape(Rectangle())
             .gesture(
