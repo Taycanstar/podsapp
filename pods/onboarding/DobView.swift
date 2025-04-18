@@ -63,7 +63,7 @@ struct DobView: View {
                 Text("When were you born?")
                     .font(.system(size: 32, weight: .bold))
                 
-                Text("This will be used to calibrate your custom plan.")
+                Text("We'll use this to tailor your personalized plan.")
                     .font(.system(size: 18))
                     .foregroundColor(.secondary)
             }
