@@ -131,7 +131,7 @@ struct WeightRulerView: View {
             ZStack {
                 // Background track
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray6))
+            
                     .frame(height: 60)
                 // Center indicator
                 Rectangle()
@@ -154,27 +154,28 @@ struct WeightRulerView: View {
                     }
                 }
                 .offset(x: baseOffset + dragOffset + centerX - CGFloat((selectedWeight - range.lowerBound) / step) * tickSpacing)
-                .gesture(
-                    DragGesture()
-                        .onChanged { g in
-                            dragOffset = g.translation.width
-                            let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
-                            let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
-                            selectedWeight = range.lowerBound + Double(round(clamped)) * step
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onChanged { g in
+                        dragOffset = g.translation.width
+                        let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
+                        let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
+                        selectedWeight = range.lowerBound + Double(round(clamped)) * step
+                    }
+                    .onEnded { _ in
+                        let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                        let newBase = -idx * tickSpacing + centerX
+                        withAnimation(.spring()) {
+                            baseOffset = newBase
+                            dragOffset = 0
                         }
-                        .onEnded { _ in
-                            let idx = CGFloat((selectedWeight - range.lowerBound) / step)
-                            let newBase = -idx * tickSpacing + centerX
-                            withAnimation(.spring()) {
-                                baseOffset = newBase
-                                dragOffset = 0
-                            }
-                        }
-                )
-                .onAppear {
-                    let idx = CGFloat((selectedWeight - range.lowerBound) / step)
-                    baseOffset = -idx * tickSpacing + centerX
-                }
+                    }
+            )
+            .onAppear {
+                let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                baseOffset = -idx * tickSpacing + centerX
             }
         }
     }
