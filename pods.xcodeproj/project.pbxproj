@@ -118,6 +118,7 @@
 		36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */; };
 		36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */; };
 		36A85CEF2DB4282100DD4266 /* AccomplishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEE2DB4282100DD4266 /* AccomplishView.swift */; };
+		36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -292,6 +293,7 @@
 		36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ObstaclesView.swift; path = Pods/onboarding/ObstaclesView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecificDietView.swift; sourceTree = "<group>"; };
 		36A85CEE2DB4282100DD4266 /* AccomplishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccomplishView.swift; sourceTree = "<group>"; };
+		36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectToAppleHealth.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -553,6 +555,7 @@
 				36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */,
 				36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */,
 				36A85CEE2DB4282100DD4266 /* AccomplishView.swift */,
+				36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -998,6 +1001,7 @@
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
+				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
@@ -1298,7 +1302,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Pods;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Sync your Apple Health data for a personalized experience.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -1316,7 +1321,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -1365,7 +1370,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Pods;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to attach audio to your pods.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Sync your Apple Health data for a personalized experience.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -1383,7 +1389,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = profile2;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";

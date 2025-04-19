@@ -16,7 +16,7 @@ struct AccomplishView: View {
     enum UserGoal: String, Identifiable, CaseIterable {
         case healthier = "Improve my nutrition habits"
         case energy = "Enhance my vitality and wellbeing"
-        case consistent = "Build lasting healthy routines"
+        case consistent = "Stay consistent and inspired"
         case confidence = "Develop a positive body image"
         
         var id: Self { self }
@@ -132,7 +132,7 @@ struct AccomplishView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: Text("Dashboard"),
+                destination: ConnectToAppleHealth(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

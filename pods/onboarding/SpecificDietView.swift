@@ -85,6 +85,7 @@ struct SpecificDietView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
             .padding(.bottom, 30)
+            
             Spacer()
             
             // Diet selection options
