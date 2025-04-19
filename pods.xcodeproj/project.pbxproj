@@ -117,6 +117,7 @@
 		36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE82DB40BD100DD4266 /* TwoXView.swift */; };
 		36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */; };
 		36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */; };
+		36A85CEF2DB4282100DD4266 /* AccomplishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEE2DB4282100DD4266 /* AccomplishView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -290,6 +291,7 @@
 		36A85CE82DB40BD100DD4266 /* TwoXView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoXView.swift; sourceTree = "<group>"; };
 		36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ObstaclesView.swift; path = Pods/onboarding/ObstaclesView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecificDietView.swift; sourceTree = "<group>"; };
+		36A85CEE2DB4282100DD4266 /* AccomplishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccomplishView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -550,6 +552,7 @@
 				36A85CE82DB40BD100DD4266 /* TwoXView.swift */,
 				36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */,
 				36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */,
+				36A85CEE2DB4282100DD4266 /* AccomplishView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1015,6 +1018,7 @@
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
+				36A85CEF2DB4282100DD4266 /* AccomplishView.swift in Sources */,
 				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
 				36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */,
 				364A83B02D87D21E009D2620 /* EditRecipeView.swift in Sources */,
