@@ -147,7 +147,7 @@ struct SpecificDietView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: Text("Final Onboarding View"),
+                destination: AccomplishView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
