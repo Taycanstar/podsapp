@@ -50,8 +50,8 @@ struct GoalInfoView: View {
     
     var body: some View {
         ZStack {
-            // Background color
-            Color(red: 0.13, green: 0.14, blue: 0.17)
+            // Background color - update to match other onboarding views
+            Color(UIColor.systemBackground)
                 .ignoresSafeArea()
             
             VStack {
@@ -63,7 +63,7 @@ struct GoalInfoView: View {
                     }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .padding()
                     }
                     
@@ -74,30 +74,20 @@ struct GoalInfoView: View {
                     VStack(spacing: 64) {
                         Spacer(minLength: 40)
                         
-                        // Main content
+                        // Main content with combined text
                         VStack(spacing: 30) {
-                            // Title with weight goal information
-                            VStack(spacing: 8) {
-                                if goal != "Maintain" {
-                                    Text(goal == "Lose weight" ? "Losing" : "Gaining")
-                                        .font(.system(size: 36, weight: .bold))
-                                    
-                                    Text("\(Int(weightDifference)) \(weightUnit)")
-                                        .font(.system(size: 36, weight: .bold))
-                                        .foregroundColor(.accentColor)
-                                    
-                                    Text("is achievable with your plan!")
-                                        .font(.system(size: 36, weight: .bold))
-                                } else {
-                                    Text("Maintaining your weight")
-                                        .font(.system(size: 36, weight: .bold))
-                                        
-                                    Text("is achievable with your plan!")
-                                        .font(.system(size: 36, weight: .bold))
-                                }
+                            // Title with weight goal information - combined into a single text view
+                            if goal != "Maintain" {
+                                Text("\(goal == "Lose weight" ? "Losing" : "Gaining") \(Int(abs(targetWeight - currentWeight))) \(weightUnit) is achievable with your plan!")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
+                            } else {
+                                Text("Maintaining your weight is achievable with your plan!")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
                             }
-                            .multilineTextAlignment(.center)
-                            // .padding(.horizontal)
                             
                             // Motivational text
                             Text("85% of Humuli users report significant changes following their personalized plan and maintaining results long-term.")
@@ -134,7 +124,7 @@ struct GoalInfoView: View {
                 .background(Material.ultraThin)
             }
         }
-        .foregroundColor(.white)
+        .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(
             NavigationLink(

@@ -86,9 +86,7 @@ struct GoalTimeView: View {
                 
                 // Animal icons for speed reference
                 HStack(spacing: 0) {
-                    Spacer()
-                    
-                    // Slow - Sloth
+                    // Slow - Tortoise
                     VStack {
                         Image(systemName: "tortoise.fill")
                             .font(.system(size: 32))
@@ -108,15 +106,13 @@ struct GoalTimeView: View {
                     
                     Spacer()
                     
-                    // Fast - Cheetah
+                    // Fast - Bolt
                     VStack {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 32))
                             .foregroundColor(selectedSpeed >= 2.5 ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
-                    
-                    Spacer()
                 }
                 .padding(.bottom, 20)
                 
@@ -127,14 +123,6 @@ struct GoalTimeView: View {
                         .fill(Color.secondary.opacity(0.3))
                         .frame(height: 6)
                         .cornerRadius(3)
-                    
-                    // Slider filled part
-                    GeometryReader { geometry in
-                        Rectangle()
-                            .fill(Color.primary)
-                            .frame(width: CGFloat((selectedSpeed - 0.2) / 2.8) * geometry.size.width, height: 6)
-                            .cornerRadius(3)
-                    }
                     
                     // Slider thumb
                     Circle()
@@ -239,9 +227,6 @@ struct GoalTimeView: View {
         
         // Round to 1 decimal place for better UX
         selectedSpeed = round(newValue * 10) / 10
-        
-        // Provide haptic feedback
-        HapticFeedback.generateLigth()
     }
     
     // Save the weight change speed to UserDefaults
