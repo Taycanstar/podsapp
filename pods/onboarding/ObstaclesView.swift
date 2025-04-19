@@ -51,7 +51,7 @@ struct ObstaclesView: View {
                 }
                 .padding(.horizontal)
                 
-                // Progress bar - almost complete
+                // Progress bar
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
@@ -60,7 +60,7 @@ struct ObstaclesView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.99, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .obstacles), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

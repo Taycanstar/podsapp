@@ -1,0 +1,165 @@
+//
+//  CaloriesBurnedView.swift
+//  Pods
+//
+//  Created by Dimi Nunez on 6/8/25.
+//
+
+import SwiftUI
+
+struct CaloriesBurnedView: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var navigateToNextStep = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with back button and progress bar
+            VStack(spacing: 16) {
+                HStack {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
+                // Progress bar
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.3))
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.primary)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .caloriesBurned), height: 4)
+                        .cornerRadius(2)
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical)
+            
+            // Title and content
+            VStack(spacing: 40) {
+                Text("Add calories burned back to your daily goal?")
+                    .font(.system(size: 32, weight: .bold))
+                
+                Spacer()
+                
+                // Calorie info card
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Today's Goal")
+                        .font(.system(size: 15))
+                        .foregroundColor(Color("bg"))
+                        .fontWeight(.medium)
+                    
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(.primary)
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "flame.fill")
+                                .foregroundColor(.white)
+                                .font(.system(size: 18))
+                        }
+                        
+                        Text("500 Cals")
+                            .foregroundColor(Color("bg"))
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    
+                    Divider()
+                    
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(.primary)
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "shoe")
+                                .foregroundColor(.white)
+                                .font(.system(size: 18))
+                        }
+                        
+                        Text("Running")
+                            .foregroundColor(Color("bg"))
+                            .font(.system(size: 15))
+                        
+                        Spacer()
+                        
+                        Text("+100 cals")
+                            .foregroundColor(Color("bg"))
+                            .font(.system(size: 15, weight: .medium))
+                    }
+                }
+                .padding(24)
+                .background(.primary)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .frame(width: 300)
+                
+                Spacer()
+            }
+            
+            Spacer()
+            
+            // No/Yes buttons
+            HStack(spacing: 16) {
+                Button(action: {
+                    HapticFeedback.generate()
+                    UserDefaults.standard.set(false, forKey: "addCaloriesBurned")
+                    navigateToNextStep = true
+                }) {
+                    Text("No")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color(UIColor.systemBackground))
+                        .foregroundColor(.primary)
+                        .cornerRadius(28)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28)
+                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                
+                Button(action: {
+                    HapticFeedback.generate()
+                    UserDefaults.standard.set(true, forKey: "addCaloriesBurned")
+                    navigateToNextStep = true
+                }) {
+                    Text("Yes")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color.black)
+                        .foregroundColor(.white)
+                        .cornerRadius(28)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 40)
+        }
+        .edgesIgnoringSafeArea(.bottom)
+        .navigationBarHidden(true)
+        .background(
+            NavigationLink(
+                destination: ObstaclesView(),
+                isActive: $navigateToNextStep
+            ) {
+                EmptyView()
+            }
+        )
+    }
+}
+
+struct CaloriesBurnedView_Previews: PreviewProvider {
+    static var previews: some View {
+        CaloriesBurnedView()
+    }
+}

@@ -65,6 +65,20 @@ struct GoalInfoView: View {
                     }
                     
                     Spacer()
+                    
+                    // Progress bar
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.3))
+                            .frame(height: 4)
+                            .cornerRadius(2)
+                        
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .goalInfo), height: 4)
+                            .cornerRadius(2)
+                    }
+                    .padding(.horizontal)
                 }
                 
                 ScrollView {

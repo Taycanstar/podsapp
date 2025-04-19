@@ -44,7 +44,7 @@ struct OnboardingGoal: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.9, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .onboardingGoal), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

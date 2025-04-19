@@ -51,7 +51,7 @@ struct DobView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.8, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .dob), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

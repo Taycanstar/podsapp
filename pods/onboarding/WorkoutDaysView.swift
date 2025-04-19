@@ -69,7 +69,7 @@ struct WorkoutDaysView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.4, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .workoutDays), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

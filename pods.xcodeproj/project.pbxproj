@@ -119,6 +119,8 @@
 		36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */; };
 		36A85CEF2DB4282100DD4266 /* AccomplishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEE2DB4282100DD4266 /* AccomplishView.swift */; };
 		36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */; };
+		36A85CF32DB44D7800DD4266 /* CaloriesBurnedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */; };
+		36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -294,6 +296,8 @@
 		36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecificDietView.swift; sourceTree = "<group>"; };
 		36A85CEE2DB4282100DD4266 /* AccomplishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccomplishView.swift; sourceTree = "<group>"; };
 		36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectToAppleHealth.swift; sourceTree = "<group>"; };
+		36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaloriesBurnedView.swift; sourceTree = "<group>"; };
+		36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgress.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -556,6 +560,8 @@
 				36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */,
 				36A85CEE2DB4282100DD4266 /* AccomplishView.swift */,
 				36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */,
+				36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */,
+				36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -988,6 +994,7 @@
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
+				36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
 				3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */,
@@ -1068,6 +1075,7 @@
 				3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */,
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,
 				364A83C52DA59627009D2620 /* AddFoodView.swift in Sources */,
+				36A85CF32DB44D7800DD4266 /* CaloriesBurnedView.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,
 				36CB03412D66CDD3006A74E9 /* CreateMealView.swift in Sources */,

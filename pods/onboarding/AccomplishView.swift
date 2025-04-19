@@ -10,23 +10,25 @@ import SwiftUI
 struct AccomplishView: View {
     @Environment(\.dismiss) var dismiss
     @State private var navigateToNextStep = false
-    @State private var selectedGoal: UserGoal = .consistent
+    @State private var selectedGoal: Accomplishment?
     
-    // Enum for goal options
-    enum UserGoal: String, Identifiable, CaseIterable {
-        case healthier = "Improve my nutrition habits"
-        case energy = "Enhance my vitality and wellbeing"
-        case consistent = "Stay consistent and inspired"
-        case confidence = "Develop a positive body image"
+    // Enum for accomplishment options
+    enum Accomplishment: String, Identifiable, CaseIterable {
+        case healthyHabits = "Create healthy habits"
+        case loseWeight = "Lose weight"
+        case gainMuscle = "Gain muscle"
+        case eatBetter = "Eat better"
+        case sleep = "Improve sleep"
         
         var id: Self { self }
         
         var icon: String {
             switch self {
-            case .healthier: return "carrot"
-            case .energy: return "sun.max"
-            case .consistent: return "figure.walk"
-            case .confidence: return "person.fill"
+            case .healthyHabits: return "leaf"
+            case .loseWeight: return "figure.run"
+            case .gainMuscle: return "figure.strengthtraining.traditional"
+            case .eatBetter: return "carrot"
+            case .sleep: return "moon.fill"
             }
         }
     }
@@ -56,7 +58,7 @@ struct AccomplishView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .accomplish), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)
@@ -77,7 +79,7 @@ struct AccomplishView: View {
             // Goal selection options
             ScrollView {
                 VStack(spacing: 16) {
-                    ForEach(UserGoal.allCases) { goal in
+                    ForEach(Accomplishment.allCases) { goal in
                         Button(action: {
                             HapticFeedback.generate()
                             selectedGoal = goal
@@ -142,7 +144,7 @@ struct AccomplishView: View {
     
     // Save selected goal to UserDefaults
     private func saveUserGoal() {
-        UserDefaults.standard.set(selectedGoal.rawValue, forKey: "primaryWellnessGoal")
+        UserDefaults.standard.set(selectedGoal?.rawValue, forKey: "primaryWellnessGoal")
     }
 }
 

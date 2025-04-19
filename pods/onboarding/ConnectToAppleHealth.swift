@@ -32,7 +32,7 @@ struct ConnectToAppleHealth: View {
                 }
                 .padding(.horizontal)
                 
-                // Progress bar - complete
+                // Progress bar
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
@@ -41,7 +41,7 @@ struct ConnectToAppleHealth: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .connectHealth), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)
@@ -61,12 +61,13 @@ struct ConnectToAppleHealth: View {
                         Text("Walking")
                             .font(.system(size: 18, weight: .medium))
                         
-                       
+                        ZStack {
+                   
                             
                             Image(systemName: "apple.logo")
                                 .font(.system(size: 30))
                                 .foregroundColor(.white)
-                        
+                        }
                     }
                     
                     HStack(spacing: 45) {
@@ -99,7 +100,7 @@ struct ConnectToAppleHealth: View {
                     .font(.system(size: 36, weight: .bold))
                     .multilineTextAlignment(.center)
                 
-                Text("Sync your daily activity between Humuli and the Health app to have the most thorough data.")
+                Text("Sync your daily activity between Cal AI and the Health app to have the most thorough data.")
                     .font(.system(size: 16))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -143,7 +144,7 @@ struct ConnectToAppleHealth: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: ObstaclesView(),
+                destination: CaloriesBurnedView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

@@ -62,7 +62,7 @@ struct TwoXView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.98, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .twoX), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

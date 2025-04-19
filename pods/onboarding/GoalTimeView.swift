@@ -56,7 +56,7 @@ struct GoalTimeView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.95, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .goalTime), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

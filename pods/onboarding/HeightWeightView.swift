@@ -53,7 +53,7 @@ struct HeightWeightView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * 0.6, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .heightWeight), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)

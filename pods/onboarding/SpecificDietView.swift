@@ -9,36 +9,53 @@ import SwiftUI
 
 struct SpecificDietView: View {
     @Environment(\.dismiss) var dismiss
+    @State private var selectedDiet: Diet?
     @State private var navigateToNextStep = false
-    @State private var selectedDiet: DietType = .balanced
     
     // Enum for diet options
-    enum DietType: String, Identifiable, CaseIterable {
-        case balanced = "Balanced"
-        case pescatarian = "Pescatarian"
+    enum Diet: String, Identifiable, CaseIterable {
         case vegetarian = "Vegetarian"
         case vegan = "Vegan"
-        case keto = "Keto"  // Additional diet option
+        case keto = "Keto"
+        case paleo = "Paleo"
+        case mediterranian = "Mediterranean"
+        case lowCarb = "Low Carb"
+        case glutenFree = "Gluten Free"
+        case none = "None"
         
         var id: Self { self }
         
         var icon: String {
             switch self {
-            case .balanced: return "fork.knife"
-            case .pescatarian: return "fish"
             case .vegetarian: return "leaf"
             case .vegan: return "leaf.fill"
             case .keto: return "chart.pie"
+            case .paleo: return "fossil.shell"
+            case .mediterranian: return "sun.min"
+            case .lowCarb: return "barcode"
+            case .glutenFree: return "allergens"
+            case .none: return "checkmark.circle"
             }
         }
         
         var description: String {
             switch self {
-            case .balanced: return "Includes all food groups with an emphasis on moderation"
-            case .pescatarian: return "Vegetarian diet that includes seafood"
-            case .vegetarian: return "Excludes meat and seafood"
-            case .vegan: return "Excludes all animal products"
-            case .keto: return "High fat, low carb, moderate protein"
+            case .vegetarian:
+                return "No meat, fish, or poultry"
+            case .vegan:
+                return "No animal products at all"
+            case .keto:
+                return "High fat, adequate protein, low carb"
+            case .paleo:
+                return "Foods similar to what pre-agricultural humans ate"
+            case .mediterranian:
+                return "Plant-based foods, lean proteins, healthy fats"
+            case .lowCarb:
+                return "Reduced carbohydrate consumption"
+            case .glutenFree:
+                return "Elimination of gluten protein"
+            case .none:
+                return "No specific diet restrictions"
             }
         }
     }
@@ -59,7 +76,7 @@ struct SpecificDietView: View {
                 }
                 .padding(.horizontal)
                 
-                // Progress bar - complete
+                // Progress bar
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
@@ -68,7 +85,7 @@ struct SpecificDietView: View {
                     
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width, height: 4)
+                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .specificDiet), height: 4)
                         .cornerRadius(2)
                 }
                 .padding(.horizontal)
@@ -79,8 +96,6 @@ struct SpecificDietView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Which diet do you follow?")
                     .font(.system(size: 32, weight: .bold))
-                
-
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
@@ -91,7 +106,7 @@ struct SpecificDietView: View {
             // Diet selection options
             ScrollView {
                 VStack(spacing: 16) {
-                    ForEach(DietType.allCases) { diet in
+                    ForEach(Diet.allCases) { diet in
                         Button(action: {
                             HapticFeedback.generate()
                             selectedDiet = diet
@@ -158,7 +173,7 @@ struct SpecificDietView: View {
     
     // Save selected diet to UserDefaults
     private func saveDietPreference() {
-        UserDefaults.standard.set(selectedDiet.rawValue, forKey: "dietPreference")
+        UserDefaults.standard.set(selectedDiet?.rawValue, forKey: "dietPreference")
     }
 }
 
