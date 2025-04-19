@@ -161,25 +161,15 @@ struct GoalTimeView: View {
                 .padding(.horizontal, 20)
                 
                 // Recommended tag for middle value
-                if abs(selectedSpeed - 1.5) < 0.3 {
-                    Text("Recommended")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(20)
-                        .padding(.top, 20)
-                } else {
-                    Text("")
-                      .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(20)
-                        .padding(.top, 20)
-                }
+                Text("Recommended")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color(.systemGray6).opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0))
+                    .cornerRadius(20)
+                    .padding(.top, 20)
+                    .opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0)
             }
             .padding(.horizontal)
             
@@ -210,7 +200,7 @@ struct GoalTimeView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: Text("Final View - Next Step"),  // Replace with next view in flow
+                destination: TwoXView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

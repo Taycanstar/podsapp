@@ -114,6 +114,7 @@
 		36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */; };
 		36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */; };
 		36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */; };
+		36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE82DB40BD100DD4266 /* TwoXView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -284,6 +285,7 @@
 		36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesiredWeightView.swift; sourceTree = "<group>"; };
 		36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalInfoView.swift; path = Pods/onboarding/GoalInfoView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalTimeView.swift; path = Pods/onboarding/GoalTimeView.swift; sourceTree = SOURCE_ROOT; };
+		36A85CE82DB40BD100DD4266 /* TwoXView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoXView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -541,6 +543,7 @@
 				36A85CE02DB2C24A00DD4266 /* DesiredWeightView.swift */,
 				36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */,
 				36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */,
+				36A85CE82DB40BD100DD4266 /* TwoXView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1015,6 +1018,7 @@
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
 				3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */,
+				36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */,
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
