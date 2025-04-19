@@ -18,6 +18,10 @@ struct TwoXView: View {
     @Environment(\.dismiss) var dismiss
     @State private var navigateToNextStep = false
     
+    // Animation states
+    @State private var showBottomSections = false
+    @State private var showTagline = false
+    
     // Get the selected goal from UserDefaults
     private var goal: String {
         return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "Maintain"
@@ -66,7 +70,7 @@ struct TwoXView: View {
             .padding(.vertical)
             
             // Title text - dynamically based on goal
-            Text("\(goalText.capitalized) twice as fast with Humuli vs on your own")
+            Text("\(goalText.capitalized) twice as fast with Humuli")
                 .font(.system(size: 32, weight: .bold))
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,70 +79,105 @@ struct TwoXView: View {
             
             Spacer()
             
-            // Comparison cards
-            VStack(spacing: 30) {
-                // Cards container
-                HStack(spacing: 20) {
-                    // Without Humuli card
-                    VStack {
-                        Spacer()
-                        
-                        Text("Without Humuli")
-                            .font(.system(size: 20, weight: .semibold))
-                            .padding(.top, 20)
-                        
-                        Spacer()
-                        
-                        Text("20%")
-                            .font(.system(size: 28, weight: .bold))
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.secondary.opacity(0.2))
-                            .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
-                    }
-                    .frame(height: 200)
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    
-                    // With Humuli card
-                    VStack {
-                        Spacer()
-                        
-                        Text("With Humuli")
-                            .font(.system(size: 20, weight: .semibold))
-                            .padding(.top, 20)
-                        
-                        Spacer()
-                        
-                        Text("2X")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.black)
-                            .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
-                    }
-                    .frame(height: 200)
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                }
-                .padding(.horizontal)
+            // Comparison cards in a dark container
+            ZStack {
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Material.ultraThinMaterial)
+                    .padding(.horizontal)
                 
-                // Tagline
-                VStack(spacing: 4) {
-                    Text("Humuli makes it easier to reach your goals")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
+                VStack(spacing: 50) {
+                    // Cards container
+                    HStack(spacing: 20) {
+                        // Without Humuli card
+                        ZStack(alignment: .bottom) {
+                            // Top white part (fills more space)
+                            VStack {
+                                Text("Without\nHumuli")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Color(.systemBackground))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 30)
+                                
+                                Spacer()
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 240)
+                            .background(.primary)
+                            .mask(
+                                RoundedCorner(radius: 20, corners: [.topLeft, .topRight, .bottomLeft, .bottomRight])
+                            )
+                            
+                            // Bottom section with percentage (overlaid at bottom)
+                            VStack {
+                                Text("20%")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 80 * (showBottomSections ? 1.0 : 0.01))
+                            .background(Color.gray.opacity(0.8))
+                            .mask(
+                                RoundedCorner(radius: 20, corners: [.topLeft, .topRight, .bottomLeft, .bottomRight])
+                            )
+                            .opacity(showBottomSections ? 1 : 0)
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // With Humuli card
+                        ZStack(alignment: .bottom) {
+                            // Top white part (fills more space)
+                            VStack {
+                                Text("With\nHumuli")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Color(.systemBackground))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 30)
+                                
+                                Spacer()
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 240)
+                            .background(.primary)
+                            .mask(
+                                RoundedCorner(radius: 20, corners: [.topLeft, .topRight, .bottomLeft, .bottomRight])
+                            )
+                            
+                            // Bottom section with 2X (overlaid at bottom)
+                            VStack {
+                                Text("2X")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 160 * (showBottomSections ? 1.0 : 0.01))
+                            .background(Color.accentColor)
+                            .mask(
+                                RoundedCorner(radius: 20, corners: [.topLeft, .topRight, .bottomLeft, .bottomRight])
+                            )
+                            .opacity(showBottomSections ? 1 : 0)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.top, 50)
                     
-                    Text("and helps you stay accountable.")
-                        .font(.system(size: 18, weight: .regular))
-                        .foregroundColor(.secondary)
+                    // Tagline
+                    Text("Humuli makes it easy and holds you accountable.")
+                        .font(.system(size: 15))
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 50)
+                        .opacity(showTagline ? 1 : 0)
+                        .offset(y: showTagline ? 0 : 20)
                 }
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 35)
+
             }
+            .padding(.vertical, 20)
+            .frame(height: 450)
             
             Spacer()
             
@@ -166,16 +205,29 @@ struct TwoXView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: Text("Final Onboarding View"),  // Replace with final view
+                destination: ObstaclesView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Initial states
+            showBottomSections = false
+            showTagline = false
+            
+            // Animate bottom sections with a spring animation for the growing effect
+            withAnimation(.spring(response: 1.0, dampingFraction: 0.6).delay(0.5)) {
+                showBottomSections = true
+            }
+            
+            // Animate tagline with a longer delay
+            withAnimation(.easeInOut(duration: 0.8).delay(1.2)) {
+                showTagline = true
+            }
+        }
     }
 }
-
-
 
 // Custom shape for rounded corners
 struct RoundedCornerShape: Shape {

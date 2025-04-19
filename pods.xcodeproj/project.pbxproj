@@ -115,6 +115,8 @@
 		36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */; };
 		36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */; };
 		36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CE82DB40BD100DD4266 /* TwoXView.swift */; };
+		36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */; };
+		36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -286,6 +288,8 @@
 		36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalInfoView.swift; path = Pods/onboarding/GoalInfoView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalTimeView.swift; path = Pods/onboarding/GoalTimeView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CE82DB40BD100DD4266 /* TwoXView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoXView.swift; sourceTree = "<group>"; };
+		36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ObstaclesView.swift; path = Pods/onboarding/ObstaclesView.swift; sourceTree = SOURCE_ROOT; };
+		36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecificDietView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -544,6 +548,8 @@
 				36A85CE22DB2ECFD00DD4266 /* GoalInfoView.swift */,
 				36A85CE42DB2F35000DD4266 /* GoalTimeView.swift */,
 				36A85CE82DB40BD100DD4266 /* TwoXView.swift */,
+				36A85CEA2DB41EF300DD4266 /* ObstaclesView.swift */,
+				36A85CEC2DB4246000DD4266 /* SpecificDietView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -971,6 +977,7 @@
 				3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */,
 				3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */,
 				3638CCAA2C954BA900CCA675 /* TeamInvitationView.swift in Sources */,
+				36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */,
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
@@ -1025,6 +1032,7 @@
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
+				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,
