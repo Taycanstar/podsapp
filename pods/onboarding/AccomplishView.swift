@@ -14,21 +14,20 @@ struct AccomplishView: View {
     
     // Enum for accomplishment options
     enum Accomplishment: String, Identifiable, CaseIterable {
-        case healthyHabits = "Create healthy habits"
-        case loseWeight = "Lose weight"
-        case gainMuscle = "Gain muscle"
-        case eatBetter = "Eat better"
-        case sleep = "Improve sleep"
+        case healthyHabits = "Live a healthier lifestyle"
+        case boost = "Boost my energy and vitality"
+        case consistent = "Be consistent"
+        case aesthetics = "Physical aesthetic"
+       
         
         var id: Self { self }
         
         var icon: String {
             switch self {
             case .healthyHabits: return "leaf"
-            case .loseWeight: return "figure.run"
-            case .gainMuscle: return "figure.strengthtraining.traditional"
-            case .eatBetter: return "carrot"
-            case .sleep: return "moon.fill"
+            case .boost: return "figure.run"
+            case .consistent: return "water.waves"
+            case .aesthetics: return "figure.dance"
             }
         }
     }

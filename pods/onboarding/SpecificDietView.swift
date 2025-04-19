@@ -14,50 +14,24 @@ struct SpecificDietView: View {
     
     // Enum for diet options
     enum Diet: String, Identifiable, CaseIterable {
+        case balanced = "Balanced"
         case vegetarian = "Vegetarian"
         case vegan = "Vegan"
         case keto = "Keto"
-        case paleo = "Paleo"
-        case mediterranian = "Mediterranean"
-        case lowCarb = "Low Carb"
         case glutenFree = "Gluten Free"
-        case none = "None"
         
         var id: Self { self }
         
         var icon: String {
             switch self {
+            case .balanced: return "fork.knife"
             case .vegetarian: return "leaf"
             case .vegan: return "leaf.fill"
             case .keto: return "chart.pie"
-            case .paleo: return "fossil.shell"
-            case .mediterranian: return "sun.min"
-            case .lowCarb: return "barcode"
             case .glutenFree: return "allergens"
-            case .none: return "checkmark.circle"
             }
         }
         
-        var description: String {
-            switch self {
-            case .vegetarian:
-                return "No meat, fish, or poultry"
-            case .vegan:
-                return "No animal products at all"
-            case .keto:
-                return "High fat, adequate protein, low carb"
-            case .paleo:
-                return "Foods similar to what pre-agricultural humans ate"
-            case .mediterranian:
-                return "Plant-based foods, lean proteins, healthy fats"
-            case .lowCarb:
-                return "Reduced carbohydrate consumption"
-            case .glutenFree:
-                return "Elimination of gluten protein"
-            case .none:
-                return "No specific diet restrictions"
-            }
-        }
     }
     
     var body: some View {

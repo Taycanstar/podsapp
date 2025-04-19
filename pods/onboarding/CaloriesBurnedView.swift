@@ -46,8 +46,9 @@ struct CaloriesBurnedView: View {
             // Title and content
             VStack(spacing: 40) {
                 Text("Add calories burned back to your daily goal?")
+                    .padding()
                     .font(.system(size: 32, weight: .bold))
-                
+                    
                 Spacer()
                 
                 // Calorie info card
@@ -60,17 +61,17 @@ struct CaloriesBurnedView: View {
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill(.primary)
+                                .fill(Color("bg"))
                                 .frame(width: 40, height: 40)
                             
                             Image(systemName: "flame.fill")
-                                .foregroundColor(.white)
+                                .foregroundColor(primary)
                                 .font(.system(size: 18))
                         }
                         
                         Text("500 Cals")
                             .foregroundColor(Color("bg"))
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15))
                     }
                     
                     Divider()
@@ -78,11 +79,11 @@ struct CaloriesBurnedView: View {
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill(.primary)
+                                .fill(Color("bg"))
                                 .frame(width: 40, height: 40)
                             
                             Image(systemName: "shoe")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .font(.system(size: 18))
                         }
                         
