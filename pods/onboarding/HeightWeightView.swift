@@ -72,6 +72,8 @@ struct HeightWeightView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
             .padding(.bottom, 40)
+
+            Spacer()
             
             // Imperial/Metric Toggle
             HStack(spacing: 20) {

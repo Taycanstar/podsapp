@@ -79,10 +79,12 @@ struct ObstaclesView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
             .padding(.bottom, 30)
+
+            Spacer()
             
             // Obstacle selection options
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 10) {
                     ForEach(Obstacle.allCases) { obstacle in
                         Button(action: {
                             toggleObstacle(obstacle)
@@ -148,7 +150,7 @@ struct ObstaclesView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: Text("Final Onboarding View"),
+                destination: SpecificDietView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
