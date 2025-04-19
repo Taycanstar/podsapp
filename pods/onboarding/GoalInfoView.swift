@@ -28,11 +28,8 @@ struct GoalInfoView: View {
     }
     
     private var targetWeight: Double {
-        if isImperial {
-            return Double(UserDefaults.standard.integer(forKey: "targetWeightPounds"))
-        } else {
-            return Double(UserDefaults.standard.integer(forKey: "targetWeightKilograms"))
-        }
+        // Get the desired weight from DesiredWeightView
+        return UserDefaults.standard.double(forKey: "desiredWeight")
     }
     
     private var weightUnit: String {
@@ -76,10 +73,15 @@ struct GoalInfoView: View {
                         
                         // Main content with combined text
                         VStack(spacing: 30) {
-                            // Title with weight goal information - combined into a single text view
+                            // Title with weight goal information - using Text concatenation for natural flow
                             if goal != "Maintain" {
-                                Text("\(goal == "Lose weight" ? "Losing" : "Gaining") \(Int(abs(targetWeight - currentWeight))) \(weightUnit) is achievable with your plan!")
+                                (Text("\(goal == "Lose weight" ? "Losing" : "Gaining") ")
                                     .font(.system(size: 36, weight: .bold))
+                                + Text("\(Int(weightDifference)) \(weightUnit)")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundColor(.accentColor)
+                                + Text(" is achievable with your plan!")
+                                    .font(.system(size: 36, weight: .bold)))
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
                             } else {

@@ -170,6 +170,15 @@ struct GoalTimeView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(20)
                         .padding(.top, 20)
+                } else {
+                    Text("")
+                      .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(20)
+                        .padding(.top, 20)
                 }
             }
             .padding(.horizontal)

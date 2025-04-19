@@ -147,7 +147,7 @@ struct WeightRulerView: View {
                     .frame(height: 60)
                 
                 Rectangle()
-                    .fill(Color.secondary)
+                    .fill(Color("iosbtn"))
                     .frame(height: 60)
                     .mask(
                         HStack(spacing: 0) {
