@@ -96,7 +96,8 @@ struct InfoView: View {
                                 // Handle success
                                 self.viewModel.username = self.username
                                 
-                                viewModel.currentStep = .welcome
+                                // Navigate to GenderView instead of WelcomeView
+                                viewModel.currentStep = .gender
                                 isLoading = false
                             } else {
                                 // Handle error, optionally update errorMessage and showError to inform the user

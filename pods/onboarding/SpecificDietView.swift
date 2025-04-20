@@ -15,6 +15,7 @@ struct SpecificDietView: View {
     // Enum for diet options
     enum Diet: String, Identifiable, CaseIterable {
         case balanced = "Balanced"
+        case pescatarian = "Pescatarian"
         case vegetarian = "Vegetarian"
         case vegan = "Vegan"
         case keto = "Keto"
@@ -25,6 +26,7 @@ struct SpecificDietView: View {
         var icon: String {
             switch self {
             case .balanced: return "fork.knife"
+            case .pescatarian: return "fish"
             case .vegetarian: return "leaf"
             case .vegan: return "leaf.fill"
             case .keto: return "chart.pie"

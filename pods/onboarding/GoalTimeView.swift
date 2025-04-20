@@ -133,7 +133,7 @@ struct GoalTimeView: View {
                     // Mark key positions
                     HStack {
                         Circle()
-                            .fill(selectedSpeed == 0.2 ? Color.primary : Color.clear)
+                            .fill(selectedSpeed == 0.0 ? Color.primary : Color.clear)
                             .frame(width: 6, height: 6)
                             .offset(x: -10)
                         
@@ -243,14 +243,13 @@ struct GoalTimeView: View {
     // Calculate the horizontal offset for the thumb based on selected speed
     private func getThumbOffset() -> CGFloat {
         let width: CGFloat = UIScreen.main.bounds.width - 80 // Account for horizontal padding
-        let midpoint = width / 2
-        let range: CGFloat = 2.8 // 3.0 - 0.2
+        let totalRange: CGFloat = 3.0 // 3.0 - 0.0
         
-        // Calculate normalized position (0-1)
-        let normalizedPosition = CGFloat((selectedSpeed - 0.2) / range)
+        // Calculate the percentage of the way through the range (0.0 to 1.0)
+        let percentage = selectedSpeed / totalRange
         
         // Map to screen width
-        return (normalizedPosition * width) - midpoint
+        return (percentage * width) - (width / 2)
     }
     
     // Update the selected speed based on touch position
@@ -263,8 +262,11 @@ struct GoalTimeView: View {
         let clampedPosition = min(max(normalizedPosition, 0), 1)
         
         // Map to value range
-        let range: Double = 2.8 // 3.0 - 0.2
-        let newValue = 0.2 + (range * Double(clampedPosition))
+        let range: Double = 3.0 // 3.0 - 0.0
+        var newValue = range * Double(clampedPosition)
+        
+        // Enforce minimum value of 0.2
+        newValue = max(newValue, 0.2)
         
         // Round to 1 decimal place for better UX
         selectedSpeed = round(newValue * 10) / 10

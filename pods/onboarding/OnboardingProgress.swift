@@ -28,6 +28,7 @@ struct OnboardingProgress {
         case .connectHealth: return 0.70
         case .caloriesBurned: return 0.75
         case .rollover:      return 0.80
+        case .complete:      return 1.0
         }
     }
 
@@ -48,6 +49,7 @@ struct OnboardingProgress {
         case connectHealth
         case caloriesBurned
         case rollover
+        case complete
     }
 }
 
