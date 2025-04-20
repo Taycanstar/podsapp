@@ -54,48 +54,48 @@ struct CreatingPlanView: View {
             // Recommendations card
             VStack(alignment: .leading, spacing: 20) {
                 Text("Daily recommendation for")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .padding(.bottom, 5)
                    .foregroundColor(Color("bg"))
                 
                 Group {
                     HStack {
                         Text("•")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Calories")
-                            .font(.system(size: 20))
+                            .font(.system(size: 15))
                     }
                 .foregroundColor(Color("bg"))
                     
                     HStack {
                         Text("•")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Carbs")
-                            .font(.system(size: 20))
+                            .font(.system(size: 15))
                     }
                .foregroundColor(Color("bg"))
                     
                     HStack {
                         Text("•")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Protein")
-                            .font(.system(size: 20))
+                                    .font(.system(size: 15))
                     }
                  .foregroundColor(Color("bg"))
                     
                     HStack {
                         Text("•")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Fats")
-                            .font(.system(size: 20))
+                            .font(.system(size: 15))
                     }
                   .foregroundColor(Color("bg"))
                     
                     HStack {
                         Text("•")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Health Score")
-                            .font(.system(size: 20))
+                            .font(.system(size: 15))
                     }
                     .foregroundColor(Color("bg"))
                 }
