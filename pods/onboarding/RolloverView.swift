@@ -211,7 +211,7 @@ struct RolloverView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: ObstaclesView(),
+                destination: CreatingPlanView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
