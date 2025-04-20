@@ -7,11 +7,6 @@
 
 import SwiftUI
 
-/*
- * Simple progress calculation for onboarding screens.
- * Each screen is directly mapped to a specific progress percentage.
- * Use OnboardingProgress.progressFor(screen: .screenName) to get the progress value.
- */
 
 // Simple struct for calculating onboarding progress
 struct OnboardingProgress {
@@ -25,14 +20,14 @@ struct OnboardingProgress {
         case .onboardingGoal: return 0.35
         case .desiredWeight: return 0.42
         case .goalInfo:      return 0.49
-        case .goalTime:      return 0.56
-        case .twoX:          return 0.63
-        case .rollover:      return 0.70
-        case .obstacles:     return 0.77
-        case .specificDiet:  return 0.84
-        case .accomplish:    return 0.90
-        case .connectHealth: return 0.95
-        case .caloriesBurned: return 0.98
+        case .goalTime:      return 0.50
+        case .twoX:          return 0.53
+        case .obstacles:     return 0.55
+        case .specificDiet:  return 0.60
+        case .accomplish:    return 0.65
+        case .connectHealth: return 0.70
+        case .caloriesBurned: return 0.75
+        case .rollover:      return 0.80
         }
     }
 
@@ -47,12 +42,12 @@ struct OnboardingProgress {
         case goalInfo
         case goalTime
         case twoX
-        case rollover
         case obstacles
         case specificDiet
         case accomplish
         case connectHealth
         case caloriesBurned
+        case rollover
     }
 }
 
@@ -69,12 +64,12 @@ enum OnboardingProgressEnum: Int, CaseIterable {
     case goalInfo = 7
     case goalTime = 8
     case twoX = 9
-    case rollover = 10
-    case obstacles = 11
-    case specificDiet = 12
-    case accomplish = 13
-    case connectHealth = 14
-    case caloriesBurned = 15
+    case obstacles = 10
+    case specificDiet = 11
+    case accomplish = 12
+    case connectHealth = 13
+    case caloriesBurned = 14
+    case rollover = 15
     
     /// Total screens in the onboarding flow
     static var totalScreens: Int {
@@ -94,12 +89,12 @@ enum OnboardingProgressEnum: Int, CaseIterable {
         case .goalInfo:      return .goalInfo
         case .goalTime:      return .goalTime
         case .twoX:          return .twoX
-        case .rollover:      return .rollover
         case .obstacles:     return .obstacles
         case .specificDiet:  return .specificDiet
         case .accomplish:    return .accomplish
         case .connectHealth: return .connectHealth
         case .caloriesBurned: return .caloriesBurned
+        case .rollover:      return .rollover
         }
     }
     
