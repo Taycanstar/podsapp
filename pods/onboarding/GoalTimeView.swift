@@ -85,36 +85,42 @@ struct GoalTimeView: View {
                     .font(.system(size: 44, weight: .bold))
                 
                 // Animal icons for speed reference
-                HStack(spacing: 0) {
+                HStack {
                     // Slow - Tortoise
-                    VStack {
+                    VStack(alignment: .center) {
                         Image(systemName: "tortoise.fill")
                             .font(.system(size: 32))
                             .foregroundColor(selectedSpeed <= 0.5 ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
+                    .frame(width: 80)
+                    .offset(x: -10)
                     
                     Spacer()
                     
                     // Medium - Rabbit
-                    VStack {
+                    VStack(alignment: .center) {
                         Image(systemName: "hare.fill")
                             .font(.system(size: 32))
                             .foregroundColor(selectedSpeed > 0.5 && selectedSpeed < 2.5 ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
+                    .frame(width: 80)
                     
                     Spacer()
                     
                     // Fast - Bolt
-                    VStack {
+                    VStack(alignment: .center) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 32))
                             .foregroundColor(selectedSpeed >= 2.5 ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
+                    .frame(width: 80)
+                    .offset(x: 10)
                 }
                 .padding(.bottom, 20)
+                .padding(.horizontal, 20)
                 
                 // Slider
                 ZStack(alignment: .center) {
@@ -123,6 +129,27 @@ struct GoalTimeView: View {
                         .fill(Color.secondary.opacity(0.3))
                         .frame(height: 6)
                         .cornerRadius(3)
+                    
+                    // Mark key positions
+                    HStack {
+                        Circle()
+                            .fill(selectedSpeed == 0.2 ? Color.primary : Color.clear)
+                            .frame(width: 6, height: 6)
+                            .offset(x: -10)
+                        
+                        Spacer()
+                        
+                        Circle()
+                            .fill(selectedSpeed == 1.5 ? Color.primary : Color.clear)
+                            .frame(width: 6, height: 6)
+                        
+                        Spacer()
+                        
+                        Circle()
+                            .fill(selectedSpeed == 3.0 ? Color.primary : Color.clear)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 10)
+                    }
                     
                     // Slider thumb
                     Circle()
@@ -145,18 +172,23 @@ struct GoalTimeView: View {
                     Text("0.2 lbs")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
+                        .frame(width: 80)
+                        .offset(x: -10)
                     
                     Spacer()
                     
                     Text("1.5 lbs")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
+                        .frame(width: 80)
                     
                     Spacer()
                     
                     Text("3.0 lbs")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
+                        .frame(width: 80)
+                        .offset(x: 10)
                 }
                 .padding(.horizontal, 20)
                 
@@ -210,19 +242,29 @@ struct GoalTimeView: View {
     
     // Calculate the horizontal offset for the thumb based on selected speed
     private func getThumbOffset() -> CGFloat {
-        @State var width: CGFloat = UIScreen.main.bounds.width - 40
+        let width: CGFloat = UIScreen.main.bounds.width - 80 // Account for horizontal padding
+        let midpoint = width / 2
         let range: CGFloat = 2.8 // 3.0 - 0.2
-        let position = CGFloat((selectedSpeed - 0.2) / range)
-        return (width * position) - (width / 2)
+        
+        // Calculate normalized position (0-1)
+        let normalizedPosition = CGFloat((selectedSpeed - 0.2) / range)
+        
+        // Map to screen width
+        return (normalizedPosition * width) - midpoint
     }
     
     // Update the selected speed based on touch position
     private func updateSelectedSpeed(with xPosition: CGFloat) {
-        let width = UIScreen.main.bounds.width - 40
-        let percentage = (xPosition + (width / 2)) / width
-        let clampedPercentage = min(max(percentage, 0), 1)
+        let width = UIScreen.main.bounds.width - 80 // Account for horizontal padding
+        let midpoint = width / 2
+        
+        // Calculate normalized position (0-1)
+        let normalizedPosition = (xPosition + midpoint) / width
+        let clampedPosition = min(max(normalizedPosition, 0), 1)
+        
+        // Map to value range
         let range: Double = 2.8 // 3.0 - 0.2
-        let newValue = 0.2 + (range * Double(clampedPercentage))
+        let newValue = 0.2 + (range * Double(clampedPosition))
         
         // Round to 1 decimal place for better UX
         selectedSpeed = round(newValue * 10) / 10

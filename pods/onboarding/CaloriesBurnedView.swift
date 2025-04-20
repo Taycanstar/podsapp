@@ -65,7 +65,7 @@ struct CaloriesBurnedView: View {
                                 .frame(width: 40, height: 40)
                             
                             Image(systemName: "flame.fill")
-                                .foregroundColor(primary)
+                                .foregroundColor(.primary)
                                 .font(.system(size: 18))
                         }
                         
@@ -121,11 +121,11 @@ struct CaloriesBurnedView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(Color(UIColor.systemBackground))
-                        .foregroundColor(.primary)
+                        .foregroundColor(.accentColor)
                         .cornerRadius(28)
                         .overlay(
                             RoundedRectangle(cornerRadius: 28)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                .stroke(Color.accentColor, lineWidth: 1)
                         )
                 }
                 
@@ -138,7 +138,7 @@ struct CaloriesBurnedView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color.black)
+                        .background(Color.accentColor)
                         .foregroundColor(.white)
                         .cornerRadius(28)
                 }
@@ -150,7 +150,7 @@ struct CaloriesBurnedView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: ObstaclesView(),
+                destination: RolloverView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

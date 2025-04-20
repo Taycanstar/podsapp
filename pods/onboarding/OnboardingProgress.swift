@@ -27,10 +27,11 @@ struct OnboardingProgress {
         case .goalInfo:      return 0.49
         case .goalTime:      return 0.56
         case .twoX:          return 0.63
-        case .obstacles:     return 0.70
-        case .specificDiet:  return 0.80
-        case .accomplish:    return 0.87
-        case .connectHealth: return 0.93
+        case .rollover:      return 0.70
+        case .obstacles:     return 0.77
+        case .specificDiet:  return 0.84
+        case .accomplish:    return 0.90
+        case .connectHealth: return 0.95
         case .caloriesBurned: return 0.98
         }
     }
@@ -46,6 +47,7 @@ struct OnboardingProgress {
         case goalInfo
         case goalTime
         case twoX
+        case rollover
         case obstacles
         case specificDiet
         case accomplish
@@ -67,11 +69,12 @@ enum OnboardingProgressEnum: Int, CaseIterable {
     case goalInfo = 7
     case goalTime = 8
     case twoX = 9
-    case obstacles = 10
-    case specificDiet = 11
-    case accomplish = 12
-    case connectHealth = 13
-    case caloriesBurned = 14
+    case rollover = 10
+    case obstacles = 11
+    case specificDiet = 12
+    case accomplish = 13
+    case connectHealth = 14
+    case caloriesBurned = 15
     
     /// Total screens in the onboarding flow
     static var totalScreens: Int {
@@ -91,6 +94,7 @@ enum OnboardingProgressEnum: Int, CaseIterable {
         case .goalInfo:      return .goalInfo
         case .goalTime:      return .goalTime
         case .twoX:          return .twoX
+        case .rollover:      return .rollover
         case .obstacles:     return .obstacles
         case .specificDiet:  return .specificDiet
         case .accomplish:    return .accomplish

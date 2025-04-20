@@ -121,6 +121,7 @@
 		36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */; };
 		36A85CF32DB44D7800DD4266 /* CaloriesBurnedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */; };
 		36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */; };
+		36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF62DB46B1100DD4266 /* RolloverView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -298,6 +299,7 @@
 		36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectToAppleHealth.swift; sourceTree = "<group>"; };
 		36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaloriesBurnedView.swift; sourceTree = "<group>"; };
 		36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgress.swift; sourceTree = "<group>"; };
+		36A85CF62DB46B1100DD4266 /* RolloverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RolloverView.swift; path = Pods/onboarding/RolloverView.swift; sourceTree = SOURCE_ROOT; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -562,6 +564,7 @@
 				36A85CF02DB43FEE00DD4266 /* ConnectToAppleHealth.swift */,
 				36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */,
 				36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */,
+				36A85CF62DB46B1100DD4266 /* RolloverView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -991,6 +994,7 @@
 				3638CCAA2C954BA900CCA675 /* TeamInvitationView.swift in Sources */,
 				36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */,
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
+				36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
