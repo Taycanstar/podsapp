@@ -122,6 +122,7 @@
 		36A85CF32DB44D7800DD4266 /* CaloriesBurnedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */; };
 		36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */; };
 		36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF62DB46B1100DD4266 /* RolloverView.swift */; };
+		36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -300,6 +301,7 @@
 		36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaloriesBurnedView.swift; sourceTree = "<group>"; };
 		36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgress.swift; sourceTree = "<group>"; };
 		36A85CF62DB46B1100DD4266 /* RolloverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RolloverView.swift; path = Pods/onboarding/RolloverView.swift; sourceTree = SOURCE_ROOT; };
+		36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatingPlanView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -565,6 +567,7 @@
 				36A85CF22DB44D7800DD4266 /* CaloriesBurnedView.swift */,
 				36A85CF42DB453AD00DD4266 /* OnboardingProgress.swift */,
 				36A85CF62DB46B1100DD4266 /* RolloverView.swift */,
+				36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1016,6 +1019,7 @@
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
+				36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */,
 				36CB032C2D5AAD5C006A74E9 /* LogFood.swift in Sources */,
 				364A83AC2D81F3F7009D2620 /* EditMealView.swift in Sources */,
 				3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */,
