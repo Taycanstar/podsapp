@@ -31,10 +31,12 @@ struct LandingView: View {
                     // Bottom card with buttons, corrected for padding and edge issues
                     VStack(spacing: 10) { // Increased spacing for visual appeal
                         SignInWithAppleButton(
-                                                    .signIn,
+                                                    .continue,
                                                     onRequest: configureAppleSignIn,
                                                     onCompletion: handleAppleSignIn
+
                                                 )
+                                                
                         .frame(height: 50)
                         .cornerRadius(10)
                         
@@ -48,7 +50,7 @@ struct LandingView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 20) // Adjust based on your design needs
                                 
-                                Text("Sign in with Google")
+                                Text("Continue with Google")
                                     .foregroundColor(.black) // Set text color
                             }
                         }

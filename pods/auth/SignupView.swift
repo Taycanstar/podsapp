@@ -1,4 +1,3 @@
-
 import SwiftUI
 import Foundation
 
@@ -137,7 +136,8 @@ struct SignupView: View {
             networkManager.signup(email: email, password: password) { success, message in
                 if success {
                     DispatchQueue.main.async {
-                        self.viewModel.currentStep = .emailVerification
+                        // Skip email verification and go directly to info screen
+                        self.viewModel.currentStep = .info
                         self.viewModel.email = self.email
                         self.viewModel.password = self.password
                         isLoading = false

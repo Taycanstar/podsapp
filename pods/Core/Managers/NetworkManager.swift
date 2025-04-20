@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 // //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.3:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
 
     
 
@@ -320,42 +320,97 @@ class NetworkManager {
         }.resume()
     }
 
-    func updateUserInformation(email: String, name: String, username: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
-         let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
-         var request = URLRequest(url: url)
-         request.httpMethod = "PUT"
-         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    // func updateUserInformation(email: String, name: String, username: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
+    //      let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
+    //      var request = URLRequest(url: url)
+    //      request.httpMethod = "PUT"
+    //      request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-         let parameters: [String: Any] = [
-             "email": email,
-             "name": name,
-             "username": username,
-             "birthday": birthday, // ISO 8601 format
+    //      let parameters: [String: Any] = [
+    //          "email": email,
+    //          "name": name,
+    //          "username": username,
+    //          "birthday": birthday, // ISO 8601 format
             
-         ]
+    //      ]
 
-         request.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
+    //      request.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
 
-         URLSession.shared.dataTask(with: request) { data, response, error in
-             guard let data = data, error == nil else {
-                 completion(false, "Network request failed")
-                 return
-             }
+    //      URLSession.shared.dataTask(with: request) { data, response, error in
+    //          guard let data = data, error == nil else {
+    //              completion(false, "Network request failed")
+    //              return
+    //          }
 
-             // Decode or handle the response accordingly
-             // For simplicity, we'll assume a successful response includes a 'message' key
-             do {
-                 if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                    let message = jsonResponse["message"] as? String {
-                     completion(true, message)
-                 } else {
-                     completion(false, "Invalid response from server")
-                 }
-             } catch {
-                 completion(false, "Failed to decode response")
-             }
-         }.resume()
-     }
+    //          // Decode or handle the response accordingly
+    //          // For simplicity, we'll assume a successful response includes a 'message' key
+    //          do {
+    //              if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+    //                 let message = jsonResponse["message"] as? String {
+    //                  completion(true, message)
+    //              } else {
+    //                  completion(false, "Invalid response from server")
+    //              }
+    //          } catch {
+    //              completion(false, "Failed to decode response")
+    //          }
+    //      }.resume()
+    //  }
+
+    func updateUserInformation(email: String, name: String, username: String, completion: @escaping (Bool, String) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/add-info/") else {
+        completion(false, "Invalid URL")
+        return
+    }
+    
+    let body: [String: Any] = [
+        "email": email,
+        "name": name,
+        "username": username
+    ]
+    
+    guard let finalBody = try? JSONSerialization.data(withJSONObject: body) else {
+        completion(false, "Error encoding data")
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = finalBody
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(false, "Update failed: \(error.localizedDescription)")
+            }
+            return
+        }
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            DispatchQueue.main.async {
+                completion(false, "No response from server")
+            }
+            return
+        }
+        
+        if httpResponse.statusCode == 200 {
+            DispatchQueue.main.async {
+                completion(true, "User information updated successfully")
+            }
+        } else if let data = data,
+                 let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                 let errorMessage = json["error"] as? String {
+            DispatchQueue.main.async {
+                completion(false, errorMessage)
+            }
+        } else {
+            DispatchQueue.main.async {
+                completion(false, "Update failed with status code: \(httpResponse.statusCode)")
+            }
+        }
+    }.resume()
+}
     func createPod(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
         print("Starting createPod...")
         let dispatchGroup = DispatchGroup()
