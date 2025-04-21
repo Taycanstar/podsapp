@@ -94,7 +94,7 @@ struct ObstaclesView: View {
                             HStack {
                                 Image(systemName: obstacle.icon)
                                     .font(.system(size: 18))
-                                    .foregroundColor(isSelected(obstacle) ? (colorScheme == .dark ? .black : .white) : .primary)
+                                    .foregroundColor(isSelected(obstacle) ? .white : .primary)
                                     .frame(width: 30)
                                     .padding(.leading, 16)
                                 
@@ -110,14 +110,14 @@ struct ObstaclesView: View {
                                 
                                 if isSelected(obstacle) {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                                        .foregroundColor(.white)
                                         .padding(.trailing, 16)
                                 }
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 70)
                             .background(isSelected(obstacle) ? Color.accentColor : (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6)))
-                            .foregroundColor(isSelected(obstacle) ? (colorScheme == .dark ? .black : .white) : .primary)
+                            .foregroundColor(isSelected(obstacle) ? .white : .primary)
                             .cornerRadius(12)
                         }
                     }

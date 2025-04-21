@@ -84,7 +84,7 @@ struct OnboardingGoal: View {
                                     Color.accentColor : 
                                     (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                             )
-                            .foregroundColor(selectedGoal == goal ? (colorScheme == .dark ? .black : .white) : .primary)
+                            .foregroundColor(selectedGoal == goal ? .white : .primary)
                             .cornerRadius(12)
                     }
                 }

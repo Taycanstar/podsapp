@@ -103,7 +103,7 @@ struct WorkoutDaysView: View {
                         HStack {
                             Image(systemName: frequency.icon)
                                 .font(.system(size: 22))
-                                .foregroundColor(selectedFrequency == frequency ? (colorScheme == .dark ? .black : .white) : .primary)
+                                .foregroundColor(selectedFrequency == frequency ? .white : .primary)
                                 .frame(width: 30)
                                 .padding(.leading, 6)
                             
@@ -126,7 +126,7 @@ struct WorkoutDaysView: View {
                                 Color.accentColor : 
                                 (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                         )
-                        .foregroundColor(selectedFrequency == frequency ? (colorScheme == .dark ? .black : .white) : .primary)
+                        .foregroundColor(selectedFrequency == frequency ? .white : .primary)
                         .cornerRadius(12)
                     }
                 }

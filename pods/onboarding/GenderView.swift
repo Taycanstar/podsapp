@@ -95,7 +95,7 @@ struct GenderView: View {
                                         Color.accentColor : 
                                         (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                                 )
-                                .foregroundColor(selectedGender == gender ? (colorScheme == .dark ? .black : .white) : .primary)
+                                .foregroundColor(selectedGender == gender ? .white : .primary)
                                 .cornerRadius(12)
                         }
                     }

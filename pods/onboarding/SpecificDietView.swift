@@ -92,7 +92,7 @@ struct SpecificDietView: View {
                             HStack {
                                 Image(systemName: diet.icon)
                                     .font(.system(size: 18))
-                                    .foregroundColor(selectedDiet == diet ? (colorScheme == .dark ? .black : .white) : .primary)
+                                    .foregroundColor(selectedDiet == diet ? .white : .primary)
                                     .frame(width: 40)
                                 
                                 Text(diet.rawValue)
@@ -110,7 +110,7 @@ struct SpecificDietView: View {
                                     Color.accentColor : 
                                     (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                             )
-                            .foregroundColor(selectedDiet == diet ? (colorScheme == .dark ? .black : .white) : .primary)
+                            .foregroundColor(selectedDiet == diet ? .white : .primary)
                             .cornerRadius(12)
                         }
                     }
