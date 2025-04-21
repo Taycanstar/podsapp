@@ -142,8 +142,16 @@ struct CreatingPlanView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     // Mark onboarding as complete
                     viewModel.onboardingCompleted = true
+                    
+                    // Make sure user is authenticated in UserDefaults
+                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                    UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                    
+                    // Post notification that authentication is complete
+                    NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                    
+                    // Close the onboarding container
                     viewModel.isShowingOnboarding = false
-                    viewModel.saveOnboardingState()
                 }
             }
         }

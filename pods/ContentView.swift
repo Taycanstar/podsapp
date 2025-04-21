@@ -231,15 +231,21 @@ struct ContentView: View {
                            
                            fetchSubscriptionInfo()
                        }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
-                 fetchSubscriptionInfo()
-             }
-
-        .onChange(of: isAuthenticated) { _, newValue in
-            UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
+       
+        // Add observer for authentication completion notification
+        NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in
+            // Refresh authentication state
+            self.isAuthenticated = true
         }
     }
+    .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
+             fetchSubscriptionInfo()
+         }
+
+    .onChange(of: isAuthenticated) { _, newValue in
+        UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
+    }
+}
     
     
     func hasPremiumAccess() -> Bool {

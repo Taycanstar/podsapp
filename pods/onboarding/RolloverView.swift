@@ -221,7 +221,7 @@ struct RolloverView: View {
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
-            }
+}
         )
     }
 }
