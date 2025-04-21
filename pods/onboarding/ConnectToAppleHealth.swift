@@ -10,6 +10,7 @@ import HealthKit
 
 struct ConnectToAppleHealth: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var isRequestingPermission = false
     
@@ -53,13 +54,14 @@ struct ConnectToAppleHealth: View {
             // Apple Health icon and visual elements
             ZStack {
                 Circle()
-                    .fill(Color(UIColor.systemGray6))
+                    .fill(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                     .frame(width: 300, height: 300)
                 
                 VStack {
                     HStack(spacing: 45) {
                         Text("Walking")
                             .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
                         
                         ZStack {
                    
@@ -73,6 +75,7 @@ struct ConnectToAppleHealth: View {
                     HStack(spacing: 45) {
                         Text("Running")
                             .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
                         
             
                     }
@@ -84,11 +87,13 @@ struct ConnectToAppleHealth: View {
                         
                         Text("Yoga")
                             .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
                     }
                     
                     HStack(spacing: 45) {
                         Text("Sleep")
                             .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
                     }
                 }
             }
@@ -98,6 +103,7 @@ struct ConnectToAppleHealth: View {
             VStack(spacing: 16) {
                 Text("Connect to\nApple Health")
                     .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
                 Text("Sync your daily activity between Cal AI and the Health app to have the most thorough data.")
@@ -140,6 +146,7 @@ struct ConnectToAppleHealth: View {
             .padding(.vertical, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

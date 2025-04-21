@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GoalInfoView: View {
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
     private var goal: String {
@@ -91,16 +92,19 @@ struct GoalInfoView: View {
                             if goal != "Maintain" {
                                 (Text("\(goal == "Lose weight" ? "Losing" : "Gaining") ")
                                     .font(.system(size: 36, weight: .bold))
+                                    .foregroundColor(.primary)
                                 + Text("\(Int(weightDifference)) \(weightUnit)")
                                     .font(.system(size: 36, weight: .bold))
                                     .foregroundColor(.accentColor)
                                 + Text(" is achievable with your plan!")
-                                    .font(.system(size: 36, weight: .bold)))
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundColor(.primary))
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
                             } else {
                                 Text("Maintaining your weight is achievable with your plan!")
                                     .font(.system(size: 36, weight: .bold))
+                                    .foregroundColor(.primary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
                             }

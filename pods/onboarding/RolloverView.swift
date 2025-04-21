@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RolloverView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
     var body: some View {
@@ -48,14 +49,16 @@ struct RolloverView: View {
                 Text("Rollover extra calories to the next day?")
                     .padding(.horizontal)
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
                 ZStack {
                     Text("Rollover up to 200 cals")
                         .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color("iosbg"))
+                        .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                         .cornerRadius(16)
                 }
                 .padding(.bottom, 10)
@@ -64,40 +67,40 @@ struct RolloverView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Yesterday")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color("bg"))
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                     
                     HStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .stroke(Color("bg").opacity(0.3), lineWidth: 6)
+                                .stroke(colorScheme == .dark ? .black.opacity(0.3) : .white.opacity(0.3), lineWidth: 6)
                                 .frame(width: 80, height: 80)
                             
                             Circle()
                                 .trim(from: 0, to: 0.7) // 350/500 = 0.7
-                                .stroke(Color("bg"), lineWidth: 6)
+                                .stroke(colorScheme == .dark ? .black : .white, lineWidth: 6)
                                 .frame(width: 80, height: 80)
                                 .rotationEffect(.degrees(-90))
                             
                             VStack(spacing: 2) {
                                 Text("350/500")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "flame.fill")
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                 
                                 Text("Cals left")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                             
                             Text("150")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Color("bg"))
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
                         }
                         
                         Spacer(minLength: 0)
@@ -115,44 +118,44 @@ struct RolloverView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Today")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color("bg"))
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                     
                     HStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .stroke(Color("bg").opacity(0.3), lineWidth: 6)
+                                .stroke(colorScheme == .dark ? .black.opacity(0.3) : .white.opacity(0.3), lineWidth: 6)
                                 .frame(width: 80, height: 80)
                             
                             Circle()
                                 .trim(from: 0, to: 0.54) // 350/650 = ~0.54
-                                .stroke(Color("bg"), lineWidth: 6)
+                                .stroke(colorScheme == .dark ? .black : .white, lineWidth: 6)
                                 .frame(width: 80, height: 80)
                                 .rotationEffect(.degrees(-90))
                             
                             VStack(spacing: 2) {
                                 Text("350/650")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "flame.fill")
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                 
                                 Text("Cals left")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                 
                                 Text("+150")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(Color("bg"))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                             
                             Text("150+150")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Color("bg"))
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
                         }
                         
                         Spacer(minLength: 0)
@@ -204,9 +207,12 @@ struct RolloverView: View {
                         .cornerRadius(28)
                 }
             }
+            
+            
             .padding(.horizontal)
             .padding(.bottom, 40)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(
@@ -220,8 +226,4 @@ struct RolloverView: View {
     }
 }
 
-struct RolloverView_Previews: PreviewProvider {
-    static var previews: some View {
-        RolloverView()
-    }
-}
+

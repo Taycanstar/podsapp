@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ObstaclesView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var selectedObstacles: Set<Obstacle> = []
     
@@ -71,6 +72,7 @@ struct ObstaclesView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's holding you back from reaching your goals?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 Text("Select all that apply.")
                     .font(.system(size: 18))
@@ -92,7 +94,7 @@ struct ObstaclesView: View {
                             HStack {
                                 Image(systemName: obstacle.icon)
                                     .font(.system(size: 18))
-                                    .foregroundColor(isSelected(obstacle) ? .white : .primary)
+                                    .foregroundColor(isSelected(obstacle) ? (colorScheme == .dark ? .black : .white) : .primary)
                                     .frame(width: 30)
                                     .padding(.leading, 16)
                                 
@@ -108,14 +110,14 @@ struct ObstaclesView: View {
                                 
                                 if isSelected(obstacle) {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.white)
+                                        .foregroundColor(colorScheme == .dark ? .black : .white)
                                         .padding(.trailing, 16)
                                 }
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 70)
-                            .background(isSelected(obstacle) ? Color.accentColor : Color("iosbg"))
-                            .foregroundColor(isSelected(obstacle) ? .white : .primary)
+                            .background(isSelected(obstacle) ? Color.accentColor : (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6)))
+                            .foregroundColor(isSelected(obstacle) ? (colorScheme == .dark ? .black : .white) : .primary)
                             .cornerRadius(12)
                         }
                     }
@@ -146,6 +148,7 @@ struct ObstaclesView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

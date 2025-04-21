@@ -101,6 +101,9 @@ class OnboardingViewModel: ObservableObject {
     @Published var subscriptionSeats: Int?
     @Published var canCreateNewTeam: Bool = false
     
+    // Add this property with the others
+    @Published var isShowingOnboarding: Bool = false
+    
     // Computed property to get current progress
     var progress: CGFloat {
         return OnboardingProgress.progressFor(screen: currentFlowStep.asScreen)
@@ -147,21 +150,19 @@ class OnboardingViewModel: ObservableObject {
     
     func completeOnboarding() {
         onboardingCompleted = true
-        currentStep = .welcome
         saveOnboardingState()
     }
     
     // MARK: - Persistence
     
-    private func saveOnboardingState() {
+     func saveOnboardingState() {
         UserDefaults.standard.set(currentFlowStep.rawValue, forKey: "onboardingFlowStep")
         UserDefaults.standard.set(onboardingCompleted, forKey: "onboardingCompleted")
     }
     
-    private func loadOnboardingState() {
+     func loadOnboardingState() {
         if UserDefaults.standard.bool(forKey: "onboardingCompleted") {
             onboardingCompleted = true
-            currentStep = .welcome
         } else if let stepValue = UserDefaults.standard.object(forKey: "onboardingFlowStep") as? Int,
                   let step = OnboardingFlowStep(rawValue: stepValue) {
             currentFlowStep = step
@@ -175,7 +176,6 @@ class OnboardingViewModel: ObservableObject {
         if UserDefaults.standard.bool(forKey: "isAuthenticated") {
             onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
             if onboardingCompleted {
-                currentStep = .welcome
             } else if let stepValue = UserDefaults.standard.object(forKey: "onboardingFlowStep") as? Int,
                       let step = OnboardingFlowStep(rawValue: stepValue) {
                 currentFlowStep = step

@@ -96,18 +96,28 @@ struct InfoView: View {
                                 // Handle success
                                 self.viewModel.username = self.username
                                 
-                                // Navigate to GenderView instead of WelcomeView
-                                viewModel.currentStep = .gender
+                                // Authenticate the user immediately
+                                // Authenticate the user
+                                UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                                
+                                // Save name and other user info
+                                UserDefaults.standard.set(self.name, forKey: "userName")
+                                UserDefaults.standard.set(self.username, forKey: "username")
+                                UserDefaults.standard.set(self.viewModel.email, forKey: "userEmail")
+                                
+                                // Start the onboarding flow
+                                self.viewModel.isShowingOnboarding = true
+                                
+                                // No need to set currentStep to .welcome
                                 isLoading = false
                             } else {
                                 // Handle error, optionally update errorMessage and showError to inform the user
-                                print("Error updating user information: \(message)")
+                                self.errorMessage = message
+                                self.showError = true
+                                isLoading = false
                             }
                         }
                     }
-                    
-                    // Reset error state when button action is successfully triggered
-                    self.showError = false
                 }) {
                     Text("Continue")
                         .foregroundColor(.white)

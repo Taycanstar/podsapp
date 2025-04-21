@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GoalTimeView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var selectedSpeed: Double = 1.5  // Default to medium speed
     
@@ -67,6 +68,7 @@ struct GoalTimeView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("How fast do you want to \(goalText) your goal?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
@@ -83,6 +85,7 @@ struct GoalTimeView: View {
                 // Selected speed value
                 Text("\(String(format: "%.1f", selectedSpeed)) lbs")
                     .font(.system(size: 44, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 // Animal icons for speed reference
                 HStack {
@@ -198,7 +201,7 @@ struct GoalTimeView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Color(.systemGray6).opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0))
+                    .background(Color(UIColor.systemGray6).opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0))
                     .cornerRadius(20)
                     .padding(.top, 20)
                     .opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0)
@@ -228,6 +231,7 @@ struct GoalTimeView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

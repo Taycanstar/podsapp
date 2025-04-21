@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AccomplishView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var selectedGoal: Accomplishment?
     
@@ -68,6 +69,7 @@ struct AccomplishView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's your primary wellness goal?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
@@ -86,7 +88,7 @@ struct AccomplishView: View {
                             HStack {
                                 Image(systemName: goal.icon)
                                     .font(.system(size: 22))
-                                    .foregroundColor(selectedGoal == goal ? .white : .primary)
+                                    .foregroundColor(selectedGoal == goal ? (colorScheme == .dark ? .black : .white) : .primary)
                                     .frame(width: 30)
                                     .padding(.leading, 16)
                                 
@@ -97,8 +99,12 @@ struct AccomplishView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 70)
-                            .background(selectedGoal == goal ? Color.accentColor : Color("iosbg"))
-                            .foregroundColor(selectedGoal == goal ? .white : .primary)
+                            .background(
+                                selectedGoal == goal ? 
+                                    Color.accentColor : 
+                                    (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
+                            )
+                            .foregroundColor(selectedGoal == goal ? (colorScheme == .dark ? .black : .white) : .primary)
                             .cornerRadius(12)
                         }
                     }
@@ -129,6 +135,7 @@ struct AccomplishView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

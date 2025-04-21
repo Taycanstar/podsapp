@@ -42,6 +42,7 @@ struct WorkoutDaysView: View {
     
     @State private var selectedFrequency: WorkoutFrequency = .medium
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToHeightWeight = false
     
     var body: some View {
@@ -80,6 +81,7 @@ struct WorkoutDaysView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("How often do you workout weekly?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 Text("We'll use this to shape your plan.")
                     .font(.system(size: 18))
@@ -101,7 +103,7 @@ struct WorkoutDaysView: View {
                         HStack {
                             Image(systemName: frequency.icon)
                                 .font(.system(size: 22))
-                                .foregroundColor(selectedFrequency == frequency ? .white : .primary)
+                                .foregroundColor(selectedFrequency == frequency ? (colorScheme == .dark ? .black : .white) : .primary)
                                 .frame(width: 30)
                                 .padding(.leading, 6)
                             
@@ -119,8 +121,12 @@ struct WorkoutDaysView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 70)
-                        .background(selectedFrequency == frequency ? Color.accentColor : Color("iosbg"))
-                        .foregroundColor(selectedFrequency == frequency ? .white : .primary)
+                        .background(
+                            selectedFrequency == frequency ? 
+                                Color.accentColor : 
+                                (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
+                        )
+                        .foregroundColor(selectedFrequency == frequency ? (colorScheme == .dark ? .black : .white) : .primary)
                         .cornerRadius(12)
                     }
                 }
@@ -150,6 +156,7 @@ struct WorkoutDaysView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

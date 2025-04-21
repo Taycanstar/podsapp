@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SpecificDietView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedDiet: Diet?
     @State private var navigateToNextStep = false
     
@@ -72,6 +73,7 @@ struct SpecificDietView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Which diet do you follow?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
@@ -90,7 +92,7 @@ struct SpecificDietView: View {
                             HStack {
                                 Image(systemName: diet.icon)
                                     .font(.system(size: 18))
-                                    .foregroundColor(selectedDiet == diet ? .white : .primary)
+                                    .foregroundColor(selectedDiet == diet ? (colorScheme == .dark ? .black : .white) : .primary)
                                     .frame(width: 40)
                                 
                                 Text(diet.rawValue)
@@ -103,8 +105,12 @@ struct SpecificDietView: View {
                             .padding(.leading, 12)
                             .frame(maxWidth: .infinity)
                             .frame(height: 60)
-                            .background(selectedDiet == diet ? Color.accentColor : Color("iosbg"))
-                            .foregroundColor(selectedDiet == diet ? .white : .primary)
+                            .background(
+                                selectedDiet == diet ? 
+                                    Color.accentColor : 
+                                    (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
+                            )
+                            .foregroundColor(selectedDiet == diet ? (colorScheme == .dark ? .black : .white) : .primary)
                             .cornerRadius(12)
                         }
                     }
@@ -135,6 +141,7 @@ struct SpecificDietView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

@@ -10,6 +10,7 @@ import UIKit
 
 struct DesiredWeightView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedWeight: Double = {
         // Check if user selected imperial or metric
         let isImperial = UserDefaults.standard.bool(forKey: "isImperial")
@@ -65,6 +66,7 @@ struct DesiredWeightView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's your desired weight?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
@@ -81,6 +83,7 @@ struct DesiredWeightView: View {
             // Weight display
             Text(String(format: "%.1f lbs", selectedWeight))
                 .font(.system(size: 44, weight: .bold))
+                .foregroundColor(.primary)
                 .padding(.bottom, 24)
             
             // Weight ruler picker (range: 50.0...500.0)
@@ -116,6 +119,7 @@ struct DesiredWeightView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
     }
@@ -132,6 +136,7 @@ struct WeightRulerView: View {
     let range: ClosedRange<Double>
     let step: Double
     private let tickSpacing: CGFloat = 8
+    @Environment(\.colorScheme) var colorScheme
 
     @State private var baseOffset: CGFloat = 0
     @State private var dragOffset: CGFloat = 0
@@ -147,7 +152,7 @@ struct WeightRulerView: View {
                     .frame(height: 60)
                 
                 Rectangle()
-                    .fill(Color(.systemGray6))
+                    .fill(colorScheme == .dark ? Color(UIColor.systemGray5) : Color(UIColor.systemGray6))
                     .frame(height: 60)
                     .mask(
                         HStack(spacing: 0) {
@@ -174,6 +179,7 @@ struct WeightRulerView: View {
                             if i % Int(1/step) == 0 {
                                 Text(String(format: "%.0f", weight))
                                     .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }

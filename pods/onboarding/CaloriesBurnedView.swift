@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CaloriesBurnedView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
     var body: some View {
@@ -48,6 +49,7 @@ struct CaloriesBurnedView: View {
                 Text("Add calories burned back to your daily goal?")
                     .padding()
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                     
                 Spacer()
                 
@@ -55,13 +57,13 @@ struct CaloriesBurnedView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Today's Goal")
                         .font(.system(size: 15))
-                        .foregroundColor(Color("bg"))
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                         .fontWeight(.medium)
                     
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill(Color("bg"))
+                                .fill(colorScheme == .dark ? .black : .white)
                                 .frame(width: 40, height: 40)
                             
                             Image(systemName: "flame.fill")
@@ -70,7 +72,7 @@ struct CaloriesBurnedView: View {
                         }
                         
                         Text("500 Cals")
-                            .foregroundColor(Color("bg"))
+                            .foregroundColor(colorScheme == .dark ? .black : .white)
                             .font(.system(size: 15))
                     }
                     
@@ -79,7 +81,7 @@ struct CaloriesBurnedView: View {
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill(Color("bg"))
+                                .fill(colorScheme == .dark ? .black : .white)
                                 .frame(width: 40, height: 40)
                             
                             Image(systemName: "shoe")
@@ -88,13 +90,13 @@ struct CaloriesBurnedView: View {
                         }
                         
                         Text("Running")
-                            .foregroundColor(Color("bg"))
+                            .foregroundColor(colorScheme == .dark ? .black : .white)
                             .font(.system(size: 15))
                         
                         Spacer()
                         
                         Text("+100 cals")
-                            .foregroundColor(Color("bg"))
+                            .foregroundColor(colorScheme == .dark ? .black : .white)
                             .font(.system(size: 15, weight: .medium))
                     }
                 }
@@ -146,6 +148,7 @@ struct CaloriesBurnedView: View {
             .padding(.horizontal)
             .padding(.bottom, 40)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(

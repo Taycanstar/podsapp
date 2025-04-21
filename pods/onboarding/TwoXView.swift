@@ -16,6 +16,7 @@ import SwiftUI
 
 struct TwoXView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
     // Animation states
@@ -72,6 +73,7 @@ struct TwoXView: View {
             // Title text - dynamically based on goal
             Text("\(goalText.capitalized) twice as fast with Humuli")
                 .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
@@ -94,7 +96,7 @@ struct TwoXView: View {
                             VStack {
                                 Text("Without\nHumuli")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(Color(.systemBackground))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                     .multilineTextAlignment(.center)
                                     .padding(.top, 30)
                                 
@@ -129,7 +131,7 @@ struct TwoXView: View {
                             VStack {
                                 Text("With\nHumuli")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(Color(.systemBackground))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                     .multilineTextAlignment(.center)
                                     .padding(.top, 30)
                                 
@@ -164,7 +166,7 @@ struct TwoXView: View {
                     // Tagline
                     Text("Humuli makes it easy and holds you accountable.")
                         .font(.system(size: 15))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .lineLimit(2)
@@ -203,6 +205,7 @@ struct TwoXView: View {
         }
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .background(Color(UIColor.systemBackground))
         .background(
             NavigationLink(
                 destination: ObstaclesView(),

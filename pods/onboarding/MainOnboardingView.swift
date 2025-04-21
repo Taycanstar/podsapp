@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainOnboardingView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     @Binding var isAuthenticated: Bool
     @Binding var showTourView: Bool
     
@@ -17,15 +18,15 @@ struct MainOnboardingView: View {
             case .info:
                 InfoView()
             case .gender:
-                // This is the entry point to the detailed onboarding flow
-                // Each view handles its own progress display
                 onboardingFlowView
              case .welcome:
+                
                  WelcomeView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             case .login:
                 LoginView(isAuthenticated: $isAuthenticated)
             }
         }
+        .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
         .onAppear {
             viewModel.loadProgress()
         }

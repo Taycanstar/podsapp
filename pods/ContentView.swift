@@ -176,6 +176,10 @@ struct ContentView: View {
             }
         }
   
+        .fullScreenCover(isPresented: $viewModel.isShowingOnboarding) {
+            OnboardingFlowContainer()
+                .environmentObject(viewModel)
+        }
         .id(forceRefresh)
         .onChange(of: isAuthenticated) { _, newValue in
             if newValue {
@@ -188,6 +192,13 @@ struct ContentView: View {
 //        }
         .onAppear {
             self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+            
+            // Check if user is authenticated but hasn't completed onboarding
+            if self.isAuthenticated && !UserDefaults.standard.bool(forKey: "onboardingCompleted") {
+                // Show the onboarding flow
+                viewModel.isShowingOnboarding = true
+            }
+            
             if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
                 viewModel.email = storedEmail
             }

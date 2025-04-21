@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct CreatingPlanView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var progress: CGFloat = 0.0
     @State private var percentage: Int = 0
     @State private var currentTask: String = "Customizing health plan..."
-    @State private var navigateToHome = false
     
     var body: some View {
         VStack(spacing: 25) {
@@ -113,14 +113,6 @@ struct CreatingPlanView: View {
         }
         .background(Color(.systemBackground).edgesIgnoringSafeArea(.all))
         .navigationBarHidden(true)
-        .background(
-            NavigationLink(
-                destination: Text("Home Screen").font(.largeTitle),
-                isActive: $navigateToHome
-            ) {
-                EmptyView()
-            }
-        )
     }
     
     // Function to simulate loading progress
@@ -148,7 +140,10 @@ struct CreatingPlanView: View {
             } else {
                 timer.invalidate()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    navigateToHome = true
+                    // Mark onboarding as complete
+                    viewModel.onboardingCompleted = true
+                    viewModel.isShowingOnboarding = false
+                    viewModel.saveOnboardingState()
                 }
             }
         }

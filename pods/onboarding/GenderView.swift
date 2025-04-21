@@ -1,4 +1,3 @@
-//
 //  GenderView.swift
 //  Pods
 //
@@ -17,14 +16,18 @@ import SwiftUI
 struct GenderView: View {
     @State private var selectedGender: Gender = .male
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToWorkoutDays = false
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    // Optional closure for container-based navigation
+    var nextStep: (() -> Void)? = nil
     
     // Enum for gender options
     enum Gender: String, CaseIterable {
         case male = "Male"
         case female = "Female"
         case other = "Other"
-        
     }
     
     var body: some View {
@@ -53,7 +56,7 @@ struct GenderView: View {
                         
                         Rectangle()
                             .fill(Color.primary)
-                            .frame(width: UIScreen.main.bounds.width * 0.2, height: 4)
+                            .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .gender), height: 4)
                             .cornerRadius(2)
                     }
                     .padding(.horizontal)
@@ -64,6 +67,7 @@ struct GenderView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Choose your Gender")
                         .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.primary)
                     
                     Text("We'll use this to tailor your personalized plan")
                         .font(.system(size: 18))
@@ -86,8 +90,12 @@ struct GenderView: View {
                                 .font(.system(size: 18, weight: .medium))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
-                                .background(selectedGender == gender ? Color.accentColor : Color("iosbg"))
-                                .foregroundColor(selectedGender == gender ? .white : .primary)
+                                .background(
+                                    selectedGender == gender ? 
+                                        Color.accentColor : 
+                                        (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
+                                )
+                                .foregroundColor(selectedGender == gender ? (colorScheme == .dark ? .black : .white) : .primary)
                                 .cornerRadius(12)
                         }
                     }
@@ -101,7 +109,14 @@ struct GenderView: View {
                     Button(action: {
                         HapticFeedback.generate()
                         UserDefaults.standard.set(selectedGender.rawValue, forKey: "selectedGender")
-                        navigateToWorkoutDays = true
+                        
+                        if let nextStep = nextStep {
+                            // Use provided closure if available
+                            nextStep()
+                        } else {
+                            // Fall back to traditional navigation
+                            navigateToWorkoutDays = true
+                        }
                     }) {
                         Text("Continue")
                             .font(.system(size: 18, weight: .semibold))
@@ -117,6 +132,7 @@ struct GenderView: View {
                 .padding(.bottom, 24)
                 .background(Material.ultraThin)
             }
+            .background(Color("bg"))
             .edgesIgnoringSafeArea(.bottom)
             .navigationBarHidden(true)
             .background(
@@ -131,7 +147,3 @@ struct GenderView: View {
         .navigationViewStyle(StackNavigationViewStyle())
     }
 }
-
-#Preview {
-    GenderView()
-} 

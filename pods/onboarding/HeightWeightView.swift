@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HeightWeightView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var isImperial = true
     @State private var navigateToDob = false
     
@@ -64,6 +65,7 @@ struct HeightWeightView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Height & weight")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 Text("This will be used to calibrate your custom plan.")
                     .font(.system(size: 18))
@@ -99,6 +101,7 @@ struct HeightWeightView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Height")
                         .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
                     
                     if isImperial {
                         // Imperial height pickers (feet and inches)
@@ -134,6 +137,7 @@ struct HeightWeightView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Weight")
                         .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
                     
                     if isImperial {
                         // Imperial weight picker (pounds)
@@ -178,6 +182,7 @@ struct HeightWeightView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
         .background(
@@ -229,6 +234,7 @@ struct ScrollViewPicker: View {
     @Binding var selection: Int
     let range: ClosedRange<Int>
     let suffix: String
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack {
@@ -246,7 +252,7 @@ struct ScrollViewPicker: View {
                 HapticFeedback.generateLigth()
             }
         }
-        .background(Color(UIColor.systemGray6))
+        .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
         .cornerRadius(12)
     }
 }

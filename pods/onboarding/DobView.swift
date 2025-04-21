@@ -9,6 +9,7 @@ import SwiftUI
 
 struct DobView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
     // Date of birth components
@@ -62,6 +63,7 @@ struct DobView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("When were you born?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 Text("We'll use this to tailor your personalized plan.")
                     .font(.system(size: 18))
@@ -131,6 +133,7 @@ struct DobView: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
     }
@@ -167,6 +170,7 @@ struct DateScrollPicker: View {
     @Binding var selection: Int
     let options: [String]
     let label: String
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack {
@@ -191,7 +195,7 @@ struct DateScrollPicker: View {
                 HapticFeedback.generateLigth()
             }
         }
-        .background(Color(UIColor.systemGray6))
+        .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
         .cornerRadius(12)
     }
 }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct OnboardingGoal: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedGoal: Goal = .loseWeight
     @State private var navigateToNextStep = false
     
@@ -55,6 +56,7 @@ struct OnboardingGoal: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's your goal?")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
                 
                 Text("This will be used to calibrate your custom plan.")
                     .font(.system(size: 18))
@@ -77,8 +79,12 @@ struct OnboardingGoal: View {
                             .font(.system(size: 18, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(selectedGoal == goal ? Color.accentColor : Color("iosbg"))
-                            .foregroundColor(selectedGoal == goal ? .white : .primary)
+                            .background(
+                                selectedGoal == goal ? 
+                                    Color.accentColor : 
+                                    (colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
+                            )
+                            .foregroundColor(selectedGoal == goal ? (colorScheme == .dark ? .black : .white) : .primary)
                             .cornerRadius(12)
                     }
                 }
@@ -110,6 +116,7 @@ struct OnboardingGoal: View {
             .padding(.bottom, 24)
             .background(Material.ultraThin)
         }
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
     }
