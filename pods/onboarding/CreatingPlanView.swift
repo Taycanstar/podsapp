@@ -35,11 +35,12 @@ struct CreatingPlanView: View {
                     .frame(height: 8)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: [.red, .blue]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ))
+                    // .fill(LinearGradient(
+                    //     gradient: Gradient(colors: [.red, .blue]),
+                    //     startPoint: .leading,
+                    //     endPoint: .trailing
+                    // ))
+                    .fill(Color.accentColor)
                     .frame(width: UIScreen.main.bounds.width * 0.8 * progress, height: 8)
             }
             .frame(width: UIScreen.main.bounds.width * 0.8)
