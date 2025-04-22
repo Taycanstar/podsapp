@@ -153,6 +153,14 @@ struct GoalInfoView: View {
                 label: { EmptyView() }
             )
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("GoalInfoView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(6, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 GoalInfoView appeared - saved current step")
+        }
     }
 }
 

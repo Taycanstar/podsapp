@@ -215,6 +215,13 @@ struct TwoXView: View {
             }
         )
         .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("TwoXView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(8, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 TwoXView appeared - saved current step")
+            
             // Initial states
             showBottomSections = false
             showTagline = false

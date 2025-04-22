@@ -122,11 +122,24 @@ struct DesiredWeightView: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(5, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 DesiredWeightView appeared - saved current step")
+        }
     }
     
     private func saveDesiredWeight() {
         // Save the selected weight to UserDefaults
         UserDefaults.standard.set(selectedWeight, forKey: "desiredWeight")
+        
+        // Also save the current step before navigating
+        UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")
+        UserDefaults.standard.set(5, forKey: "onboardingFlowStep")
+        UserDefaults.standard.synchronize()
     }
 }
 

@@ -146,11 +146,24 @@ class OnboardingViewModel: ObservableObject {
         currentFlowStep = .gender
         onboardingCompleted = false
         saveOnboardingState()
+        
+        // Mark that onboarding is now in progress
+        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
     }
     
     func completeOnboarding() {
-        onboardingCompleted = true
-        saveOnboardingState()
+        // Safety check - only mark as complete if we're on the final step
+        if currentFlowStep == .complete {
+            print("✓ Marking onboarding as completed (on final step)")
+            onboardingCompleted = true
+            saveOnboardingState()
+            
+            // Mark that onboarding is no longer in progress
+            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+        } else {
+            print("⚠️ WARNING: Attempted to mark onboarding as complete when not on final step! (current: \(currentFlowStep))")
+            // Don't mark as complete, this is likely an error
+        }
     }
     
     // MARK: - Persistence
@@ -158,6 +171,9 @@ class OnboardingViewModel: ObservableObject {
      func saveOnboardingState() {
         UserDefaults.standard.set(currentFlowStep.rawValue, forKey: "onboardingFlowStep")
         UserDefaults.standard.set(onboardingCompleted, forKey: "onboardingCompleted")
+        
+        // Save step name for easier restoration
+        UserDefaults.standard.set(currentFlowStep.viewType, forKey: "currentOnboardingStep")
     }
     
      func loadOnboardingState() {
@@ -167,6 +183,16 @@ class OnboardingViewModel: ObservableObject {
                   let step = OnboardingFlowStep(rawValue: stepValue) {
             currentFlowStep = step
             currentStep = .gender // We'll use this to trigger showing the onboarding flow
+        }
+    }
+    
+    // Method to restore onboarding progress from a specific step name
+    func restoreOnboardingProgress(step: String) {
+        // Find the corresponding step from viewType
+        if let flowStep = OnboardingFlowStep.allCases.first(where: { $0.viewType == step }) {
+            currentFlowStep = flowStep
+            // Default to gender for initial step
+            currentStep = .gender
         }
     }
     

@@ -92,11 +92,42 @@ struct OnboardingFlowContainer: View {
     private func updateCurrentStep() {
         // Update the ViewModel's currentFlowStep to match our local state
         viewModel.currentFlowStep = currentStep
+        
+        // Save to UserDefaults for persistence across app restarts
+        viewModel.saveOnboardingState()
+        
+        // Mark that onboarding is in progress - FORCE SAVE
+        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+        UserDefaults.standard.set(currentStep.viewType, forKey: "currentOnboardingStep")
+        UserDefaults.standard.set(currentStep.rawValue, forKey: "onboardingFlowStep")
+        
+        // Force synchronize to ensure data is written immediately
+        UserDefaults.standard.synchronize()
+        
+        print("📝 Saved onboarding step: \(currentStep.viewType) (raw: \(currentStep.rawValue))")
     }
     
     private func completeOnboarding() {
         viewModel.onboardingCompleted = true
         viewModel.isShowingOnboarding = false
+        
+        // Clear onboarding progress flags when complete
+        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+        
+        // Force synchronize to ensure changes are saved immediately
+        UserDefaults.standard.synchronize()
+        
+        print("✅ Onboarding completed and flags cleared")
+    }
+}
+
+// Add initializer to sync with viewModel's state
+extension OnboardingFlowContainer {
+    init(viewModel: OnboardingViewModel) {
+        // Can't initialize EnvironmentObject directly
+        self._currentStep = State(initialValue: viewModel.currentFlowStep)
     }
 }
 

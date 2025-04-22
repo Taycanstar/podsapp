@@ -152,6 +152,14 @@ struct SpecificDietView: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("SpecificDietView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(10, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 SpecificDietView appeared - saved current step")
+        }
     }
     
     // Save selected diet to UserDefaults

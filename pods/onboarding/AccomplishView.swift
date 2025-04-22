@@ -146,6 +146,14 @@ struct AccomplishView: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("AccomplishView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(11, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 AccomplishView appeared - saved current step")
+        }
     }
     
     // Save selected goal to UserDefaults

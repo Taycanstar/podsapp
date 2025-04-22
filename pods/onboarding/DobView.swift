@@ -136,6 +136,22 @@ struct DobView: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .background(
+            NavigationLink(
+                destination: OnboardingGoal(),
+                isActive: $navigateToNextStep
+            ) {
+                EmptyView()
+            }
+        )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("DobView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(3, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 DobView appeared - saved current step")
+        }
     }
     
     private func saveDateOfBirth() {

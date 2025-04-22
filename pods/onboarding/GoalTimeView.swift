@@ -242,6 +242,14 @@ struct GoalTimeView: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("GoalTimeView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(7, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 GoalTimeView appeared - saved current step")
+        }
     }
     
     // Calculate the horizontal offset for the thumb based on selected speed

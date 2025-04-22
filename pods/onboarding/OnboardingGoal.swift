@@ -119,6 +119,14 @@ struct OnboardingGoal: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("OnboardingGoal", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(4, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 OnboardingGoal appeared - saved current step")
+        }
     }
     
     private func saveGoal() {

@@ -159,6 +159,14 @@ struct CaloriesBurnedView: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("CaloriesBurnedView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(13, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 CaloriesBurnedView appeared - saved current step")
+        }
     }
 }
 

@@ -92,13 +92,7 @@ struct CreatingPlanView: View {
                     }
                   .foregroundColor(Color("bg"))
                     
-                    HStack {
-                        Text("•")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Health Score")
-                            .font(.system(size: 15))
-                    }
-                    .foregroundColor(Color("bg"))
+   
                 }
             }
             .padding(30)
@@ -141,12 +135,33 @@ struct CreatingPlanView: View {
             } else {
                 timer.invalidate()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // CRITICAL FIX: First check if onboarding is actually complete
+                    // We want to avoid corrupting the flag
+                    print("🚀 About to mark onboarding as complete - validating state")
+                    
+                    // Double check if we should actually mark as complete
+                    let currentStep = UserDefaults.standard.string(forKey: "currentOnboardingStep")
+                    if currentStep != "CreatingPlanView" {
+                        print("⚠️ WARNING: Trying to mark onboarding as complete when currentStep=\(currentStep ?? "nil")!")
+                        print("⚠️ Setting currentStep=CreatingPlanView to fix inconsistency")
+                        UserDefaults.standard.set("CreatingPlanView", forKey: "currentOnboardingStep")
+                    }
+                    
                     // Mark onboarding as complete
                     viewModel.onboardingCompleted = true
                     
                     // Make sure user is authenticated in UserDefaults
                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
                     UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                    
+                    // Clear onboarding in progress flag
+                    UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                    UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                    
+                    // Force synchronize to ensure changes are written immediately
+                    UserDefaults.standard.synchronize()
+                    
+                    print("✅ Onboarding completed - all flags saved")
                     
                     // Post notification that authentication is complete
                     NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)

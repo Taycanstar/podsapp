@@ -221,8 +221,16 @@ struct RolloverView: View {
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()
-}
+            }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("RolloverView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(14, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 RolloverView appeared - saved current step")
+        }
     }
 }
 

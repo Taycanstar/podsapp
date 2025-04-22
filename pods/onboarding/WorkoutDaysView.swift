@@ -167,6 +167,14 @@ struct WorkoutDaysView: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("WorkoutDaysView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(1, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 WorkoutDaysView appeared - saved current step")
+        }
     }
 }
 

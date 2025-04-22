@@ -157,6 +157,14 @@ struct ConnectToAppleHealth: View {
                 EmptyView()
             }
         )
+        .onAppear {
+            // Save current step to UserDefaults when this view appears
+            UserDefaults.standard.set("ConnectToAppleHealth", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(12, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
+            print("📱 ConnectToAppleHealth appeared - saved current step")
+        }
     }
     
     // Request health permissions
