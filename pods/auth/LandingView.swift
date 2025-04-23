@@ -124,7 +124,7 @@ struct LandingView: View {
                 return
             }
 
-            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted in
+            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     print("Token sent successfully")
                     let userIdString = String(userId ?? 0)
@@ -136,14 +136,45 @@ struct LandingView: View {
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
                         
-                        // Save onboarding status from server
-                        viewModel.onboardingCompleted = onboardingCompleted ?? false
-                        UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
-                        print("🔑 Google Auth - Onboarding completed: \(onboardingCompleted ?? false)")
+                        // Always trust the server's onboarding status
+                        let isOnboardingComplete = onboardingCompleted ?? false
                         
-                        // If onboarding not completed, prepare to show it
-                        if !(onboardingCompleted ?? false) {
+                        // Save both local and server onboarding status variables
+                        viewModel.onboardingCompleted = isOnboardingComplete
+                        viewModel.serverOnboardingCompleted = isOnboardingComplete
+                        UserDefaults.standard.set(isOnboardingComplete, forKey: "onboardingCompleted")
+                        UserDefaults.standard.set(isOnboardingComplete, forKey: "serverOnboardingCompleted")
+                        
+                        print("🔑 Google Auth - Onboarding completed: \(isOnboardingComplete)")
+                        
+                        // If this is a new user, make sure to reset ALL onboarding UserDefaults
+                        if isNewUser {
+                            print("👤 New Google user detected - resetting onboarding state")
+                            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                            UserDefaults.standard.set(0, forKey: "onboardingFlowStep")
+                            UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                            UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                            viewModel.currentFlowStep = .gender
+                        }
+                        
+                        // If user has email and onboarding is completed, save their email
+                        if let email = email, !email.isEmpty, isOnboardingComplete {
+                            UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
+                            print("📝 Saved \(email) as the email with completed onboarding")
+                        }
+                        
+                        // Set appropriate onboarding flags based on completion status
+                        if !isOnboardingComplete {
+                            // Onboarding is not complete, prepare to show it
+                            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                            UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                            viewModel.currentFlowStep = .gender
+                        } else {
+                            // Onboarding is complete, make sure we're not in "inProgress" state
+                            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                            // Also remove any saved step if onboarding is complete
+                            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
                         }
 
                         // Update view model
@@ -177,10 +208,13 @@ struct LandingView: View {
                             "$name": viewModel.username
                         ])
                         
-                        if onboardingCompleted ?? false {
+                        if isOnboardingComplete {
+                            // If onboarding is already completed, authenticate directly
                             self.isAuthenticated = true
                         } else {
-                            viewModel.currentStep = .welcome
+                            // If onboarding is not completed, show the onboarding flow right away
+                            viewModel.isShowingOnboarding = true
+                            self.isAuthenticated = true
                         }
                     }
                 } else {
@@ -216,7 +250,7 @@ struct LandingView: View {
             
             print("Sending original nonce to backend: \(nonce)")
             
-            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted in
+            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     let userIdString = String(userId ?? 0)
 
@@ -227,14 +261,45 @@ struct LandingView: View {
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
                         
-                        // Save onboarding status from server
-                        viewModel.onboardingCompleted = onboardingCompleted ?? false
-                        UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
-                        print("🔑 Apple Auth - Onboarding completed: \(onboardingCompleted ?? false)")
+                        // Always trust the server's onboarding status
+                        let isOnboardingComplete = onboardingCompleted ?? false
                         
-                        // If onboarding not completed, prepare to show it
-                        if !(onboardingCompleted ?? false) {
+                        // Save both local and server onboarding status variables
+                        viewModel.onboardingCompleted = isOnboardingComplete
+                        viewModel.serverOnboardingCompleted = isOnboardingComplete
+                        UserDefaults.standard.set(isOnboardingComplete, forKey: "onboardingCompleted")
+                        UserDefaults.standard.set(isOnboardingComplete, forKey: "serverOnboardingCompleted")
+                        
+                        print("🔑 Apple Auth - Onboarding completed: \(isOnboardingComplete)")
+                        
+                        // If this is a new user, make sure to reset ALL onboarding UserDefaults
+                        if isNewUser {
+                            print("👤 New Apple user detected - resetting onboarding state")
+                            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                            UserDefaults.standard.set(0, forKey: "onboardingFlowStep")
+                            UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                            UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                            viewModel.currentFlowStep = .gender
+                        }
+                        
+                        // If user has email and onboarding is completed, save their email
+                        if let email = email, !email.isEmpty, isOnboardingComplete {
+                            UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
+                            print("📝 Saved \(email) as the email with completed onboarding")
+                        }
+                        
+                        // Set appropriate onboarding flags based on completion status
+                        if !isOnboardingComplete {
+                            // Onboarding is not complete, prepare to show it
+                            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                            UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                            viewModel.currentFlowStep = .gender
+                        } else {
+                            // Onboarding is complete, make sure we're not in "inProgress" state
+                            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                            // Also remove any saved step if onboarding is complete
+                            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
                         }
 
                         // Update view model
@@ -260,6 +325,9 @@ struct LandingView: View {
                             seats: subscriptionSeats,
                             canCreateNewTeam: nil
                         )
+                        
+                        // Force synchronize to ensure all changes are written immediately
+                        UserDefaults.standard.synchronize()
 
                         // Mixpanel tracking
                         Mixpanel.mainInstance().identify(distinctId: userIdString)
@@ -268,10 +336,13 @@ struct LandingView: View {
                             "$name": viewModel.username
                         ])
 
-                        if onboardingCompleted ?? false {
+                        if isOnboardingComplete {
+                            // If onboarding is already completed, authenticate directly
                             self.isAuthenticated = true
                         } else {
-                            viewModel.currentStep = .welcome
+                            // If onboarding is not completed, show the onboarding flow right away
+                            viewModel.isShowingOnboarding = true
+                            self.isAuthenticated = true
                         }
                     }
                 } else {

@@ -147,43 +147,66 @@ struct CreatingPlanView: View {
                         UserDefaults.standard.set("CreatingPlanView", forKey: "currentOnboardingStep")
                     }
                     
-                    // Mark onboarding as complete
-                    viewModel.onboardingCompleted = true
-                    
-                    // Mark completion in the viewModel and let it handle saving to UserDefaults
-                    viewModel.completeOnboarding()
-                    
                     // Make sure user is authenticated in UserDefaults
                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
                     
-                    // Now we just need to save the email of the user who completed onboarding
+                    // Get the user's email for updating the server
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        // Save the email of the user who completed onboarding
                         UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
-                    }
-                    
-                    // Force synchronize to ensure changes are written immediately
-                    UserDefaults.standard.synchronize()
-                    
-                    print("✅ Onboarding completed - all flags saved")
-                    
-                    // Mark onboarding as completed on the server
-                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        // Use NetworkManagerTwo for the server call
+                        print("✅ Saved email \(email) as the one who completed onboarding")
+                        
+                        // Mark onboarding as completed on the server - this is critical
                         NetworkManagerTwo.shared.markOnboardingCompleted(email: email) { result in
                             switch result {
                             case .success(let successful):
                                 if successful {
                                     print("✅ Server confirmed onboarding completion successfully")
+                                    
+                                    // Make sure to update all relevant state in the main thread
+                                    DispatchQueue.main.async {
+                                        // ONLY set serverOnboardingCompleted to true AFTER server confirms success
+                                        UserDefaults.standard.set(true, forKey: "serverOnboardingCompleted")
+                                        // Set all onboarding flags for this user
+                                        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                                        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                                        UserDefaults.standard.synchronize()
+                                    }
                                 } else {
                                     print("⚠️ Server returned failure when marking onboarding as completed")
+                                    // If the server call failed, we should not mark onboarding as completed
+                                    DispatchQueue.main.async {
+                                        print("⚠️ Resetting onboarding completion status due to server error")
+                                        UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
+                                        UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+                                        UserDefaults.standard.synchronize()
+                                    }
                                 }
                             case .failure(let error):
                                 print("⚠️ Failed to update server with onboarding completion: \(error)")
+                                // If the server call failed, we should not mark onboarding as completed
+                                DispatchQueue.main.async {
+                                    print("⚠️ Resetting onboarding completion status due to network error")
+                                    UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
+                                    UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+                                    UserDefaults.standard.synchronize()
+                                }
                             }
                         }
                     } else {
                         print("⚠️ Could not find email to update server onboarding status")
                     }
+                    
+                    // Mark onboarding as complete in the viewModel - this updates the UI
+                    viewModel.onboardingCompleted = true
+                    
+                    // Mark completion in the viewModel and let it handle saving to UserDefaults
+                    viewModel.completeOnboarding()
+                    
+                    // Force synchronize to ensure changes are written immediately
+                    UserDefaults.standard.synchronize()
+                    
+                    print("✅ Onboarding completed - all flags saved")
                     
                     // Post notification that authentication is complete
                     NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)

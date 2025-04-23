@@ -148,21 +148,42 @@ struct LoginView: View {
                     UserDefaults.standard.set(userId, forKey: "userId")
                     self.viewModel.userId = userId
                     
-                    self.viewModel.serverOnboardingCompleted = onboardingCompleted ?? false
-                    print("🔐 Login successful - Server onboarding completed: \(onboardingCompleted ?? false)")
+                    // Always trust the server's onboarding status
+                    let isOnboardingComplete = onboardingCompleted ?? false
                     
-                    self.viewModel.onboardingCompleted = onboardingCompleted ?? false
-                    UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
+                    // Save both local and server onboarding status variables
+                    self.viewModel.serverOnboardingCompleted = isOnboardingComplete
+                    self.viewModel.onboardingCompleted = isOnboardingComplete
+                    UserDefaults.standard.set(isOnboardingComplete, forKey: "onboardingCompleted")
+                    UserDefaults.standard.set(isOnboardingComplete, forKey: "serverOnboardingCompleted")
                     
-                    if !(onboardingCompleted ?? false) {
-                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-                        self.viewModel.currentFlowStep = .gender
-                    }
+                    print("🔐 Login successful - Server onboarding completed: \(isOnboardingComplete)")
                     
                     if let email = email {
                         self.viewModel.email = email
                         UserDefaults.standard.set(email, forKey: "userEmail")
+                        
+                        // If onboarding is completed, save this email as the one who completed onboarding
+                        if isOnboardingComplete {
+                            UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
+                            print("📝 Saved \(email) as the email with completed onboarding")
+                        }
                     }
+                    
+                    // Set onboarding flags appropriately
+                    if !isOnboardingComplete {
+                        // Onboarding is not complete, prepare to start/resume it
+                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        self.viewModel.currentFlowStep = .gender
+                        // Remove any saved completion email if onboarding is not complete
+                        UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                    } else {
+                        // Onboarding is complete, make sure we're not in "inProgress" state
+                        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                        // We can also remove any saved step if onboarding is complete
+                        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                    }
+                    
                     if let username = username {
                         self.viewModel.username = username
                         UserDefaults.standard.set(username, forKey: "username")
@@ -184,6 +205,9 @@ struct LoginView: View {
                         seats: subscriptionSeats,
                         canCreateNewTeam: nil
                     )
+                    
+                    // Force synchronize UserDefaults to ensure all changes are written
+                    UserDefaults.standard.synchronize()
                     
                     Mixpanel.mainInstance().identify(distinctId: userIdString)
                     Mixpanel.mainInstance().people.set(properties: [

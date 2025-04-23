@@ -348,19 +348,35 @@ struct ContentView: View {
             if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
                 viewModel.email = storedEmail
                 
-                // Check if this is a different user than the one who completed onboarding
-                if let completedEmail = UserDefaults.standard.string(forKey: "emailWithCompletedOnboarding"),
-                   completedEmail != storedEmail {
-                    // Different user, need to reset onboarding state
-                    print("⚠️ Detected different user login. Resetting onboarding state.")
-                    viewModel.onboardingCompleted = false
-                    // We still set UserDefaults here as other components might be reading it directly
-                    UserDefaults.standard.set(false, forKey: "onboardingCompleted")
-                    UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-                    UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
-                    // Make sure viewModel state is consistent
-                    viewModel.currentFlowStep = .gender
+                // Only check for different user if the server says onboarding is NOT completed
+                // If the server says onboarding is completed, we should trust that over the local email check
+                if !viewModel.serverOnboardingCompleted {
+                    // Check if this is a different user than the one who completed onboarding
+                    if let completedEmail = UserDefaults.standard.string(forKey: "emailWithCompletedOnboarding"),
+                       completedEmail != storedEmail {
+                        // Different user, need to reset onboarding state
+                        print("⚠️ Detected different user login. Resetting onboarding state.")
+                        viewModel.onboardingCompleted = false
+                        // We still set UserDefaults here as other components might be reading it directly
+                        UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                        // Make sure viewModel state is consistent
+                        viewModel.currentFlowStep = .gender
+                    }
                 }
+            }
+            
+            // If the server says onboarding is completed, update our local state to match
+            if viewModel.serverOnboardingCompleted {
+                viewModel.onboardingCompleted = true
+                UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                // Also save the email to prevent future confusion
+                if !viewModel.email.isEmpty {
+                    UserDefaults.standard.set(viewModel.email, forKey: "emailWithCompletedOnboarding")
+                }
+                print("✅ Server says onboarding is completed - updating local state to match")
             }
             
             if let storedUsername = UserDefaults.standard.string(forKey: "username") {
@@ -418,9 +434,23 @@ struct ContentView: View {
             UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
         }
 
+        // IMPORTANT: If server says onboarding IS completed but local state says it's not,
+        // trust the server and override the local state
+        if isAuthenticated && viewModel.serverOnboardingCompleted && !viewModel.onboardingCompleted {
+            print("⚠️ Mismatch detected! Server says onboarding IS completed but local state says not completed.")
+            print("⚠️ Overriding local state to match server...")
+            viewModel.onboardingCompleted = true
+            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+            // Save the current email as the one who completed onboarding
+            if !viewModel.email.isEmpty {
+                UserDefaults.standard.set(viewModel.email, forKey: "emailWithCompletedOnboarding")
+            }
+        }
+
         // CRITICAL FIX: Resume onboarding if server indicates incomplete OR there's a saved step OR onboarding is marked in progress
         // Server status takes priority over local flags which might be corrupted
-        if isAuthenticated && (!viewModel.serverOnboardingCompleted || currentStep != nil || onboardingInProgress) {
+        if isAuthenticated && (!viewModel.serverOnboardingCompleted || currentStep != nil || onboardingInProgress) && !viewModel.onboardingCompleted {
             print("🚨 RESUMING ONBOARDING NOW - Server indicates incomplete or found saved step/in-progress flag")
             
             // If the server says onboarding is incomplete, make sure the local state reflects this

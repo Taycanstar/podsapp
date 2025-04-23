@@ -87,16 +87,37 @@ struct DataControlsView: View {
     }
     
     private func logOut() {
-          // Clear the authentication state and email from UserDefaults
-          UserDefaults.standard.set(false, forKey: "isAuthenticated")
-          UserDefaults.standard.set("", forKey: "userEmail")
-        UserDefaults.standard.set("", forKey: "username")
+        // Clear authentication state
+        UserDefaults.standard.set(false, forKey: "isAuthenticated")
+        
+        // Clear user information
+        UserDefaults.standard.removeObject(forKey: "userEmail")
+        UserDefaults.standard.removeObject(forKey: "username")
+        UserDefaults.standard.removeObject(forKey: "userId")
+        
+        // Reset all onboarding flags
+        UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+        UserDefaults.standard.removeObject(forKey: "onboardingFlowStep")
+        UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+        UserDefaults.standard.removeObject(forKey: "serverOnboardingCompleted")
+        
         // Sign out from Google
-                GIDSignIn.sharedInstance.signOut()
-          // Update the state variables
+        GIDSignIn.sharedInstance.signOut()
+        
+        // Reset view model state
         isAuthenticated = false
-          viewModel.email = ""
-      }
+        viewModel.email = ""
+        viewModel.username = ""
+        viewModel.userId = nil
+        viewModel.onboardingCompleted = false
+        viewModel.serverOnboardingCompleted = false
+        viewModel.currentStep = .landing
+        
+        // Force synchronize to ensure changes take effect immediately
+        UserDefaults.standard.synchronize()
+    }
 
     private func deleteAllPods() {
         isLoading = true

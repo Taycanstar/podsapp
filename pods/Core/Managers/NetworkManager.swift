@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 // //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
 
     
 
@@ -1761,114 +1761,229 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
         task.resume()
     }
     
-    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/google-login/") else {
-            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    // func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool) -> Void) {
+    //     guard let url = URL(string: "\(baseUrl)/google-login/") else {
+    //         completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //         return
+    //     }
+
+    //     let body: [String: Any] = ["token": idToken]
+    //     var request = URLRequest(url: url)
+    //     request.httpMethod = "POST"
+    //     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    //     request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    //     URLSession.shared.dataTask(with: request) { data, response, error in
+    //         if let error = error {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //             return
+    //         }
+
+    //         guard let data = data else {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //             return
+    //         }
+
+    //         do {
+    //             if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+    //                 let email = json["email"] as? String
+    //                 let username = json["username"] as? String
+    //                 let profileInitial = json["profileInitial"] as? String
+    //                 let profileColor = json["profileColor"] as? String
+    //                 let subscriptionStatus = json["subscriptionStatus"] as? String
+    //                 let subscriptionPlan = json["subscriptionPlan"] as? String
+    //                 let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+    //                 let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+    //                 let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+    //                 let userId = (json["userId"] as? NSNumber)?.intValue
+    //                 let isNewUser = json["isNewUser"] as? Bool ?? false
+
+    //                 DispatchQueue.main.async {
+    //                     completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser)
+    //                 }
+    //             }
+    //         } catch {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //         }
+    //     }.resume()
+    // }
+
+    // func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool) -> Void) {
+    //     guard let url = URL(string: "\(baseUrl)/apple-login/") else {
+    //         completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //         return
+    //     }
+
+    //     let body: [String: Any] = [
+    //         "token": idToken,
+    //         "nonce": nonce
+    //     ]
+    //     var request = URLRequest(url: url)
+    //     request.httpMethod = "POST"
+    //     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    //     request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    //     URLSession.shared.dataTask(with: request) { data, response, error in
+    //         if let error = error {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //             return
+    //         }
+
+    //         guard let data = data else {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //             return
+    //         }
+
+    //         do {
+    //             if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+    //                 let email = json["email"] as? String
+    //                 let username = json["username"] as? String
+    //                 let profileInitial = json["profileInitial"] as? String
+    //                 let profileColor = json["profileColor"] as? String
+    //                 let subscriptionStatus = json["subscriptionStatus"] as? String
+    //                 let subscriptionPlan = json["subscriptionPlan"] as? String
+    //                 let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+    //                 let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+    //                 let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+    //                 let userId = (json["userId"] as? NSNumber)?.intValue
+    //                 let isNewUser = json["isNewUser"] as? Bool ?? false
+
+    //                 DispatchQueue.main.async {
+    //                     completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser)
+    //                 }
+    //             }
+    //         } catch {
+    //             DispatchQueue.main.async {
+    //                 completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+    //             }
+    //         }
+    //     }.resume()
+    // }
+
+    func sendTokenToBackend(idToken: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/google-login/") else {
+        completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+        return
+    }
+
+    let body: [String: Any] = ["token": idToken]
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
             return
         }
 
-        let body: [String: Any] = ["token": idToken]
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-                }
-                return
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
             }
-
-            guard let data = data else {
-                DispatchQueue.main.async {
-                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-                }
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    let email = json["email"] as? String
-                    let username = json["username"] as? String
-                    let profileInitial = json["profileInitial"] as? String
-                    let profileColor = json["profileColor"] as? String
-                    let subscriptionStatus = json["subscriptionStatus"] as? String
-                    let subscriptionPlan = json["subscriptionPlan"] as? String
-                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
-                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
-                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
-                    let userId = (json["userId"] as? NSNumber)?.intValue
-                    let isNewUser = json["isNewUser"] as? Bool ?? false
-
-                    DispatchQueue.main.async {
-                        completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser)
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-                }
-            }
-        }.resume()
-    }
-
-    func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/apple-login/") else {
-            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
             return
         }
 
-        let body: [String: Any] = [
-            "token": idToken,
-            "nonce": nonce
-        ]
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                let email = json["email"] as? String
+                let username = json["username"] as? String
+                let profileInitial = json["profileInitial"] as? String
+                let profileColor = json["profileColor"] as? String
+                let subscriptionStatus = json["subscriptionStatus"] as? String
+                let subscriptionPlan = json["subscriptionPlan"] as? String
+                let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                let userId = (json["userId"] as? NSNumber)?.intValue
+                let onboardingCompleted = json["onboarding_completed"] as? Bool ?? false
+                let isNewUser = json["isNewUser"] as? Bool ?? false
+                
+                print("📱 Google login - isNewUser: \(isNewUser), onboarding_completed: \(onboardingCompleted)")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
                 DispatchQueue.main.async {
-                    completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-                }
-                return
-            }
-
-            guard let data = data else {
-                DispatchQueue.main.async {
-                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
-                }
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    let email = json["email"] as? String
-                    let username = json["username"] as? String
-                    let profileInitial = json["profileInitial"] as? String
-                    let profileColor = json["profileColor"] as? String
-                    let subscriptionStatus = json["subscriptionStatus"] as? String
-                    let subscriptionPlan = json["subscriptionPlan"] as? String
-                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
-                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
-                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
-                    let userId = (json["userId"] as? NSNumber)?.intValue
-                    let isNewUser = json["isNewUser"] as? Bool ?? false
-
-                    DispatchQueue.main.async {
-                        completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser)
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false)
+                    completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)
                 }
             }
-        }.resume()
+        } catch {
+            DispatchQueue.main.async {
+                completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+        }
+    }.resume()
+}
+
+func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/apple-login/") else {
+        completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+        return
     }
+
+    let body: [String: Any] = [
+        "token": idToken,
+        "nonce": nonce
+    ]
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                let email = json["email"] as? String
+                let username = json["username"] as? String
+                let profileInitial = json["profileInitial"] as? String
+                let profileColor = json["profileColor"] as? String
+                let subscriptionStatus = json["subscriptionStatus"] as? String
+                let subscriptionPlan = json["subscriptionPlan"] as? String
+                let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                let userId = (json["userId"] as? NSNumber)?.intValue
+                let onboardingCompleted = json["onboarding_completed"] as? Bool ?? false
+                let isNewUser = json["isNewUser"] as? Bool ?? false
+                
+                print("📱 Apple login - isNewUser: \(isNewUser), onboarding_completed: \(onboardingCompleted)")
+
+                DispatchQueue.main.async {
+                    completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)
+                }
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+        }
+    }.resume()
+}
 
 
 
