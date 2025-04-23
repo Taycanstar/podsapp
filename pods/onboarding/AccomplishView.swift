@@ -12,6 +12,7 @@ struct AccomplishView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var selectedGoal: Accomplishment?
+    @State private var showAlert = false
     
     // Enum for accomplishment options
     enum Accomplishment: String, Identifiable, CaseIterable {
@@ -118,8 +119,14 @@ struct AccomplishView: View {
             VStack {
                 Button(action: {
                     HapticFeedback.generate()
-                    saveUserGoal()
-                    navigateToNextStep = true
+                    
+                    // Validate selection
+                    if selectedGoal != nil {
+                        saveUserGoal()
+                        navigateToNextStep = true
+                    } else {
+                        showAlert = true
+                    }
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -138,6 +145,13 @@ struct AccomplishView: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Selection Required"),
+                message: Text("Please select your primary wellness goal to continue."),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .background(
             NavigationLink(
                 destination: ConnectToAppleHealth(),

@@ -12,6 +12,7 @@ struct ObstaclesView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     @State private var selectedObstacles: Set<Obstacle> = []
+    @State private var showAlert = false
     
     // Enum for obstacle options
     enum Obstacle: String, Identifiable, CaseIterable {
@@ -131,8 +132,14 @@ struct ObstaclesView: View {
             VStack {
                 Button(action: {
                     HapticFeedback.generate()
-                    saveObstacles()
-                    navigateToNextStep = true
+                    
+                    // Validate selection - at least one obstacle should be selected
+                    if !selectedObstacles.isEmpty {
+                        saveObstacles()
+                        navigateToNextStep = true
+                    } else {
+                        showAlert = true
+                    }
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -151,6 +158,13 @@ struct ObstaclesView: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Selection Required"),
+                message: Text("Please select at least one obstacle to continue."),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .background(
             NavigationLink(
                 destination: SpecificDietView(),

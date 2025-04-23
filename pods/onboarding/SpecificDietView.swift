@@ -12,6 +12,7 @@ struct SpecificDietView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var selectedDiet: Diet?
     @State private var navigateToNextStep = false
+    @State private var showAlert = false
     
     // Enum for diet options
     enum Diet: String, Identifiable, CaseIterable {
@@ -124,8 +125,14 @@ struct SpecificDietView: View {
             VStack {
                 Button(action: {
                     HapticFeedback.generate()
-                    saveDietPreference()
-                    navigateToNextStep = true
+                    
+                    // Validate selection
+                    if selectedDiet != nil {
+                        saveDietPreference()
+                        navigateToNextStep = true
+                    } else {
+                        showAlert = true
+                    }
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -144,6 +151,13 @@ struct SpecificDietView: View {
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarHidden(true)
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Selection Required"),
+                message: Text("Please select a diet preference to continue."),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .background(
             NavigationLink(
                 destination: AccomplishView(),
