@@ -106,6 +106,10 @@ struct InfoView: View {
                                 UserDefaults.standard.set(self.viewModel.email, forKey: "userEmail")
                                 
                                 // Start the onboarding flow
+
+                                UserDefaults.standard.set("GenderView", forKey: "currentOnboardingStep")
+                                UserDefaults.standard.set(0, forKey: "onboardingFlowStep") // Reset to first step
+                                self.viewModel.currentFlowStep = .gender 
                                 self.viewModel.isShowingOnboarding = true
                                 
                                 // No need to set currentStep to .welcome
