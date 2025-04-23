@@ -156,7 +156,6 @@ struct CreatingPlanView: View {
                         UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
                         print("✅ Saved email \(email) as the one who completed onboarding")
                         
-                        // Mark onboarding as completed on the server - this is critical
                         NetworkManagerTwo.shared.markOnboardingCompleted(email: email) { result in
                             switch result {
                             case .success(let successful):
@@ -171,6 +170,20 @@ struct CreatingPlanView: View {
                                         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                                         UserDefaults.standard.set(false, forKey: "onboardingInProgress")
                                         UserDefaults.standard.synchronize()
+                                        
+                                        // Mark onboarding as complete in the viewModel - this updates the UI
+                                        self.viewModel.onboardingCompleted = true
+                                        
+                                        // Mark completion in the viewModel and let it handle saving to UserDefaults
+                                        self.viewModel.completeOnboarding()
+                                        
+                                        // Post notification that authentication is complete
+                                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                                        
+                                        // Wait briefly then close the onboarding container (fixes dismissal glitch)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            self.viewModel.isShowingOnboarding = false
+                                        }
                                     }
                                 } else {
                                     print("⚠️ Server returned failure when marking onboarding as completed")
@@ -180,6 +193,9 @@ struct CreatingPlanView: View {
                                         UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
                                         UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                                         UserDefaults.standard.synchronize()
+                                        
+                                        // Still dismiss the view to avoid getting stuck
+                                        self.viewModel.isShowingOnboarding = false
                                     }
                                 }
                             case .failure(let error):
@@ -190,29 +206,17 @@ struct CreatingPlanView: View {
                                     UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
                                     UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                                     UserDefaults.standard.synchronize()
+                                    
+                                    // Still dismiss the view to avoid getting stuck
+                                    self.viewModel.isShowingOnboarding = false
                                 }
                             }
                         }
                     } else {
                         print("⚠️ Could not find email to update server onboarding status")
+                        // If no email, still dismiss the view to avoid getting stuck
+                        viewModel.isShowingOnboarding = false
                     }
-                    
-                    // Mark onboarding as complete in the viewModel - this updates the UI
-                    viewModel.onboardingCompleted = true
-                    
-                    // Mark completion in the viewModel and let it handle saving to UserDefaults
-                    viewModel.completeOnboarding()
-                    
-                    // Force synchronize to ensure changes are written immediately
-                    UserDefaults.standard.synchronize()
-                    
-                    print("✅ Onboarding completed - all flags saved")
-                    
-                    // Post notification that authentication is complete
-                    NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
-                    
-                    // Close the onboarding container
-                    viewModel.isShowingOnboarding = false
                 }
             }
         }

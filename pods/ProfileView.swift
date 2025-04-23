@@ -126,21 +126,35 @@ struct ProfileView: View {
        
     
     private func logOut() {
-        // Clear authentication state
+        // Clear authentication state and set to false first
         UserDefaults.standard.set(false, forKey: "isAuthenticated")
         
-        // Clear user information
+        // Clear ALL user-related information
         UserDefaults.standard.removeObject(forKey: "userEmail")
         UserDefaults.standard.removeObject(forKey: "username")
         UserDefaults.standard.removeObject(forKey: "userId")
+        UserDefaults.standard.removeObject(forKey: "userName")
+        UserDefaults.standard.removeObject(forKey: "profileInitial")
+        UserDefaults.standard.removeObject(forKey: "profileColor")
         
-        // Reset all onboarding flags
+        // Clear subscription information
+        UserDefaults.standard.removeObject(forKey: "subscriptionStatus")
+        UserDefaults.standard.removeObject(forKey: "subscriptionPlan")
+        UserDefaults.standard.removeObject(forKey: "subscriptionExpiresAt")
+        UserDefaults.standard.removeObject(forKey: "subscriptionRenews")
+        UserDefaults.standard.removeObject(forKey: "subscriptionSeats")
+        
+        // Reset ALL onboarding flags - make sure to set booleans to false not just remove them
         UserDefaults.standard.set(false, forKey: "onboardingCompleted")
         UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+        UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted") // This is critical!
         UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
         UserDefaults.standard.removeObject(forKey: "onboardingFlowStep")
         UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
-        UserDefaults.standard.removeObject(forKey: "serverOnboardingCompleted")
+        
+        // Clear active teams and workspaces
+        UserDefaults.standard.removeObject(forKey: "activeTeamId")
+        UserDefaults.standard.removeObject(forKey: "activeWorkspaceId")
         
         // Sign out from Google
         GIDSignIn.sharedInstance.signOut()
@@ -150,12 +164,24 @@ struct ProfileView: View {
         viewModel.email = ""
         viewModel.username = ""
         viewModel.userId = nil
+        viewModel.profileInitial = ""
+        viewModel.profileColor = ""
         viewModel.onboardingCompleted = false
         viewModel.serverOnboardingCompleted = false
         viewModel.currentStep = .landing
+        viewModel.currentFlowStep = .gender
+        
+        // Reset subscription info in viewModel
+        viewModel.subscriptionStatus = "none"
+        viewModel.subscriptionPlan = nil
+        viewModel.subscriptionExpiresAt = nil
+        viewModel.subscriptionRenews = false
+        viewModel.subscriptionSeats = nil
         
         // Force synchronize to ensure changes take effect immediately
         UserDefaults.standard.synchronize()
+        
+        print("✅ User logged out successfully - all state cleared")
     }
 }
 
