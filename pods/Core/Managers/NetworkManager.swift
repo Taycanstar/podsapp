@@ -262,9 +262,9 @@ class NetworkManager {
 
 
     
-    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?) -> Void) {
+    func login(identifier: String, password: String, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/login/") else {
-            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
             return
         }
 
@@ -277,14 +277,14 @@ class NetworkManager {
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, "Login failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 DispatchQueue.main.async {
-                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, "No response from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
                 return
             }
@@ -302,60 +302,26 @@ class NetworkManager {
                         let subscriptionRenews = json["subscriptionRenews"] as? Bool
                         let subscriptionSeats = json["subscriptionSeats"] as? Int
                         let userId = json["userId"] as? Int
+                        let onboardingCompleted = json["onboarding_completed"] as? Bool
                         
                         DispatchQueue.main.async {
-                            completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId)
+                            completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted)
                         }
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                        completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                     }
                 }
             } else {
                 DispatchQueue.main.async {
-                    completion(false, "Login failed", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                    completion(false, "Login failed", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                 }
             }
         }.resume()
     }
 
-    // func updateUserInformation(email: String, name: String, username: String, birthday: String, completion: @escaping (Bool, String) -> Void) {
-    //      let url = URL(string: "\(baseUrl)/add-info/")! // Adjust the URL
-    //      var request = URLRequest(url: url)
-    //      request.httpMethod = "PUT"
-    //      request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-    //      let parameters: [String: Any] = [
-    //          "email": email,
-    //          "name": name,
-    //          "username": username,
-    //          "birthday": birthday, // ISO 8601 format
-            
-    //      ]
-
-    //      request.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
-
-    //      URLSession.shared.dataTask(with: request) { data, response, error in
-    //          guard let data = data, error == nil else {
-    //              completion(false, "Network request failed")
-    //              return
-    //          }
-
-    //          // Decode or handle the response accordingly
-    //          // For simplicity, we'll assume a successful response includes a 'message' key
-    //          do {
-    //              if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-    //                 let message = jsonResponse["message"] as? String {
-    //                  completion(true, message)
-    //              } else {
-    //                  completion(false, "Invalid response from server")
-    //              }
-    //          } catch {
-    //              completion(false, "Failed to decode response")
-    //          }
-    //      }.resume()
-    //  }
 
     func updateUserInformation(email: String, name: String, username: String, completion: @escaping (Bool, String) -> Void) {
     guard let url = URL(string: "\(baseUrl)/add-info/") else {
@@ -411,6 +377,55 @@ class NetworkManager {
         }
     }.resume()
 }
+    
+    func markOnboardingCompleted(email: String, completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/mark_onboarding_completed/") else {
+            completion(false)
+            return
+        }
+        
+        let parameters: [String: Any] = [
+            "email": email
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(false)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = json["success"] as? Bool, success {
+                    DispatchQueue.main.async {
+                        completion(true)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(false)
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
     func createPod(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
         print("Starting createPod...")
         let dispatchGroup = DispatchGroup()
@@ -4905,8 +4920,8 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 do {
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    decoder.keyDecodingStrategy = .convertFromSnakeCase
-                    
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
 //                    // Try to decode the activity log directly
 //                    let activityLog = try decoder.decode(PodItemActivityLog.self, from: data)
 //                    completion(.success(activityLog))
@@ -5141,7 +5156,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 
                 // Create LoggedFood with default status if missing
                 let loggedFood = LoggedFood(
-                    status: status,
+                        status: status,
                     foodLogId: foodLogId,
                     calories: calculatedCalories, // Total calories
                     message: message,
@@ -5152,7 +5167,7 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
                 DispatchQueue.main.async {
                     completion(.success(loggedFood))
                 }
-            } else {
+                } else {
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -5199,16 +5214,16 @@ private func deleteAzureBlob(blobName: String, completion: @escaping (Bool) -> V
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let response = try decoder.decode(FoodLogsResponse.self, from: data)
             completion(.success(response))
-        } catch {
+            } catch {
             print("Decoding error: \(error)")
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("Received JSON:", jsonString)
             }
-            completion(.failure(error))
-        }
-    }.resume()
-}
-
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
 func getCombinedLogs(userEmail: String, page: Int, completion: @escaping (Result<CombinedLogsResponse, Error>) -> Void) {
     guard var urlComponents = URLComponents(string: "\(baseUrl)/get-combined-logs/") else {
         completion(.failure(NetworkError.invalidURL))

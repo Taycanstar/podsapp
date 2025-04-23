@@ -101,6 +101,9 @@ class OnboardingViewModel: ObservableObject {
     @Published var subscriptionSeats: Int?
     @Published var canCreateNewTeam: Bool = false
     
+    // Server-reported onboarding completion status
+    @Published var serverOnboardingCompleted: Bool = false
+    
     // Add this property with the others
     @Published var isShowingOnboarding: Bool = false
     

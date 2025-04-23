@@ -339,4 +339,77 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+
+    // MARK: - Onboarding
+    
+    /// Mark the user's onboarding as completed on the server
+    /// - Parameters:
+    ///   - email: The user's email address
+    ///   - completion: Callback with success or failure result
+    func markOnboardingCompleted(email: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/mark_onboarding_completed/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let parameters: [String: Any] = [
+            "email": email
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Sending request to mark onboarding completed for user: \(email)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    print("❌ Network error marking onboarding completed: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    print("❌ No data received from server when marking onboarding completed")
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = json["success"] as? Bool {
+                    DispatchQueue.main.async {
+                        if success {
+                            print("✅ Successfully marked onboarding as completed on server for user: \(email)")
+                            completion(.success(true))
+                        } else {
+                            print("❌ Server returned failure when marking onboarding completed")
+                            completion(.success(false))
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        print("❌ Invalid server response when marking onboarding completed")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("❌ Error parsing response when marking onboarding completed: \(error)")
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
 }

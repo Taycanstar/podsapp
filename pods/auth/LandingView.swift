@@ -124,7 +124,7 @@ struct LandingView: View {
                 return
             }
 
-            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser in
+            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted in
                 if success {
                     print("Token sent successfully")
                     let userIdString = String(userId ?? 0)
@@ -135,6 +135,16 @@ struct LandingView: View {
                         UserDefaults.standard.set(email, forKey: "userEmail")
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
+                        
+                        // Save onboarding status from server
+                        viewModel.onboardingCompleted = onboardingCompleted ?? false
+                        UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
+                        print("🔑 Google Auth - Onboarding completed: \(onboardingCompleted ?? false)")
+                        
+                        // If onboarding not completed, prepare to show it
+                        if !(onboardingCompleted ?? false) {
+                            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        }
 
                         // Update view model
                         viewModel.email = email ?? ""
@@ -167,10 +177,10 @@ struct LandingView: View {
                             "$name": viewModel.username
                         ])
                         
-                        if isNewUser {
-                            viewModel.currentStep = .welcome
-                        } else {
+                        if onboardingCompleted ?? false {
                             self.isAuthenticated = true
+                        } else {
+                            viewModel.currentStep = .welcome
                         }
                     }
                 } else {
@@ -206,7 +216,7 @@ struct LandingView: View {
             
             print("Sending original nonce to backend: \(nonce)")
             
-            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, isNewUser in
+            NetworkManager().sendAppleTokenToBackend(idToken: idTokenString, nonce: nonce) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted in
                 if success {
                     let userIdString = String(userId ?? 0)
 
@@ -216,6 +226,16 @@ struct LandingView: View {
                         UserDefaults.standard.set(email, forKey: "userEmail")
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
+                        
+                        // Save onboarding status from server
+                        viewModel.onboardingCompleted = onboardingCompleted ?? false
+                        UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
+                        print("🔑 Apple Auth - Onboarding completed: \(onboardingCompleted ?? false)")
+                        
+                        // If onboarding not completed, prepare to show it
+                        if !(onboardingCompleted ?? false) {
+                            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        }
 
                         // Update view model
                         viewModel.email = email ?? ""
@@ -248,10 +268,10 @@ struct LandingView: View {
                             "$name": viewModel.username
                         ])
 
-                        if isNewUser {
-                            viewModel.currentStep = .welcome
-                        } else {
+                        if onboardingCompleted ?? false {
                             self.isAuthenticated = true
+                        } else {
+                            viewModel.currentStep = .welcome
                         }
                     }
                 } else {

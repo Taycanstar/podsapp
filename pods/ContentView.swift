@@ -265,13 +265,15 @@ struct ContentView: View {
         
         // Get all relevant onboarding state
         self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
-        let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+        
+        // Use viewModel for onboarding state
+        viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
         let onboardingInProgress = UserDefaults.standard.bool(forKey: "onboardingInProgress")
         let hasSavedStep = UserDefaults.standard.string(forKey: "currentOnboardingStep") != nil
         
-        print("Onboarding state check: isAuthenticated=\(isAuthenticated), completed=\(onboardingCompleted), inProgress=\(onboardingInProgress), hasSavedStep=\(hasSavedStep)")
+        print("Onboarding state check: isAuthenticated=\(isAuthenticated), completed=\(viewModel.onboardingCompleted), inProgress=\(onboardingInProgress), hasSavedStep=\(hasSavedStep)")
         
-        if isAuthenticated && !onboardingCompleted && (onboardingInProgress || hasSavedStep) {
+        if isAuthenticated && !viewModel.onboardingCompleted && (onboardingInProgress || hasSavedStep) {
             // Need to resume onboarding
             print("Resuming onboarding flow...")
             
@@ -288,7 +290,7 @@ struct ContentView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 viewModel.isShowingOnboarding = true
             }
-        } else if isAuthenticated && !onboardingCompleted && !hasSavedStep {
+        } else if isAuthenticated && !viewModel.onboardingCompleted && !hasSavedStep {
             // New user who needs to start onboarding
             print("Starting new onboarding flow...")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
@@ -335,14 +337,32 @@ struct ContentView: View {
 
     // FORCE direct check that always runs and has immediate UI updates
     private func forceCheckOnboarding() {
-        // Load basic user data first
+        // Load basic user data first - keep this as we still need to check authentication status
         self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+        
+        // Always load the server onboarding status if available
+        viewModel.serverOnboardingCompleted = UserDefaults.standard.bool(forKey: "serverOnboardingCompleted")
         
         // Load all user data
         if isAuthenticated {
             if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
                 viewModel.email = storedEmail
+                
+                // Check if this is a different user than the one who completed onboarding
+                if let completedEmail = UserDefaults.standard.string(forKey: "emailWithCompletedOnboarding"),
+                   completedEmail != storedEmail {
+                    // Different user, need to reset onboarding state
+                    print("⚠️ Detected different user login. Resetting onboarding state.")
+                    viewModel.onboardingCompleted = false
+                    // We still set UserDefaults here as other components might be reading it directly
+                    UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+                    UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                    UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                    // Make sure viewModel state is consistent
+                    viewModel.currentFlowStep = .gender
+                }
             }
+            
             if let storedUsername = UserDefaults.standard.string(forKey: "username") {
                 viewModel.username = storedUsername
             }
@@ -371,26 +391,41 @@ struct ContentView: View {
             }
         }
 
-        // Now check onboarding state
-        let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+        // Now check onboarding state using the viewModel and UserDefaults
+        // (we're in a transition, so we read from UserDefaults but update the viewModel)
+        viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
         let onboardingInProgress = UserDefaults.standard.bool(forKey: "onboardingInProgress")
         let currentStep = UserDefaults.standard.string(forKey: "currentOnboardingStep")
         let flowStepRaw = UserDefaults.standard.integer(forKey: "onboardingFlowStep")
         
         print("🟥 AUTH STATUS: \(isAuthenticated)")
-        print("🟥 ONBOARDING COMPLETED: \(onboardingCompleted)")
+        print("🟥 ONBOARDING COMPLETED: \(viewModel.onboardingCompleted)")
+        print("🟥 ONBOARDING COMPLETED (SERVER): \(viewModel.serverOnboardingCompleted)")
         print("🟥 ONBOARDING IN PROGRESS: \(onboardingInProgress)")
         print("🟥 CURRENT STEP: \(currentStep ?? "none")")
         print("🟥 FLOW STEP RAW: \(flowStepRaw)")
 
-        // CRITICAL FIX: Resume if either there's a step saved OR if onboarding is marked in progress
-        // Ignore the completed flag because it's getting corrupted
-        if isAuthenticated && (currentStep != nil || onboardingInProgress) {
-            print("🚨 RESUMING ONBOARDING NOW - Found saved step or in-progress flag")
+        // IMPORTANT: If server says onboarding is not completed but local state says it is,
+        // trust the server and override the local state
+        if isAuthenticated && !viewModel.serverOnboardingCompleted && viewModel.onboardingCompleted {
+            print("⚠️ Mismatch detected! Server says onboarding not completed but local state says completed.")
+            print("⚠️ Overriding local state to match server...")
+            viewModel.onboardingCompleted = false
+            UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            // Reset onboarding state to start fresh
+            viewModel.currentFlowStep = .gender
+            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+        }
+
+        // CRITICAL FIX: Resume onboarding if server indicates incomplete OR there's a saved step OR onboarding is marked in progress
+        // Server status takes priority over local flags which might be corrupted
+        if isAuthenticated && (!viewModel.serverOnboardingCompleted || currentStep != nil || onboardingInProgress) {
+            print("🚨 RESUMING ONBOARDING NOW - Server indicates incomplete or found saved step/in-progress flag")
             
-            // FIX THE CORRUPTED FLAG - if we're resuming, onboarding is obviously not complete
-            if onboardingCompleted {
-                print("⚠️ WARNING: Onboarding was incorrectly marked as completed while still in progress!")
+            // If the server says onboarding is incomplete, make sure the local state reflects this
+            if !viewModel.serverOnboardingCompleted {
+                viewModel.onboardingCompleted = false
                 UserDefaults.standard.set(false, forKey: "onboardingCompleted")
             }
             
@@ -423,7 +458,7 @@ struct ContentView: View {
                 }
             }
         } else {
-            print("✅ No need to resume onboarding: isAuth=\(isAuthenticated), completed=\(onboardingCompleted)")
+            print("✅ No need to resume onboarding: isAuth=\(isAuthenticated), completed=\(viewModel.onboardingCompleted), serverCompleted=\(viewModel.serverOnboardingCompleted)")
         }
         
         // Add observer for authentication completion notification

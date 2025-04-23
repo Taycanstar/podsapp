@@ -150,18 +150,40 @@ struct CreatingPlanView: View {
                     // Mark onboarding as complete
                     viewModel.onboardingCompleted = true
                     
+                    // Mark completion in the viewModel and let it handle saving to UserDefaults
+                    viewModel.completeOnboarding()
+                    
                     // Make sure user is authenticated in UserDefaults
                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                    UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                     
-                    // Clear onboarding in progress flag
-                    UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-                    UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                    // Now we just need to save the email of the user who completed onboarding
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
+                    }
                     
                     // Force synchronize to ensure changes are written immediately
                     UserDefaults.standard.synchronize()
                     
                     print("✅ Onboarding completed - all flags saved")
+                    
+                    // Mark onboarding as completed on the server
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        // Use NetworkManagerTwo for the server call
+                        NetworkManagerTwo.shared.markOnboardingCompleted(email: email) { result in
+                            switch result {
+                            case .success(let successful):
+                                if successful {
+                                    print("✅ Server confirmed onboarding completion successfully")
+                                } else {
+                                    print("⚠️ Server returned failure when marking onboarding as completed")
+                                }
+                            case .failure(let error):
+                                print("⚠️ Failed to update server with onboarding completion: \(error)")
+                            }
+                        }
+                    } else {
+                        print("⚠️ Could not find email to update server onboarding status")
+                    }
                     
                     // Post notification that authentication is complete
                     NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)

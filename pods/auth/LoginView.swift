@@ -139,7 +139,7 @@ struct LoginView: View {
     }
     private func authenticateUser() {
         isLoading = true
-        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId in
+        NetworkManager().login(identifier: identifier, password: password) { success, error, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted in
             DispatchQueue.main.async {
                 if success {
                     let userIdString = "\(userId ?? 0)"
@@ -147,6 +147,17 @@ struct LoginView: View {
                     UserDefaults.standard.set(true, forKey: "isAuthenticated")
                     UserDefaults.standard.set(userId, forKey: "userId")
                     self.viewModel.userId = userId
+                    
+                    self.viewModel.serverOnboardingCompleted = onboardingCompleted ?? false
+                    print("🔐 Login successful - Server onboarding completed: \(onboardingCompleted ?? false)")
+                    
+                    self.viewModel.onboardingCompleted = onboardingCompleted ?? false
+                    UserDefaults.standard.set(onboardingCompleted ?? false, forKey: "onboardingCompleted")
+                    
+                    if !(onboardingCompleted ?? false) {
+                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        self.viewModel.currentFlowStep = .gender
+                    }
                     
                     if let email = email {
                         self.viewModel.email = email
