@@ -14,8 +14,8 @@ class NetworkManagerTwo {
     
 
    //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: Error {
@@ -412,4 +412,133 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+    
+    /// Process user onboarding data and calculate BMR, TDEE, and nutrition goals
+    /// - Parameters:
+    ///   - userData: The user's onboarding data
+    ///   - completion: Callback with nutritional goals or error
+    func processOnboardingData(userData: OnboardingData, completion: @escaping (Result<NutritionGoals, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/process-onboarding-data/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Prepare data for the request
+        var parameters: [String: Any] = [
+            "user_email": userData.email,
+            "gender": userData.gender,
+            "date_of_birth": userData.dateOfBirth,
+            "height_cm": userData.heightCm,
+            "weight_kg": userData.weightKg,
+            "desired_weight_kg": userData.desiredWeightKg,
+            "fitness_goal": userData.fitnessGoal,
+            "workout_frequency": userData.workoutFrequency,
+            "diet_preference": userData.dietPreference,
+            "primary_wellness_goal": userData.primaryWellnessGoal
+        ]
+        
+        // Add optional fields
+        if let goalTimeframe = userData.goalTimeframeWeeks {
+            parameters["goal_timeframe_weeks"] = goalTimeframe
+        }
+        
+        if let obstacles = userData.obstacles {
+            parameters["obstacles"] = obstacles
+        }
+        
+        parameters["add_calories_burned"] = userData.addCaloriesBurned
+        parameters["rollover_calories"] = userData.rolloverCalories
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Sending onboarding data for processing - user: \(userData.email)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    print("❌ Network error processing onboarding data: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    print("❌ No data received from server when processing onboarding data")
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    // Check for error response
+                    if let errorMessage = json["error"] as? String {
+                        DispatchQueue.main.async {
+                            print("❌ Server error processing onboarding data: \(errorMessage)")
+                            completion(.failure(NetworkError.serverError(errorMessage)))
+                        }
+                        return
+                    }
+                    
+                    // Process successful response
+                    if let success = json["success"] as? Bool, success,
+                       let bmr = json["bmr"] as? Double,
+                       let tdee = json["tdee"] as? Double,
+                       let dailyGoals = json["daily_goals"] as? [String: Any],
+                       let calories = dailyGoals["calories"] as? Double,
+                       let protein = dailyGoals["protein"] as? Double,
+                       let carbs = dailyGoals["carbs"] as? Double,
+                       let fat = dailyGoals["fat"] as? Double,
+                       let insights = json["insights"] as? [String: Any],
+                       let metabolismInsights = insights["metabolism"] as? String,
+                       let nutritionInsights = insights["nutrition"] as? String {
+                        
+                        let nutritionGoals = NutritionGoals(
+                            bmr: bmr,
+                            tdee: tdee,
+                            calories: calories,
+                            protein: protein,
+                            carbs: carbs,
+                            fat: fat,
+                            metabolismInsights: metabolismInsights,
+                            nutritionInsights: nutritionInsights
+                        )
+                        
+                        DispatchQueue.main.async {
+                            print("✅ Successfully processed onboarding data")
+                            completion(.success(nutritionGoals))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            print("❌ Invalid or incomplete response data")
+                            completion(.failure(NetworkError.decodingError))
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        print("❌ Could not parse JSON response")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("❌ Error parsing response: \(error)")
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
 }
+
+
+

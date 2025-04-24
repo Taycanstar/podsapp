@@ -108,7 +108,7 @@ struct GenderView: View {
                 VStack {
                     Button(action: {
                         HapticFeedback.generate()
-                        UserDefaults.standard.set(selectedGender.rawValue, forKey: "selectedGender")
+                        UserDefaults.standard.set(selectedGender.rawValue.lowercased(), forKey: "gender")
                         
                         if let nextStep = nextStep {
                             // Use provided closure if available

@@ -10,29 +10,7 @@ import SwiftUI
 
 // Simple struct for calculating onboarding progress
 struct OnboardingProgress {
-    // Static method to get the progress percentage for a specific screen
-    static func progressFor(screen: Screen) -> CGFloat {
-        switch screen {
-        case .gender:        return 0.07
-        case .workoutDays:   return 0.14
-        case .heightWeight:  return 0.21
-        case .dob:           return 0.28
-        case .onboardingGoal: return 0.35
-        case .desiredWeight: return 0.42
-        case .goalInfo:      return 0.49
-        case .goalTime:      return 0.50
-        case .twoX:          return 0.53
-        case .obstacles:     return 0.55
-        case .specificDiet:  return 0.60
-        case .accomplish:    return 0.65
-        case .connectHealth: return 0.70
-        case .caloriesBurned: return 0.75
-        case .rollover:      return 0.80
-        case .complete:      return 1.0
-        }
-    }
-
-    // Enum for screen identification
+    // Which screen we're on
     enum Screen {
         case gender
         case workoutDays
@@ -49,29 +27,67 @@ struct OnboardingProgress {
         case connectHealth
         case caloriesBurned
         case rollover
-        case complete
+        case creatingPlan
+    }
+    
+    // Get progress ratio (0.0 to 1.0) for the given screen
+    static func progressFor(screen: Screen) -> Double {
+        switch screen {
+        case .gender:
+            return 0.0625
+        case .workoutDays:
+            return 0.125
+        case .heightWeight:
+            return 0.1875
+        case .dob:
+            return 0.25
+        case .onboardingGoal:
+            return 0.3125
+        case .desiredWeight:
+            return 0.375
+        case .goalInfo:
+            return 0.4375
+        case .goalTime:
+            return 0.5
+        case .twoX:
+            return 0.5625
+        case .obstacles:
+            return 0.625
+        case .specificDiet:
+            return 0.6875
+        case .accomplish:
+            return 0.75
+        case .connectHealth:
+            return 0.8125
+        case .caloriesBurned:
+            return 0.875
+        case .rollover:
+            return 0.9375
+        case .creatingPlan:
+            return 1.0
+        }
     }
 }
 
 /// Helper for calculating accurate onboarding progress based on the actual navigation flow
 enum OnboardingProgressEnum: Int, CaseIterable {
     // The correct onboarding flow in EXACT order from navigation links
-    case welcome = 0
-    case gender = 1
-    case workoutDays = 2
-    case heightWeight = 3
-    case dob = 4
-    case fitnessGoal = 5
-    case desiredWeight = 6
-    case goalInfo = 7
-    case goalTime = 8
-    case twoX = 9
-    case obstacles = 10
-    case specificDiet = 11
-    case accomplish = 12
-    case connectHealth = 13
-    case caloriesBurned = 14
-    case rollover = 15
+    case gender = 0
+    case workoutDays = 1
+    case heightWeight = 2
+    case dob = 3
+    case fitnessGoal = 4   // OnboardingGoal
+    case desiredWeight = 5
+    case goalInfo = 6
+    case goalTime = 7
+    case twoX = 8
+    case obstacles = 9
+    case specificDiet = 10
+    case accomplish = 11
+    case connectHealth = 12
+    case caloriesBurned = 13
+    case rollover = 14
+    case creatingPlan = 15  // Added CreatingPlanView as the final step
     
     /// Total screens in the onboarding flow
     static var totalScreens: Int {
@@ -81,29 +97,29 @@ enum OnboardingProgressEnum: Int, CaseIterable {
     /// Convert this enum to the corresponding Screen type
     var asScreen: OnboardingProgress.Screen {
         switch self {
-        case .welcome:       return .gender // Default to first real screen
-        case .gender:        return .gender
-        case .workoutDays:   return .workoutDays
-        case .heightWeight:  return .heightWeight
-        case .dob:           return .dob
+        case .gender:       return .gender
+        case .workoutDays:  return .workoutDays
+        case .heightWeight: return .heightWeight
+        case .dob:          return .dob
         case .fitnessGoal:   return .onboardingGoal
         case .desiredWeight: return .desiredWeight
-        case .goalInfo:      return .goalInfo
-        case .goalTime:      return .goalTime
-        case .twoX:          return .twoX
-        case .obstacles:     return .obstacles
-        case .specificDiet:  return .specificDiet
-        case .accomplish:    return .accomplish
+        case .goalInfo:     return .goalInfo
+        case .goalTime:     return .goalTime
+        case .twoX:         return .twoX
+        case .obstacles:    return .obstacles
+        case .specificDiet: return .specificDiet
+        case .accomplish:   return .accomplish
         case .connectHealth: return .connectHealth
         case .caloriesBurned: return .caloriesBurned
-        case .rollover:      return .rollover
+        case .rollover:     return .rollover
+        case .creatingPlan: return .creatingPlan  // Map to new screen case
         }
     }
     
     /// Calculate progress percentage (0.0 to 1.0) for a screen
     var progressPercentage: CGFloat {
         // Use the new progressFor function to get the right percentage
-        return OnboardingProgress.progressFor(screen: self.asScreen)
+        return CGFloat(OnboardingProgress.progressFor(screen: self.asScreen))
     }
     
     /// Get width for progress bar for a specific screen

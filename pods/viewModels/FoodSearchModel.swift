@@ -553,3 +553,34 @@ struct RecipesResponse: Codable {
 extension RecipeSummary: MealDisplayable {
     var id: Int { recipeId }  // Map recipeId to id for the protocol
 }
+
+
+/// Structure to hold all the user's onboarding data
+struct OnboardingData {
+    let email: String
+    let gender: String // "male", "female", or "other"
+    let dateOfBirth: String // YYYY-MM-DD format
+    let heightCm: Double
+    let weightKg: Double
+    let desiredWeightKg: Double
+    let fitnessGoal: String // "loseWeight", "maintain", or "gainWeight"
+    let workoutFrequency: String // "low", "medium", or "high"
+    let dietPreference: String // "balanced", "vegan", "keto", etc.
+    let primaryWellnessGoal: String
+    let goalTimeframeWeeks: Int?
+    let obstacles: [String]?
+    let addCaloriesBurned: Bool
+    let rolloverCalories: Bool
+}
+
+/// Structure to hold the calculated nutrition goals
+struct NutritionGoals {
+    let bmr: Double
+    let tdee: Double
+    let calories: Double
+    let protein: Double
+    let carbs: Double
+    let fat: Double
+    let metabolismInsights: String
+    let nutritionInsights: String
+}

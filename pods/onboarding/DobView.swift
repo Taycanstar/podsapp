@@ -163,8 +163,13 @@ struct DobView: View {
         
         // Create date from components
         if let date = Calendar.current.date(from: dateComponents) {
-            // Save date
-            UserDefaults.standard.set(date, forKey: "dateOfBirth")
+            // Format date as YYYY-MM-DD
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            let dateString = formatter.string(from: date)
+            
+            // Save date string
+            UserDefaults.standard.set(dateString, forKey: "dateOfBirth")
             
             // Save individual components for easier access
             UserDefaults.standard.set(selectedMonth, forKey: "birthMonth")

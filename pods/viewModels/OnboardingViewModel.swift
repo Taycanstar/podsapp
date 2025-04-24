@@ -71,9 +71,8 @@ class OnboardingViewModel: ObservableObject {
             case .connectHealth: return .connectHealth
             case .caloriesBurned: return .caloriesBurned
             case .rollover: return .rollover
-            case .complete: return .complete
+            case .complete: return .creatingPlan
             }
-            
         }
     }
     
@@ -155,17 +154,48 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func completeOnboarding() {
-        // Safety check - only mark as complete if we're on the final step
-        if currentFlowStep == .complete {
-            print("✓ Marking onboarding as completed (on final step)")
-            onboardingCompleted = true
-            saveOnboardingState()
-            
-            // Mark that onboarding is no longer in progress
-            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-        } else {
-            print("⚠️ WARNING: Attempted to mark onboarding as complete when not on final step! (current: \(currentFlowStep))")
-            // Don't mark as complete, this is likely an error
+        // First, ensure we're on the final step
+        currentFlowStep = .complete
+        
+        // Create OnboardingData struct with all collected data
+        let onboardingData = OnboardingData(
+            email: UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            gender: UserDefaults.standard.string(forKey: "gender") ?? "",
+            dateOfBirth: UserDefaults.standard.string(forKey: "dateOfBirth") ?? "",
+            heightCm: Double(UserDefaults.standard.integer(forKey: "heightCentimeters")),
+            weightKg: Double(UserDefaults.standard.integer(forKey: "weightKilograms")),
+            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeight"),
+            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal") ?? "",
+            workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
+            dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
+            primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
+            goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
+            obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
+            addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
+            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
+        )
+        
+        // Send data to server using NetworkManagerTwo
+        let networkManager = NetworkManagerTwo()
+        networkManager.processOnboardingData(userData: onboardingData) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✓ Successfully processed onboarding data with server")
+                    // Now mark as completed locally
+                    self.onboardingCompleted = true
+                    self.saveOnboardingState()
+                    
+                    // Mark that onboarding is no longer in progress
+                    UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                    
+                    // Ensure all state is synchronized
+                    UserDefaults.standard.synchronize()
+                case .failure(let error):
+                    print("⚠️ Failed to process onboarding data with server: \(error)")
+                    // Handle error case
+                }
+            }
         }
     }
     
