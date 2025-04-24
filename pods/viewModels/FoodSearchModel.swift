@@ -562,7 +562,7 @@ struct OnboardingData {
     let dateOfBirth: String // YYYY-MM-DD format
     let heightCm: Double
     let weightKg: Double
-    let desiredWeightKg: Double
+    let desiredWeightKg: Double // This will be populated from desiredWeightKilograms
     let fitnessGoal: String // "loseWeight", "maintain", or "gainWeight"
     let workoutFrequency: String // "low", "medium", or "high"
     let dietPreference: String // "balanced", "vegan", "keto", etc.
@@ -571,6 +571,30 @@ struct OnboardingData {
     let obstacles: [String]?
     let addCaloriesBurned: Bool
     let rolloverCalories: Bool
+}
+
+// Make OnboardingData printable for debugging
+extension OnboardingData: CustomStringConvertible {
+    var description: String {
+        return """
+        OnboardingData {
+            email: \(email)
+            gender: \(gender)
+            dateOfBirth: \(dateOfBirth)
+            heightCm: \(heightCm)
+            weightKg: \(weightKg)
+            desiredWeightKg: \(desiredWeightKg)
+            fitnessGoal: \(fitnessGoal)
+            workoutFrequency: \(workoutFrequency)
+            dietPreference: \(dietPreference)
+            primaryWellnessGoal: \(primaryWellnessGoal)
+            goalTimeframeWeeks: \(goalTimeframeWeeks ?? 0)
+            obstacles: \(obstacles?.joined(separator: ", ") ?? "none")
+            addCaloriesBurned: \(addCaloriesBurned)
+            rolloverCalories: \(rolloverCalories)
+        }
+        """
+    }
 }
 
 /// Structure to hold the calculated nutrition goals

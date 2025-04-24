@@ -27,7 +27,24 @@ struct DesiredWeightView: View {
     
     // Get the selected goal from UserDefaults
     private var goal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "Maintain"
+        let rawGoal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+        print("📊 Current fitness goal in DesiredWeightView: \(rawGoal)")
+        
+        switch rawGoal {
+        case "loseWeight": return "Lose weight"
+        case "maintain": return "Maintain"
+        case "gainWeight": return "Gain weight"
+        default: return "Maintain"
+        }
+    }
+    
+    private var goalDisplayText: String {
+        switch goal {
+        case "loseWeight": return "Lose weight"
+        case "maintain": return "Maintain"
+        case "gainWeight": return "Gain weight"
+        default: return "Maintain"
+        }
     }
     
     var body: some View {
@@ -79,6 +96,10 @@ struct DesiredWeightView: View {
                 .font(.system(size: 18))
                 .foregroundColor(.secondary)
                 .padding(.bottom, 10)
+                .onAppear {
+                    // Print the goal again on view appear to verify
+                    print("📊 Displaying goal text: \(goal)")
+                }
             
             // Weight display
             Text(String(format: "%.1f lbs", selectedWeight))
@@ -133,8 +154,23 @@ struct DesiredWeightView: View {
     }
     
     private func saveDesiredWeight() {
-        // Save the selected weight to UserDefaults
-        UserDefaults.standard.set(selectedWeight, forKey: "desiredWeight")
+        let isImperial = UserDefaults.standard.bool(forKey: "isImperial")
+        
+        if isImperial {
+            // Save imperial weight
+            UserDefaults.standard.set(selectedWeight, forKey: "desiredWeightPounds")
+            
+            // Convert and save metric weight for API
+            let kilograms = selectedWeight * 0.45359237 // Using precise conversion factor
+            UserDefaults.standard.set(kilograms, forKey: "desiredWeightKilograms")
+        } else {
+            // Save metric weight
+            UserDefaults.standard.set(selectedWeight, forKey: "desiredWeightKilograms")
+            
+            // Convert and save imperial weight for UI
+            let pounds = selectedWeight / 0.45359237 // Using precise conversion factor
+            UserDefaults.standard.set(pounds, forKey: "desiredWeightPounds")
+        }
         
         // Also save the current step before navigating
         UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")

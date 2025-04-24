@@ -16,13 +16,21 @@ struct AccomplishView: View {
     
     // Enum for accomplishment options
     enum Accomplishment: String, Identifiable, CaseIterable {
-        case healthyHabits = "Live a healthier lifestyle"
-        case boost = "Boost my energy and vitality"
-        case consistent = "Be consistent"
-        case aesthetics = "Physical aesthetic"
-       
+        case healthyHabits = "healthyHabits"
+        case boost = "boost"
+        case consistent = "consistent"
+        case aesthetics = "aesthetics"
         
         var id: Self { self }
+        
+        var displayText: String {
+            switch self {
+            case .healthyHabits: return "Live a healthier lifestyle"
+            case .boost: return "Boost my energy and vitality"
+            case .consistent: return "Be consistent"
+            case .aesthetics: return "Physical aesthetic"
+            }
+        }
         
         var icon: String {
             switch self {
@@ -93,7 +101,7 @@ struct AccomplishView: View {
                                     .frame(width: 30)
                                     .padding(.leading, 16)
                                 
-                                Text(goal.rawValue)
+                                Text(goal.displayText)
                                     .font(.system(size: 15, weight: .medium))
                                 
                                 Spacer()
@@ -172,7 +180,10 @@ struct AccomplishView: View {
     
     // Save selected goal to UserDefaults
     private func saveUserGoal() {
-        UserDefaults.standard.set(selectedGoal?.rawValue, forKey: "primaryWellnessGoal")
+        if let goal = selectedGoal {
+            print("📝 Saving wellness goal: \(goal.rawValue)")
+            UserDefaults.standard.set(goal.rawValue, forKey: "primaryWellnessGoal")
+        }
     }
 }
 

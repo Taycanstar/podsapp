@@ -15,9 +15,17 @@ struct OnboardingGoal: View {
     
     // Enum for goal options
     enum Goal: String, CaseIterable {
-        case loseWeight = "Lose weight"
-        case maintain = "Maintain"
-        case gainWeight = "Gain weight"
+        case loseWeight = "loseWeight"
+        case maintain = "maintain"
+        case gainWeight = "gainWeight"
+        
+        var displayText: String {
+            switch self {
+            case .loseWeight: return "Lose weight"
+            case .maintain: return "Maintain"
+            case .gainWeight: return "Gain weight"
+            }
+        }
     }
     
     var body: some View {
@@ -75,7 +83,7 @@ struct OnboardingGoal: View {
                         HapticFeedback.generate()
                         selectedGoal = goal
                     }) {
-                        Text(goal.rawValue)
+                        Text(goal.displayText)
                             .font(.system(size: 18, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)

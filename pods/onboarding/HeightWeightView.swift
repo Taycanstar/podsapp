@@ -214,9 +214,11 @@ struct HeightWeightView: View {
             
             // Also calculate and save metric for API calls
             let totalInches = (selectedFeet * 12) + selectedInches
-            let centimeters = Int(Double(totalInches) * 2.54)
-            let kilograms = Int(Double(selectedPounds) * 0.453592)
+            // Use Double instead of Int for better precision
+            let centimeters = Double(totalInches) * 2.54
+            let kilograms = Double(selectedPounds) * 0.45359237
             
+            // Save with precision
             UserDefaults.standard.set(centimeters, forKey: "heightCentimeters")
             UserDefaults.standard.set(kilograms, forKey: "weightKilograms")
         } else {
@@ -225,10 +227,10 @@ struct HeightWeightView: View {
             UserDefaults.standard.set(selectedKilograms, forKey: "weightKilograms")
             
             // Also calculate and save imperial for UI display
-            let totalInches = Int(Double(selectedCentimeters) / 2.54)
-            let feet = totalInches / 12
-            let inches = totalInches % 12
-            let pounds = Int(Double(selectedKilograms) / 0.453592)
+            let totalInches = Double(selectedCentimeters) / 2.54
+            let feet = Int(totalInches / 12)
+            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12))
+            let pounds = Double(selectedKilograms) / 0.45359237
             
             UserDefaults.standard.set(feet, forKey: "heightFeet")
             UserDefaults.standard.set(inches, forKey: "heightInches")

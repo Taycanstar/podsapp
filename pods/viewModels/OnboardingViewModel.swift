@@ -162,9 +162,9 @@ class OnboardingViewModel: ObservableObject {
             email: UserDefaults.standard.string(forKey: "userEmail") ?? "",
             gender: UserDefaults.standard.string(forKey: "gender") ?? "",
             dateOfBirth: UserDefaults.standard.string(forKey: "dateOfBirth") ?? "",
-            heightCm: Double(UserDefaults.standard.integer(forKey: "heightCentimeters")),
-            weightKg: Double(UserDefaults.standard.integer(forKey: "weightKilograms")),
-            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeight"),
+            heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
+            weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
+            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
             fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal") ?? "",
             workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
             dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
@@ -174,6 +174,9 @@ class OnboardingViewModel: ObservableObject {
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
         )
+        
+        // Debug log
+        print("📊 Sending onboarding data - Height: \(onboardingData.heightCm)cm, Weight: \(onboardingData.weightKg)kg, Desired: \(onboardingData.desiredWeightKg)kg")
         
         // Send data to server using NetworkManagerTwo
         let networkManager = NetworkManagerTwo()

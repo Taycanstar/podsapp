@@ -30,7 +30,11 @@ struct GoalInfoView: View {
     
     private var targetWeight: Double {
         // Get the desired weight from DesiredWeightView
-        return UserDefaults.standard.double(forKey: "desiredWeight")
+        if isImperial {
+            return UserDefaults.standard.double(forKey: "desiredWeightPounds")
+        } else {
+            return UserDefaults.standard.double(forKey: "desiredWeightKilograms")
+        }
     }
     
     private var weightUnit: String {

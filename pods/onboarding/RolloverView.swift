@@ -177,7 +177,7 @@ struct RolloverView: View {
             HStack(spacing: 16) {
                 Button(action: {
                     HapticFeedback.generate()
-                    UserDefaults.standard.set(false, forKey: "allowCalorieRollover")
+                    UserDefaults.standard.set(false, forKey: "rolloverCalories")
                     navigateToNextStep = true
                 }) {
                     Text("No")
@@ -195,7 +195,7 @@ struct RolloverView: View {
                 
                 Button(action: {
                     HapticFeedback.generate()
-                    UserDefaults.standard.set(true, forKey: "allowCalorieRollover")
+                    UserDefaults.standard.set(true, forKey: "rolloverCalories")
                     navigateToNextStep = true
                 }) {
                     Text("Yes")

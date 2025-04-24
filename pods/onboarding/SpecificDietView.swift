@@ -16,14 +16,25 @@ struct SpecificDietView: View {
     
     // Enum for diet options
     enum Diet: String, Identifiable, CaseIterable {
-        case balanced = "Balanced"
-        case pescatarian = "Pescatarian"
-        case vegetarian = "Vegetarian"
-        case vegan = "Vegan"
-        case keto = "Keto"
-        case glutenFree = "Gluten Free"
+        case balanced = "balanced"
+        case pescatarian = "pescatarian"
+        case vegetarian = "vegetarian"
+        case vegan = "vegan"
+        case keto = "keto"
+        case glutenFree = "glutenFree"
         
         var id: Self { self }
+        
+        var displayText: String {
+            switch self {
+            case .balanced: return "Balanced"
+            case .pescatarian: return "Pescatarian"
+            case .vegetarian: return "Vegetarian"
+            case .vegan: return "Vegan"
+            case .keto: return "Keto"
+            case .glutenFree: return "Gluten Free"
+            }
+        }
         
         var icon: String {
             switch self {
@@ -35,7 +46,6 @@ struct SpecificDietView: View {
             case .glutenFree: return "allergens"
             }
         }
-        
     }
     
     var body: some View {
@@ -96,7 +106,7 @@ struct SpecificDietView: View {
                                     .foregroundColor(selectedDiet == diet ? .white : .primary)
                                     .frame(width: 40)
                                 
-                                Text(diet.rawValue)
+                                Text(diet.displayText)
                                     .font(.system(size: 15, weight: .medium))
                                 
                                 Spacer()
@@ -178,7 +188,10 @@ struct SpecificDietView: View {
     
     // Save selected diet to UserDefaults
     private func saveDietPreference() {
-        UserDefaults.standard.set(selectedDiet?.rawValue, forKey: "dietPreference")
+        if let diet = selectedDiet {
+            print("📝 Saving diet preference: \(diet.rawValue)")
+            UserDefaults.standard.set(diet.rawValue, forKey: "dietPreference")
+        }
     }
 }
 

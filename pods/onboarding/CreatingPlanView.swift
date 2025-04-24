@@ -27,7 +27,7 @@ struct CreatingPlanView: View {
                 .foregroundColor(.primary)
             
             // Status message
-            Text("We're setting everything\nup for you")
+            Text(showError ? "Error Occurred" : "We're setting everything\nup for you")
                 .font(.system(size: 24, weight: .bold))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 20)
@@ -39,7 +39,7 @@ struct CreatingPlanView: View {
                     .frame(height: 8)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.accentColor)
+                    .fill(showError ? Color.red : Color.accentColor)
                     .frame(width: UIScreen.main.bounds.width * 0.8 * loadingProgress, height: 8)
             }
             .frame(width: UIScreen.main.bounds.width * 0.8)
@@ -48,55 +48,86 @@ struct CreatingPlanView: View {
             // Current task text
             Text(currentTask)
                 .font(.system(size: 18))
-                .foregroundColor(.secondary)
-                .padding(.bottom, 60)
+                .foregroundColor(showError ? .red : .secondary)
+                .padding(.bottom, 20)
             
-            // Recommendations card
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Daily recommendation for")
-                    .font(.system(size: 15, weight: .semibold))
-                    .padding(.bottom, 5)
-                   .foregroundColor(Color("bg"))
+            // Error message when error occurs
+            if showError {
+                Text(errorMessage)
+                    .font(.system(size: 16))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 32)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 20)
                 
-                Group {
-                    HStack {
-                        Text("•")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Calories: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.calories)) kcal" : "Calculating...")")
-                            .font(.system(size: 15))
-                    }
-                .foregroundColor(Color("bg"))
-                    
-                    HStack {
-                        Text("•")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Carbs: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.carbs))g" : "Calculating...")")
-                            .font(.system(size: 15))
-                    }
-               .foregroundColor(Color("bg"))
-                    
-                    HStack {
-                        Text("•")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Protein: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.protein))g" : "Calculating...")")
-                                    .font(.system(size: 15))
-                    }
-                 .foregroundColor(Color("bg"))
-                    
-                    HStack {
-                        Text("•")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Fats: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.fat))g" : "Calculating...")")
-                            .font(.system(size: 15))
-                    }
-                  .foregroundColor(Color("bg"))
+                Button(action: {
+                    // Reset error state and try again
+                    self.showError = false
+                    self.errorMessage = ""
+                    self.currentTask = "Customizing health plan..."
+                    self.loadingProgress = 0.0
+                    self.startLoadingSequence()
+                }) {
+                    Text("Try Again")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(width: 150)
+                        .padding(.vertical, 12)
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                 }
+                .padding(.bottom, 20)
             }
-            .padding(30)
-            .background(Color.primary)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-            .padding(.horizontal, 20)
+            
+            // Only show recommendations card if no error
+            if !showError {
+                // Recommendations card
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Daily recommendation for")
+                        .font(.system(size: 15, weight: .semibold))
+                        .padding(.bottom, 5)
+                       .foregroundColor(Color("bg"))
+                    
+                    Group {
+                        HStack {
+                            Text("•")
+                                .font(.system(size: 15, weight: .bold))
+                            Text("Calories: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.calories)) kcal" : "Calculating...")")
+                                .font(.system(size: 15))
+                        }
+                    .foregroundColor(Color("bg"))
+                        
+                        HStack {
+                            Text("•")
+                                .font(.system(size: 15, weight: .bold))
+                            Text("Carbs: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.carbs))g" : "Calculating...")")
+                                .font(.system(size: 15))
+                        }
+                   .foregroundColor(Color("bg"))
+                        
+                        HStack {
+                            Text("•")
+                                .font(.system(size: 15, weight: .bold))
+                            Text("Protein: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.protein))g" : "Calculating...")")
+                                        .font(.system(size: 15))
+                        }
+                     .foregroundColor(Color("bg"))
+                        
+                        HStack {
+                            Text("•")
+                                .font(.system(size: 15, weight: .bold))
+                            Text("Fats: \(nutritionGoals != nil ? "\(Int(nutritionGoals!.fat))g" : "Calculating...")")
+                                .font(.system(size: 15))
+                        }
+                      .foregroundColor(Color("bg"))
+                    }
+                }
+                .padding(30)
+                .background(Color.primary)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                .padding(.horizontal, 20)
+            }
             
             Spacer()
         }
@@ -125,22 +156,35 @@ struct CreatingPlanView: View {
         
         // First, send the onboarding data to the server
         let networkManager = NetworkManagerTwo()
+        
+        // Get values from UserDefaults
+        let dietPreference = UserDefaults.standard.string(forKey: "dietPreference") ?? ""
+        let primaryWellnessGoal = UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? ""
+        
+        print("📊 Sending onboarding data to server:")
+        print("Diet Preference: \(dietPreference)")
+        print("Primary Wellness Goal: \(primaryWellnessGoal)")
+        
         let onboardingData = OnboardingData(
             email: UserDefaults.standard.string(forKey: "userEmail") ?? "",
             gender: UserDefaults.standard.string(forKey: "gender") ?? "",
             dateOfBirth: UserDefaults.standard.string(forKey: "dateOfBirth") ?? "",
-            heightCm: Double(UserDefaults.standard.integer(forKey: "heightCentimeters")),
-            weightKg: Double(UserDefaults.standard.integer(forKey: "weightKilograms")),
-            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeight"),
+            heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
+            weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
+            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
             fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal") ?? "",
             workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
-            dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
-            primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
+            dietPreference: dietPreference,
+            primaryWellnessGoal: primaryWellnessGoal,
             goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
             obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
         )
+        
+        // Debug print the full data being sent with precise values
+        print("⬆️ Sending full onboarding data: \(onboardingData)")
+        print("📊 Data precision check - Height: \(onboardingData.heightCm)cm, Weight: \(onboardingData.weightKg)kg, Desired: \(onboardingData.desiredWeightKg)kg")
         
         networkManager.processOnboardingData(userData: onboardingData) { result in
             DispatchQueue.main.async {
@@ -169,9 +213,17 @@ struct CreatingPlanView: View {
                     print("⚠️ Failed to process onboarding data with server: \(error)")
                     // Stop the loading animation
                     timer.invalidate()
-                    // Handle error case - maybe show an error message to the user
+                    
+                    // Handle specific error cases
+                    if let networkError = error as? NetworkManagerTwo.NetworkError {
+                        print("❌ Network error details: \(networkError.localizedDescription)")
+                        self.errorMessage = "Error: \(networkError.localizedDescription)"
+                    } else {
+                        self.errorMessage = "Failed to process your data. Please try again."
+                    }
+                    
                     self.showError = true
-                    self.errorMessage = "Failed to process your data. Please try again."
+                    self.currentTask = "Error processing your data. Please try again."
                 }
             }
         }

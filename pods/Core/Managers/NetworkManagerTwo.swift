@@ -14,15 +14,28 @@ class NetworkManagerTwo {
     
 
    //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: Error {
         case invalidURL
         case noData
-        case decodingError
+        case decodingError(String = "Unknown decoding error")
         case serverError(String)
+        
+        var localizedDescription: String {
+            switch self {
+            case .invalidURL:
+                return "Invalid URL"
+            case .noData:
+                return "No data received from server"
+            case .decodingError(let message):
+                return "Error decoding response: \(message)"
+            case .serverError(let message):
+                return "Server error: \(message)"
+            }
+        }
     }
     
     // MARK: - Barcode Lookup
@@ -115,7 +128,7 @@ class NetworkManagerTwo {
                     print("Response data: \(json)")
                 }
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.decodingError))
+                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
                 }
             }
         }.resume()
@@ -196,13 +209,13 @@ class NetworkManagerTwo {
                 } else {
                     print("🔴 Unable to parse response")
                     DispatchQueue.main.async {
-                        completion(.failure(NetworkError.decodingError))
+                        completion(.failure(NetworkError.decodingError(NetworkError.decodingError().localizedDescription)))
                     }
                 }
             } catch {
                 print("🔴 Error parsing JSON: \(error)")
                 DispatchQueue.main.async {
-                    completion(.failure(error))
+                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
                 }
             }
         }
@@ -334,7 +347,7 @@ class NetworkManagerTwo {
                     print("Response data: \(json)")
                 }
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.decodingError))
+                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
                 }
             }
         }.resume()
@@ -401,13 +414,13 @@ class NetworkManagerTwo {
                 } else {
                     DispatchQueue.main.async {
                         print("❌ Invalid server response when marking onboarding completed")
-                        completion(.failure(NetworkError.decodingError))
+                        completion(.failure(NetworkError.decodingError()))
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
                     print("❌ Error parsing response when marking onboarding completed: \(error)")
-                    completion(.failure(NetworkError.decodingError))
+                    completion(.failure(NetworkError.decodingError()))
                 }
             }
         }.resume()
@@ -481,6 +494,9 @@ class NetworkManagerTwo {
             
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    // Debug log raw response
+                    print("🔍 Raw server response: \(json)")
+                    
                     // Check for error response
                     if let errorMessage = json["error"] as? String {
                         DispatchQueue.main.async {
@@ -490,50 +506,110 @@ class NetworkManagerTwo {
                         return
                     }
                     
-                    // Process successful response
-                    if let success = json["success"] as? Bool, success,
-                       let bmr = json["bmr"] as? Double,
-                       let tdee = json["tdee"] as? Double,
-                       let dailyGoals = json["daily_goals"] as? [String: Any],
-                       let calories = dailyGoals["calories"] as? Double,
-                       let protein = dailyGoals["protein"] as? Double,
-                       let carbs = dailyGoals["carbs"] as? Double,
-                       let fat = dailyGoals["fat"] as? Double,
-                       let insights = json["insights"] as? [String: Any],
-                       let metabolismInsights = insights["metabolism"] as? String,
-                       let nutritionInsights = insights["nutrition"] as? String {
+                    // Make parsing more flexible to accommodate potential changes in the API response
+                    // Extract basic metrics, with fallbacks
+                    let bmr = json["bmr"] as? Double ?? 0
+                    let tdee = json["tdee"] as? Double ?? 0
+                    
+                    // Extract daily goals with flexible parsing for different formats
+                    var calories: Double = 0
+                    var protein: Double = 0
+                    var carbs: Double = 0
+                    var fat: Double = 0
+                    
+                    // Try different paths to get the daily goals
+                    if let dailyGoals = json["daily_goals"] as? [String: Any] {
+                        calories = dailyGoals["calories"] as? Double ?? 0
+                        protein = dailyGoals["protein"] as? Double ?? 0
+                        carbs = dailyGoals["carbs"] as? Double ?? 0
+                        fat = dailyGoals["fat"] as? Double ?? 0
+                    } else if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
+                        // Alternative format
+                        calories = nutritionGoals["calories"] as? Double ?? 0
+                        protein = nutritionGoals["protein"] as? Double ?? 0
+                        carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
+                        fat = nutritionGoals["fats"] as? Double ?? 0
+                    } else if let goals = json["goals"] as? [String: Any] {
+                        // Another possible format
+                        calories = goals["calories"] as? Double ?? 0
+                        protein = goals["protein"] as? Double ?? 0
+                        carbs = goals["carbs"] as? Double ?? 0
+                        fat = goals["fat"] as? Double ?? 0
+                    }
+                    
+                    // Extract insights with flexible parsing
+                    var metabolismInsights = ""
+                    var nutritionInsights = ""
+                    
+                    if let insights = json["insights"] as? [String: Any] {
+                        // Handle metabolism insights
+                        if let metabolism = insights["metabolism"] as? [String: Any] {
+                            var metabolismText = ""
+                            if let primary = metabolism["primary_analysis"] as? String {
+                                metabolismText += "Primary Analysis:\n\(primary)\n\n"
+                            }
+                            if let practical = metabolism["practical_implications"] as? String {
+                                metabolismText += "Practical Implications:\n\(practical)\n\n"
+                            }
+                            if let strategies = metabolism["optimization_strategies"] as? String {
+                                metabolismText += "Optimization Strategies:\n\(strategies)"
+                            }
+                            metabolismInsights = metabolismText
+                        }
                         
-                        let nutritionGoals = NutritionGoals(
-                            bmr: bmr,
-                            tdee: tdee,
-                            calories: calories,
-                            protein: protein,
-                            carbs: carbs,
-                            fat: fat,
-                            metabolismInsights: metabolismInsights,
-                            nutritionInsights: nutritionInsights
-                        )
-                        
-                        DispatchQueue.main.async {
-                            print("✅ Successfully processed onboarding data")
-                            completion(.success(nutritionGoals))
+                        // Handle nutrition insights
+                        if let nutrition = insights["nutrition_insights"] as? [String: Any] {
+                            var nutritionText = ""
+                            if let primary = nutrition["primary_analysis"] as? String {
+                                nutritionText += "Primary Analysis:\n\(primary)\n\n"
+                            }
+                            if let macros = nutrition["macronutrient_breakdown"] as? String {
+                                nutritionText += "Macronutrient Breakdown:\n\(macros)\n\n"
+                            }
+                            if let timing = nutrition["meal_timing"] as? String {
+                                nutritionText += "Meal Timing:\n\(timing)"
+                            }
+                            nutritionInsights = nutritionText
                         }
                     } else {
-                        DispatchQueue.main.async {
-                            print("❌ Invalid or incomplete response data")
-                            completion(.failure(NetworkError.decodingError))
-                        }
+                        // Fallback to simple string fields if the complex structure isn't present
+                        metabolismInsights = json["metabolism_insights"] as? String ?? ""
+                        nutritionInsights = json["nutrition_insights"] as? String ?? ""
+                    }
+                    
+                    // Create nutrition goals object
+                    let nutritionGoals = NutritionGoals(
+                        bmr: bmr,
+                        tdee: tdee,
+                        calories: calories,
+                        protein: protein,
+                        carbs: carbs,
+                        fat: fat,
+                        metabolismInsights: metabolismInsights,
+                        nutritionInsights: nutritionInsights
+                    )
+                    
+                    DispatchQueue.main.async {
+                        // Log values for debugging
+                        print("✅ Successfully processed onboarding data")
+                        print("📊 BMR: \(bmr), TDEE: \(tdee)")
+                        print("📊 Calories: \(calories), Protein: \(protein)g, Carbs: \(carbs)g, Fat: \(fat)g")
+                        completion(.success(nutritionGoals))
                     }
                 } else {
                     DispatchQueue.main.async {
-                        print("❌ Could not parse JSON response")
-                        completion(.failure(NetworkError.decodingError))
+                        // Try to print the raw response as string for debugging
+                        let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode as string"
+                        print("❌ Could not parse JSON response. Raw response: \(responseString)")
+                        completion(.failure(NetworkError.decodingError()))
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    print("❌ Error parsing response: \(error)")
-                    completion(.failure(NetworkError.decodingError))
+                    // Try to print the raw response as string for debugging
+                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode as string"
+                    print("❌ Error parsing response: \(error). Raw response: \(responseString)")
+                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
                 }
             }
         }.resume()
