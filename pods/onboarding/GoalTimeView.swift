@@ -286,7 +286,31 @@ struct GoalTimeView: View {
     
     // Save the weight change speed to UserDefaults
     private func saveWeightChangeSpeed() {
+        // Save the selected speed
         UserDefaults.standard.set(selectedSpeed, forKey: "weightChangeSpeed")
+        
+        // Calculate goal timeframe in weeks
+        let currentWeight = UserDefaults.standard.double(forKey: "weightKilograms")
+        let desiredWeight = UserDefaults.standard.double(forKey: "desiredWeightKilograms")
+        let weightDifference = abs(desiredWeight - currentWeight)
+        
+        // Convert weight difference to pounds for weekly calculation
+        let weightDifferenceLbs = weightDifference * 2.20462
+        
+        // Calculate weeks needed (round up to nearest week)
+        let weeksNeeded = Int(ceil(weightDifferenceLbs / selectedSpeed))
+        
+        // Save both the speed and timeframe
+        UserDefaults.standard.set(selectedSpeed, forKey: "weeklyWeightChange")
+        UserDefaults.standard.set(weeksNeeded, forKey: "goalTimeframeWeeks")
+        
+        // Calculate and save the estimated completion date
+        let calendar = Calendar.current
+        if let completionDate = calendar.date(byAdding: .weekOfYear, value: weeksNeeded, to: Date()) {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            UserDefaults.standard.set(formatter.string(from: completionDate), forKey: "goalCompletionDate")
+        }
     }
 }
 

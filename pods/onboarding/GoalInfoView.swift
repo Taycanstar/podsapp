@@ -45,6 +45,22 @@ struct GoalInfoView: View {
         return abs(targetWeight - currentWeight)
     }
     
+    private var goalTimeframe: Int {
+        return UserDefaults.standard.integer(forKey: "goalTimeframeWeeks")
+    }
+    
+    private var completionDate: String {
+        if let dateString = UserDefaults.standard.string(forKey: "goalCompletionDate") {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let date = formatter.date(from: dateString) {
+                formatter.dateFormat = "MMMM d, yyyy"
+                return formatter.string(from: date)
+            }
+        }
+        return ""
+    }
+    
     // Save any needed data
     private func saveData() {
         // No additional data to save at this step
@@ -105,6 +121,12 @@ struct GoalInfoView: View {
                                     .foregroundColor(.primary))
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
+                                
+                                // Add goal timeframe and completion date
+                                Text("Estimated completion: \(completionDate)")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 10)
                             } else {
                                 Text("Maintaining your weight is achievable with your plan!")
                                     .font(.system(size: 36, weight: .bold))

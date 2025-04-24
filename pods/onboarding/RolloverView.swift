@@ -53,7 +53,7 @@ struct RolloverView: View {
                     .multilineTextAlignment(.center)
                 
                 ZStack {
-                    Text("Rollover up to 200 cals")
+                    Text("Rollover up to 10% of your daily goal")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.primary)
                         .padding(.horizontal, 12)
@@ -148,12 +148,12 @@ struct RolloverView: View {
                                     .font(.system(size: 16))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                                 
-                                Text("+150")
+                                Text("+50")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                             
-                            Text("150+150")
+                            Text("150+50")
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(colorScheme == .dark ? .black : .white)
                         }

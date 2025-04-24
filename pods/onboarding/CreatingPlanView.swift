@@ -177,6 +177,7 @@ struct CreatingPlanView: View {
             dietPreference: dietPreference,
             primaryWellnessGoal: primaryWellnessGoal,
             goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
+            weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
             obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")

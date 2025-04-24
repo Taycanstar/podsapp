@@ -568,6 +568,7 @@ struct OnboardingData {
     let dietPreference: String // "balanced", "vegan", "keto", etc.
     let primaryWellnessGoal: String
     let goalTimeframeWeeks: Int?
+    let weeklyWeightChange: Double? // New field for weekly weight change
     let obstacles: [String]?
     let addCaloriesBurned: Bool
     let rolloverCalories: Bool
@@ -589,6 +590,7 @@ extension OnboardingData: CustomStringConvertible {
             dietPreference: \(dietPreference)
             primaryWellnessGoal: \(primaryWellnessGoal)
             goalTimeframeWeeks: \(goalTimeframeWeeks ?? 0)
+            weeklyWeightChange: \(weeklyWeightChange ?? 0.0)
             obstacles: \(obstacles?.joined(separator: ", ") ?? "none")
             addCaloriesBurned: \(addCaloriesBurned)
             rolloverCalories: \(rolloverCalories)
