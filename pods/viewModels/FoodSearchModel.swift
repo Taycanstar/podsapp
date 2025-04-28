@@ -600,6 +600,93 @@ extension OnboardingData: CustomStringConvertible {
 }
 
 /// Structure to hold the calculated nutrition goals
+struct ResearchBacking: Codable {
+    let insight: String?
+    let citation: String?
+    let relevance: String?
+}
+
+struct InsightDetails: Codable {
+    let primaryAnalysis: String?
+    let researchBacking: [ResearchBacking]?
+    let practicalImplications: String?
+    let optimizationStrategies: String?
+    let macronutrientBreakdown: String?
+    let micronutrientFocus: String?
+    let mealTiming: String?
+    let supplementation: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case primaryAnalysis = "primary_analysis"
+        case researchBacking = "research_backing"
+        case practicalImplications = "practical_implications"
+        case optimizationStrategies = "optimization_strategies"
+        case macronutrientBreakdown = "macronutrient_breakdown"
+        case micronutrientFocus = "micronutrient_focus"
+        case mealTiming = "meal_timing"
+        case supplementation
+    }
+}
+
+// Add this extension to allow .isEmpty checks
+extension InsightDetails {
+    var isEmpty: Bool {
+        return (primaryAnalysis?.isEmpty ?? true)
+            && (researchBacking?.isEmpty ?? true)
+            && (practicalImplications?.isEmpty ?? true)
+            && (optimizationStrategies?.isEmpty ?? true)
+            && (macronutrientBreakdown?.isEmpty ?? true)
+            && (micronutrientFocus?.isEmpty ?? true)
+            && (mealTiming?.isEmpty ?? true)
+            && (supplementation?.isEmpty ?? true)
+    }
+}
+
+extension InsightDetails {
+    var summary: String {
+        var parts: [String] = []
+        if let primaryAnalysis = primaryAnalysis, !primaryAnalysis.isEmpty {
+            parts.append("Primary Analysis: \(primaryAnalysis)")
+        }
+        if let practicalImplications = practicalImplications, !practicalImplications.isEmpty {
+            parts.append("Practical Implications: \(practicalImplications)")
+        }
+        if let optimizationStrategies = optimizationStrategies, !optimizationStrategies.isEmpty {
+            parts.append("Optimization Strategies: \(optimizationStrategies)")
+        }
+        if let macronutrientBreakdown = macronutrientBreakdown, !macronutrientBreakdown.isEmpty {
+            parts.append("Macronutrient Breakdown: \(macronutrientBreakdown)")
+        }
+        if let micronutrientFocus = micronutrientFocus, !micronutrientFocus.isEmpty {
+            parts.append("Micronutrient Focus: \(micronutrientFocus)")
+        }
+        if let mealTiming = mealTiming, !mealTiming.isEmpty {
+            parts.append("Meal Timing: \(mealTiming)")
+        }
+        if let supplementation = supplementation, !supplementation.isEmpty {
+            parts.append("Supplementation: \(supplementation)")
+        }
+        // Research backing (array)
+        if let researchBacking = researchBacking, !researchBacking.isEmpty {
+            let researchText = researchBacking.compactMap { rb in
+                guard let insight = rb.insight, !insight.isEmpty else { return nil }
+                var text = "- \(insight)"
+                if let citation = rb.citation, !citation.isEmpty {
+                    text += " (\(citation))"
+                }
+                if let relevance = rb.relevance, !relevance.isEmpty {
+                    text += "\n  Relevance: \(relevance)"
+                }
+                return text
+            }.joined(separator: "\n")
+            if !researchText.isEmpty {
+                parts.append("Research Backing:\n\(researchText)")
+            }
+        }
+        return parts.joined(separator: "\n\n")
+    }
+}
+
 struct NutritionGoals: Codable {
     let bmr: Double
     let tdee: Double
@@ -607,6 +694,6 @@ struct NutritionGoals: Codable {
     let protein: Double
     let carbs: Double
     let fat: Double
-    let metabolismInsights: String
-    let nutritionInsights: String
+    let metabolismInsights: InsightDetails?
+    let nutritionInsights: InsightDetails?
 }

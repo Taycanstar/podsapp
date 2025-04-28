@@ -139,6 +139,13 @@ struct CreatingPlanView: View {
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
         )
         
+        // Guard against missing email
+        if onboardingData.email.isEmpty {
+            print("❌ Cannot proceed: user email is missing. Please log in again.")
+            // Optionally show a user-facing error here
+            return
+        }
+        
         // Debug print the full data being sent with precise values
         print("⬆️ Sending full onboarding data: \(onboardingData)")
         print("📊 Data precision check - Height: \(onboardingData.heightCm)cm, Weight: \(onboardingData.weightKg)kg, Desired: \(onboardingData.desiredWeightKg)kg")

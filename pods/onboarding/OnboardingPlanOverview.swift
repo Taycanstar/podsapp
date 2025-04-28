@@ -234,8 +234,7 @@ struct OnboardingPlanOverview: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Metabolic Insights")
                                 .font(.system(size: 20, weight: .bold))
-                            
-                            Text(insights)
+                            Text(insights.summary.isEmpty ? "No insights available" : insights.summary)
                                 .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                                 .padding(16)
@@ -248,8 +247,7 @@ struct OnboardingPlanOverview: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Nutrition Insights")
                                 .font(.system(size: 20, weight: .bold))
-                            
-                            Text(insights)
+                            Text(insights.summary.isEmpty ? "No insights available" : insights.summary)
                                 .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                                 .padding(16)

@@ -14,8 +14,8 @@ class NetworkManagerTwo {
     
 
    //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: Error {
@@ -537,44 +537,19 @@ class NetworkManagerTwo {
                         fat = goals["fat"] as? Double ?? 0
                     }
                     
-                    // Extract insights with flexible parsing
-                    var metabolismInsights = ""
-                    var nutritionInsights = ""
+                    // Replace the old string-based parsing for insights with decoding to InsightDetails
+                    var metabolismInsights: InsightDetails? = nil
+                    var nutritionInsights: InsightDetails? = nil
                     
                     if let insights = json["insights"] as? [String: Any] {
-                        // Handle metabolism insights
                         if let metabolism = insights["metabolism"] as? [String: Any] {
-                            var metabolismText = ""
-                            if let primary = metabolism["primary_analysis"] as? String {
-                                metabolismText += "Primary Analysis:\n\(primary)\n\n"
-                            }
-                            if let practical = metabolism["practical_implications"] as? String {
-                                metabolismText += "Practical Implications:\n\(practical)\n\n"
-                            }
-                            if let strategies = metabolism["optimization_strategies"] as? String {
-                                metabolismText += "Optimization Strategies:\n\(strategies)"
-                            }
-                            metabolismInsights = metabolismText
+                            let metabolismData = try? JSONSerialization.data(withJSONObject: metabolism)
+                            metabolismInsights = metabolismData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
                         }
-                        
-                        // Handle nutrition insights
-                        if let nutrition = insights["nutrition_insights"] as? [String: Any] {
-                            var nutritionText = ""
-                            if let primary = nutrition["primary_analysis"] as? String {
-                                nutritionText += "Primary Analysis:\n\(primary)\n\n"
-                            }
-                            if let macros = nutrition["macronutrient_breakdown"] as? String {
-                                nutritionText += "Macronutrient Breakdown:\n\(macros)\n\n"
-                            }
-                            if let timing = nutrition["meal_timing"] as? String {
-                                nutritionText += "Meal Timing:\n\(timing)"
-                            }
-                            nutritionInsights = nutritionText
+                        if let nutrition = insights["nutrition"] as? [String: Any] {
+                            let nutritionData = try? JSONSerialization.data(withJSONObject: nutrition)
+                            nutritionInsights = nutritionData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
                         }
-                    } else {
-                        // Fallback to simple string fields if the complex structure isn't present
-                        metabolismInsights = json["metabolism_insights"] as? String ?? ""
-                        nutritionInsights = json["nutrition_insights"] as? String ?? ""
                     }
                     
                     // Create nutrition goals object
@@ -592,7 +567,7 @@ class NetworkManagerTwo {
                     DispatchQueue.main.async {
                         // Log values for debugging
                         print("✅ Successfully processed onboarding data")
-                        print("📊 BMR: \(bmr), TDEE: \(tdee)")
+                        print("�� BMR: \(bmr), TDEE: \(tdee)")
                         print("📊 Calories: \(calories), Protein: \(protein)g, Carbs: \(carbs)g, Fat: \(fat)g")
                         completion(.success(nutritionGoals))
                     }
