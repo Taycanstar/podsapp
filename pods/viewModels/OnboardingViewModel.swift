@@ -170,6 +170,7 @@ class OnboardingViewModel: ObservableObject {
             dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
             primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
             goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
+            weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
             obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")

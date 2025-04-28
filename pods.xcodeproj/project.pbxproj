@@ -124,6 +124,7 @@
 		36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF62DB46B1100DD4266 /* RolloverView.swift */; };
 		36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */; };
 		36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */; };
+		36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -304,6 +305,7 @@
 		36A85CF62DB46B1100DD4266 /* RolloverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RolloverView.swift; path = Pods/onboarding/RolloverView.swift; sourceTree = SOURCE_ROOT; };
 		36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatingPlanView.swift; sourceTree = "<group>"; };
 		36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowContainer.swift; sourceTree = "<group>"; };
+		36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPlanOverview.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -571,6 +573,7 @@
 				36A85CF62DB46B1100DD4266 /* RolloverView.swift */,
 				36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */,
 				36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */,
+				36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1036,6 +1039,7 @@
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
+				36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */,
 				363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,

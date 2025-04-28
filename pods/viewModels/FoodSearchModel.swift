@@ -600,7 +600,7 @@ extension OnboardingData: CustomStringConvertible {
 }
 
 /// Structure to hold the calculated nutrition goals
-struct NutritionGoals {
+struct NutritionGoals: Codable {
     let bmr: Double
     let tdee: Double
     let calories: Double
