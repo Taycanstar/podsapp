@@ -20,39 +20,39 @@ struct CreatingPlanView: View {
     
     var body: some View {
         ZStack {
-            VStack(spacing: 25) {
-                Spacer()
-                
-                // Percentage display
-                Text("\(Int(loadingProgress * 100))%")
-                    .font(.system(size: 64, weight: .bold))
-                    .foregroundColor(.primary)
-                
-                // Status message
+        VStack(spacing: 25) {
+            Spacer()
+            
+            // Percentage display
+            Text("\(Int(loadingProgress * 100))%")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundColor(.primary)
+            
+            // Status message
                 Text(showError ? "Error Occurred" : "We're setting everything\nup for you")
-                    .font(.system(size: 24, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 20)
+                .font(.system(size: 24, weight: .bold))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 20)
+            
+            // Progress bar
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(height: 8)
                 
-                // Progress bar
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 8)
-                    
-                    RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 4)
                         .fill(showError ? Color.red : Color.accentColor)
-                        .frame(width: UIScreen.main.bounds.width * 0.8 * loadingProgress, height: 8)
-                }
-                .frame(width: UIScreen.main.bounds.width * 0.8)
-                .padding(.bottom, 30)
-                
-                // Current task text
-                Text(currentTask)
-                    .font(.system(size: 18))
+                    .frame(width: UIScreen.main.bounds.width * 0.8 * loadingProgress, height: 8)
+            }
+            .frame(width: UIScreen.main.bounds.width * 0.8)
+            .padding(.bottom, 30)
+            
+            // Current task text
+            Text(currentTask)
+                .font(.system(size: 18))
                     .foregroundColor(showError ? .red : .secondary)
                     .padding(.bottom, 20)
-                
+            
                 // Error message when error occurs
                 if showError {
                     Text(errorMessage)
@@ -166,7 +166,7 @@ struct CreatingPlanView: View {
                         let encoder = JSONEncoder()
                         if let encoded = try? encoder.encode(nutritionGoals) {
                             UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-                            UserDefaults.standard.synchronize()
+                    UserDefaults.standard.synchronize()
                         }
                     }
                     
@@ -188,8 +188,8 @@ struct CreatingPlanView: View {
                     
                     self.showError = true
                     self.currentTask = "Error processing your data. Please try again."
+                    }
                 }
-            }
         }
     }
 }

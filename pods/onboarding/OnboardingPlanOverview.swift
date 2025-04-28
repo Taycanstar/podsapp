@@ -231,189 +231,97 @@ struct OnboardingPlanOverview: View {
                     
                     // Insights sections
                     if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Headline outside the card
                             Text("Metabolic Insights")
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.primary)
+                                .padding(.bottom, 2)
                             
-                            // Primary Analysis
-                            if let primaryAnalysis = insights.primaryAnalysis {
-                                Text("Overview")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                Text(primaryAnalysis)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                    .padding(.vertical, 8)
-                            }
-                            
-                            // Practical Implications
-                            if let practicalImplications = insights.practicalImplications {
-                                Text("Key Takeaways")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                Text(practicalImplications)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                    .padding(.vertical, 8)
-                            }
-                            
-                            // Optimization Strategies
-                            if let optimizationStrategies = insights.optimizationStrategies {
-                                Text("Action Plan")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                // Split into bullet points
-                                let strategies = optimizationStrategies.components(separatedBy: ". ")
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(strategies, id: \.self) { strategy in
-                                        if !strategy.isEmpty {
-                                            HStack(alignment: .top, spacing: 8) {
-                                                Text("•")
-                                                    .foregroundColor(.primary)
-                                                Text(strategy)
-                                                    .font(.system(size: 16))
-                                                    .foregroundColor(.primary)
+                            VStack(alignment: .leading, spacing: 12) {
+                                // Main summary/analysis at the top (no 'Overview' subheadline)
+                                if let primaryAnalysis = insights.primaryAnalysis {
+                                    renderTextWithCitations(primaryAnalysis, researchBacking: insights.researchBacking)
+                                }
+                                // Key Takeaways
+                                if let practicalImplications = insights.practicalImplications {
+                                    Text("Key Takeaways")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    renderTextWithCitations(practicalImplications, researchBacking: insights.researchBacking)
+                                }
+                                // Action Plan (bullets)
+                                if let optimizationStrategies = insights.optimizationStrategies {
+                                    Text("Action Plan")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    let strategies = optimizationStrategies.components(separatedBy: ". ")
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(strategies, id: \.self) { strategy in
+                                            if !strategy.isEmpty {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    Text("•")
+                                                        .foregroundColor(.primary)
+                                                    renderTextWithCitations(strategy, researchBacking: insights.researchBacking)
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                            
-                            // Research Backing
-                            if let researchBacking = insights.researchBacking, !researchBacking.isEmpty {
-                                Text("Research Sources")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(Array(researchBacking.enumerated()), id: \.element.insight) { index, research in
-                                        if let insight = research.insight {
-                                            HStack(alignment: .top, spacing: 8) {
-                                                Text("[\(index + 1)]")
-                                                    .font(.system(size: 14, weight: .medium))
-                                                    .foregroundColor(.accentColor)
-                                                    .frame(width: 30, height: 30)
-                                                    .background(Color.accentColor.opacity(0.1))
-                                                    .cornerRadius(15)
-                                                    .onTapGesture {
-                                                        if let url = URL(string: research.citation ?? "") {
-                                                            UIApplication.shared.open(url)
-                                                        }
-                                                    }
-                                                
-                                                Text(insight)
-                                                    .font(.system(size: 16))
-                                                    .foregroundColor(.primary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            .padding(16)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(10)
                         }
-                        .padding(16)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
                     }
                     
                     if let insights = nutritionGoals?.nutritionInsights, !insights.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Headline outside the card
                             Text("Nutrition Insights")
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.primary)
+                                .padding(.bottom, 2)
                             
-                            // Primary Analysis
-                            if let primaryAnalysis = insights.primaryAnalysis {
-                                Text("Overview")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                Text(primaryAnalysis)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                    .padding(.vertical, 8)
-                            }
-                            
-                            // Practical Implications
-                            if let practicalImplications = insights.practicalImplications {
-                                Text("Key Takeaways")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                Text(practicalImplications)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                    .padding(.vertical, 8)
-                            }
-                            
-                            // Optimization Strategies
-                            if let optimizationStrategies = insights.optimizationStrategies {
-                                Text("Action Plan")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                // Split into bullet points
-                                let strategies = optimizationStrategies.components(separatedBy: ". ")
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(strategies, id: \.self) { strategy in
-                                        if !strategy.isEmpty {
-                                            HStack(alignment: .top, spacing: 8) {
-                                                Text("•")
-                                                    .foregroundColor(.primary)
-                                                Text(strategy)
-                                                    .font(.system(size: 16))
-                                                    .foregroundColor(.primary)
+                            VStack(alignment: .leading, spacing: 12) {
+                                // Main summary/analysis at the top (no 'Overview' subheadline)
+                                if let primaryAnalysis = insights.primaryAnalysis {
+                                    renderTextWithCitations(primaryAnalysis, researchBacking: insights.researchBacking)
+                                }
+                                // Key Takeaways
+                                if let practicalImplications = insights.practicalImplications {
+                                    Text("Key Takeaways")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    renderTextWithCitations(practicalImplications, researchBacking: insights.researchBacking)
+                                }
+                                // Action Plan (bullets)
+                                if let optimizationStrategies = insights.optimizationStrategies {
+                                    Text("Action Plan")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    let strategies = optimizationStrategies.components(separatedBy: ". ")
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(strategies, id: \.self) { strategy in
+                                            if !strategy.isEmpty {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    Text("•")
+                                                        .foregroundColor(.primary)
+                                                    renderTextWithCitations(strategy, researchBacking: insights.researchBacking)
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                            
-                            // Research Backing
-                            if let researchBacking = insights.researchBacking, !researchBacking.isEmpty {
-                                Text("Research Sources")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(Array(researchBacking.enumerated()), id: \.element.insight) { index, research in
-                                        if let insight = research.insight {
-                                            HStack(alignment: .top, spacing: 8) {
-                                                Text("[\(index + 1)]")
-                                                    .font(.system(size: 14, weight: .medium))
-                                                    .foregroundColor(.accentColor)
-                                                    .frame(width: 30, height: 30)
-                                                    .background(Color.accentColor.opacity(0.1))
-                                                    .cornerRadius(15)
-                                                    .onTapGesture {
-                                                        if let url = URL(string: research.citation ?? "") {
-                                                            UIApplication.shared.open(url)
-                                                        }
-                                                    }
-                                                
-                                                Text(insight)
-                                                    .font(.system(size: 16))
-                                                    .foregroundColor(.primary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            .padding(16)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(10)
                         }
-                        .padding(16)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -561,6 +469,70 @@ struct OnboardingPlanOverview: View {
             viewModel.isShowingOnboarding = false
         }
     }
+    
+    // Helper function to split text into segments of plain text and citation markers
+    private func parseTextWithCitations(_ text: String) -> [(type: String, value: String)] {
+        // Matches [1], [2], ...
+        let pattern = #"(\[\d+\])"#
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let nsText = text as NSString
+        var segments: [(String, String)] = []
+        var lastIndex = 0
+        let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: nsText.length)) ?? []
+        for match in matches {
+            let range = match.range
+            if range.location > lastIndex {
+                let before = nsText.substring(with: NSRange(location: lastIndex, length: range.location - lastIndex))
+                segments.append(("text", before))
+            }
+            let marker = nsText.substring(with: range)
+            segments.append(("citation", marker))
+            lastIndex = range.location + range.length
+        }
+        if lastIndex < nsText.length {
+            let after = nsText.substring(from: lastIndex)
+            segments.append(("text", after))
+        }
+        return segments
+    }
+
+    @ViewBuilder
+private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
+    let segments = parseTextWithCitations(text)
+    // Use a horizontal stack for inline layout, but keep everything in one line
+    HStack(alignment: .firstTextBaseline, spacing: 0) {
+        ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
+            if segment.type == "text" {
+                Text(segment.value)
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+            } else if segment.type == "citation" {
+                let numberString = segment.value.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
+                if let number = Int(numberString),
+                   let researchBacking = researchBacking,
+                   number > 0, number <= researchBacking.count {
+                    let research = researchBacking[number - 1]
+                    Button(action: {
+                        if let urlString = research.citation, let url = URL(string: urlString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
+                        Text("\(number)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 22, height: 22)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color(UIColor.systemGray5))
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.leading, 2)
+                }
+            }
+        }
+    }
+}
 }
 
 #Preview {
