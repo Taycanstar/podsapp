@@ -503,12 +503,12 @@ struct OnboardingPlanOverview: View {
     }
     
     // Helper to process text nicely for display with citations
-    private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [String])] {
+    private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [(number: String, index: Int)])] {
         // First, split the text by paragraphs (we'll treat each sentence as a paragraph for now)
         let sentences = text.components(separatedBy: ". ").map { $0.trimmingCharacters(in: .whitespaces) }
-        var result: [(paragraphText: String, citations: [String])] = []
+        var result: [(paragraphText: String, citations: [(number: String, index: Int)])] = []
         
-        for sentence in sentences {
+        for (index, sentence) in sentences.enumerated() {
             if sentence.isEmpty { continue }
             
             // Use regex to extract citation references
@@ -517,14 +517,14 @@ struct OnboardingPlanOverview: View {
             let nsText = sentence as NSString
             let range = NSRange(location: 0, length: nsText.length)
             
-            // Extract all citation numbers
-            var citations: [String] = []
+            // Extract all citation numbers with their index
+            var citations: [(number: String, index: Int)] = []
             if let matches = regex?.matches(in: sentence, range: range) {
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let numberRange = match.range(at: 1)
                         let number = nsText.substring(with: numberRange)
-                        citations.append(number)
+                        citations.append((number, Int(number) ?? 0))
                     }
                 }
             }
@@ -532,8 +532,15 @@ struct OnboardingPlanOverview: View {
             // Remove citation brackets from the displayed text
             let cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
             
-            // Add period back to the end if this isn't the last sentence
-            let displayText = cleanText + "."
+            // Check if text already ends with a period
+            var displayText = cleanText.trimmingCharacters(in: .whitespaces)
+            if !displayText.hasSuffix(".") {
+                // Add period only if needed and this isn't the last sentence
+                // or if this is the last sentence but doesn't have a period
+                if index < sentences.count - 1 || !text.hasSuffix(".") {
+                    displayText += "."
+                }
+            }
             
             result.append((displayText, citations))
         }
@@ -558,8 +565,8 @@ struct OnboardingPlanOverview: View {
                 // If there are citations, show them in an HStack
                 if !paragraph.citations.isEmpty {
                     HStack(spacing: 8) {
-                        ForEach(paragraph.citations, id: \.self) { citation in
-                            Text(citation)
+                        ForEach(paragraph.citations, id: \.number) { citation in
+                            Text(citation.number)
                                 .font(.system(size: 12, weight: .medium))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -568,6 +575,9 @@ struct OnboardingPlanOverview: View {
                                         .fill(Color(UIColor.systemGray5))
                                 )
                                 .foregroundColor(.primary)
+                                .onTapGesture {
+                                    openCitationURL(citationIndex: citation.index, researchBacking: researchBacking)
+                                }
                         }
                         Spacer()
                     }
@@ -585,6 +595,19 @@ struct OnboardingPlanOverview: View {
         let nsText = text as NSString
         let range = NSRange(location: 0, length: nsText.length)
         return regex?.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "") ?? text
+    }
+    
+    // Helper function to open citation URL
+    private func openCitationURL(citationIndex: Int, researchBacking: [ResearchBacking]?) {
+        guard let backings = researchBacking, citationIndex > 0, citationIndex <= backings.count else {
+            return
+        }
+        
+        // Get URL from research backing
+        let backing = backings[citationIndex - 1]
+        if let urlString = backing.citation, let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
