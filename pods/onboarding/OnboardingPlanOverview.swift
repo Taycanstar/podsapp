@@ -277,7 +277,8 @@ struct OnboardingPlanOverview: View {
                         }
                     }
                     
-                    if let insights = nutritionGoals?.nutritionInsights, !insights.isEmpty {
+                    let insights = nutritionGoals?.nutritionInsights
+                    if let insights = insights, !insights.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             // Headline outside the card
                             Text("Nutrition Insights")
@@ -290,32 +291,37 @@ struct OnboardingPlanOverview: View {
                                 if let primaryAnalysis = insights.primaryAnalysis {
                                     renderTextWithCitations(primaryAnalysis, researchBacking: insights.researchBacking)
                                 }
-                                // Key Takeaways
-                                if let practicalImplications = insights.practicalImplications {
-                                    Text("Key Takeaways")
+                                // Macronutrient Breakdown
+                                if let breakdown = insights.macronutrientBreakdown {
+                                    Text("Macronutrient Breakdown")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.primary)
                                         .padding(.top, 8)
-                                    renderTextWithCitations(practicalImplications, researchBacking: insights.researchBacking)
+                                    renderTextWithCitations(breakdown, researchBacking: insights.researchBacking)
                                 }
-                                // Action Plan (bullets)
-                                if let optimizationStrategies = insights.optimizationStrategies {
-                                    Text("Action Plan")
+                                // Meal Timing
+                                if let timing = insights.mealTiming {
+                                    Text("Meal Timing")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.primary)
                                         .padding(.top, 8)
-                                    let strategies = optimizationStrategies.components(separatedBy: ". ")
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        ForEach(strategies, id: \.self) { strategy in
-                                            if !strategy.isEmpty {
-                                                HStack(alignment: .top, spacing: 8) {
-                                                    Text("•")
-                                                        .foregroundColor(.primary)
-                                                    renderTextWithCitations(strategy, researchBacking: insights.researchBacking)
-                                                }
-                                            }
-                                        }
-                                    }
+                                    renderTextWithCitations(timing, researchBacking: insights.researchBacking)
+                                }
+                                // Micronutrient Focus
+                                if let micro = insights.micronutrientFocus {
+                                    Text("Micronutrient Focus")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    renderTextWithCitations(micro, researchBacking: insights.researchBacking)
+                                }
+                                // Supplementation
+                                if let supp = insights.supplementation, !supp.isEmpty {
+                                    Text("Supplementation")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                    renderTextWithCitations(supp, researchBacking: insights.researchBacking)
                                 }
                             }
                             .padding(16)
@@ -497,42 +503,61 @@ struct OnboardingPlanOverview: View {
     }
 
     @ViewBuilder
-private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
-    let segments = parseTextWithCitations(text)
-    // Use a horizontal stack for inline layout, but keep everything in one line
-    HStack(alignment: .firstTextBaseline, spacing: 0) {
-        ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
-            if segment.type == "text" {
-                Text(segment.value)
-                    .font(.system(size: 16))
-                    .foregroundColor(.primary)
-            } else if segment.type == "citation" {
-                let numberString = segment.value.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                if let number = Int(numberString),
-                   let researchBacking = researchBacking,
-                   number > 0, number <= researchBacking.count {
-                    let research = researchBacking[number - 1]
-                    Button(action: {
-                        if let urlString = research.citation, let url = URL(string: urlString) {
-                            UIApplication.shared.open(url)
+    private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
+        let segments = parseTextWithCitations(text)
+        
+        // Use a horizontal stack for inline layout, but keep everything in one line
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
+                if segment.type == "text" {
+                    Text(segment.value)
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                } else if segment.type == "citation" {
+                    let numberString = segment.value.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
+                    if let number = Int(numberString),
+                       number > 0 {
+                        // Just display the citation number without trying to match it to research backing
+                        Button(action: {
+                            // Try to find the citation in any research backing
+                            if let researchBacking = researchBacking, number <= researchBacking.count,
+                               let urlString = researchBacking[number - 1].citation,
+                               let url = URL(string: urlString) {
+                                UIApplication.shared.open(url)
+                            } else if let metabolismInsights = nutritionGoals?.metabolismInsights?.researchBacking,
+                                      number <= metabolismInsights.count,
+                                      let urlString = metabolismInsights[number - 1].citation,
+                                      let url = URL(string: urlString) {
+                                UIApplication.shared.open(url)
+                            } else if let nutritionInsights = nutritionGoals?.nutritionInsights?.researchBacking {
+                                // Calculate adjusted index separately
+                                let metabolismCount = nutritionGoals?.metabolismInsights?.researchBacking?.count ?? 0
+                                let adjustedIndex = number - metabolismCount - 1
+                                
+                                // Check if the adjusted index is valid
+                                if adjustedIndex >= 0, adjustedIndex < nutritionInsights.count,
+                                   let urlString = nutritionInsights[adjustedIndex].citation,
+                                   let url = URL(string: urlString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                        }) {
+                            Text("\(number)")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.primary)
+                                .frame(width: 22, height: 22)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(Color(UIColor.systemGray5))
+                                )
                         }
-                    }) {
-                        Text("\(number)")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 22, height: 22)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(Color(UIColor.systemGray5))
-                            )
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.leading, 2)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.leading, 2)
                 }
             }
         }
     }
-}
 }
 
 #Preview {
