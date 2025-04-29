@@ -501,31 +501,80 @@ struct OnboardingPlanOverview: View {
         }
         return segments
     }
+    
+    // Helper to process text nicely for display with citations
+    private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [String])] {
+        // First, split the text by paragraphs (we'll treat each sentence as a paragraph for now)
+        let sentences = text.components(separatedBy: ". ").map { $0.trimmingCharacters(in: .whitespaces) }
+        var result: [(paragraphText: String, citations: [String])] = []
+        
+        for sentence in sentences {
+            if sentence.isEmpty { continue }
+            
+            // Use regex to extract citation references
+            let pattern = #"\[(\d+)\]"#
+            let regex = try? NSRegularExpression(pattern: pattern)
+            let nsText = sentence as NSString
+            let range = NSRange(location: 0, length: nsText.length)
+            
+            // Extract all citation numbers
+            var citations: [String] = []
+            if let matches = regex?.matches(in: sentence, range: range) {
+                for match in matches {
+                    if match.numberOfRanges > 1 {
+                        let numberRange = match.range(at: 1)
+                        let number = nsText.substring(with: numberRange)
+                        citations.append(number)
+                    }
+                }
+            }
+            
+            // Remove citation brackets from the displayed text
+            let cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
+            
+            // Add period back to the end if this isn't the last sentence
+            let displayText = cleanText + "."
+            
+            result.append((displayText, citations))
+        }
+        
+        return result
+    }
 
     @ViewBuilder
     private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
-        let segments = parseTextWithCitations(text)
+        let processedText = processTextWithCitations(text)
         
-        // Build a text view by manually concatenating all segments
-        var combinedText: Text = Text("")
-        
-        for segment in segments {
-            if segment.type == "text" {
-                combinedText = combinedText + Text(segment.value)
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(0..<processedText.count, id: \.self) { index in
+                let paragraph = processedText[index]
+                
+                // The paragraph text
+                Text(paragraph.paragraphText)
                     .font(.system(size: 16))
                     .foregroundColor(.primary)
-            } else if segment.type == "citation" {
-                let numberString = segment.value.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                if let number = Int(numberString), number > 0 {
-                    combinedText = combinedText + Text(segment.value)
-                        .font(.system(size: 12, weight: .medium))
-                        .baselineOffset(3)
-                        .foregroundColor(Color.accentColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                // If there are citations, show them in an HStack
+                if !paragraph.citations.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(paragraph.citations, id: \.self) { citation in
+                            Text(citation)
+                                .font(.system(size: 12, weight: .medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(UIColor.systemGray5))
+                                )
+                                .foregroundColor(.primary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.bottom, 2)
                 }
             }
         }
-        
-        return combinedText
     }
     
     // Helper function to process optimization strategies and remove numbering
