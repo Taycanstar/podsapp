@@ -231,104 +231,10 @@ struct OnboardingPlanOverview: View {
                     
                     // Insights sections
                     if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Headline outside the card
-                            Text("Metabolic Insights")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.primary)
-                                .padding(.bottom, 2)
-                            
-                            VStack(alignment: .leading, spacing: 12) {
-                                // Main summary/analysis at the top (no 'Overview' subheadline)
-                                if let primaryAnalysis = insights.primaryAnalysis {
-                                    renderTextWithCitations(primaryAnalysis, researchBacking: insights.researchBacking)
-                                }
-                                // Key Takeaways
-                                if let practicalImplications = insights.practicalImplications {
-                                    Text("Key Takeaways")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    renderTextWithCitations(practicalImplications, researchBacking: insights.researchBacking)
-                                }
-                                // Action Plan (bullets)
-                                if let optimizationStrategies = insights.optimizationStrategies {
-                                    Text("Action Plan")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    let strategies = optimizationStrategies.components(separatedBy: ". ")
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        ForEach(strategies, id: \.self) { strategy in
-                                            if !strategy.isEmpty {
-                                                HStack(alignment: .top, spacing: 8) {
-                                                    Text("•")
-                                                        .foregroundColor(.primary)
-                                                    renderTextWithCitations(processOptimizationStrategies(strategy), researchBacking: insights.researchBacking)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                        }
+                        metabolismInsightsView
                     }
                     
-                    let insights = nutritionGoals?.nutritionInsights
-                    if let insights = insights, !insights.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Headline outside the card
-                            Text("Nutrition Insights")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.primary)
-                                .padding(.bottom, 2)
-                            
-                            VStack(alignment: .leading, spacing: 12) {
-                                // Main summary/analysis at the top (no 'Overview' subheadline)
-                                if let primaryAnalysis = insights.primaryAnalysis {
-                                    renderTextWithCitations(primaryAnalysis, researchBacking: insights.researchBacking)
-                                }
-                                // Macronutrient Breakdown
-                                if let breakdown = insights.macronutrientBreakdown {
-                                    Text("Macronutrient Breakdown")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    renderTextWithCitations(breakdown, researchBacking: insights.researchBacking)
-                                }
-                                // Meal Timing
-                                if let timing = insights.mealTiming {
-                                    Text("Meal Timing")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    renderTextWithCitations(timing, researchBacking: insights.researchBacking)
-                                }
-                                // Micronutrient Focus
-                                if let micro = insights.micronutrientFocus {
-                                    Text("Micronutrient Focus")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    renderTextWithCitations(micro, researchBacking: insights.researchBacking)
-                                }
-                                // Supplementation
-                                if let supp = insights.supplementation, !supp.isEmpty {
-                                    Text("Supplementation")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                    renderTextWithCitations(supp, researchBacking: insights.researchBacking)
-                                }
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                        }
-                    }
+                    nutritionInsightsView
                 }
                 .padding(.horizontal, 20)
             }
@@ -478,40 +384,40 @@ struct OnboardingPlanOverview: View {
     
     @ViewBuilder
     private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
-        let processedText = processTextWithCitations(text)
+        // Extract all the processing OUTSIDE of the ViewBuilder context
+        let (paragraphTexts, sortedCitations) = processTextWithCitationsForRendering(text)
         
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(0..<processedText.count, id: \.self) { index in
-                let paragraph = processedText[index]
-                
-                // The paragraph text
-                Text(paragraph.paragraphText)
+            // First, display all paragraphs without any citations
+            ForEach(paragraphTexts.indices, id: \.self) { index in
+                Text(paragraphTexts[index])
                     .font(.system(size: 16))
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
-                
-                // If there are citations, show them in an HStack
-                if !paragraph.citations.isEmpty {
-                    HStack(spacing: 8) {
-                        ForEach(paragraph.citations, id: \.number) { citation in
-                            Text(citation.number)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(UIColor.systemGray5))
-                                )
-                                .foregroundColor(.primary)
-                                .onTapGesture {
-                                    // Try to open URL for this citation
-                                    openCitationURL(citationNumber: Int(citation.number) ?? 0, researchBacking: researchBacking)
-                                }
-                        }
-                        Spacer()
+                    .padding(.bottom, 4)
+            }
+            
+            // Then display all citations once at the end, only if there are any
+            if !sortedCitations.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(sortedCitations, id: \.self) { citationNumber in
+                        Text(citationNumber)
+                            .font(.system(size: 12, weight: .medium))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(UIColor.systemGray5))
+                            )
+                            .foregroundColor(.primary)
+                            .onTapGesture {
+                                // Try to open URL for this citation
+                                openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: researchBacking)
+                            }
                     }
-                    .padding(.bottom, 8)
+                    Spacer()
                 }
+                .padding(.top, 4)
             }
         }
         .onAppear {
@@ -520,6 +426,29 @@ struct OnboardingPlanOverview: View {
                 debugPrintResearchBacking(backings)
             }
         }
+    }
+    
+    // Helper function to process text outside of ViewBuilder context
+    private func processTextWithCitationsForRendering(_ text: String) -> (paragraphTexts: [String], citations: [String]) {
+        let processedText = processTextWithCitations(text)
+        
+        // First, collect all unique citations from all paragraphs
+        var allUniqueCitations = Set<String>()
+        for paragraph in processedText {
+            for citation in paragraph.citations {
+                allUniqueCitations.insert(citation.number)
+            }
+        }
+        
+        // Sort the citations by number for consistent display
+        let sortedCitations = allUniqueCitations.sorted { 
+            (Int($0) ?? 0) < (Int($1) ?? 0)
+        }
+        
+        // Extract the paragraph texts
+        let paragraphTexts = processedText.map { $0.paragraphText }
+        
+        return (paragraphTexts, sortedCitations)
     }
     
     // Helper function to print debug info about research backing
@@ -686,6 +615,296 @@ struct OnboardingPlanOverview: View {
         let nsText = text as NSString
         let range = NSRange(location: 0, length: nsText.length)
         return regex?.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "") ?? text
+    }
+    
+    // Function to render text without showing citations (for bullet points)
+    @ViewBuilder
+    private func renderTextWithoutCitations(_ text: String) -> some View {
+        let processedText = processTextWithCitations(text)
+        
+        // Only display the paragraph text, no citations
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(processedText.indices, id: \.self) { index in
+                Text(processedText[index].paragraphText)
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+    
+    // Helper function to extract all citations from text
+    private func extractCitationsFromText(_ text: String) -> [String] {
+        let processedText = processTextWithCitations(text)
+        
+        // Collect all unique citations 
+        var allCitations = Set<String>()
+        for paragraph in processedText {
+            for citation in paragraph.citations {
+                allCitations.insert(citation.number)
+            }
+        }
+        
+        // Return sorted citations
+        return allCitations.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+    }
+    
+    // In your SwiftUI view where you display insights
+    private var metabolismInsightsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Headline outside the card
+            Text("Metabolic Insights")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.primary)
+                .padding(.bottom, 2)
+            
+            if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
+                // PRE-PROCESS: Collect all citations completely outside of the View building context
+                let allMetabolismCitations = collectAllCitations(insights: insights)
+                let sortedCitations = allMetabolismCitations.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    // Main summary/analysis at the top (no 'Overview' subheadline)
+                    if let primaryAnalysis = insights.primaryAnalysis {
+                        // Just render the text without citations
+                        renderTextWithoutCitations(primaryAnalysis)
+                    }
+                    
+                    // Key Takeaways
+                    if let practicalImplications = insights.practicalImplications {
+                        Text("Key Takeaways")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        renderTextWithoutCitations(practicalImplications)
+                    }
+                    
+                    // Action Plan (bullets)
+                    if let optimizationStrategies = insights.optimizationStrategies {
+                        Text("Action Plan")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        let strategies = optimizationStrategies.components(separatedBy: ". ")
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(strategies.indices, id: \.self) { index in
+                                let strategy = strategies[index]
+                                if !strategy.isEmpty {
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Text("•")
+                                            .foregroundColor(.primary)
+                                        
+                                        // Just render the text without citations
+                                        renderTextWithoutCitations(processOptimizationStrategies(strategy))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Display ALL collected citations at the bottom of the section
+                    if !sortedCitations.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(sortedCitations, id: \.self) { citationNumber in
+                                Text(citationNumber)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(UIColor.systemGray5))
+                                    )
+                                    .foregroundColor(.primary)
+                                    .onTapGesture {
+                                        // Try to open URL for this citation
+                                        openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: insights.researchBacking)
+                                    }
+                            }
+                            Spacer()
+                        }
+                        .padding(.top, 12)
+                    }
+                }
+                .padding(16)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(10)
+            }
+        }
+    }
+    
+    // Helper to collect all citations from metabolism insights
+    private func collectAllCitations(insights: InsightDetails) -> Set<String> {
+        var allCitations = Set<String>()
+        
+        // Collect from primary analysis
+        if let primaryAnalysis = insights.primaryAnalysis {
+            let citations = extractCitationsFromText(primaryAnalysis)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from practical implications
+        if let practicalImplications = insights.practicalImplications {
+            let citations = extractCitationsFromText(practicalImplications)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from optimization strategies
+        if let optimizationStrategies = insights.optimizationStrategies {
+            let strategies = optimizationStrategies.components(separatedBy: ". ")
+            for strategy in strategies {
+                if !strategy.isEmpty {
+                    let citations = extractCitationsFromText(processOptimizationStrategies(strategy))
+                    for citation in citations {
+                        allCitations.insert(citation)
+                    }
+                }
+            }
+        }
+        
+        return allCitations
+    }
+    
+    private var nutritionInsightsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Headline outside the card
+            Text("Nutrition Insights")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.primary)
+                .padding(.bottom, 2)
+            
+            if let insights = nutritionGoals?.nutritionInsights, !insights.isEmpty {
+                // PRE-PROCESS: Collect all citations completely outside of the View building context
+                let allNutritionCitations = collectAllNutritionCitations(insights: insights)
+                let sortedCitations = allNutritionCitations.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    // Main summary/analysis at the top (no 'Overview' subheadline)
+                    if let primaryAnalysis = insights.primaryAnalysis {
+                        // Just render the text without citations
+                        renderTextWithoutCitations(primaryAnalysis)
+                    }
+                    
+                    // Macronutrient Breakdown
+                    if let breakdown = insights.macronutrientBreakdown {
+                        Text("Macronutrient Breakdown")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        renderTextWithoutCitations(breakdown)
+                    }
+                    
+                    // Meal Timing
+                    if let timing = insights.mealTiming {
+                        Text("Meal Timing")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        renderTextWithoutCitations(timing)
+                    }
+                    
+                    // Micronutrient Focus
+                    if let micro = insights.micronutrientFocus {
+                        Text("Micronutrient Focus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        renderTextWithoutCitations(micro)
+                    }
+                    
+                    // Supplementation
+                    if let supp = insights.supplementation, !supp.isEmpty {
+                        Text("Supplementation")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)
+                        
+                        renderTextWithoutCitations(supp)
+                    }
+                    
+                    // Display ALL collected citations at the bottom of the section
+                    if !sortedCitations.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(sortedCitations, id: \.self) { citationNumber in
+                                Text(citationNumber)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(UIColor.systemGray5))
+                                    )
+                                    .foregroundColor(.primary)
+                                    .onTapGesture {
+                                        // Try to open URL for this citation
+                                        openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: insights.researchBacking)
+                                    }
+                            }
+                            Spacer()
+                        }
+                        .padding(.top, 12)
+                    }
+                }
+                .padding(16)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(10)
+            }
+        }
+    }
+    
+    // Helper to collect all citations from nutrition insights
+    private func collectAllNutritionCitations(insights: InsightDetails) -> Set<String> {
+        var allCitations = Set<String>()
+        
+        // Collect from primary analysis
+        if let primaryAnalysis = insights.primaryAnalysis {
+            let citations = extractCitationsFromText(primaryAnalysis)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from macronutrient breakdown
+        if let breakdown = insights.macronutrientBreakdown {
+            let citations = extractCitationsFromText(breakdown)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from meal timing
+        if let timing = insights.mealTiming {
+            let citations = extractCitationsFromText(timing)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from micronutrient focus
+        if let micro = insights.micronutrientFocus {
+            let citations = extractCitationsFromText(micro)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        // Collect from supplementation
+        if let supp = insights.supplementation, !supp.isEmpty {
+            let citations = extractCitationsFromText(supp)
+            for citation in citations {
+                allCitations.insert(citation)
+            }
+        }
+        
+        return allCitations
     }
 }
 
