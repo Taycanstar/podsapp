@@ -503,46 +503,45 @@ struct OnboardingPlanOverview: View {
     }
     
     // Helper to process text nicely for display with citations
-    private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [(number: String, index: Int)])] {
-        // First, split the text by paragraphs (we'll treat each sentence as a paragraph for now)
-        let sentences = text.components(separatedBy: ". ").map { $0.trimmingCharacters(in: .whitespaces) }
-        var result: [(paragraphText: String, citations: [(number: String, index: Int)])] = []
-        
-        for (index, sentence) in sentences.enumerated() {
-            if sentence.isEmpty { continue }
+    private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [(number: String, url: String?)])] {
+        // Better separator detection - handle periods in a more robust way
+        // Split by sentence-ending periods followed by spaces
+        let pattern = #"\.(?=\s|$)"#
+        let sentences = text.split(separator: ".", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
             
+        var result: [(paragraphText: String, citations: [(number: String, url: String?)])] = []
+        
+        for sentence in sentences {
             // Use regex to extract citation references
-            let pattern = #"\[(\d+)\]"#
-            let regex = try? NSRegularExpression(pattern: pattern)
+            let citationPattern = #"\[(\d+)\]"#
+            let regex = try? NSRegularExpression(pattern: citationPattern)
             let nsText = sentence as NSString
             let range = NSRange(location: 0, length: nsText.length)
             
-            // Extract all citation numbers with their index
-            var citations: [(number: String, index: Int)] = []
+            // Extract all citation numbers
+            var citations: [(number: String, url: String?)] = []
             if let matches = regex?.matches(in: sentence, range: range) {
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let numberRange = match.range(at: 1)
                         let number = nsText.substring(with: numberRange)
-                        citations.append((number, Int(number) ?? 0))
+                        citations.append((number, nil)) // URL will be set later
                     }
                 }
             }
             
             // Remove citation brackets from the displayed text
-            let cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
+            var cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
             
-            // Check if text already ends with a period
-            var displayText = cleanText.trimmingCharacters(in: .whitespaces)
-            if !displayText.hasSuffix(".") {
-                // Add period only if needed and this isn't the last sentence
-                // or if this is the last sentence but doesn't have a period
-                if index < sentences.count - 1 || !text.hasSuffix(".") {
-                    displayText += "."
-                }
+            // Clean up text formatting and ensure it ends with a period
+            cleanText = cleanText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !cleanText.hasSuffix(".") {
+                cleanText += "."
             }
             
-            result.append((displayText, citations))
+            result.append((cleanText, citations))
         }
         
         return result
@@ -565,7 +564,12 @@ struct OnboardingPlanOverview: View {
                 // If there are citations, show them in an HStack
                 if !paragraph.citations.isEmpty {
                     HStack(spacing: 8) {
-                        ForEach(paragraph.citations, id: \.number) { citation in
+                        ForEach(paragraph.citations.indices, id: \.self) { i in
+                            let citation = paragraph.citations[i]
+                            
+                            // Get citation number
+                            let citationNumber = Int(citation.number) ?? 0
+                            
                             Text(citation.number)
                                 .font(.system(size: 12, weight: .medium))
                                 .padding(.horizontal, 8)
@@ -576,7 +580,18 @@ struct OnboardingPlanOverview: View {
                                 )
                                 .foregroundColor(.primary)
                                 .onTapGesture {
-                                    openCitationURL(citationIndex: citation.index, researchBacking: researchBacking)
+                                    if let backings = researchBacking, citationNumber > 0, citationNumber <= backings.count {
+                                        // Get the backing that corresponds to this citation number
+                                        let backing = backings[citationNumber - 1]
+                                        if let urlString = backing.citation, let url = URL(string: urlString) {
+                                            print("Opening URL for citation [\(citationNumber)]: \(urlString)")
+                                            UIApplication.shared.open(url)
+                                        } else {
+                                            print("Failed to open URL for citation [\(citationNumber)]")
+                                        }
+                                    } else {
+                                        print("No matching backing for citation [\(citationNumber)]")
+                                    }
                                 }
                         }
                         Spacer()
@@ -597,16 +612,19 @@ struct OnboardingPlanOverview: View {
         return regex?.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "") ?? text
     }
     
-    // Helper function to open citation URL
-    private func openCitationURL(citationIndex: Int, researchBacking: [ResearchBacking]?) {
-        guard let backings = researchBacking, citationIndex > 0, citationIndex <= backings.count else {
+    // Debug helper to print research backing
+    private func debugPrintResearchBacking(_ backings: [ResearchBacking]?) {
+        guard let backings = backings else {
+            print("No research backing provided")
             return
         }
         
-        // Get URL from research backing
-        let backing = backings[citationIndex - 1]
-        if let urlString = backing.citation, let url = URL(string: urlString) {
-            UIApplication.shared.open(url)
+        print("Research Backing (\(backings.count) items):")
+        for (i, backing) in backings.enumerated() {
+            print("[\(i+1)] Citation: \(backing.citation ?? "nil")")
+            // Only use properties that actually exist in ResearchBacking
+            print("     Insight: \(backing.insight ?? "nil")")
+            print("     Relevance: \(backing.relevance ?? "nil")")
         }
     }
 }
