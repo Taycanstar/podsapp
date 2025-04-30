@@ -698,16 +698,18 @@ struct OnboardingPlanOverview: View {
                             .foregroundColor(.primary)
                             .padding(.top, 8)
                         
-                        let strategies = optimizationStrategies.components(separatedBy: ". ")
+                        // Extract the strategies outside the view builder context
+                        let strategies = extractNumberedItems(from: optimizationStrategies)
+                        
                         VStack(alignment: .leading, spacing: 8) {
-                            ForEach(strategies.filter { !$0.isEmpty }, id: \.self) { strategy in
+                            ForEach(strategies, id: \.self) { strategy in
                                 HStack(alignment: .top, spacing: 8) {
                                     Text("•")
                                         .foregroundColor(.primary)
                                         .padding(.top, 0)
                                     
-                                    // Just render the text without citations
-                                    renderTextWithoutCitations(processOptimizationStrategies(strategy))
+                                    // Render text without citations
+                                    renderTextWithoutCitations(strategy)
                                 }
                             }
                         }
@@ -950,6 +952,40 @@ struct OnboardingPlanOverview: View {
         }
         
         return identityMap
+    }
+    
+    // Helper function to extract numbered items from text
+    private func extractNumberedItems(from text: String) -> [String] {
+        // Extract numbered items using a pattern
+        let regex = try? NSRegularExpression(pattern: #"\d+\.\s*(.*?)(?=\s*\d+\.|$)"#, options: [.dotMatchesLineSeparators])
+        let nsString = text as NSString
+        let range = NSRange(location: 0, length: nsString.length)
+        
+        // Get matches for the numbered items
+        var strategies: [String] = []
+        if let matches = regex?.matches(in: text, options: [], range: range) {
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let itemRange = match.range(at: 1)
+                    let item = nsString.substring(with: itemRange)
+                    if !item.isEmpty {
+                        strategies.append(item)
+                    }
+                }
+            }
+        }
+        
+        // Fallback if regex didn't work
+        if strategies.isEmpty {
+            // Simple fallback: Just filter out items that are just numbers
+            strategies = text.components(separatedBy: ". ").filter {
+                let trimmed = $0.trimmingCharacters(in: .whitespaces)
+                // Is not just a number
+                return !trimmed.isEmpty && !(Int(trimmed) != nil)
+            }
+        }
+        
+        return strategies.filter { !$0.isEmpty }
     }
 }
 
