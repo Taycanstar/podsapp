@@ -49,8 +49,6 @@ struct MainOnboardingView: View {
             HeightWeightView()
         case .dob:
             DobView()
-        case .onboardingGoal:
-            OnboardingGoal()
         case .desiredWeight:
             DesiredWeightView()
         case .goalInfo:
@@ -67,10 +65,6 @@ struct MainOnboardingView: View {
             AccomplishView()
         case .connectHealth:
             ConnectToAppleHealth()
-        case .caloriesBurned:
-            CaloriesBurnedView()
-        case .rollover:
-            RolloverView()
         case .complete:
             CreatingPlanView()
         }

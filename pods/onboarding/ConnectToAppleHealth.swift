@@ -151,7 +151,7 @@ struct ConnectToAppleHealth: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: CaloriesBurnedView(),
+                destination: CreatingPlanView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

@@ -112,7 +112,7 @@ struct DobView: View {
             
             // Continue button
             VStack {
-                NavigationLink(destination: OnboardingGoal(), isActive: $navigateToNextStep) {
+                NavigationLink(destination: DesiredWeightView(), isActive: $navigateToNextStep) {
                     Button(action: {
                         HapticFeedback.generate()
                         saveDateOfBirth()
@@ -138,7 +138,7 @@ struct DobView: View {
         .navigationBarHidden(true)
         .background(
             NavigationLink(
-                destination: OnboardingGoal(),
+                destination: DesiredWeightView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

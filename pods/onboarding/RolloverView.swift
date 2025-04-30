@@ -35,10 +35,10 @@ struct RolloverView: View {
                         .frame(height: 4)
                         .cornerRadius(2)
                     
-                    Rectangle()
-                        .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .rollover), height: 4)
-                        .cornerRadius(2)
+//                    Rectangle()
+//                        .fill(Color.primary)
+//                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .rollover), height: 4)
+//                        .cornerRadius(2)
                 }
                 .padding(.horizontal)
             }
@@ -53,7 +53,7 @@ struct RolloverView: View {
                     .multilineTextAlignment(.center)
                 
                 ZStack {
-                    Text("Rollover up to 10% of your daily goal")
+                    Text("Rollover up to 200 cals")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.primary)
                         .padding(.horizontal, 12)
@@ -148,12 +148,12 @@ struct RolloverView: View {
                                     .font(.system(size: 16))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                                 
-                                Text("+50")
+                                Text("+150")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                             }
                             
-                            Text("150+50")
+                            Text("150+150")
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(colorScheme == .dark ? .black : .white)
                         }
@@ -177,7 +177,7 @@ struct RolloverView: View {
             HStack(spacing: 16) {
                 Button(action: {
                     HapticFeedback.generate()
-                    UserDefaults.standard.set(false, forKey: "rolloverCalories")
+                    UserDefaults.standard.set(false, forKey: "allowCalorieRollover")
                     navigateToNextStep = true
                 }) {
                     Text("No")
@@ -195,7 +195,7 @@ struct RolloverView: View {
                 
                 Button(action: {
                     HapticFeedback.generate()
-                    UserDefaults.standard.set(true, forKey: "rolloverCalories")
+                    UserDefaults.standard.set(true, forKey: "allowCalorieRollover")
                     navigateToNextStep = true
                 }) {
                     Text("Yes")
@@ -203,7 +203,7 @@ struct RolloverView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(Color.accentColor)
-                        .foregroundColor(.white)
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                         .cornerRadius(28)
                 }
             }
@@ -223,14 +223,6 @@ struct RolloverView: View {
                 EmptyView()
             }
         )
-        .onAppear {
-            // Save current step to UserDefaults when this view appears
-            UserDefaults.standard.set("RolloverView", forKey: "currentOnboardingStep")
-            UserDefaults.standard.set(14, forKey: "onboardingFlowStep") // Raw value for this step
-            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-            UserDefaults.standard.synchronize()
-            print("📱 RolloverView appeared - saved current step")
-        }
     }
 }
 

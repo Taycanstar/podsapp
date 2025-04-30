@@ -35,10 +35,10 @@ struct CaloriesBurnedView: View {
                         .frame(height: 4)
                         .cornerRadius(2)
                     
-                    Rectangle()
-                        .fill(Color.primary)
-                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .caloriesBurned), height: 4)
-                        .cornerRadius(2)
+//                    Rectangle()
+//                        .fill(Color.primary)
+//                        .frame(width: UIScreen.main.bounds.width * OnboardingProgress.progressFor(screen: .caloriesBurned), height: 4)
+//                        .cornerRadius(2)
                 }
                 .padding(.horizontal)
             }

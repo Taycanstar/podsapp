@@ -26,10 +26,6 @@ struct OnboardingFlowContainer: View {
                     DobView()
                         .environmentObject(viewModel)
                         .onAppear { updateCurrentStep() }
-                case .onboardingGoal:
-                    OnboardingGoal()
-                        .environmentObject(viewModel)
-                        .onAppear { updateCurrentStep() }
                 case .desiredWeight:
                     DesiredWeightView()
                         .environmentObject(viewModel)
@@ -60,14 +56,6 @@ struct OnboardingFlowContainer: View {
                         .onAppear { updateCurrentStep() }
                 case .connectHealth:
                     ConnectToAppleHealth()
-                        .environmentObject(viewModel)
-                        .onAppear { updateCurrentStep() }
-                case .caloriesBurned:
-                    CaloriesBurnedView()
-                        .environmentObject(viewModel)
-                        .onAppear { updateCurrentStep() }
-                case .rollover:
-                    RolloverView()
                         .environmentObject(viewModel)
                         .onAppear { updateCurrentStep() }
                 case .complete:

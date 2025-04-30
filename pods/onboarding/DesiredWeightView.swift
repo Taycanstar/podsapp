@@ -172,9 +172,33 @@ struct DesiredWeightView: View {
             UserDefaults.standard.set(pounds, forKey: "desiredWeightPounds")
         }
         
+        // Automatically determine fitness goal based on weight difference
+        let currentWeight = isImperial ? 
+            UserDefaults.standard.double(forKey: "weightPounds") : 
+            UserDefaults.standard.double(forKey: "weightKilograms")
+        
+        let weightDifference = selectedWeight - currentWeight
+        
+        // Set the appropriate fitness goal
+        let fitnessGoal: String
+        if abs(weightDifference) < 1.0 {
+            // If the difference is less than 1 lb/kg, consider it "maintain"
+            fitnessGoal = "maintain"
+        } else if weightDifference < 0 {
+            // Desired weight is less than current weight: lose weight
+            fitnessGoal = "loseWeight"
+        } else {
+            // Desired weight is more than current weight: gain weight
+            fitnessGoal = "gainWeight"
+        }
+        
+        // Save the determined fitness goal
+        UserDefaults.standard.set(fitnessGoal, forKey: "fitnessGoal")
+        print("📊 Automatically determined fitness goal: \(fitnessGoal)")
+        
         // Also save the current step before navigating
         UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")
-        UserDefaults.standard.set(5, forKey: "onboardingFlowStep")
+        UserDefaults.standard.set(4, forKey: "onboardingFlowStep") // Updated raw value
         UserDefaults.standard.synchronize()
     }
 }

@@ -18,18 +18,15 @@ class OnboardingViewModel: ObservableObject {
         case workoutDays = 1
         case heightWeight = 2
         case dob = 3
-        case onboardingGoal = 4
-        case desiredWeight = 5
-        case goalInfo = 6
-        case goalTime = 7
-        case twoX = 8
-        case obstacles = 9
-        case specificDiet = 10
-        case accomplish = 11
-        case connectHealth = 12
-        case caloriesBurned = 13
-        case rollover = 14
-        case complete = 15
+        case desiredWeight = 4
+        case goalInfo = 5
+        case goalTime = 6
+        case twoX = 7
+        case obstacles = 8
+        case specificDiet = 9
+        case accomplish = 10
+        case connectHealth = 11
+        case complete = 12
         
         // Return view type for this step
         var viewType: String {
@@ -38,7 +35,6 @@ class OnboardingViewModel: ObservableObject {
             case .workoutDays: return "WorkoutDaysView"
             case .heightWeight: return "HeightWeightView"
             case .dob: return "DobView"
-            case .onboardingGoal: return "OnboardingGoal"
             case .desiredWeight: return "DesiredWeightView"
             case .goalInfo: return "GoalInfoView"
             case .goalTime: return "GoalTimeView"
@@ -47,8 +43,6 @@ class OnboardingViewModel: ObservableObject {
             case .specificDiet: return "SpecificDietView"
             case .accomplish: return "AccomplishView"
             case .connectHealth: return "ConnectToAppleHealth"
-            case .caloriesBurned: return "CaloriesBurnedView"
-            case .rollover: return "RolloverView"
             case .complete: return "CreatingPlanView"
             }
         }
@@ -60,7 +54,6 @@ class OnboardingViewModel: ObservableObject {
             case .workoutDays: return .workoutDays
             case .heightWeight: return .heightWeight
             case .dob: return .dob
-            case .onboardingGoal: return .onboardingGoal
             case .desiredWeight: return .desiredWeight
             case .goalInfo: return .goalInfo
             case .goalTime: return .goalTime
@@ -69,8 +62,6 @@ class OnboardingViewModel: ObservableObject {
             case .specificDiet: return .specificDiet
             case .accomplish: return .accomplish
             case .connectHealth: return .connectHealth
-            case .caloriesBurned: return .caloriesBurned
-            case .rollover: return .rollover
             case .complete: return .creatingPlan
             }
         }
@@ -156,6 +147,10 @@ class OnboardingViewModel: ObservableObject {
     func completeOnboarding() {
         // First, ensure we're on the final step
         currentFlowStep = .complete
+        
+        // Set default values for removed screens
+        UserDefaults.standard.set(true, forKey: "addCaloriesBurned") // Default to true for calories burned
+        UserDefaults.standard.set(false, forKey: "rolloverCalories") // Default to false for rollover calories
         
         // Create OnboardingData struct with all collected data
         let onboardingData = OnboardingData(
