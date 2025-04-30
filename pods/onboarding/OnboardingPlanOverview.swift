@@ -612,12 +612,19 @@ struct OnboardingPlanOverview: View {
     
     // Helper function to process optimization strategies and remove numbering
     private func processOptimizationStrategies(_ text: String) -> String {
-        // Remove numbering pattern like "1. ", "2. " etc.
-        let pattern = #"^\s*\d+\.\s*"#
-        let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines])
-        let nsText = text as NSString
-        let range = NSRange(location: 0, length: nsText.length)
-        return regex?.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "") ?? text
+        // Remove any numbering patterns from the text:
+        // - Remove leading numbers like "1. " or "2. "
+        // - Also handle numbered items that might start with a digit but no period
+        let cleanedText = text.replacingOccurrences(of: #"^\s*\d+[\.\)]\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"^\s*\d+\s+"#, with: "", options: .regularExpression)
+        
+        // If the text still starts with a lowercase letter after removing numbering,
+        // capitalize the first letter for better presentation
+        if !cleanedText.isEmpty && cleanedText.first!.isLowercase {
+            return cleanedText.prefix(1).uppercased() + cleanedText.dropFirst()
+        }
+        
+        return cleanedText
     }
     
     // Function to render text without showing citations (for bullet points)
@@ -692,9 +699,17 @@ struct OnboardingPlanOverview: View {
                             .padding(.top, 8)
                         
                         let strategies = optimizationStrategies.components(separatedBy: ". ")
-                        ForEach(strategies.filter { !$0.isEmpty }, id: \.self) { strategy in
-                            // Just render the text without citations
-                            renderTextWithoutCitations(processOptimizationStrategies(strategy))
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(strategies.filter { !$0.isEmpty }, id: \.self) { strategy in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("•")
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 0)
+                                    
+                                    // Just render the text without citations
+                                    renderTextWithoutCitations(processOptimizationStrategies(strategy))
+                                }
+                            }
                         }
                     }
                     
