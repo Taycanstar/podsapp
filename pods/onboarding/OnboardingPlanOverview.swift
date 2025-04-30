@@ -493,12 +493,7 @@ struct OnboardingPlanOverview: View {
                 // If there are citations, show them in an HStack
                 if !paragraph.citations.isEmpty {
                     HStack(spacing: 8) {
-                        ForEach(paragraph.citations.indices, id: \.self) { i in
-                            let citation = paragraph.citations[i]
-                            
-                            // Get citation number
-                            let citationNumber = Int(citation.number) ?? 0
-                            
+                        ForEach(paragraph.citations, id: \.number) { citation in
                             Text(citation.number)
                                 .font(.system(size: 12, weight: .medium))
                                 .padding(.horizontal, 8)
@@ -510,7 +505,7 @@ struct OnboardingPlanOverview: View {
                                 .foregroundColor(.primary)
                                 .onTapGesture {
                                     // Try to open URL for this citation
-                                    openCitationURL(citationNumber: citationNumber, researchBacking: researchBacking)
+                                    openCitationURL(citationNumber: Int(citation.number) ?? 0, researchBacking: researchBacking)
                                 }
                         }
                         Spacer()
@@ -583,13 +578,20 @@ struct OnboardingPlanOverview: View {
             let range = NSRange(location: 0, length: nsText.length)
             
             // Extract all citation numbers
+            var citationNumbersSeen = Set<String>() // Track unique citation numbers
             var citations: [(number: String, url: String?)] = []
+            
             if let matches = regex?.matches(in: paragraph, range: range) {
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let numberRange = match.range(at: 1)
                         let number = nsText.substring(with: numberRange)
-                        citations.append((number, nil))
+                        
+                        // Only add each unique citation number once
+                        if !citationNumbersSeen.contains(number) {
+                            citations.append((number, nil))
+                            citationNumbersSeen.insert(number)
+                        }
                     }
                 }
             }
@@ -626,7 +628,14 @@ struct OnboardingPlanOverview: View {
             // Final cleanup of duplicate periods
             cleanText = cleanText.replacingOccurrences(of: "..", with: ".")
             
-            result.append((cleanText, citations))
+            // Sort citations by number for consistent display
+            let sortedCitations = citations.sorted { 
+                let num1 = Int($0.number) ?? 0
+                let num2 = Int($1.number) ?? 0
+                return num1 < num2
+            }
+            
+            result.append((cleanText, sortedCitations))
         }
         
         return result
