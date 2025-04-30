@@ -480,7 +480,7 @@ struct OnboardingPlanOverview: View {
     private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
         let processedText = processTextWithCitations(text)
         
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             ForEach(0..<processedText.count, id: \.self) { index in
                 let paragraph = processedText[index]
                 
@@ -509,13 +509,13 @@ struct OnboardingPlanOverview: View {
                                 )
                                 .foregroundColor(.primary)
                                 .onTapGesture {
-                                    // Try to open URL for this citation - use 1-based indexing
+                                    // Try to open URL for this citation
                                     openCitationURL(citationNumber: citationNumber, researchBacking: researchBacking)
                                 }
                         }
                         Spacer()
                     }
-                    .padding(.bottom, 2)
+                    .padding(.bottom, 8)
                 }
             }
         }
@@ -537,39 +537,94 @@ struct OnboardingPlanOverview: View {
     
     // Helper to process text nicely for display with citations
     private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [(number: String, url: String?)])] {
-        // Better separator detection - handle periods in a more robust way
-        // Split by sentence-ending periods followed by spaces
-        let pattern = #"\.(?=\s|$)"#
-        let sentences = text.split(separator: ".", omittingEmptySubsequences: false)
+        // Split by paragraphs (either by double newlines or single newlines that end with period)
+        var paragraphTexts: [String] = []
+        
+        // First attempt natural paragraph splitting
+        let naturalParagraphs = text.components(separatedBy: "\n\n")
+        if naturalParagraphs.count > 1 {
+            // Use natural paragraph structure if available
+            paragraphTexts = naturalParagraphs
+        } else {
+            // Fall back to sentence-based splitting for better formatting
+            let sentences = text.components(separatedBy: ". ")
+                               .filter { !$0.isEmpty }
+            
+            // Group sentences into paragraphs (max 3 sentences per paragraph)
+            var currentParagraph = ""
+            for (index, sentence) in sentences.enumerated() {
+                if currentParagraph.isEmpty {
+                    currentParagraph = sentence
+                } else {
+                    currentParagraph += ". " + sentence
+                }
+                
+                // End paragraph after 3 sentences or at end of text
+                if index % 3 == 2 || index == sentences.count - 1 {
+                    paragraphTexts.append(currentParagraph)
+                    currentParagraph = ""
+                }
+            }
+        }
+        
+        // Clean paragraph texts
+        paragraphTexts = paragraphTexts
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            
+        
         var result: [(paragraphText: String, citations: [(number: String, url: String?)])] = []
         
-        for sentence in sentences {
-            // Use regex to extract citation references
+        // Process each paragraph to extract citations and clean text
+        for paragraph in paragraphTexts {
+            // Find all citation references like [1], [2], etc.
             let citationPattern = #"\[(\d+)\]"#
             let regex = try? NSRegularExpression(pattern: citationPattern)
-            let nsText = sentence as NSString
+            let nsText = paragraph as NSString
             let range = NSRange(location: 0, length: nsText.length)
             
             // Extract all citation numbers
             var citations: [(number: String, url: String?)] = []
-            if let matches = regex?.matches(in: sentence, range: range) {
+            if let matches = regex?.matches(in: paragraph, range: range) {
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let numberRange = match.range(at: 1)
                         let number = nsText.substring(with: numberRange)
-                        citations.append((number, nil)) // URL will be set later
+                        citations.append((number, nil))
                     }
                 }
             }
             
             // Remove citation brackets from the displayed text
-            var cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
+            var cleanText = regex?.stringByReplacingMatches(in: paragraph, range: range, withTemplate: "") ?? paragraph
             
-            // Clean up text formatting without forcing a period at the end
+            // Fix formatting issues
             cleanText = cleanText.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Fix common formatting issues:
+            // 1. Remove spaces before periods, commas, etc.
+            let punctuationFixes = [
+                (pattern: #" \."#, replacement: "."),
+                (pattern: #" ,"#, replacement: ","),
+                (pattern: #" ;"#, replacement: ";"),
+                (pattern: #" :"#, replacement: ":"),
+                (pattern: #",\."#, replacement: "."),
+                (pattern: #"\s{2,}"#, replacement: " ")  // Replace multiple spaces with single space
+            ]
+            
+            for (pattern, replacement) in punctuationFixes {
+                let fixRegex = try? NSRegularExpression(pattern: pattern)
+                let wholeRange = NSRange(location: 0, length: cleanText.count)
+                cleanText = fixRegex?.stringByReplacingMatches(in: cleanText, range: wholeRange, withTemplate: replacement) ?? cleanText
+            }
+            
+            // Ensure text ends with proper punctuation
+            let lastChar = cleanText.last
+            if lastChar != nil && !".,:;!?".contains(lastChar!) {
+                cleanText += "."
+            }
+            
+            // Final cleanup of duplicate periods
+            cleanText = cleanText.replacingOccurrences(of: "..", with: ".")
             
             result.append((cleanText, citations))
         }
@@ -585,24 +640,23 @@ struct OnboardingPlanOverview: View {
         
         // Debug info
         print("🔍 Trying to open citation [\(citationNumber)]")
-        print("🔍 Available backings: \(backings.count)")
+        print("🔍 Available backings count: \(backings.count)")
         
-        // Check if we're within bounds
-        if citationNumber <= 0 || citationNumber > backings.count {
-            print("⚠️ Citation [\(citationNumber)] out of bounds (1-\(backings.count))")
-            
-            // Fallback: Just open the first URL as a last resort
-            if let firstURLString = backings.first?.citation, let url = URL(string: firstURLString) {
-                print("🌐 Fallback: Opening first available URL: \(firstURLString)")
-                UIApplication.shared.open(url)
-            }
-            return
-        }
+        // We need a smarter algorithm to match citation numbers with backing data
+        // Because there's a mismatch between citation numbers in text and backing array size
         
-        // Get the backing that corresponds to this citation number (using 1-based indexing)
-        let backing = backings[citationNumber - 1]
+        // APPROACH 1: Try to keep citation numbers within bounds
+        let safeIndex = min(max(0, citationNumber - 1), backings.count - 1)
+        
+        // APPROACH 2: Modulo mapping for cycling through available sources
+        // This ensures we always map to an available citation even if numbers exceed count
+        let moduloIndex = (citationNumber - 1) % backings.count
+        
+        // We'll use the modulo approach for more natural cycling through sources
+        let backing = backings[moduloIndex]
+        
         if let urlString = backing.citation, let url = URL(string: urlString) {
-            print("🌐 Opening URL for citation [\(citationNumber)]: \(urlString)")
+            print("🌐 Opening URL for citation [\(citationNumber)] (mapped to source \(moduloIndex + 1)): \(urlString)")
             UIApplication.shared.open(url)
         } else {
             print("⚠️ No valid URL for citation [\(citationNumber)]")
