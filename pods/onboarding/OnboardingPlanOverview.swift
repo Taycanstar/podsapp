@@ -476,30 +476,63 @@ struct OnboardingPlanOverview: View {
         }
     }
     
-    // Helper function to split text into segments of plain text and citation markers
-    private func parseTextWithCitations(_ text: String) -> [(type: String, value: String)] {
-        // Matches [1], [2], ...
-        let pattern = #"(\[\d+\])"#
-        let regex = try? NSRegularExpression(pattern: pattern, options: [])
-        let nsText = text as NSString
-        var segments: [(String, String)] = []
-        var lastIndex = 0
-        let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: nsText.length)) ?? []
-        for match in matches {
-            let range = match.range
-            if range.location > lastIndex {
-                let before = nsText.substring(with: NSRange(location: lastIndex, length: range.location - lastIndex))
-                segments.append(("text", before))
+    @ViewBuilder
+    private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
+        let processedText = processTextWithCitations(text)
+        
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(0..<processedText.count, id: \.self) { index in
+                let paragraph = processedText[index]
+                
+                // The paragraph text
+                Text(paragraph.paragraphText)
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                // If there are citations, show them in an HStack
+                if !paragraph.citations.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(paragraph.citations.indices, id: \.self) { i in
+                            let citation = paragraph.citations[i]
+                            
+                            // Get citation number
+                            let citationNumber = Int(citation.number) ?? 0
+                            
+                            Text(citation.number)
+                                .font(.system(size: 12, weight: .medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(UIColor.systemGray5))
+                                )
+                                .foregroundColor(.primary)
+                                .onTapGesture {
+                                    // Try to open URL for this citation - use 1-based indexing
+                                    openCitationURL(citationNumber: citationNumber, researchBacking: researchBacking)
+                                }
+                        }
+                        Spacer()
+                    }
+                    .padding(.bottom, 2)
+                }
             }
-            let marker = nsText.substring(with: range)
-            segments.append(("citation", marker))
-            lastIndex = range.location + range.length
         }
-        if lastIndex < nsText.length {
-            let after = nsText.substring(from: lastIndex)
-            segments.append(("text", after))
+        .onAppear {
+            // Debug print research backing when the view appears
+            if let backings = researchBacking {
+                debugPrintResearchBacking(backings)
+            }
         }
-        return segments
+    }
+    
+    // Helper function to print debug info about research backing
+    private func debugPrintResearchBacking(_ backings: [ResearchBacking]) {
+        print("📚 Research Backing count: \(backings.count)")
+        for (i, backing) in backings.enumerated() {
+            print("📚 [\(i+1)] Citation URL: \(backing.citation ?? "nil")")
+        }
     }
     
     // Helper to process text nicely for display with citations
@@ -535,69 +568,49 @@ struct OnboardingPlanOverview: View {
             // Remove citation brackets from the displayed text
             var cleanText = regex?.stringByReplacingMatches(in: sentence, range: range, withTemplate: "") ?? sentence
             
-            // Clean up text formatting and ensure it ends with a period
+            // Clean up text formatting without forcing a period at the end
             cleanText = cleanText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !cleanText.hasSuffix(".") {
-                cleanText += "."
-            }
             
             result.append((cleanText, citations))
         }
         
         return result
     }
-
-    @ViewBuilder
-    private func renderTextWithCitations(_ text: String, researchBacking: [ResearchBacking]?) -> some View {
-        let processedText = processTextWithCitations(text)
+    
+    private func openCitationURL(citationNumber: Int, researchBacking: [ResearchBacking]?) {
+        guard let backings = researchBacking else {
+            print("⚠️ No research backing available")
+            return
+        }
         
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(0..<processedText.count, id: \.self) { index in
-                let paragraph = processedText[index]
-                
-                // The paragraph text
-                Text(paragraph.paragraphText)
-                    .font(.system(size: 16))
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                // If there are citations, show them in an HStack
-                if !paragraph.citations.isEmpty {
-                    HStack(spacing: 8) {
-                        ForEach(paragraph.citations.indices, id: \.self) { i in
-                            let citation = paragraph.citations[i]
-                            
-                            // Get citation number
-                            let citationNumber = Int(citation.number) ?? 0
-                            
-                            Text(citation.number)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(UIColor.systemGray5))
-                                )
-                                .foregroundColor(.primary)
-                                .onTapGesture {
-                                    if let backings = researchBacking, citationNumber > 0, citationNumber <= backings.count {
-                                        // Get the backing that corresponds to this citation number
-                                        let backing = backings[citationNumber - 1]
-                                        if let urlString = backing.citation, let url = URL(string: urlString) {
-                                            print("Opening URL for citation [\(citationNumber)]: \(urlString)")
-                                            UIApplication.shared.open(url)
-                                        } else {
-                                            print("Failed to open URL for citation [\(citationNumber)]")
-                                        }
-                                    } else {
-                                        print("No matching backing for citation [\(citationNumber)]")
-                                    }
-                                }
-                        }
-                        Spacer()
-                    }
-                    .padding(.bottom, 2)
-                }
+        // Debug info
+        print("🔍 Trying to open citation [\(citationNumber)]")
+        print("🔍 Available backings: \(backings.count)")
+        
+        // Check if we're within bounds
+        if citationNumber <= 0 || citationNumber > backings.count {
+            print("⚠️ Citation [\(citationNumber)] out of bounds (1-\(backings.count))")
+            
+            // Fallback: Just open the first URL as a last resort
+            if let firstURLString = backings.first?.citation, let url = URL(string: firstURLString) {
+                print("🌐 Fallback: Opening first available URL: \(firstURLString)")
+                UIApplication.shared.open(url)
+            }
+            return
+        }
+        
+        // Get the backing that corresponds to this citation number (using 1-based indexing)
+        let backing = backings[citationNumber - 1]
+        if let urlString = backing.citation, let url = URL(string: urlString) {
+            print("🌐 Opening URL for citation [\(citationNumber)]: \(urlString)")
+            UIApplication.shared.open(url)
+        } else {
+            print("⚠️ No valid URL for citation [\(citationNumber)]")
+            
+            // Fallback: Try the first URL
+            if let firstURLString = backings.first?.citation, let url = URL(string: firstURLString) {
+                print("🌐 Fallback: Opening first available URL: \(firstURLString)")
+                UIApplication.shared.open(url)
             }
         }
     }
@@ -610,22 +623,6 @@ struct OnboardingPlanOverview: View {
         let nsText = text as NSString
         let range = NSRange(location: 0, length: nsText.length)
         return regex?.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "") ?? text
-    }
-    
-    // Debug helper to print research backing
-    private func debugPrintResearchBacking(_ backings: [ResearchBacking]?) {
-        guard let backings = backings else {
-            print("No research backing provided")
-            return
-        }
-        
-        print("Research Backing (\(backings.count) items):")
-        for (i, backing) in backings.enumerated() {
-            print("[\(i+1)] Citation: \(backing.citation ?? "nil")")
-            // Only use properties that actually exist in ResearchBacking
-            print("     Insight: \(backing.insight ?? "nil")")
-            print("     Relevance: \(backing.relevance ?? "nil")")
-        }
     }
 }
 
