@@ -170,7 +170,7 @@ struct SpecificDietView: View {
         }
         .background(
             NavigationLink(
-                destination: AccomplishView(),
+                destination: ConnectToAppleHealth(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

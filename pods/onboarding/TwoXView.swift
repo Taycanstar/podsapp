@@ -208,7 +208,7 @@ struct TwoXView: View {
         .background(Color(UIColor.systemBackground))
         .background(
             NavigationLink(
-                destination: ObstaclesView(),
+                destination: SpecificDietView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

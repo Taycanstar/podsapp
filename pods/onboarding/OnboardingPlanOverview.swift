@@ -401,10 +401,8 @@ struct OnboardingPlanOverview: View {
             if !sortedCitations.isEmpty {
                 HStack(spacing: 8) {
                     ForEach(sortedCitations, id: \.self) { citationNumber in
-                        // Extract clean number without brackets
-                        let cleanNumber = citationNumber.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                        // Just display the number without any brackets
-                        Text("\(cleanNumber)")
+                        // The citation number is already clean at this point
+                        Text("\(citationNumber)")
                             .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -415,7 +413,7 @@ struct OnboardingPlanOverview: View {
                             .foregroundColor(.primary)
                             .onTapGesture {
                                 // Try to open URL for this citation
-                                openCitationURL(citationNumber: Int(cleanNumber) ?? 0, researchBacking: researchBacking)
+                                openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: researchBacking)
                             }
                     }
                     Spacer()
@@ -517,6 +515,7 @@ struct OnboardingPlanOverview: View {
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let numberRange = match.range(at: 1)
+                        // Extract the clean number without brackets
                         let number = nsText.substring(with: numberRange)
                         
                         // Only add each unique citation number once
@@ -719,10 +718,8 @@ struct OnboardingPlanOverview: View {
                     if !sortedCitations.isEmpty {
                         HStack(spacing: 8) {
                             ForEach(sortedCitations, id: \.self) { citationNumber in
-                                // Extract clean number without brackets
-                                let cleanNumber = citationNumber.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                                // Just display the number without any brackets
-                                Text("\(cleanNumber)")
+                                // Citation numbers are already clean at this point
+                                Text("\(citationNumber)")
                                     .font(.system(size: 12, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -733,7 +730,7 @@ struct OnboardingPlanOverview: View {
                                     .foregroundColor(.primary)
                                     .onTapGesture {
                                         // Try to open URL for this citation
-                                        openCitationURL(citationNumber: Int(cleanNumber) ?? 0, researchBacking: insights.researchBacking)
+                                        openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: insights.researchBacking)
                                     }
                             }
                             Spacer()
@@ -761,23 +758,18 @@ struct OnboardingPlanOverview: View {
         }
         
         // Collect from practical implications
-        if let practicalImplications = insights.practicalImplications {
-            let citations = extractCitationsFromText(practicalImplications)
+        if let implications = insights.practicalImplications {
+            let citations = extractCitationsFromText(implications)
             for citation in citations {
                 allCitations.insert(citation)
             }
         }
         
         // Collect from optimization strategies
-        if let optimizationStrategies = insights.optimizationStrategies {
-            let strategies = optimizationStrategies.components(separatedBy: ". ")
-            for strategy in strategies {
-                if !strategy.isEmpty {
-                    let citations = extractCitationsFromText(processOptimizationStrategies(strategy))
-                    for citation in citations {
-                        allCitations.insert(citation)
-                    }
-                }
+        if let strategies = insights.optimizationStrategies {
+            let citations = extractCitationsFromText(strategies)
+            for citation in citations {
+                allCitations.insert(citation)
             }
         }
         
@@ -785,23 +777,25 @@ struct OnboardingPlanOverview: View {
     }
     
     private var nutritionInsightsView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Headline outside the card
-            Text("Nutrition Insights")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
-                .padding(.bottom, 2)
-            
+        VStack(alignment: .leading, spacing: 16) {
             if let insights = nutritionGoals?.nutritionInsights, !insights.isEmpty {
-                // PRE-PROCESS: Collect all citations completely outside of the View building context
-                let allNutritionCitations = collectAllNutritionCitations(insights: insights)
-                let sortedCitations = allNutritionCitations.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
-                // No longer need to get global citation map since citations are already numbered correctly from backend
+                // Title for this section
+                Text("Nutrition Recommendations")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.primary)
                 
+                // For nutrition insights, we need to collect all citations once
+                let allCitations = collectAllNutritionCitations(insights: insights)
+                
+                // Sort the citation numbers for consistent display
+                let sortedCitations = allCitations.sorted { 
+                    (Int($0) ?? 0) < (Int($1) ?? 0)
+                }
+                
+                // Insights panel
                 VStack(alignment: .leading, spacing: 12) {
-                    // Main summary/analysis at the top (no 'Overview' subheadline)
+                    // Primary Analysis
                     if let primaryAnalysis = insights.primaryAnalysis {
-                        // Just render the text without citations
                         renderTextWithoutCitations(primaryAnalysis)
                     }
                     
@@ -849,10 +843,8 @@ struct OnboardingPlanOverview: View {
                     if !sortedCitations.isEmpty {
                         HStack(spacing: 8) {
                             ForEach(sortedCitations, id: \.self) { citationNumber in
-                                // Extract clean number without brackets
-                                let cleanNumber = citationNumber.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                                // Just display the number without any brackets
-                                Text("\(cleanNumber)")
+                                // Citation numbers are already clean at this point
+                                Text("\(citationNumber)")
                                     .font(.system(size: 12, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -863,7 +855,7 @@ struct OnboardingPlanOverview: View {
                                     .foregroundColor(.primary)
                                     .onTapGesture {
                                         // Try to open URL for this citation
-                                        openCitationURL(citationNumber: Int(cleanNumber) ?? 0, researchBacking: insights.researchBacking)
+                                        openCitationURL(citationNumber: Int(citationNumber) ?? 0, researchBacking: insights.researchBacking)
                                     }
                             }
                             Spacer()
@@ -927,31 +919,35 @@ struct OnboardingPlanOverview: View {
     
     // This function is needed as parts of the UI are still calling it
     private func createGlobalCitationMap() -> [String: Int] {
-        // Return identity map - what goes in is what comes out
-        var identityMap = [String: Int]()
+        // Map each citation to a unique, sequential number
+        var citationMap = [String: Int]()
         
-        // Just map each citation number to itself
+        // Collect all citations from both insight types
+        var allCitations = Set<String>()
+        
         if let metaInsights = nutritionGoals?.metabolismInsights, !metaInsights.isEmpty {
             let metaCitations = collectAllCitations(insights: metaInsights)
-            for citation in metaCitations {
-                let cleanNumber = citation.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                if let num = Int(cleanNumber) {
-                    identityMap[cleanNumber] = num
-                }
-            }
+            allCitations = allCitations.union(metaCitations)
         }
         
         if let nutriInsights = nutritionGoals?.nutritionInsights, !nutriInsights.isEmpty {
             let nutriCitations = collectAllNutritionCitations(insights: nutriInsights)
-            for citation in nutriCitations {
-                let cleanNumber = citation.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
-                if let num = Int(cleanNumber) {
-                    identityMap[cleanNumber] = num
-                }
+            allCitations = allCitations.union(nutriCitations)
+        }
+        
+        // Sort citations numerically
+        let sortedCitations = allCitations.sorted { 
+            (Int($0) ?? 0) < (Int($1) ?? 0)
+        }
+        
+        // Map each citation to its clean number value
+        for citation in sortedCitations {
+            if let num = Int(citation) {
+                citationMap[citation] = num
             }
         }
         
-        return identityMap
+        return citationMap
     }
     
     // Helper function to extract numbered items from text

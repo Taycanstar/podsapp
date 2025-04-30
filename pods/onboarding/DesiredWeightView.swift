@@ -119,7 +119,7 @@ struct DesiredWeightView: View {
             
             // Continue button
             VStack {
-                NavigationLink(destination: GoalInfoView(), isActive: $navigateToNextStep) {
+                NavigationLink(destination: GoalTimeView(), isActive: $navigateToNextStep) {
                     Button(action: {
                         HapticFeedback.generate()
                         saveDesiredWeight()

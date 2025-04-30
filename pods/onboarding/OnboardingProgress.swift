@@ -34,35 +34,35 @@ struct OnboardingProgress {
     static func progressFor(screen: Screen) -> Double {
         switch screen {
         case .gender:
-            return 0.0625
+            return 0.0769
         case .workoutDays:
-            return 0.125
+            return 0.1538
         case .heightWeight:
-            return 0.1875
+            return 0.2307
         case .dob:
-            return 0.25
+            return 0.3076
         case .onboardingGoal:
-            return 0.3125
+            return 0.3845
         case .desiredWeight:
-            return 0.375
+            return 0.4614
         case .goalInfo:
-            return 0.4375
+            return 0.5000
         case .goalTime:
-            return 0.5
+            return 0.5383
         case .twoX:
-            return 0.5625
+            return 0.6152
         case .obstacles:
-            return 0.625
+            return 0.6614
         case .specificDiet:
-            return 0.6875
+            return 0.6921
         case .accomplish:
-            return 0.75
+            return 0.7307
         case .connectHealth:
-            return 0.8125
+            return 0.7690
         case .caloriesBurned:
-            return 0.875
+            return 0.8459
         case .rollover:
-            return 0.9375
+            return 0.9228
         case .creatingPlan:
             return 1.0
         }
@@ -87,7 +87,7 @@ enum OnboardingProgressEnum: Int, CaseIterable {
     case connectHealth = 12
     case caloriesBurned = 13
     case rollover = 14
-    case creatingPlan = 15  // Added CreatingPlanView as the final step
+    case creatingPlan = 15
     
     /// Total screens in the onboarding flow
     static var totalScreens: Int {
@@ -112,7 +112,7 @@ enum OnboardingProgressEnum: Int, CaseIterable {
         case .connectHealth: return .connectHealth
         case .caloriesBurned: return .caloriesBurned
         case .rollover:     return .rollover
-        case .creatingPlan: return .creatingPlan  // Map to new screen case
+        case .creatingPlan: return .creatingPlan
         }
     }
     
