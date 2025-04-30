@@ -705,7 +705,7 @@ struct OnboardingPlanOverview: View {
                                 // Extract clean number without brackets
                                 let cleanNumber = citationNumber.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
                                 // Just display the number without any brackets
-                                Text("[\(cleanNumber)]")
+                                Text("\(cleanNumber)")
                                     .font(.system(size: 12, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -835,7 +835,7 @@ struct OnboardingPlanOverview: View {
                                 // Extract clean number without brackets
                                 let cleanNumber = citationNumber.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
                                 // Just display the number without any brackets
-                                Text("[\(cleanNumber)]")
+                                Text("\(cleanNumber)")
                                     .font(.system(size: 12, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
