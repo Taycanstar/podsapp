@@ -13,23 +13,25 @@ struct GoalTimeView: View {
     @State private var navigateToNextStep = false
     @State private var selectedSpeed: Double = 1.5  // Default to medium speed
     
-    // Get the selected goal from UserDefaults
-    private var goal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "Maintain"
+    // Goal-related computed properties that take into account the automatically determined goal
+    private var fitnessGoal: String {
+        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
     }
     
     private var goalText: String {
-        if goal == "Lose weight" {
-            return "lose"
-        } else if goal == "Gain weight" {
-            return "gain"
-        } else {
-            return "maintain"
+        switch fitnessGoal {
+        case "loseWeight": return "lose"
+        case "gainWeight": return "gain"
+        default: return "maintain"
         }
     }
     
     private var speedText: String {
-        return "\(goal == "Maintain" ? "Weight stability" : "\(goalText.capitalized) weight speed") per week"
+        if goalText == "maintain" {
+            return "Weight stability per week"
+        } else {
+            return "\(goalText.capitalized) weight speed per week"
+        }
     }
     
     var body: some View {
@@ -64,7 +66,7 @@ struct GoalTimeView: View {
             }
             .padding(.vertical)
             
-            // Title and instructions
+            // Title and instructions - Now uses the automatically determined goal
             VStack(alignment: .leading, spacing: 12) {
                 Text("How fast do you want to \(goalText) your goal?")
                     .font(.system(size: 32, weight: .bold))

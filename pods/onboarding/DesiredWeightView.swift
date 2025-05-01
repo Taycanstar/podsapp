@@ -25,28 +25,6 @@ struct DesiredWeightView: View {
     }()
     @State private var navigateToNextStep = false
     
-    // Get the selected goal from UserDefaults
-    private var goal: String {
-        let rawGoal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
-        print("📊 Current fitness goal in DesiredWeightView: \(rawGoal)")
-        
-        switch rawGoal {
-        case "loseWeight": return "Lose weight"
-        case "maintain": return "Maintain"
-        case "gainWeight": return "Gain weight"
-        default: return "Maintain"
-        }
-    }
-    
-    private var goalDisplayText: String {
-        switch goal {
-        case "loseWeight": return "Lose weight"
-        case "maintain": return "Maintain"
-        case "gainWeight": return "Gain weight"
-        default: return "Maintain"
-        }
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             // Header with back button and progress
@@ -90,16 +68,6 @@ struct DesiredWeightView: View {
             .padding(.bottom, 40)
             
             Spacer()
-            
-            // Goal display
-            Text(goal)
-                .font(.system(size: 18))
-                .foregroundColor(.secondary)
-                .padding(.bottom, 10)
-                .onAppear {
-                    // Print the goal again on view appear to verify
-                    print("📊 Displaying goal text: \(goal)")
-                }
             
             // Weight display
             Text(String(format: "%.1f lbs", selectedWeight))
@@ -146,7 +114,7 @@ struct DesiredWeightView: View {
         .onAppear {
             // Save current step to UserDefaults when this view appears
             UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")
-            UserDefaults.standard.set(5, forKey: "onboardingFlowStep") // Raw value for this step
+            UserDefaults.standard.set(4, forKey: "onboardingFlowStep") // Raw value for this step
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
             print("📱 DesiredWeightView appeared - saved current step")

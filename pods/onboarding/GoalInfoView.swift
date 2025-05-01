@@ -12,8 +12,16 @@ struct GoalInfoView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var navigateToNextStep = false
     
-    private var goal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "Maintain"
+    private var fitnessGoal: String {
+        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+    }
+    
+    private var goalDisplayText: String {
+        switch fitnessGoal {
+        case "loseWeight": return "Losing"
+        case "gainWeight": return "Gaining"
+        default: return "Maintaining"
+        }
     }
     
     private var isImperial: Bool {
@@ -109,8 +117,8 @@ struct GoalInfoView: View {
                         // Main content with combined text
                         VStack(spacing: 30) {
                             // Title with weight goal information - using Text concatenation for natural flow
-                            if goal != "Maintain" {
-                                (Text("\(goal == "Lose weight" ? "Losing" : "Gaining") ")
+                            if fitnessGoal != "maintain" {
+                                (Text("\(goalDisplayText) ")
                                     .font(.system(size: 36, weight: .bold))
                                     .foregroundColor(.primary)
                                 + Text("\(Int(weightDifference)) \(weightUnit)")

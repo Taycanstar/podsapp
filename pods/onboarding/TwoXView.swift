@@ -23,21 +23,6 @@ struct TwoXView: View {
     @State private var showBottomSections = false
     @State private var showTagline = false
     
-    // Get the selected goal from UserDefaults
-    private var goal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "Maintain"
-    }
-    
-    private var goalText: String {
-        if goal == "Lose weight" {
-            return "lose"
-        } else if goal == "Gain weight" {
-            return "gain"
-        } else {
-            return "maintain"
-        }
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             // Header with back button and progress
@@ -70,8 +55,8 @@ struct TwoXView: View {
             }
             .padding(.vertical)
             
-            // Title text - dynamically based on goal
-            Text("\(goalText.capitalized) twice as fast with Humuli")
+            // Generic title text that works for any goal
+            Text("Reach your goals twice as fast with Humuli")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)

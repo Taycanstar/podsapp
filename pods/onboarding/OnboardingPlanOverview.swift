@@ -30,8 +30,8 @@ struct OnboardingPlanOverview: View {
                             .font(.system(size: 20, weight: .bold))
                         
                         // Weight goal with date
-                        let goal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
-                        if goal != "maintain" && !completionDate.isEmpty {
+                        let fitnessGoal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+                        if fitnessGoal != "maintain" && !completionDate.isEmpty {
                             Text("\(weightDifferenceFormatted) \(weightUnit) by \(completionDate)")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
@@ -460,6 +460,32 @@ struct OnboardingPlanOverview: View {
         }
     }
     
+    // Helper function to extract all citations from text
+    private func extractCitationsFromText(_ text: String) -> [String] {
+        // Find all citation references like [1], [2], etc.
+        let citationPattern = #"\[(\d+)\]"#
+        let regex = try? NSRegularExpression(pattern: citationPattern)
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        
+        // Extract all unique citation numbers
+        var citationNumbers = Set<String>()
+        
+        if let matches = regex?.matches(in: text, range: range) {
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let numberRange = match.range(at: 1)
+                    // Extract the clean number without brackets
+                    let number = nsText.substring(with: numberRange)
+                    citationNumbers.insert(number)
+                }
+            }
+        }
+        
+        // Return sorted citations
+        return citationNumbers.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+    }
+    
     // Helper to process text nicely for display with citations
     private func processTextWithCitations(_ text: String) -> [(paragraphText: String, citations: [(number: String, url: String?)])] {
         // Split by paragraphs (either by double newlines or single newlines that end with period)
@@ -507,9 +533,8 @@ struct OnboardingPlanOverview: View {
             let nsText = paragraph as NSString
             let range = NSRange(location: 0, length: nsText.length)
             
-            // Extract all citation numbers
-            var citationNumbersSeen = Set<String>() // Track unique citation numbers
-            var citations: [(number: String, url: String?)] = []
+            // Track citation locations and numbers for this paragraph
+            var citationsInParagraph: [(number: String, range: NSRange)] = []
             
             if let matches = regex?.matches(in: paragraph, range: range) {
                 for match in matches {
@@ -517,24 +542,28 @@ struct OnboardingPlanOverview: View {
                         let numberRange = match.range(at: 1)
                         // Extract the clean number without brackets
                         let number = nsText.substring(with: numberRange)
-                        
-                        // Only add each unique citation number once
-                        if !citationNumbersSeen.contains(number) {
-                            citations.append((number, nil))
-                            citationNumbersSeen.insert(number)
-                        }
+                        // Save the full match range (including brackets)
+                        citationsInParagraph.append((number, match.range(at: 0)))
                     }
                 }
             }
             
-            // Remove citation brackets from the displayed text
-            var cleanText = regex?.stringByReplacingMatches(in: paragraph, range: range, withTemplate: "") ?? paragraph
+            // Sort citations by position in the text (to properly remove them in reverse order)
+            citationsInParagraph.sort { $0.range.location > $1.range.location }
+            
+            // Start with the original text
+            var cleanText = paragraph
+            
+            // Remove each citation bracket from the text (in reverse order to avoid index issues)
+            for (_, citationRange) in citationsInParagraph {
+                let nsCleanText = cleanText as NSString
+                cleanText = nsCleanText.replacingCharacters(in: citationRange, with: "")
+            }
             
             // Fix formatting issues
             cleanText = cleanText.trimmingCharacters(in: .whitespacesAndNewlines)
             
             // Fix common formatting issues:
-            // 1. Remove spaces before periods, commas, etc.
             let punctuationFixes = [
                 (pattern: #" \."#, replacement: "."),
                 (pattern: #" ,"#, replacement: ","),
@@ -559,14 +588,25 @@ struct OnboardingPlanOverview: View {
             // Final cleanup of duplicate periods
             cleanText = cleanText.replacingOccurrences(of: "..", with: ".")
             
-            // Sort citations by number for consistent display
-            let sortedCitations = citations.sorted { 
+            // Create unique citations for this paragraph
+            var uniqueCitations = Set<String>()
+            var paragraphCitations: [(number: String, url: String?)] = []
+            
+            for (number, _) in citationsInParagraph {
+                if !uniqueCitations.contains(number) {
+                    paragraphCitations.append((number, nil))
+                    uniqueCitations.insert(number)
+                }
+            }
+            
+            // Sort citations by number
+            paragraphCitations.sort { 
                 let num1 = Int($0.number) ?? 0
                 let num2 = Int($1.number) ?? 0
                 return num1 < num2
             }
             
-            result.append((cleanText, sortedCitations))
+            result.append((cleanText, paragraphCitations))
         }
         
         return result
@@ -640,22 +680,6 @@ struct OnboardingPlanOverview: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-    
-    // Helper function to extract all citations from text
-    private func extractCitationsFromText(_ text: String) -> [String] {
-        let processedText = processTextWithCitations(text)
-        
-        // Collect all unique citations 
-        var allCitations = Set<String>()
-        for paragraph in processedText {
-            for citation in paragraph.citations {
-                allCitations.insert(citation.number)
-            }
-        }
-        
-        // Return sorted citations
-        return allCitations.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
     }
     
     // In your SwiftUI view where you display insights
@@ -940,11 +964,9 @@ struct OnboardingPlanOverview: View {
             (Int($0) ?? 0) < (Int($1) ?? 0)
         }
         
-        // Map each citation to its clean number value
-        for citation in sortedCitations {
-            if let num = Int(citation) {
-                citationMap[citation] = num
-            }
+        // Create sequential mapping (1, 2, 3...)
+        for (index, citation) in sortedCitations.enumerated() {
+            citationMap[citation] = index + 1
         }
         
         return citationMap
