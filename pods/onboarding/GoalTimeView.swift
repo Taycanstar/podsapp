@@ -15,7 +15,7 @@ struct GoalTimeView: View {
     
     // Goal-related computed properties that take into account the automatically determined goal
     private var fitnessGoal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+        return UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
     }
     
     private var goalText: String {

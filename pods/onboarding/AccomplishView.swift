@@ -162,7 +162,7 @@ struct AccomplishView: View {
         }
         .background(
             NavigationLink(
-                destination: ConnectToAppleHealth(),
+                destination: FitnessLevelView(),
                 isActive: $navigateToNextStep
             ) {
                 EmptyView()

@@ -125,6 +125,9 @@
 		36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */; };
 		36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */; };
 		36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */; };
+		36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D022DC2FFED00DD4266 /* FitnessLevelView.swift */; };
+		36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D042DC300FB00DD4266 /* FitnessGoalView.swift */; };
+		36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D062DC3020000DD4266 /* SportSelectionView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -306,6 +309,9 @@
 		36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatingPlanView.swift; sourceTree = "<group>"; };
 		36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowContainer.swift; sourceTree = "<group>"; };
 		36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPlanOverview.swift; sourceTree = "<group>"; };
+		36A85D022DC2FFED00DD4266 /* FitnessLevelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessLevelView.swift; sourceTree = "<group>"; };
+		36A85D042DC300FB00DD4266 /* FitnessGoalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FitnessGoalView.swift; path = Pods/onboarding/FitnessGoalView.swift; sourceTree = SOURCE_ROOT; };
+		36A85D062DC3020000DD4266 /* SportSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SportSelectionView.swift; path = Pods/onboarding/SportSelectionView.swift; sourceTree = SOURCE_ROOT; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -574,6 +580,9 @@
 				36A85CF82DB49A7900DD4266 /* CreatingPlanView.swift */,
 				36A85CFA2DB693D800DD4266 /* OnboardingFlowContainer.swift */,
 				36A85CFC2DBEF20500DD4266 /* OnboardingPlanOverview.swift */,
+				36A85D022DC2FFED00DD4266 /* FitnessLevelView.swift */,
+				36A85D042DC300FB00DD4266 /* FitnessGoalView.swift */,
+				36A85D062DC3020000DD4266 /* SportSelectionView.swift */,
 			);
 			path = onboarding;
 			sourceTree = "<group>";
@@ -1019,6 +1028,7 @@
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
+				36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */,
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
@@ -1058,9 +1068,11 @@
 				36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */,
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
+				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
+				36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,

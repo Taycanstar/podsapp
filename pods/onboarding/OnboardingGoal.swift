@@ -139,7 +139,20 @@ struct OnboardingGoal: View {
     
     private func saveGoal() {
         // Save the selected goal to UserDefaults
-        UserDefaults.standard.set(selectedGoal.rawValue, forKey: "fitnessGoal")
+        UserDefaults.standard.set(selectedGoal.rawValue, forKey: "dietGoal")
+        
+        // Also save the server-compatible format
+        let serverDietGoal: String
+        switch selectedGoal {
+        case .loseWeight:
+            serverDietGoal = "lose"
+        case .gainWeight:
+            serverDietGoal = "gain"
+        case .maintain:
+            serverDietGoal = "maintain"
+        }
+        UserDefaults.standard.set(serverDietGoal, forKey: "serverDietGoal")
+        print("📝 Saved server-compatible diet goal: \(serverDietGoal)")
     }
 }
 

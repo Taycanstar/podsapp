@@ -63,6 +63,12 @@ struct MainOnboardingView: View {
             SpecificDietView()
         case .accomplish:
             AccomplishView()
+        case .fitnessLevel:
+            FitnessLevelView()
+        case .fitnessGoal:
+            FitnessGoalView()
+        case .sportSelection:
+            SportSelectionView()
         case .connectHealth:
             ConnectToAppleHealth()
         case .complete:

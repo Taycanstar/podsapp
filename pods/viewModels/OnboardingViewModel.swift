@@ -25,8 +25,11 @@ class OnboardingViewModel: ObservableObject {
         case obstacles = 8
         case specificDiet = 9
         case accomplish = 10
-        case connectHealth = 11
-        case complete = 12
+        case fitnessLevel = 11
+        case fitnessGoal = 12
+        case sportSelection = 13
+        case connectHealth = 14
+        case complete = 15
         
         // Return view type for this step
         var viewType: String {
@@ -42,6 +45,9 @@ class OnboardingViewModel: ObservableObject {
             case .obstacles: return "ObstaclesView"
             case .specificDiet: return "SpecificDietView"
             case .accomplish: return "AccomplishView"
+            case .fitnessLevel: return "FitnessLevelView"
+            case .fitnessGoal: return "FitnessGoalView"
+            case .sportSelection: return "SportSelectionView"
             case .connectHealth: return "ConnectToAppleHealth"
             case .complete: return "CreatingPlanView"
             }
@@ -61,6 +67,9 @@ class OnboardingViewModel: ObservableObject {
             case .obstacles: return .obstacles
             case .specificDiet: return .specificDiet
             case .accomplish: return .accomplish
+            case .fitnessLevel: return .fitnessLevel
+            case .fitnessGoal: return .fitnessGoal
+            case .sportSelection: return .sportSelection
             case .connectHealth: return .connectHealth
             case .complete: return .creatingPlan
             }
@@ -160,7 +169,7 @@ class OnboardingViewModel: ObservableObject {
             heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
             weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
             desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
-            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal") ?? "",
+            dietGoal: UserDefaults.standard.string(forKey: "dietGoal") ?? "",
             workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
             dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
             primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
@@ -168,7 +177,10 @@ class OnboardingViewModel: ObservableObject {
             weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
             obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
-            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
+            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories"),
+            fitnessLevel: UserDefaults.standard.string(forKey: "fitnessLevel"),
+            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoalType"),
+            sportType: UserDefaults.standard.string(forKey: "sportType")
         )
         
         // Debug log

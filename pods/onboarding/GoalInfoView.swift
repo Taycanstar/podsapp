@@ -13,7 +13,7 @@ struct GoalInfoView: View {
     @State private var navigateToNextStep = false
     
     private var fitnessGoal: String {
-        return UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+        return UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
     }
     
     private var goalDisplayText: String {

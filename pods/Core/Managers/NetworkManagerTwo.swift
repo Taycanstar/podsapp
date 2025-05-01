@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 class NetworkManagerTwo {
     // Shared instance (singleton)
@@ -13,27 +14,23 @@ class NetworkManagerTwo {
     
     
 
-   //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
   let baseUrl = "http://192.168.1.92:8000"
     // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
-    enum NetworkError: Error {
+    enum NetworkError: Error, LocalizedError {
         case invalidURL
         case noData
-        case decodingError(String = "Unknown decoding error")
+        case decodingError
         case serverError(String)
         
-        var localizedDescription: String {
+        var errorDescription: String? {
             switch self {
-            case .invalidURL:
-                return "Invalid URL"
-            case .noData:
-                return "No data received from server"
-            case .decodingError(let message):
-                return "Error decoding response: \(message)"
-            case .serverError(let message):
-                return "Server error: \(message)"
+            case .invalidURL: return "Invalid URL"
+            case .noData: return "No data received"
+            case .decodingError: return "Failed to decode response"
+            case .serverError(let message): return "Server error: \(message)"
             }
         }
     }
@@ -128,7 +125,7 @@ class NetworkManagerTwo {
                     print("Response data: \(json)")
                 }
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
+                    completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
@@ -209,13 +206,13 @@ class NetworkManagerTwo {
                 } else {
                     print("🔴 Unable to parse response")
                     DispatchQueue.main.async {
-                        completion(.failure(NetworkError.decodingError(NetworkError.decodingError().localizedDescription)))
+                        completion(.failure(NetworkError.decodingError))
                     }
                 }
             } catch {
                 print("🔴 Error parsing JSON: \(error)")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
+                    completion(.failure(NetworkError.decodingError))
                 }
             }
         }
@@ -347,7 +344,7 @@ class NetworkManagerTwo {
                     print("Response data: \(json)")
                 }
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
+                    completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
@@ -360,70 +357,50 @@ class NetworkManagerTwo {
     ///   - email: The user's email address
     ///   - completion: Callback with success or failure result
     func markOnboardingCompleted(email: String, completion: @escaping (Result<Bool, Error>) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/mark-onboarding-completed/") else {
+        let urlString = "\(baseUrl)/complete-onboarding/"
+        guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
         
-        let parameters: [String: Any] = [
-            "email": email
-        ]
-        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = ["email": email]
         
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-        } catch {
-            completion(.failure(error))
-            return
-        }
-        
-        print("🔄 Sending request to mark onboarding completed for user: \(email)")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    print("❌ Network error marking onboarding completed: \(error.localizedDescription)")
+            let jsonData = try JSONSerialization.data(withJSONObject: parameters)
+            request.httpBody = jsonData
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("❌ Network error: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    print("❌ No data received from server")
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let success = json["success"] as? Bool {
+                        completion(.success(success))
+                    } else {
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                } catch {
                     completion(.failure(error))
                 }
-                return
             }
-            
-            guard let data = data else {
-                DispatchQueue.main.async {
-                    print("❌ No data received from server when marking onboarding completed")
-                    completion(.failure(NetworkError.noData))
-                }
-                return
-            }
-            
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let success = json["success"] as? Bool {
-                    DispatchQueue.main.async {
-                        if success {
-                            print("✅ Successfully marked onboarding as completed on server for user: \(email)")
-                            completion(.success(true))
-                        } else {
-                            print("❌ Server returned failure when marking onboarding completed")
-                            completion(.success(false))
-                        }
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        print("❌ Invalid server response when marking onboarding completed")
-                        completion(.failure(NetworkError.decodingError()))
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    print("❌ Error parsing response when marking onboarding completed: \(error)")
-                    completion(.failure(NetworkError.decodingError()))
-                }
-            }
-        }.resume()
+            task.resume()
+        } catch {
+            completion(.failure(error))
+        }
     }
     
     /// Process user onboarding data and calculate BMR, TDEE, and nutrition goals
@@ -431,12 +408,22 @@ class NetworkManagerTwo {
     ///   - userData: The user's onboarding data
     ///   - completion: Callback with nutritional goals or error
     func processOnboardingData(userData: OnboardingData, completion: @escaping (Result<NutritionGoals, Error>) -> Void) {
-        guard let url = URL(string: "\(baseUrl)/process-onboarding-data/") else {
+        let urlString = "\(baseUrl)/process-onboarding-data/"
+        guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
         
-        // Prepare data for the request
+        // Create request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Create JSON data
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        
+        // Create dictionary representation
         var parameters: [String: Any] = [
             "user_email": userData.email,
             "gender": userData.gender,
@@ -444,150 +431,169 @@ class NetworkManagerTwo {
             "height_cm": userData.heightCm,
             "weight_kg": userData.weightKg,
             "desired_weight_kg": userData.desiredWeightKg,
-            "fitness_goal": userData.fitnessGoal,
+            "diet_goal": userData.dietGoal,
             "workout_frequency": userData.workoutFrequency,
-            "diet_preference": userData.dietPreference,
-            "primary_wellness_goal": userData.primaryWellnessGoal
+            "rollover_calories": userData.rolloverCalories,
+            "add_calories_burned": userData.addCaloriesBurned
         ]
         
-        // Add optional fields
-        if let goalTimeframe = userData.goalTimeframeWeeks {
-            parameters["goal_timeframe_weeks"] = goalTimeframe
+        // Add optional fields if they exist
+        if !userData.dietPreference.isEmpty {
+            parameters["diet_preference"] = userData.dietPreference
         }
         
-        if let obstacles = userData.obstacles {
+        if !userData.primaryWellnessGoal.isEmpty {
+            parameters["primary_wellness_goal"] = userData.primaryWellnessGoal
+        }
+        
+        if let timeframe = userData.goalTimeframeWeeks {
+            parameters["goal_timeframe_weeks"] = timeframe
+        }
+        
+        if let weightChange = userData.weeklyWeightChange {
+            parameters["weekly_weight_change"] = weightChange
+        }
+        
+        if let obstacles = userData.obstacles, !obstacles.isEmpty {
             parameters["obstacles"] = obstacles
         }
         
-        parameters["add_calories_burned"] = userData.addCaloriesBurned
-        parameters["rollover_calories"] = userData.rolloverCalories
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-        } catch {
-            completion(.failure(error))
-            return
+        if let fitnessLevel = userData.fitnessLevel, !fitnessLevel.isEmpty {
+            parameters["fitness_level"] = fitnessLevel
         }
         
-        print("🔄 Sending onboarding data for processing - user: \(userData.email)")
+        if let fitnessGoal = userData.fitnessGoal, !fitnessGoal.isEmpty {
+            parameters["fitness_goal"] = fitnessGoal
+        }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    print("❌ Network error processing onboarding data: \(error.localizedDescription)")
+        if let sportType = userData.sportType, !sportType.isEmpty {
+            parameters["sport_type"] = sportType
+        }
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: parameters)
+            request.httpBody = jsonData
+            
+            print("⬆️ Sending onboarding data to server with parameters: \(parameters)")
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("❌ Network error: \(error.localizedDescription)")
                     completion(.failure(error))
+                    return
                 }
-                return
-            }
-            
-            guard let data = data else {
-                DispatchQueue.main.async {
-                    print("❌ No data received from server when processing onboarding data")
+                
+                guard let data = data else {
+                    print("❌ No data received from server")
                     completion(.failure(NetworkError.noData))
+                    return
                 }
-                return
-            }
-            
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    // Debug log raw response
-                    print("🔍 Raw server response: \(json)")
-                    
-                    // Check for error response
-                    if let errorMessage = json["error"] as? String {
-                        DispatchQueue.main.async {
+                
+                // For debugging, get the raw server response
+                if let rawResponse = String(data: data, encoding: .utf8) {
+                    print("🔍 Raw server response: \(rawResponse)")
+                }
+                
+                // Attempt to parse the API response
+                do {
+                    // First try to check if there's an error message
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        if let errorMessage = json["error"] as? String {
                             print("❌ Server error processing onboarding data: \(errorMessage)")
                             completion(.failure(NetworkError.serverError(errorMessage)))
+                            return
                         }
-                        return
-                    }
-                    
-                    // Make parsing more flexible to accommodate potential changes in the API response
-                    // Extract basic metrics, with fallbacks
-                    let bmr = json["bmr"] as? Double ?? 0
-                    let tdee = json["tdee"] as? Double ?? 0
-                    
-                    // Extract daily goals with flexible parsing for different formats
-                    var calories: Double = 0
-                    var protein: Double = 0
-                    var carbs: Double = 0
-                    var fat: Double = 0
-                    
-                    // Try different paths to get the daily goals
-                    if let dailyGoals = json["daily_goals"] as? [String: Any] {
-                        calories = dailyGoals["calories"] as? Double ?? 0
-                        protein = dailyGoals["protein"] as? Double ?? 0
-                        carbs = dailyGoals["carbs"] as? Double ?? 0
-                        fat = dailyGoals["fat"] as? Double ?? 0
-                    } else if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
-                        // Alternative format
-                        calories = nutritionGoals["calories"] as? Double ?? 0
-                        protein = nutritionGoals["protein"] as? Double ?? 0
-                        carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
-                        fat = nutritionGoals["fats"] as? Double ?? 0
-                    } else if let goals = json["goals"] as? [String: Any] {
-                        // Another possible format
-                        calories = goals["calories"] as? Double ?? 0
-                        protein = goals["protein"] as? Double ?? 0
-                        carbs = goals["carbs"] as? Double ?? 0
-                        fat = goals["fat"] as? Double ?? 0
-                    }
-                    
-                    // Replace the old string-based parsing for insights with decoding to InsightDetails
-                    var metabolismInsights: InsightDetails? = nil
-                    var nutritionInsights: InsightDetails? = nil
-                    
-                    if let insights = json["insights"] as? [String: Any] {
-                        if let metabolism = insights["metabolism"] as? [String: Any] {
-                            let metabolismData = try? JSONSerialization.data(withJSONObject: metabolism)
-                            metabolismInsights = metabolismData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+                        
+                        // Extract nutrition goals
+                        var calories: Double = 0
+                        var protein: Double = 0
+                        var carbs: Double = 0
+                        var fat: Double = 0
+                        
+                        print("🔍 DEBUG: Looking for nutrition goals in JSON: \(json.keys)")
+                        
+                        // Try different JSON structures that might contain the nutrition goals
+                        if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
+                            print("✅ Found nutrition_goals key")
+                            calories = nutritionGoals["calories"] as? Double ?? 0
+                            protein = nutritionGoals["protein"] as? Double ?? 0
+                            carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
+                            fat = nutritionGoals["fats"] as? Double ?? 0
+                        } else if let dailyGoals = json["daily_goals"] as? [String: Any] {
+                            print("✅ Found daily_goals key: \(dailyGoals)")
+                            calories = dailyGoals["calories"] as? Double ?? 0
+                            protein = dailyGoals["protein"] as? Double ?? 0
+                            carbs = dailyGoals["carbs"] as? Double ?? 0
+                            fat = dailyGoals["fat"] as? Double ?? 0
+                        } else if let goals = json["goals"] as? [String: Any] {
+                            print("✅ Found goals key")
+                            calories = goals["calories"] as? Double ?? 0
+                            protein = goals["protein"] as? Double ?? 0
+                            carbs = goals["carbs"] as? Double ?? 0
+                            fat = goals["fat"] as? Double ?? 0
+                        } else {
+                            print("⚠️ Could not find nutrition goals in JSON structure")
                         }
-                        if let nutrition = insights["nutrition"] as? [String: Any] {
-                            let nutritionData = try? JSONSerialization.data(withJSONObject: nutrition)
-                            nutritionInsights = nutritionData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+                        
+                        // Extract BMR and TDEE if available
+                        let bmr = (json["bmr"] as? Double) ?? 0
+                        let tdee = (json["tdee"] as? Double) ?? 0
+                        
+                        // Extract insights if available
+                        var metabolismInsights: InsightDetails? = nil
+                        var nutritionInsights: InsightDetails? = nil
+                        
+                        if let insights = json["insights"] as? [String: Any] {
+                            if let metabolism = insights["metabolism"] as? [String: Any] {
+                                let metabolismData = try? JSONSerialization.data(withJSONObject: metabolism)
+                                metabolismInsights = metabolismData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+                            }
+                            if let nutrition = insights["nutrition"] as? [String: Any] {
+                                let nutritionData = try? JSONSerialization.data(withJSONObject: nutrition)
+                                nutritionInsights = nutritionData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+                            }
                         }
+                        
+                        // Create nutrition goals object
+                        let goals = NutritionGoals(
+                            bmr: bmr,
+                            tdee: tdee,
+                            calories: calories,
+                            protein: protein,
+                            carbs: carbs,
+                            fat: fat,
+                            metabolismInsights: metabolismInsights,
+                            nutritionInsights: nutritionInsights
+                        )
+                        
+                        // Save goals to UserDefaults for other parts of the app
+                        UserGoalsManager.shared.dailyGoals = DailyGoals(
+                            calories: Int(calories),
+                            protein: Int(protein),
+                            carbs: Int(carbs),
+                            fat: Int(fat)
+                        )
+                        
+                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(calories)), Protein=\(Int(protein))g, Carbs=\(Int(carbs))g, Fat=\(Int(fat))g")
+                        
+                        print("✅ Successfully parsed nutrition goals: Calories=\(calories), Protein=\(protein)g, Carbs=\(carbs)g, Fat=\(fat)g")
+                        print("📊 BMR=\(bmr), TDEE=\(tdee)")
+                        
+                        completion(.success(goals))
+                    } else {
+                        print("❌ Failed to parse JSON response")
+                        completion(.failure(NetworkError.decodingError))
                     }
-                    
-                    // Create nutrition goals object
-                    let nutritionGoals = NutritionGoals(
-                        bmr: bmr,
-                        tdee: tdee,
-                        calories: calories,
-                        protein: protein,
-                        carbs: carbs,
-                        fat: fat,
-                        metabolismInsights: metabolismInsights,
-                        nutritionInsights: nutritionInsights
-                    )
-                    
-                    DispatchQueue.main.async {
-                        // Log values for debugging
-                        print("✅ Successfully processed onboarding data")
-                        print("�� BMR: \(bmr), TDEE: \(tdee)")
-                        print("📊 Calories: \(calories), Protein: \(protein)g, Carbs: \(carbs)g, Fat: \(fat)g")
-                        completion(.success(nutritionGoals))
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        // Try to print the raw response as string for debugging
-                        let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode as string"
-                        print("❌ Could not parse JSON response. Raw response: \(responseString)")
-                        completion(.failure(NetworkError.decodingError()))
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    // Try to print the raw response as string for debugging
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode as string"
-                    print("❌ Error parsing response: \(error). Raw response: \(responseString)")
-                    completion(.failure(NetworkError.decodingError(error.localizedDescription)))
+                } catch {
+                    print("❌ JSON parsing error: \(error.localizedDescription)")
+                    completion(.failure(error))
                 }
             }
-        }.resume()
+            task.resume()
+        } catch {
+            print("❌ JSON encoding error: \(error.localizedDescription)")
+            completion(.failure(error))
+        }
     }
 }
 

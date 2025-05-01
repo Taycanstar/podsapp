@@ -128,15 +128,18 @@ struct CreatingPlanView: View {
             heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
             weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
             desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
-            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal") ?? "",
+            dietGoal: UserDefaults.standard.string(forKey: "serverDietGoal") ?? "maintain",
             workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
-            dietPreference: dietPreference,
-            primaryWellnessGoal: primaryWellnessGoal,
+            dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
+            primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
             goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
             weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
             obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
-            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories")
+            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories"),
+            fitnessLevel: UserDefaults.standard.string(forKey: "fitnessLevel"),
+            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoalType") ?? UserDefaults.standard.string(forKey: "fitness_goal"),
+            sportType: UserDefaults.standard.string(forKey: "sportType")
         )
         
         // Guard against missing email
@@ -166,8 +169,13 @@ struct CreatingPlanView: View {
                         let encoder = JSONEncoder()
                         if let encoded = try? encoder.encode(nutritionGoals) {
                             UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-                    UserDefaults.standard.synchronize()
+                            UserDefaults.standard.synchronize()
+                            print("📝 DEBUG: Encoded and saved nutrition goals to UserDefaults: Calories=\(nutritionGoals.calories), Protein=\(nutritionGoals.protein)g, Carbs=\(nutritionGoals.carbs)g, Fat=\(nutritionGoals.fat)g")
+                        } else {
+                            print("⚠️ ERROR: Failed to encode NutritionGoals for UserDefaults")
                         }
+                    } else {
+                        print("⚠️ ERROR: No nutritionGoals available to save to UserDefaults")
                     }
                     
                     // Wait a brief moment to show 100% completion

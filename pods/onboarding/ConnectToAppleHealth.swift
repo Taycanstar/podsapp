@@ -106,7 +106,7 @@ struct ConnectToAppleHealth: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
-                Text("Sync your daily activity between Cal AI and the Health app to have the most thorough data.")
+                Text("Sync your daily activity between Humuli and the Health app to have the most thorough data.")
                     .font(.system(size: 16))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

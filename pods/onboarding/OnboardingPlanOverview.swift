@@ -30,7 +30,8 @@ struct OnboardingPlanOverview: View {
                             .font(.system(size: 20, weight: .bold))
                         
                         // Weight goal with date
-                        let fitnessGoal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "maintain"
+                        let completionDate = UserDefaults.standard.string(forKey: "goalCompletionDate") ?? ""
+                        let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
                         if fitnessGoal != "maintain" && !completionDate.isEmpty {
                             Text("\(weightDifferenceFormatted) \(weightUnit) by \(completionDate)")
                                 .font(.system(size: 16, weight: .medium))
@@ -274,6 +275,18 @@ struct OnboardingPlanOverview: View {
             if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData") {
                 let decoder = JSONDecoder()
                 self.nutritionGoals = try? decoder.decode(NutritionGoals.self, from: data)
+                
+                if let goals = self.nutritionGoals {
+                    print("📝 DEBUG: Loaded nutrition goals from UserDefaults: Calories=\(goals.calories), Protein=\(goals.protein)g, Carbs=\(goals.carbs)g, Fat=\(goals.fat)g")
+                } else {
+                    print("⚠️ Failed to decode NutritionGoals from UserDefaults data")
+                }
+            } else {
+                print("⚠️ No nutritionGoalsData found in UserDefaults")
+                
+                // As a fallback, check if we have goals in UserGoalsManager
+                let userGoals = UserGoalsManager.shared.dailyGoals
+                print("🔍 DEBUG: UserGoalsManager has: Calories=\(userGoals.calories), Protein=\(userGoals.protein)g, Carbs=\(userGoals.carbs)g, Fat=\(userGoals.fat)g")
             }
             
             // Calculate weight difference and format

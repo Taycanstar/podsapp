@@ -23,6 +23,9 @@ struct OnboardingProgress {
         case obstacles
         case specificDiet
         case accomplish
+        case fitnessLevel
+        case fitnessGoal
+        case sportSelection
         case connectHealth
         case creatingPlan
     }
@@ -31,29 +34,35 @@ struct OnboardingProgress {
     static func progressFor(screen: Screen) -> Double {
         switch screen {
         case .gender:
-            return 0.0833 // 1/12
+            return 0.0667 // 1/15
         case .workoutDays:
-            return 0.1667 // 2/12
+            return 0.1333 // 2/15
         case .heightWeight:
-            return 0.2500 // 3/12
+            return 0.2000 // 3/15
         case .dob:
-            return 0.3333 // 4/12
+            return 0.2667 // 4/15
         case .desiredWeight:
-            return 0.4167 // 5/12
+            return 0.3333 // 5/15
         case .goalInfo:
-            return 0.5000 // 6/12
+            return 0.4000 // 6/15
         case .goalTime:
-            return 0.5833 // 7/12
+            return 0.4667 // 7/15
         case .twoX:
-            return 0.6667 // 8/12
+            return 0.5333 // 8/15
         case .obstacles:
-            return 0.7500 // 9/12
+            return 0.6000 // 9/15
         case .specificDiet:
-            return 0.8333 // 10/12
+            return 0.6667 // 10/15
         case .accomplish:
-            return 0.9167 // 11/12
+            return 0.7333 // 11/15
+        case .fitnessLevel:
+            return 0.8000 // 12/15
+        case .fitnessGoal:
+            return 0.8667 // 13/15
+        case .sportSelection:
+            return 0.9333 // 14/15
         case .connectHealth:
-            return 0.9583 // 11.5/12
+            return 0.9667 // 14.5/15
         case .creatingPlan:
             return 1.0
         }
@@ -74,8 +83,11 @@ enum OnboardingProgressEnum: Int, CaseIterable {
     case obstacles = 8
     case specificDiet = 9
     case accomplish = 10
-    case connectHealth = 11
-    case creatingPlan = 12
+    case fitnessLevel = 11
+    case fitnessGoal = 12
+    case sportSelection = 13
+    case connectHealth = 14
+    case creatingPlan = 15
     
     /// Total screens in the onboarding flow
     static var totalScreens: Int {
@@ -96,6 +108,9 @@ enum OnboardingProgressEnum: Int, CaseIterable {
         case .obstacles:    return .obstacles
         case .specificDiet: return .specificDiet
         case .accomplish:   return .accomplish
+        case .fitnessLevel: return .fitnessLevel
+        case .fitnessGoal:  return .fitnessGoal
+        case .sportSelection: return .sportSelection
         case .connectHealth: return .connectHealth
         case .creatingPlan: return .creatingPlan
         }

@@ -54,6 +54,18 @@ struct OnboardingFlowContainer: View {
                     AccomplishView()
                         .environmentObject(viewModel)
                         .onAppear { updateCurrentStep() }
+                case .fitnessLevel:
+                    FitnessLevelView()
+                        .environmentObject(viewModel)
+                        .onAppear { updateCurrentStep() }
+                case .fitnessGoal:
+                    FitnessGoalView()
+                        .environmentObject(viewModel)
+                        .onAppear { updateCurrentStep() }
+                case .sportSelection:
+                    SportSelectionView()
+                        .environmentObject(viewModel)
+                        .onAppear { updateCurrentStep() }
                 case .connectHealth:
                     ConnectToAppleHealth()
                         .environmentObject(viewModel)

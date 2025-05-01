@@ -148,21 +148,28 @@ struct DesiredWeightView: View {
         let weightDifference = selectedWeight - currentWeight
         
         // Set the appropriate fitness goal
+        // First, set the app-side format (loseWeight, maintain, gainWeight)
         let fitnessGoal: String
+        let serverDietGoal: String
+        
         if abs(weightDifference) < 1.0 {
             // If the difference is less than 1 lb/kg, consider it "maintain"
             fitnessGoal = "maintain"
+            serverDietGoal = "maintain"
         } else if weightDifference < 0 {
             // Desired weight is less than current weight: lose weight
             fitnessGoal = "loseWeight"
+            serverDietGoal = "lose"
         } else {
             // Desired weight is more than current weight: gain weight
             fitnessGoal = "gainWeight"
+            serverDietGoal = "gain"
         }
         
-        // Save the determined fitness goal
-        UserDefaults.standard.set(fitnessGoal, forKey: "fitnessGoal")
-        print("📊 Automatically determined fitness goal: \(fitnessGoal)")
+        // Save both the app-side and server-side formats
+        UserDefaults.standard.set(fitnessGoal, forKey: "dietGoal")
+        UserDefaults.standard.set(serverDietGoal, forKey: "serverDietGoal")
+        print("📊 Automatically determined diet goal: \(fitnessGoal) (server: \(serverDietGoal))")
         
         // Also save the current step before navigating
         UserDefaults.standard.set("DesiredWeightView", forKey: "currentOnboardingStep")

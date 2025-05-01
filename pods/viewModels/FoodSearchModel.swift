@@ -563,7 +563,7 @@ struct OnboardingData {
     let heightCm: Double
     let weightKg: Double
     let desiredWeightKg: Double // This will be populated from desiredWeightKilograms
-    let fitnessGoal: String // "loseWeight", "maintain", or "gainWeight"
+    let dietGoal: String // "loseWeight", "maintain", or "gainWeight" (renamed from fitnessGoal)
     let workoutFrequency: String // "low", "medium", or "high"
     let dietPreference: String // "balanced", "vegan", "keto", etc.
     let primaryWellnessGoal: String
@@ -572,6 +572,9 @@ struct OnboardingData {
     let obstacles: [String]?
     let addCaloriesBurned: Bool
     let rolloverCalories: Bool
+    let fitnessLevel: String? // "beginner", "intermediate", or "advanced"
+    let fitnessGoal: String? // "strength", "hypertrophy", "tone", "endurance", "powerlifting", "sportsPerformance"
+    let sportType: String? // Only populated if fitnessGoal is "sportsPerformance"
 }
 
 // Make OnboardingData printable for debugging
@@ -585,7 +588,7 @@ extension OnboardingData: CustomStringConvertible {
             heightCm: \(heightCm)
             weightKg: \(weightKg)
             desiredWeightKg: \(desiredWeightKg)
-            fitnessGoal: \(fitnessGoal)
+            dietGoal: \(dietGoal)
             workoutFrequency: \(workoutFrequency)
             dietPreference: \(dietPreference)
             primaryWellnessGoal: \(primaryWellnessGoal)
@@ -594,6 +597,9 @@ extension OnboardingData: CustomStringConvertible {
             obstacles: \(obstacles?.joined(separator: ", ") ?? "none")
             addCaloriesBurned: \(addCaloriesBurned)
             rolloverCalories: \(rolloverCalories)
+            fitnessLevel: \(fitnessLevel ?? "none")
+            fitnessGoal: \(fitnessGoal ?? "none")
+            sportType: \(sportType ?? "none")
         }
         """
     }
