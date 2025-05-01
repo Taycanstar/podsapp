@@ -13,237 +13,272 @@ struct OnboardingPlanOverview: View {
     @State private var completionDate: String = ""
     @State private var weightDifferenceFormatted: String = ""
     @State private var weightUnit: String = ""
+    @State private var scrollOffset: CGFloat = 0
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Title
-            Text("Plan Overview")
-                .font(.system(size: 32, weight: .bold))
-                .padding(.top, 40)
-                .padding(.bottom, 20)
-            
+        ZStack(alignment: .top) {
+            // Main content
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Goals
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Goals")
-                            .font(.system(size: 20, weight: .bold))
-                        
-                        // Weight goal with date
-                        let completionDate = UserDefaults.standard.string(forKey: "goalCompletionDate") ?? ""
-                        let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
-                        if fitnessGoal != "maintain" && !completionDate.isEmpty {
-                            Text("\(weightDifferenceFormatted) \(weightUnit) by \(completionDate)")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        // Nutrition cards
-                        VStack(spacing: 12) {
-                            // Calories card
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.2))
-                                        .frame(width: 40, height: 40)
-                                    
-                                    Image(systemName: "flame.fill")
-                                        .foregroundColor(.blue)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Calories")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Text("\(Int(nutritionGoals?.calories ?? 0))")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                            
-                            // Protein card
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.2))
-                                        .frame(width: 40, height: 40)
-                                    
-                                    Image(systemName: "figure.walk")
-                                        .foregroundColor(.blue)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Protein")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Text("\(Int(nutritionGoals?.protein ?? 0))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                            
-                            // Carbs card
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.2))
-                                        .frame(width: 40, height: 40)
-                                    
-                                    Image(systemName: "chart.bar.fill")
-                                        .foregroundColor(.blue)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Carbs")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Text("\(Int(nutritionGoals?.carbs ?? 0))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                            
-                            // Fats card
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.2))
-                                        .frame(width: 40, height: 40)
-                                    
-                                    Image(systemName: "drop.fill")
-                                        .foregroundColor(.blue)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Fats")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Text("\(Int(nutritionGoals?.fat ?? 0))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                        }
-                    }
-                    
-                    // Recommendations
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recommendations")
-                            .font(.system(size: 20, weight: .bold))
-                        
-                        // Log food daily card
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: "fork.knife")
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Log Food Daily")
-                                    .font(.system(size: 16, weight: .medium))
-                                
-                                Text("Use AI to describe, scan, upload, or speak your meal")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(16)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
-                        
-                        // Meet goals card
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: "clock")
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Meet Goals")
-                                    .font(.system(size: 16, weight: .medium))
-                                
-                                Text("Unlock trends and insights by hitting your daily targets")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(16)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
-                        
-                        // Track trends card
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Track Trends")
-                                    .font(.system(size: 16, weight: .medium))
-                                
-                                Text("Visualize your logging history to spot patterns and fine-tune your nutrition and fitness")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(16)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
-                    }
-                    
-                    // Insights sections
-                    if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
-                        metabolismInsightsView
-                    }
-                    
-                    nutritionInsightsView
+                // Geometry reader to track scroll position
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: ScrollOffsetPreferenceKey.self,
+                        value: geometry.frame(in: .named("scrollView")).minY
+                    )
                 }
-                .padding(.horizontal, 20)
+                .frame(height: 0)
+                
+                VStack(spacing: 0) {
+                    // Spacer to make room for the fixed header
+                    Spacer().frame(height: 100)
+                    
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Goals
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Goals")
+                                .font(.system(size: 20, weight: .bold))
+                            
+                            // Weight goal with date
+                            let completionDate = UserDefaults.standard.string(forKey: "goalCompletionDate") ?? ""
+                            let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
+                            if fitnessGoal != "maintain" && !completionDate.isEmpty {
+                                Text("\(weightDifferenceFormatted) \(weightUnit) by \(completionDate)")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Nutrition cards
+                            VStack(spacing: 12) {
+                                // Calories card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "flame.fill")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Calories")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("\(Int(nutritionGoals?.calories ?? 0))")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                                
+                                // Protein card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "figure.walk")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Protein")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("\(Int(nutritionGoals?.protein ?? 0))g")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                                
+                                // Carbs card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chart.bar.fill")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Carbs")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("\(Int(nutritionGoals?.carbs ?? 0))g")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                                
+                                // Fats card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "drop.fill")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Fats")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("\(Int(nutritionGoals?.fat ?? 0))g")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                            }
+                        }
+                        
+                        // Recommendations
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Recommendations")
+                                .font(.system(size: 20, weight: .bold))
+                            
+                            // Log food daily card
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.blue.opacity(0.2))
+                                        .frame(width: 40, height: 40)
+                                    
+                                    Image(systemName: "fork.knife")
+                                        .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Log Food Daily")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("Use AI to describe, scan, upload, or speak your meal")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                                
+                                // Meet goals card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "clock")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Meet Goals")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("Unlock trends and insights by hitting your daily targets")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                                
+                                // Track trends card
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Track Trends")
+                                            .font(.system(size: 16, weight: .medium))
+                                        
+                                        Text("Visualize your logging history to spot patterns and fine-tune your nutrition and fitness")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(10)
+                            }
+                        }
+                        
+                        // Insights sections
+                        if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
+                            metabolismInsightsView
+                        }
+                        
+                        nutritionInsightsView
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            .coordinateSpace(name: "scrollView")
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                scrollOffset = value
             }
             
-            Spacer()
+            // Sticky header
+            VStack(spacing: 0) {
+                // Background with blur effect that appears as you scroll
+                Color.clear
+                    .background(
+                        Material.regular
+                            .opacity(opacity())
+                    )
+                    .frame(height: 100)
+                
+                // Title with opacity based on scroll position
+                Text("Plan Overview")
+                    .font(.system(size: 32, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, max(40 + min(scrollOffset, 0)/2, 12))
+                    .padding(.bottom, max(20 + min(scrollOffset, 0)/4, 8))
+                    .background(Color.clear)
+            }
+            .frame(maxWidth: .infinity)
             
-            // Get Started Button
+            // Get Started Button (at bottom of screen)
             VStack {
+                Spacer()
+                
                 Button(action: {
                     HapticFeedback.generate()
                     completeOnboarding()
@@ -258,12 +293,12 @@ struct OnboardingPlanOverview: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 16)
+                .background(Material.ultraThin)
             }
-            .padding(.bottom, 24)
-            .background(Material.ultraThin)
+            .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .background(Color(UIColor.systemBackground))
-        .edgesIgnoringSafeArea(.bottom)
+        .edgesIgnoringSafeArea(.all)
         .navigationBarHidden(true)
         .onAppear {
             // Save current step to UserDefaults when this view appears
@@ -307,6 +342,19 @@ struct OnboardingPlanOverview: View {
                 }
             }
         }
+    }
+    
+    // Calculate opacity for the header background based on scroll position
+    private func opacity() -> Double {
+        let threshold: CGFloat = -100
+        
+        // Calculate opacity based on scroll position
+        // Start becoming opaque at scroll position 0
+        // Fully opaque at threshold
+        if scrollOffset < 0 {
+            return Double(min(1.0, abs(scrollOffset) / abs(threshold)))
+        }
+        return 0
     }
     
     /// Complete the onboarding process by marking it as complete on the server
@@ -1017,6 +1065,14 @@ struct OnboardingPlanOverview: View {
         }
         
         return strategies.filter { !$0.isEmpty }
+    }
+}
+
+// Preference key to track scroll offset
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
