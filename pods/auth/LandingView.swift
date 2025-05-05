@@ -200,7 +200,7 @@ struct LandingView: View {
                             seats: subscriptionSeats,
                             canCreateNewTeam: nil
                         )
-                        
+
                         // Force synchronize to ensure all changes are written immediately
                         UserDefaults.standard.synchronize()
 

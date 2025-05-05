@@ -1,0 +1,1468 @@
+{
+  "" : {
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/Pods-master.dia",
+    "emit-module-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/Pods-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/Pods-master-emit-module.dia",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/Pods-master.swiftdeps"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Components/MetricCard.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MetricCard~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Managers/NetworkManagerTwo.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManagerTwo~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/activities/EditActivityItemView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityItemView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/activities/ItemSummaryView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemSummaryView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/food/CreateFoodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateFoodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/food/CreateMealView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateMealView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/food/FoodScannerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodScannerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/pods/FoldersView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoldersView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/trends/BoundsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BoundsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/trends/ConsistencyTrackerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConsistencyTrackerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/trends/DetailedMetricView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DetailedMetricView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/FitnessGoalView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessGoalView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/GoalInfoView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalInfoView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/GoalTimeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GoalTimeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/ObstaclesView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ObstaclesView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/RolloverView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RolloverView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/onboarding/SportSelectionView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SportSelectionView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/viewModels/FoodSearchModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodSearchModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/Pods/viewModels/PodsViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsViewModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/AltCameraView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AltCameraView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/CameraContainerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraContainerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/CameraView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/CarouselView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CarouselView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/ColorThemeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColorThemeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/ContentView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/ActivityCountdownView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityCountdownView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/BottomPopup.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/BottomPopup~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/ButtonWithIcon.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ButtonWithIcon~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/CardDetailView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CardDetailView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/ConfigurationManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConfigurationManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/CustomVideoPlayer.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomVideoPlayer~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/DatePickerWheel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DatePickerWheel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/DropdownButton.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DropdownButton~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/GroupedColumnActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GroupedColumnActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/MediaManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/MinimizedActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MinimizedActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/NewSheetView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NewSheetView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/SingleVideoPlayerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingleVideoPlayerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Components/SingularColumnActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SingularColumnActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Managers/ActivityLogManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Managers/ActivityManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Managers/FoodManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Managers/NetworkManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/NetworkManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Managers/VersionManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VersionManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/MyPods/PodItemCell.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCell~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/MyPods/PodItemCellImage.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemCellImage~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/MyPods/PodItemView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodItemView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/TabBar/CustomTabBar.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CustomTabBar~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/AddItemContainerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddItemContainerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/AddSheetView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddSheetView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/AddWorkspaceView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddWorkspaceView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/CreateTeamView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateTeamView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/DashboardView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DashboardView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/DataControlsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DataControlsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/ForgotPasswordView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ForgotPasswordView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/GracieView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GracieView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/InvitationView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InvitationView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/ItemOptionsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemOptionsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/MediaPreview.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MediaPreview~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/MyTeamMembersView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MyTeamMembersView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PlayerContainerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerContainerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PlayerPageView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PlayerPageView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PodColumnsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodColumnsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PodInfoView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodInfoView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PodMembersView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodMembersView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/PodOptionsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodOptionsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/QuickPodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickPodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/ResetPasswordView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ResetPasswordView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/SplashScreenView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SplashScreenView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/SubscriptionView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TeamInfoView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInfoView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TeamInvitationView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamInvitationView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TeamOptionsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TeamOptionsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/TourView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TourView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/ActivityLogView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityLogView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/ActivitySummaryView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivitySummaryView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/ActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/EditActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/FullActivityLogView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivityLogView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/FullActivitySummaryView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullActivitySummaryView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/FullEditActivityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullEditActivityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/activities/FullSummaryView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullSummaryView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/AddFoodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddFoodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/AddIngredientsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AddIngredientsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/CreateRecipeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreateRecipeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/EditMealView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditMealView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/EditRecipeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EditRecipeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/FoodContainerView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodContainerView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/FoodDetailView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FoodDetailView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/LogFood.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LogFood~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/MealDetailView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MealDetailView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/QuickLogFood.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/QuickLogFood~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/RecipeDetailView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RecipeDetailView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/UserGoals.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UserGoals~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/food/VoiceLogView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VoiceLogView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/friends/FriendsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FriendsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/pods/HomePodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomePodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/pods/PodsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/trends/ColumnTrendView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ColumnTrendView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/trends/FullAnalyticsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FullAnalyticsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/trends/ItemTrendsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemTrendsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/trends/PerformanceVariabilityView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PerformanceVariabilityView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/Core/Views/trends/TrendsView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TrendsView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/CreatePodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatePodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/HomeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/ItemView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ItemView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/PhotoEditorRepresentable.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorRepresentable~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/PhotoEditorViewController.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PhotoEditorViewController~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/PodView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/PodView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/ProfileView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ProfileView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/RegionManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/RegionManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/SubscriptionManager.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SubscriptionManager~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/VideoEditorRepresentable.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorRepresentable~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/VideoEditorViewController.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoEditorViewController~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/VideoPreviewView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/VideoPreviewView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/auth/LandingView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LandingView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/auth/LoginView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/LoginView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/auth/SignupView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SignupView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/AccomplishView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/AccomplishView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/CaloriesBurnedView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CaloriesBurnedView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/ConnectToAppleHealth.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/ConnectToAppleHealth~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/CreatingPlanView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CreatingPlanView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/DesiredWeightView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DesiredWeightView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/DobView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DobView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/EmailVerificationView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/EmailVerificationView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/FitnessLevelView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/FitnessLevelView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/GenderView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/GenderView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/HeightWeightView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HeightWeightView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/InfoView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/InfoView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/MainOnboardingView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/MainOnboardingView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/OnboardingFlowContainer.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingFlowContainer~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/OnboardingGoal.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingGoal~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/OnboardingPlanOverview.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingPlanOverview~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/OnboardingProgress.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingProgress~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/SpecificDietView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SpecificDietView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/TwoXView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/TwoXView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/WelcomeView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WelcomeView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/onboarding/WorkoutDaysView.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/WorkoutDaysView~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/podsApp.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/podsApp~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/CameraViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/CameraViewModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/DefaultProfilePicture.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/DefaultProfilePicture~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/HomeViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/HomeViewModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/OnboardingViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/OnboardingViewModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/SharedViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/SharedViewModel~partial.swiftmodule"
+  },
+  "/Users/dimi/Documents/dimi/podsapp/pods/pods/viewModels/UploadViewModel.swift" : {
+    "const-values" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.d",
+    "diagnostics" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.dia",
+    "index-unit-output-path" : "/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.o",
+    "llvm-bc" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.bc",
+    "object" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.o",
+    "swift-dependencies" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Documents/dimi/podsapp/pods/build/pods.build/Debug-iphonesimulator/Pods.build/Objects-normal/x86_64/UploadViewModel~partial.swiftmodule"
+  }
+}

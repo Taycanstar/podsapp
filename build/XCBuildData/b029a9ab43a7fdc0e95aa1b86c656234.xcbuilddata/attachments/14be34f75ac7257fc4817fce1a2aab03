@@ -1,0 +1,228 @@
+{
+  "" : {
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel-master.dia",
+    "emit-module-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel-master-emit-module.dia",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel-master.swiftdeps"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/AutomaticEvents.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticEvents~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/AutomaticProperties.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/AutomaticProperties~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Constants.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Constants~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Error.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Error~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/FileLogging.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FileLogging~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Flush.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Flush~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/FlushRequest.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/FlushRequest~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Group.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Group~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/JSONHandler.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/JSONHandler~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/MPDB.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MPDB~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Mixpanel.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Mixpanel~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/MixpanelInstance.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelInstance~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/MixpanelLogger.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelLogger~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/MixpanelPersistence.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelPersistence~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/MixpanelType.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/MixpanelType~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Network.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Network~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/People.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/People~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/PrintLogging.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/PrintLogging~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/ReadWriteLock.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/ReadWriteLock~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/SessionMetadata.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/SessionMetadata~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/Sources/Track.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/Track~partial.swiftmodule"
+  },
+  "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.d",
+    "diagnostics" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.dia",
+    "index-unit-output-path" : "/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.o",
+    "llvm-bc" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.bc",
+    "object" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor.swiftdeps",
+    "swiftmodule" : "/Users/dimi/Library/Developer/Xcode/DerivedData/pods-ftsslyajtacryqbpiicmrulachus/SourcePackages/checkouts/mixpanel-swift/build/Mixpanel.build/Debug-iphonesimulator/Mixpanel.build/Objects-normal/x86_64/resource_bundle_accessor~partial.swiftmodule"
+  }
+}

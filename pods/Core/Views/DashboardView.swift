@@ -14,11 +14,44 @@ struct DashboardView: View {
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
     @State private var showScanningErrorAlert = false
+    @State private var selectedDate = Date()
     
     var body: some View {
         ZStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    // Date navigation bar
+                    HStack {
+                        Button(action: {
+                            moveToDate(byDays: -1)
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.black)
+                        }
+                        
+                        Spacer()
+                        
+                        Text(dateNavigationTitle)
+                            .font(.system(size: 18, weight: .medium))
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            // Only allow moving forward if we're not on today
+                            if !isToday {
+                                moveToDate(byDays: 1)
+                            }
+                        }) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(isToday ? .gray : .black)
+                        }
+                        .disabled(isToday)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
+                    
                     Text("Dashboard")
                         .font(.title)
                         .fontWeight(.bold)
@@ -145,6 +178,36 @@ struct DashboardView: View {
             }
         } message: {
             Text(foodManager.scanningFoodError ?? "Failed to analyze food image")
+        }
+    }
+    
+    // Date navigation properties
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
+    }
+    
+    private var isYesterday: Bool {
+        Calendar.current.isDateInYesterday(selectedDate)
+    }
+    
+    private var dateNavigationTitle: String {
+        if isToday {
+            return "Today"
+        } else if isYesterday {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE, MMM d, yyyy"
+            return formatter.string(from: selectedDate)
+        }
+    }
+    
+    // Date navigation method
+    private func moveToDate(byDays days: Int) {
+        if let newDate = Calendar.current.date(byAdding: .day, value: days, to: selectedDate) {
+            selectedDate = newDate
+            // Refresh logs for the selected date
+            // TODO: Add filter logic for showing logs from selected date
         }
     }
     
