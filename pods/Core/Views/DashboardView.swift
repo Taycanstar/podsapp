@@ -15,6 +15,7 @@ struct DashboardView: View {
     
     @State private var showScanningErrorAlert = false
     @State private var selectedDate = Date()
+    @State private var showDatePickerSheet = false
     
     var body: some View {
         ZStack {
@@ -22,32 +23,42 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Date navigation bar
                     HStack {
+                        Spacer()
+                        
+                        HStack(spacing: 8) {
+                            Button(action: {
+                                moveToDate(byDays: -1)
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.black)
+                            }
+                            
+                            Text(dateNavigationTitle)
+                                .font(.system(size: 18, weight: .medium))
+                            
+                            Button(action: {
+                                // Only allow moving forward if we're not on today
+                                if !isToday {
+                                    moveToDate(byDays: 1)
+                                }
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(isToday ? .gray : .black)
+                            }
+                            .disabled(isToday)
+                        }
+                        
+                        Spacer()
+                        
                         Button(action: {
-                            moveToDate(byDays: -1)
+                            showDatePicker()
                         }) {
-                            Image(systemName: "chevron.left")
+                            Image(systemName: "calendar")
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.black)
                         }
-                        
-                        Spacer()
-                        
-                        Text(dateNavigationTitle)
-                            .font(.system(size: 18, weight: .medium))
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            // Only allow moving forward if we're not on today
-                            if !isToday {
-                                moveToDate(byDays: 1)
-                            }
-                        }) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(isToday ? .gray : .black)
-                        }
-                        .disabled(isToday)
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 10)
@@ -157,7 +168,7 @@ struct DashboardView: View {
         }
         .onAppear {
             isTabBarVisible.wrappedValue = true
-            podsViewModel.initialize(email: viewModel.email)
+            // podsViewModel.initialize(email: viewModel.email)
             print("🏠 DashboardView onAppear - initializing FoodManager")
             foodManager.initialize(userEmail: viewModel.email)
             
@@ -178,6 +189,9 @@ struct DashboardView: View {
             }
         } message: {
             Text(foodManager.scanningFoodError ?? "Failed to analyze food image")
+        }
+        .sheet(isPresented: $showDatePickerSheet) {
+            DatePickerView(selectedDate: $selectedDate, isPresented: $showDatePickerSheet)
         }
     }
     
@@ -234,6 +248,11 @@ struct DashboardView: View {
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    
+    // Show date picker sheet
+    private func showDatePicker() {
+        showDatePickerSheet = true
     }
 }
 
@@ -327,6 +346,41 @@ struct ProgressBar: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 withAnimation(.spring(response: 0.6)) {
                     animate = true
+                }
+            }
+        }
+    }
+}
+
+// Date picker view for the sheet
+struct DatePickerView: View {
+    @Binding var selectedDate: Date
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                DatePicker(
+                    "Select a date",
+                    selection: $selectedDate,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .padding()
+            }
+            .navigationTitle("Choose Date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isPresented = false
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
                 }
             }
         }
