@@ -94,7 +94,7 @@ struct OnboardingPlanOverview: View {
                                         .fill(Color.blue.opacity(0.2))
                                         .frame(width: 40, height: 40)
                                     
-                                    Image(systemName: "chart.bar.fill")
+                                    Image(systemName: "laurel.leading")
                                         .foregroundColor(.blue)
                                 }
                                 

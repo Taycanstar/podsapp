@@ -175,23 +175,97 @@ struct ConnectToAppleHealth: View {
             return
         }
         
-        // Set up the health data types we want to read
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .stepCount)!,
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-            HKObjectType.workoutType()
+        // Set up the health data types we want to read - expanded for comprehensive health tracking
+        var typesToRead: Set<HKObjectType> = []
+        
+        // Activity metrics
+        let activityTypes: [HKQuantityTypeIdentifier] = [
+            .stepCount,
+            .distanceWalkingRunning,
+            .activeEnergyBurned,
+            .appleExerciseTime,
+            .appleStandTime,
+            .distanceCycling,
+            .flightsClimbed,
+            .pushCount,
+            .distanceSwimming
         ]
         
-        // Request authorization
+        // Body measurements
+        let bodyMeasurementTypes: [HKQuantityTypeIdentifier] = [
+            .height,
+            .bodyMass,
+            .bodyFatPercentage,
+            .leanBodyMass,
+            .bodyMassIndex,
+            .waistCircumference
+        ]
+        
+        // Vital signs
+        let vitalSignTypes: [HKQuantityTypeIdentifier] = [
+            .heartRate,
+            .restingHeartRate,
+            .walkingHeartRateAverage,
+            .heartRateVariabilitySDNN,
+            .oxygenSaturation,
+            .respiratoryRate,
+            .bloodPressureSystolic,
+            .bloodPressureDiastolic,
+            .bodyTemperature
+        ]
+        
+        // Nutrition
+        let nutritionTypes: [HKQuantityTypeIdentifier] = [
+            .dietaryEnergyConsumed,
+            .dietaryFatTotal,
+            .dietaryFatSaturated,
+            .dietaryProtein,
+            .dietaryCarbohydrates,
+            .dietarySugar,
+            .dietaryFiber,
+            .dietarySodium,
+            .dietaryCholesterol,
+            .dietaryWater,
+            .dietaryCaffeine
+        ]
+        
+        // Sleep & Mindfulness
+        let sleepTypes: [HKCategoryTypeIdentifier] = [
+            .sleepAnalysis,
+            .mindfulSession
+        ]
+        
+        // Add all quantity types
+        for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes {
+            if let type = HKQuantityType.quantityType(forIdentifier: typeId) {
+                typesToRead.insert(type)
+            }
+        }
+        
+        // Add all category types
+        for typeId in sleepTypes {
+            if let type = HKCategoryType.categoryType(forIdentifier: typeId) {
+                typesToRead.insert(type)
+            }
+        }
+        
+        // Add workout type to track all workouts
+        typesToRead.insert(HKObjectType.workoutType())
+        
+        // Request authorization with all the types
         isRequestingPermission = true
+        print("🏥 Requesting HealthKit permissions for \(typesToRead.count) data types")
         healthStore.requestAuthorization(toShare: nil, read: typesToRead) { (success, error) in
             DispatchQueue.main.async {
                 isRequestingPermission = false
                 
+                if let error = error {
+                    print("❌ HealthKit authorization error: \(error.localizedDescription)")
+                }
+                
                 // Save the user preference
                 UserDefaults.standard.set(success, forKey: "healthKitEnabled")
+                print("✅ HealthKit authorization result: \(success ? "granted" : "denied")")
                 
                 // Navigate to next screen regardless of user choice
                 navigateToNextStep = true
