@@ -133,6 +133,21 @@ class FoodManager: ObservableObject {
             // Remove from empty dates if it was there
             self.emptyDates.remove(dateKey)
         }
+        
+        // Persist logs to UserDefaults so they don't disappear after app restart
+        guard let userEmail = userEmail else { return }
+        
+        // Create a new CombinedLogsResponse with our updated combinedLogs
+        let response = CombinedLogsResponse(
+            logs: self.combinedLogs,
+            hasMore: self.hasMore,
+            totalPages: 1,
+            currentPage: 1
+        )
+        
+        // Use the existing cacheLogs function to persist to UserDefaults
+        cacheLogs(response, forPage: 1)
+        print("✅ Updated logs cache in UserDefaults")
     }
     /// Format a date as a string for cache keys
     private func dateKey(_ date: Date) -> String {
