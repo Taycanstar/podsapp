@@ -78,6 +78,26 @@ class FoodManager: ObservableObject {
     @Published var scannedImage: UIImage? = nil
     @Published var uploadProgress: Double = 0.0
     
+    // MARK: - Date-specific logs management
+    
+    /// Current selected date in dashboard view
+    @Published var selectedDate = Date()
+    
+    /// Cache of logs by date
+    private var logsCache: [String: [CombinedLog]] = [:]
+    
+    /// Loading state for date-specific logs
+    @Published var isLoadingDateLogs = false
+    
+    /// Error state for date-specific logs
+    @Published var dateLogsError: Error? = nil
+    
+    /// Logs for the currently selected date
+    @Published var currentDateLogs: [CombinedLog] = []
+    
+    /// Flag indicating if adjacent days are being preloaded
+    @Published var isPreloadingAdjacent = false
+    
     init() {
         self.networkManager = NetworkManager()
         
@@ -2715,6 +2735,115 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 
                 print("❌ Voice transcription failed: \(error.localizedDescription)")
             }
+        }
+    }
+
+    // MARK: - Date-specific logs management
+    
+    /// Fetch logs for a specific date, with option to preload adjacent days
+    /// - Parameters:
+    ///   - date: Target date to fetch logs for
+    ///   - preloadAdjacent: Whether to preload logs for adjacent days
+    func fetchLogsByDate(date: Date, preloadAdjacent: Bool = true) {
+        guard let email = userEmail else { return }
+        
+        // Format the date as a string for cache key
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        selectedDate = date
+        
+        // Check if we already have this date in cache
+        if let cachedLogs = logsCache[dateString] {
+            currentDateLogs = cachedLogs
+            print("📅 Using cached logs for \(dateString): \(cachedLogs.count) logs")
+            return
+        }
+        
+        // If not in cache, fetch from server
+        isLoadingDateLogs = true
+        dateLogsError = nil
+        
+        NetworkManagerTwo.shared.getLogsByDate(
+            userEmail: email,
+            date: date,
+            includeAdjacent: preloadAdjacent
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoadingDateLogs = false
+                
+                switch result {
+                case .success(let response):
+                    // Process logs for target date
+                    let logs = response.logs
+                    
+                    // Update cache with all logs by their date
+                    for log in logs {
+                        if let logDate = log.logDate {
+                            if self.logsCache[logDate] == nil {
+                                self.logsCache[logDate] = []
+                            }
+                            self.logsCache[logDate]?.append(log)
+                        }
+                    }
+                    
+                    // Update current date logs
+                    if let targetLogs = self.logsCache[dateString] {
+                        self.currentDateLogs = targetLogs
+                        print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
+                    } else {
+                        self.currentDateLogs = []
+                        print("📅 No logs found for \(dateString)")
+                    }
+                    
+                case .failure(let error):
+                    self.dateLogsError = error
+                    self.currentDateLogs = []
+                    print("❌ Error loading logs for \(dateString): \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    /// Navigate to the previous day
+    func goToPreviousDay() {
+        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        fetchLogsByDate(date: previousDay)
+    }
+    
+    /// Navigate to the next day
+    func goToNextDay() {
+        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        fetchLogsByDate(date: nextDay)
+    }
+    
+    /// Navigate to today
+    func goToToday() {
+        fetchLogsByDate(date: Date())
+    }
+    
+    /// Preload logs for adjacent days (one day before and after the selected date)
+    func preloadAdjacentDays() {
+        isPreloadingAdjacent = true
+        
+        // Set a flag to avoid duplicate preloading
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.isPreloadingAdjacent = false
+        }
+        
+        guard let email = userEmail else { return }
+        
+        NetworkManagerTwo.shared.getLogsByDate(
+            userEmail: email,
+            date: selectedDate,
+            includeAdjacent: true,
+            daysBefore: 1,
+            daysAfter: 1
+        ) { _ in
+            // We don't need to handle the response here as the cache is updated in the callback
         }
     }
 }

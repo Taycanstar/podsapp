@@ -328,26 +328,33 @@ enum LogType: String, Codable {
 }
 
 struct CombinedLog: Codable, Identifiable {
+    // MARK: - Common Properties
     let type: LogType
     let status: String
     var calories: Double
     let message: String
     
-    // Food-specific properties
+    // MARK: - Food-specific properties
     let foodLogId: Int?
     let food: LoggedFoodItem?
     let mealType: String?     // Breakfast, Lunch, Dinner, etc.
     
-    // Meal-specific properties
+    // MARK: - Meal-specific properties
     let mealLogId: Int?
     var meal: MealSummary?
     var mealTime: String?     // Keep mealTime for meal category
     var scheduledAt: Date?    // Add scheduledAt for the precise time
     
-    // Recipe-specific properties
+    // MARK: - Recipe-specific properties
     let recipeLogId: Int?
     var recipe: RecipeSummary?
     let servingsConsumed: Int?
+    
+    // MARK: - Date properties for date-based views
+    var logDate: String?      // The date of the log in YYYY-MM-DD format
+    var dayOfWeek: String?    // The day of the week (Monday, Tuesday, etc.)
+    
+    // MARK: - Computed Properties
     
     // Add a computed property to handle zero calories
     var displayCalories: Double {
@@ -703,3 +710,16 @@ struct NutritionGoals: Codable {
     let metabolismInsights: InsightDetails?
     let nutritionInsights: InsightDetails?
 }
+
+
+struct LogsByDateResponse: Codable {
+    var logs: [CombinedLog]
+    var targetDate: String
+    var adjacentDaysIncluded: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case logs
+        case targetDate = "target_date"
+        case adjacentDaysIncluded = "adjacent_days_included"
+    }
+} 

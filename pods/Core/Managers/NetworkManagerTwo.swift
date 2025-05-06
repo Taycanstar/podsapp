@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: Error, LocalizedError {
@@ -594,6 +594,156 @@ class NetworkManagerTwo {
             print("❌ JSON encoding error: \(error.localizedDescription)")
             completion(.failure(error))
         }
+    }
+
+    // MARK: - Logs Management
+
+    /// Fetch logs for a specific date, with option to include logs from adjacent days
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - date: The target date to fetch logs for
+    ///   - includeAdjacent: Whether to include logs from adjacent days
+    ///   - daysBefore: Number of days before the target date to include (default: 1)
+    ///   - daysAfter: Number of days after the target date to include (default: 1)
+    ///   - completion: Result callback with logs data or error
+    func getLogsByDate(
+        userEmail: String,
+        date: Date,
+        includeAdjacent: Bool = false,
+        daysBefore: Int = 1,
+        daysAfter: Int = 1,
+        completion: @escaping (Result<LogsByDateResponse, Error>) -> Void
+    ) {
+        // Format the date as YYYY-MM-DD
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        // Build the URL with query parameters
+        var urlComponents = URLComponents(string: "\(baseUrl)/get-logs-by-date/")
+        urlComponents?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "date", value: dateString),
+            URLQueryItem(name: "include_adjacent", value: includeAdjacent ? "true" : "false")
+        ]
+        
+        if includeAdjacent {
+            urlComponents?.queryItems?.append(URLQueryItem(name: "days_before", value: "\(daysBefore)"))
+            urlComponents?.queryItems?.append(URLQueryItem(name: "days_after", value: "\(daysAfter)"))
+        }
+        
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        print("📆 Fetching logs for date: \(dateString), include adjacent: \(includeAdjacent)")
+        
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("❌ Network error: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                print("❌ Server error: \(errorMessage)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                
+                // Use a more robust custom date decoding strategy
+                decoder.dateDecodingStrategy = .custom { decoder -> Date in
+                    let container = try decoder.singleValueContainer()
+                    let dateString = try container.decode(String.self)
+                    
+                    // Debug the date string we're trying to parse
+                    print("🔎 Attempting to decode date string: '\(dateString)'")
+                    
+                    // Handle empty strings
+                    if dateString.isEmpty {
+                        print("⚠️ Empty date string found, using current date")
+                        return Date()
+                    }
+                    
+                    // Try ISO8601 with various options
+                    let iso8601 = ISO8601DateFormatter()
+                    
+                    // Standard ISO8601
+                    if let date = iso8601.date(from: dateString) {
+                        print("✅ Successfully decoded with standard ISO8601: '\(dateString)'")
+                        return date
+                    }
+                    
+                    // With fractional seconds
+                    iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = iso8601.date(from: dateString) {
+                        print("✅ Successfully decoded with ISO8601 + fractional seconds: '\(dateString)'")
+                        return date
+                    }
+                    
+                    // Fall back to DateFormatter
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+                    
+                    // Try multiple formats
+                    let formats = [
+                        "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",  // With 6 fractional digits and timezone
+                        "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",       // With 6 fractional digits
+                        "yyyy-MM-dd'T'HH:mm:ss.SSS",          // With 3 fractional digits
+                        "yyyy-MM-dd'T'HH:mm:ss",              // No fractional digits
+                        "yyyy-MM-dd"                          // Just date
+                    ]
+                    
+                    for format in formats {
+                        dateFormatter.dateFormat = format
+                        if let date = dateFormatter.date(from: dateString) {
+                            print("✅ Successfully decoded with format '\(format)': '\(dateString)'")
+                            return date
+                        }
+                    }
+                    
+                    // If all else fails, throw an error
+                    throw DecodingError.dataCorruptedError(in: container, 
+                                                          debugDescription: "Expected date string to be ISO8601-formatted.")
+                }
+                
+                let response = try decoder.decode(LogsByDateResponse.self, from: data)
+                print("✅ Successfully fetched \(response.logs.count) logs for date: \(dateString)")
+                
+                DispatchQueue.main.async {
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Response data: \(responseString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+        
+        task.resume()
     }
 }
 

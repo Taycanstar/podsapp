@@ -18,190 +18,248 @@ struct DashboardView: View {
     @State private var showDatePickerSheet = false
     
     var body: some View {
-        ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Date navigation bar
-                    HStack {
-                        Spacer()
+        NavigationView {
+            ZStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Dashboard")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
                         
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                moveToDate(byDays: -1)
-                            }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.black)
+                        // Log Food button
+                        Button(action: {
+                            viewModel.showFoodContainer()
+                        }) {
+                            HStack {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Log Food")
+                                    .fontWeight(.semibold)
                             }
-                            
-                            Text(dateNavigationTitle)
-                                .font(.system(size: 18, weight: .medium))
-                            
-                            Button(action: {
-                                // Only allow moving forward if we're not on today
-                                if !isToday {
-                                    moveToDate(byDays: 1)
-                                }
-                            }) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(isToday ? .gray : .black)
-                            }
-                            .disabled(isToday)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.accentColor)
+                            .cornerRadius(10)
+                        }
+                        .padding(.horizontal)
+                        
+                        // Show food scanning card if analysis is in progress
+                        if foodManager.isScanningFood {
+                            FoodGenerationCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                                .environmentObject(foodManager)
                         }
                         
+                        // Regular food analysis card (for AI generation)
+                        else if foodManager.isAnalyzingFood {
+                            FoodAnalysisCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
+                        
+                        // Success card for food logged via camera
+                        else if foodManager.showLogSuccess {
+                            LogSuccessCard()
+                                .padding(.horizontal)
+                                .transition(.scale)
+                        }
+                        
+                        // Loading state for logs
+                        if foodManager.isLoadingDateLogs {
+                            VStack(spacing: 20) {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                Text("Loading logs...")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 30)
+                            .frame(maxWidth: .infinity)
+                        }
+                        // Error state
+                        else if let error = foodManager.dateLogsError {
+                            VStack(spacing: 20) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(.orange)
+                                Text("Error loading logs")
+                                    .font(.headline)
+                                Text(error.localizedDescription)
+                                    .font(.caption)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.secondary)
+                                Button("Try Again") {
+                                    foodManager.fetchLogsByDate(date: foodManager.selectedDate)
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                        }
+                        // Empty state
+                        else if foodManager.currentDateLogs.isEmpty {
+                            VStack(spacing: 20) {
+                                Image(systemName: "fork.knife")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.gray)
+                                Text("No logs for this day")
+                                    .font(.headline)
+                                Text("Tap the 'Log Food' button to add your meals")
+                                    .font(.caption)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 50)
+                            .frame(maxWidth: .infinity)
+                        }
+                        // Logs for the selected date
+                        else {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Logs section header
+                                Text("Today's Food")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                LazyVStack(spacing: 12) {
+                                    ForEach(foodManager.currentDateLogs) { log in
+                                        LogRow(log: log)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(minLength: 80) // Space for tab bar
+                    }
+                    .padding(.vertical)
+                    .animation(.default, value: foodManager.isLoading)
+                    .animation(.default, value: foodManager.isScanningFood)
+                }
+                
+                // AI Generation Success Toast
+                if foodManager.showAIGenerationSuccess, let food = foodManager.aiGeneratedFood {
+                    VStack{
                         Spacer()
+                        BottomPopup(message: "Food logged")
+                            .padding(.bottom, 55)
+                    }
+                    .zIndex(100)
+                    .transition(.opacity)
+                    .animation(.spring(), value: foodManager.showAIGenerationSuccess)
+                }
+                // Regular Log Success Toast 
+                else if foodManager.showLogSuccess, let item = foodManager.lastLoggedItem {
+                    VStack{
+                        Spacer()
+                        BottomPopup(message: "\(item.name) logged")
+                            .padding(.bottom, 55) //bot 
+                    }
+                    .zIndex(100)
+                    .transition(.opacity)
+                    .animation(.spring(), value: foodManager.showLogSuccess)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // Use a ToolbarItemGroup to properly center the date navigation controls
+                ToolbarItemGroup(placement: .principal) {
+                    HStack(spacing: 10) {
+                        Button(action: {
+                            foodManager.goToPreviousDay()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
                         
                         Button(action: {
                             showDatePicker()
                         }) {
-                            Image(systemName: "calendar")
+                            Text(dateNavigationTitle)
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                         }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 10)
-                    
-                    Text("Dashboard")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-                    
-                    // Log Food button
-                    Button(action: {
-                        viewModel.showFoodContainer()
-                    }) {
-                        HStack {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Log Food")
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.accentColor)
-                        .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    
-                    // Show food scanning card if analysis is in progress
-                    if foodManager.isScanningFood {
-                        FoodGenerationCard()
-                            .padding(.horizontal)
-                            .transition(.opacity)
-                            .environmentObject(foodManager)
-                    }
-                    
-                    // Regular food analysis card (for AI generation)
-                    else if foodManager.isLoading {
-                        FoodAnalysisCard()
-                            .padding(.horizontal)
-                            
-                            .transition(.opacity)
-                    }
-                    
-                    // Recent logs section
-                    if !foodManager.combinedLogs.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Recent Logs")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(Array(foodManager.combinedLogs.prefix(5)), id: \.id) { log in
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(getLogName(log))
-                                            .fontWeight(.medium)
-                                        if let date = getLogDate(log) {
-                                            Text(formatDate(date))
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    HStack {
-                                        Image(systemName: "flame.fill")
-                                            .foregroundColor(.orange)
-                                        Text("\(Int(log.displayCalories)) cal")
-                                    }
-                                    .font(.subheadline)
-                                }
-                                .padding()
-                                .background(Color("iosnp"))
-                                .cornerRadius(10)
-                                .padding(.horizontal)
+                        
+                        Button(action: {
+                            // Only allow moving forward if we're not on today
+                            if !isToday {
+                                foodManager.goToNextDay()
                             }
+                        }) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(isToday ? .gray : .primary)
                         }
+                        .disabled(isToday)
                     }
                 }
-                .padding(.vertical)
-                .animation(.default, value: foodManager.isLoading)
-                .animation(.default, value: foodManager.isScanningFood)
-            }
-            
-            // AI Generation Success Toast
-            if foodManager.showAIGenerationSuccess, let food = foodManager.aiGeneratedFood {
-                VStack{
-                    Spacer()
-                    BottomPopup(message: "Food logged")
-                        .padding(.bottom, 55)
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showDatePicker()
+                    }) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.accentColor)
+                    }
                 }
-                .zIndex(100)
-                .transition(.opacity)
-                .animation(.spring(), value: foodManager.showAIGenerationSuccess)
             }
-            // Regular Log Success Toast 
-            else if foodManager.showLogSuccess, let item = foodManager.lastLoggedItem {
-                VStack{
-                    Spacer()
-                    BottomPopup(message: "\(item.name) logged")
-                        .padding(.bottom, 55) //bot 
+            .onAppear {
+                isTabBarVisible.wrappedValue = true
+                print("📊 DashboardView appeared")
+                
+                if !viewModel.email.isEmpty {
+                    // Initialize food manager with user email
+                    foodManager.initialize(userEmail: viewModel.email)
+                    
+                    // Fetch logs for today if not already loaded
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if foodManager.currentDateLogs.isEmpty && !foodManager.isLoadingDateLogs {
+                            print("📅 Fetching logs for today")
+                            foodManager.fetchLogsByDate(date: Date())
+                        }
+                        
+                        // Preload adjacent days for better navigation experience
+                        if !foodManager.isPreloadingAdjacent {
+                            foodManager.preloadAdjacentDays()
+                        }
+                    }
+                } else {
+                    print("⚠️ User email is empty, cannot initialize food manager")
                 }
-                .zIndex(100)
-                .transition(.opacity)
-                .animation(.spring(), value: foodManager.showLogSuccess)
+            }
+            .onChange(of: foodManager.scanningFoodError) { error in
+                if let _ = error {
+                    showScanningErrorAlert = true
+                }
+            }
+            .alert("Logging Error", isPresented: $showScanningErrorAlert) {
+                Button("OK", role: .cancel) { 
+                    foodManager.scanningFoodError = nil
+                }
+            } message: {
+                Text(foodManager.scanningFoodError ?? "Failed to analyze food image")
+            }
+            .sheet(isPresented: $showDatePickerSheet, onDismiss: onDateSelected) {
+                DatePickerView(selectedDate: $selectedDate, isPresented: $showDatePickerSheet)
             }
         }
-        .onAppear {
-            isTabBarVisible.wrappedValue = true
-            // podsViewModel.initialize(email: viewModel.email)
-            print("🏠 DashboardView onAppear - initializing FoodManager")
-            foodManager.initialize(userEmail: viewModel.email)
-            
-            // Add a slight delay to ensure initialization completes first
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                print("🔄 DashboardView explicitly refreshing logs")
-                foodManager.refresh()
-            }
-        }
-        .onChange(of: foodManager.scanningFoodError) { error in
-            if let _ = error {
-                showScanningErrorAlert = true
-            }
-        }
-        .alert("Logging Error", isPresented: $showScanningErrorAlert) {
-            Button("OK", role: .cancel) { 
-                foodManager.scanningFoodError = nil
-            }
-        } message: {
-            Text(foodManager.scanningFoodError ?? "Failed to analyze food image")
-        }
-        .sheet(isPresented: $showDatePickerSheet) {
-            DatePickerView(selectedDate: $selectedDate, isPresented: $showDatePickerSheet)
-        }
+        .navigationViewStyle(StackNavigationViewStyle()) // Use stack style to prevent side bar on iPad
     }
     
     // Date navigation properties
     private var isToday: Bool {
-        Calendar.current.isDateInToday(selectedDate)
+        Calendar.current.isDateInToday(foodManager.selectedDate)
     }
     
     private var isYesterday: Bool {
-        Calendar.current.isDateInYesterday(selectedDate)
+        Calendar.current.isDateInYesterday(foodManager.selectedDate)
     }
     
     private var dateNavigationTitle: String {
@@ -211,8 +269,8 @@ struct DashboardView: View {
             return "Yesterday"
         } else {
             let formatter = DateFormatter()
-            formatter.dateFormat = "EEEE, MMM d, yyyy"
-            return formatter.string(from: selectedDate)
+            formatter.dateFormat = "EEEE, MMM d"
+            return formatter.string(from: foodManager.selectedDate)
         }
     }
     
@@ -252,7 +310,13 @@ struct DashboardView: View {
     
     // Show date picker sheet
     private func showDatePicker() {
+        selectedDate = foodManager.selectedDate
         showDatePickerSheet = true
+    }
+    
+    // Update view after picking a date from the date picker
+    private func onDateSelected() {
+        foodManager.fetchLogsByDate(date: selectedDate)
     }
 }
 
@@ -386,3 +450,163 @@ struct DatePickerView: View {
         }
     }
 }
+
+// MARK: - LogRow View
+struct LogRow: View {
+    let log: CombinedLog
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            // Icon based on meal type
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.1))
+                    .frame(width: 45, height: 45)
+                
+                Image(systemName: mealTypeIcon)
+                    .font(.system(size: 18))
+                    .foregroundColor(.accentColor)
+            }
+            
+            // Food/Meal info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayName)
+                    .font(.system(size: 16, weight: .medium))
+                    .lineLimit(1)
+                
+                HStack(spacing: 8) {
+                    if let mealType = getMealTypeLabel() {
+                        Text(mealType)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if let mealType = getMealTypeLabel(), let timeLabel = getTimeLabel() {
+                        Text("•")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if let timeLabel = getTimeLabel() {
+                        Text(timeLabel)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Calories
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
+                Text("\(Int(log.displayCalories))")
+                    .font(.system(size: 15, weight: .medium))
+            }
+        }
+        .padding(12)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+    
+    // Helper properties
+    private var displayName: String {
+        switch log.type {
+        case .food:
+            return log.food?.displayName ?? "Food"
+        case .meal:
+            return log.meal?.title ?? "Meal"
+        case .recipe:
+            return log.recipe?.title ?? "Recipe"
+        }
+    }
+    
+    private var mealTypeIcon: String {
+        let mealType = log.mealType?.lowercased() ?? ""
+        
+        switch mealType {
+        case "breakfast":
+            return "sunrise.fill"
+        case "lunch":
+            return "sun.max.fill"
+        case "dinner":
+            return "moon.stars.fill"
+        case "snack":
+            return "carrot.fill"
+        default:
+            return "fork.knife"
+        }
+    }
+    
+    private func getMealTypeLabel() -> String? {
+        return log.mealType
+    }
+    
+    private func getTimeLabel() -> String? {
+        guard let date = log.scheduledAt else { return nil }
+        
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - LogSuccessCard View
+struct LogSuccessCard: View {
+    @EnvironmentObject var foodManager: FoodManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 20))
+                
+                Text("Food Logged")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text("New")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.1))
+                    .foregroundColor(.accentColor)
+                    .cornerRadius(12)
+            }
+            
+            // Success content
+            if let (name, calories) = foodManager.lastLoggedItem {
+                HStack {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(name)
+                            .font(.system(size: 16, weight: .medium))
+                        
+                        Text("Added to your food log")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+                        Text("\(Int(calories))")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+}
+
