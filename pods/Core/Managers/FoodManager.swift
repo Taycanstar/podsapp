@@ -1,6 +1,21 @@
 import Foundation
 import SwiftUI
-
+// Extension to convert Food to LoggedFoodItem
+extension Food {
+    var asLoggedFoodItem: LoggedFoodItem {
+        return LoggedFoodItem(
+            fdcId: self.fdcId,
+            displayName: self.displayName,
+            calories: self.calories ?? 0,
+            servingSizeText: self.servingSizeText,
+            numberOfServings: self.numberOfServings ?? 1,
+            brandText: self.brandText,
+            protein: self.protein,
+            carbs: self.carbs,
+            fat: self.fat
+        )
+    }
+}
 class FoodManager: ObservableObject {
     @Published var loggedFoods: [LoggedFood] = []
     @Published var isLoading = false
@@ -16,7 +31,6 @@ class FoodManager: ObservableObject {
     @Published var showMealLoggedToast = false
     @Published var showRecipeLoggedToast = false
     @Published var recentlyAddedFoodIds: Set<Int> = []
-
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
     
@@ -30,7 +44,6 @@ class FoodManager: ObservableObject {
     private var userEmail: String?
     private var currentPage = 1
     private let pageSize = 20
-
     // Add these properties
     @Published var meals: [Meal] = []
     @Published var isLoadingMealPage = false
@@ -92,19 +105,44 @@ class FoodManager: ObservableObject {
     /// Dates for which we've attempted to load but found no logs
     private var emptyDates: Set<String> = []
     
+    // MARK: - Helper methods for consistent food log updates
+    /// Helper method to ensure a new food log appears in today's logs immediately
+    /// - Parameter log: The CombinedLog object to add to today's logs
+    private func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
+        // Add to the beginning of the main logs list
+        if self.combinedLogs.isEmpty {
+            self.combinedLogs = [log]
+        } else {
+            self.combinedLogs.insert(log, at: 0)
+        }
+        
+        // Update currentDateLogs if the user is viewing today
+        if Calendar.current.isDateInToday(self.selectedDate) {
+            // Format today's date for cache key
+            let dateKey = self.dateKey(Date())
+            
+            // Add the log to today's logs in cache
+            if self.logsCache[dateKey] == nil {
+                self.logsCache[dateKey] = []
+            }
+            self.logsCache[dateKey]?.append(log)
+            
+            // Update the displayed logs
+            self.currentDateLogs = self.logsCache[dateKey] ?? []
+            
+            // Remove from empty dates if it was there
+            self.emptyDates.remove(dateKey)
+        }
+    }
     /// Format a date as a string for cache keys
     private func dateKey(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
-    
-    /// Check if a date is adjacent to the currently selected date
-    private func isAdjacentToSelectedDate(_ date: Date) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.day], from: selectedDate, to: date)
-        guard let dayDifference = components.day else { return false }
-        return abs(dayDifference) <= 1
+    /// Format a date as a string for cache keys (alternative signature)
+    private func dateKey(for date: Date) -> String {
+        return dateKey(date)
     }
     
     /// Loading state for date-specific logs
@@ -119,11 +157,16 @@ class FoodManager: ObservableObject {
     /// Flag indicating if adjacent days are being preloaded
     @Published var isPreloadingAdjacent = false
     
+    // Add the new property
+    @Published var isLoggingFood = false
+    
+    // Add errorMessage property after other published properties, around line 85
+    @Published var errorMessage: String? = nil
+    
     init() {
         self.networkManager = NetworkManager()
         
     }
-
     
     
     func initialize(userEmail: String) {
@@ -137,7 +180,6 @@ class FoodManager: ObservableObject {
         resetAndFetchLogs()
         resetAndFetchUserFoods()
     }
-
     func trackRecentlyAdded(foodId: Int) {
     recentlyAddedFoodIds.insert(foodId)
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -171,7 +213,6 @@ class FoodManager: ObservableObject {
         // Update refresh timestamp
         lastRefreshTime = Date()
     }
-
     private func resetAndFetchLogs() {
          
         // Reset state
@@ -208,7 +249,6 @@ class FoodManager: ObservableObject {
         self.hasMore = decodedResponse.hasMore
     }
 }
-
     
     private func cacheFoods(_ response: FoodLogsResponse, forPage page: Int) {
         guard let userEmail = userEmail else { return }
@@ -216,14 +256,12 @@ class FoodManager: ObservableObject {
             UserDefaults.standard.set(encoded, forKey: "logged_foods_\(userEmail)_page_\(page)")
         }
     }
-
     private func cacheLogs(_ response: CombinedLogsResponse, forPage page: Int) {
     guard let userEmail = userEmail else { return }
     if let encoded = try? JSONEncoder().encode(response) {
         UserDefaults.standard.set(encoded, forKey: "combined_logs_\(userEmail)_page_\(page)")
     }
 }
-
 private func loadCachedLogs() -> Bool {
     guard let userEmail = userEmail else { return false }
     
@@ -245,7 +283,6 @@ private func loadCachedLogs() -> Bool {
     return false
 }
     
-
 private func removeDuplicates(from logs: [LoggedFood]) -> [LoggedFood] {
     var seen = Set<Int>()
     var uniqueLogs: [LoggedFood] = []
@@ -257,7 +294,6 @@ private func removeDuplicates(from logs: [LoggedFood]) -> [LoggedFood] {
     }
     return uniqueLogs
 }
-
 private func uniqueLogs(from logs: [LoggedFood]) -> [LoggedFood] {
     // First, sort the logs by their logged food id descending (assuming higher id is more recent)
     let sortedLogs = logs.sorted { $0.foodLogId > $1.foodLogId }
@@ -272,7 +308,6 @@ private func uniqueLogs(from logs: [LoggedFood]) -> [LoggedFood] {
     }
     return unique
 }
-
 func loadMoreFoods(refresh: Bool = false) {
     guard let email = userEmail else { return }
     guard !isLoadingFood else { return }
@@ -280,7 +315,6 @@ func loadMoreFoods(refresh: Bool = false) {
     let pageToLoad = refresh ? 1 : currentPage
     isLoadingFood = true
     error = nil
-
     networkManager.getFoodLogs(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
@@ -307,7 +341,6 @@ func loadMoreFoods(refresh: Bool = false) {
         }
     }
 }
-
  func loadMoreLogs(refresh: Bool = false) {
     guard let email = userEmail else {
         print("❌ FoodManager.loadMoreLogs() - No user email available")
@@ -322,7 +355,6 @@ func loadMoreFoods(refresh: Bool = false) {
     print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email), currentPage: \(currentPage)")
     isLoadingLogs = true
     error = nil
-
     networkManager.getCombinedLogs(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
@@ -384,7 +416,6 @@ func loadMoreFoods(refresh: Bool = false) {
         }
     }
 }
-
     
     // New refresh function that ensures logs are loaded
     func refresh() {
@@ -408,6 +439,17 @@ func loadMoreFoods(refresh: Bool = false) {
         print("🧹 FoodManager.refresh() - Clearing logs cache")
         clearLogsCache()
         clearUserFoodsCache()
+        
+        // If we're viewing today, clear today's cache to force a refresh
+        if Calendar.current.isDateInToday(selectedDate) {
+            let todayKey = dateKey(Date())
+            logsCache.removeValue(forKey: todayKey)
+            emptyDates.remove(todayKey)
+            loadingDates.remove(todayKey)
+            
+            // Force reload of today's logs specifically
+            fetchLogsByDate(date: Date(), preloadAdjacent: false)
+        }
         
         // Force UI update before fetching new data
         objectWillChange.send()
@@ -552,7 +594,6 @@ func loadMoreFoods(refresh: Bool = false) {
         // Then fetch from server with animation
         loadUserFoods(refresh: true)
     }
-
     func logFood(
     email: String,
     food: Food,
@@ -589,38 +630,33 @@ func loadMoreFoods(refresh: Bool = false) {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
                 
-                // If the food already exists in our list, just update and move it to the top
-                if let index = existingIndex {
-                    // Remove it from its current position
-                    let updatedLog = self.combinedLogs.remove(at: index)
-                    // Insert at the top
-                    withAnimation(.spring()) {
-                        self.combinedLogs.insert(updatedLog, at: 0)
-                    }
-                } else {
-                    // Create a new CombinedLog from the logged food
-                    let newCombinedLog = CombinedLog(
-                        type: .food,
-                        status: "success",
-                        calories: Double(loggedFood.food.calories),
-                        message: "\(loggedFood.food.displayName) - \(loggedFood.mealType)",
-                        foodLogId: loggedFood.foodLogId,
-                        food: loggedFood.food,
-                        mealType: loggedFood.mealType,
-                        mealLogId: nil,
-                        meal: nil,
-                        mealTime: nil,
-                        scheduledAt: nil,
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil
-                    )
-                    
-                    // Insert at the top with animation
-                    withAnimation(.spring()) {
-                        self.combinedLogs.insert(newCombinedLog, at: 0)
-                    }
-                }
+                // Create a new CombinedLog from the logged food
+                let combinedLog = CombinedLog(
+                    type: .food,
+                    status: "success",
+                    calories: Double(loggedFood.food.calories),
+                    message: "\(loggedFood.food.displayName) - \(loggedFood.mealType)",
+                    foodLogId: loggedFood.foodLogId,
+                    food: loggedFood.food,
+                    mealType: loggedFood.mealType,
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: nil,
+                    scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil
+                )
+                
+                // Add the log to today's logs using the helper method
+                self.addLogToTodayAndUpdateDashboard(combinedLog)
+                
+                // Track the food in recently added - fdcId is non-optional
+                self.lastLoggedFoodId = food.fdcId
+                self.trackRecentlyAdded(foodId: food.fdcId)
+                
+                // Still refresh for completeness
+                self.refresh()
                 
                 // Set data for success toast in dashboard
                 self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
@@ -669,7 +705,6 @@ func loadMoreFoods(refresh: Bool = false) {
         }
     }
 }
-
 // Helper method to update the cache with the current combinedLogs array
 private func updateCombinedLogsCache() {
     guard let userEmail = userEmail else { return }
@@ -685,7 +720,6 @@ private func updateCombinedLogsCache() {
     // Cache the first page
     cacheLogs(response, forPage: 1)
 }
-
     
     func loadMoreIfNeeded(food: LoggedFood) {
         guard let index = loggedFoods.firstIndex(where: { $0.id == food.id }),
@@ -778,7 +812,6 @@ func createMeal(
         return sum + ((food.fat ?? 0) * servings)
     }
     
-
     
     networkManager.createMeal(
         userEmail: email,
@@ -821,7 +854,6 @@ func createMeal(
         }
     }
 }
-
 private func clearMealCache() {
     guard let userEmail = userEmail else { return }
     
@@ -832,7 +864,6 @@ private func clearMealCache() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
     }
 }
-
 private func resetAndFetchMeals() {
     print("🍲 FoodManager: Reset and fetch meals called")
     currentMealPage = 1
@@ -869,7 +900,6 @@ private func resetAndFetchMeals() {
     // Update refresh timestamp
     lastRefreshTime = Date()
 }
-
 // Load cached meals
 private func loadCachedMeals() {
     guard let userEmail = userEmail else { return }
@@ -884,7 +914,6 @@ private func loadCachedMeals() {
         self.hasMoreMeals = decodedResponse.hasMore
     }
 }
-
 // Cache meals
 private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
   
@@ -904,7 +933,6 @@ private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
         UserDefaults.standard.set(encoded, forKey: "meals_\(userEmail)_page_\(page)")
     }
 }
-
 // Update loadMoreMeals to include a completion handler
 func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
     guard let email = userEmail else { 
@@ -919,7 +947,6 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
     let pageToLoad = refresh ? 1 : currentMealPage
     isLoadingMeals = true
     error = nil
-
     networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { 
@@ -959,7 +986,6 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
         }
     }
 }
-
 // Load more meals if needed
 func loadMoreMealsIfNeeded(meal: Meal) {
     guard let index = meals.firstIndex(where: { $0.id == meal.id }),
@@ -969,7 +995,6 @@ func loadMoreMealsIfNeeded(meal: Meal) {
     }
     loadMoreMeals()
 }
-
 func refreshMeals() {
     
     // Clear the meal cache
@@ -990,7 +1015,6 @@ func refreshMeals() {
         self.objectWillChange.send()
     }
 }
-
 // Log a meal (from meal history)
 func logMeal(
     meal: Meal,
@@ -1016,7 +1040,6 @@ func logMeal(
     let existingIndex = self.combinedLogs.firstIndex(where: { 
         ($0.type == .meal && $0.meal?.mealId == meal.id)
     })
-
     
     networkManager.logMeal(
         userEmail: email,
@@ -1124,7 +1147,6 @@ func logMeal(
         }
     }
 }
-
 func prefetchMealImages() {
     for meal in meals {
         if let imageUrlString = meal.image, let imageUrl = URL(string: imageUrlString) {
@@ -1136,7 +1158,6 @@ func prefetchMealImages() {
         }
     }
 }
-
 // Simple helper to ensure no duplicate log IDs
 private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
     var seenFoodLogIds = Set<Int>()
@@ -1172,7 +1193,6 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
     
     return uniqueLogs
 }
-
 func updateMeal(
     meal: Meal,
     foods: [Food] = [],
@@ -1368,7 +1388,6 @@ func updateMeal(
         }
     }
 }
-
 // Helper method to recreate a CombinedLog with an updated meal
 private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: MealSummary) throws -> CombinedLog {
     return CombinedLog(
@@ -1388,7 +1407,6 @@ private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: M
         servingsConsumed: originalLog.servingsConsumed
     )
 }
-
 // After the resetAndFetchRecipes method
 private func resetAndFetchRecipes() {
     print("🍛 FoodManager: Reset and fetch recipes called")
@@ -1415,7 +1433,6 @@ private func resetAndFetchRecipes() {
     // Update refresh timestamp
     lastRefreshTime = Date()
 }
-
 private func loadCachedRecipes() {
     guard let userEmail = userEmail else { return }
     
@@ -1494,14 +1511,12 @@ private func loadCachedRecipes() {
         print("ℹ️ No cached recipes found for user \(userEmail)")
     }
 }
-
 private func cacheRecipes(_ response: RecipesResponse, forPage page: Int) {
     guard let userEmail = userEmail else { return }
     if let encoded = try? JSONEncoder().encode(response) {
         UserDefaults.standard.set(encoded, forKey: "recipes_\(userEmail)_page_\(page)")
         }
     }
-
 func loadMoreRecipes(refresh: Bool = false) {
     guard let email = userEmail else { return }
     guard !isLoadingRecipePage else { return }
@@ -1533,7 +1548,6 @@ func loadMoreRecipes(refresh: Bool = false) {
         }
     }
 }
-
 // Add this function after createMeal
 func createRecipe(
     title: String,
@@ -1614,7 +1628,6 @@ func createRecipe(
         }
     }
 }
-
 // Add this function after logMeal
 func logRecipe(
     recipe: Recipe,
@@ -1678,7 +1691,6 @@ func logRecipe(
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.showLogSuccess = false
                 }
-
                 self.updateCombinedLogsCache()
                 
                 // Call completion handlers
@@ -1693,7 +1705,6 @@ func logRecipe(
         }
     }
 }
-
 // Add this function after updateMeal
 func updateRecipe(
     recipe: Recipe,
@@ -1839,7 +1850,6 @@ func updateRecipe(
         }
     }
 }
-
 // Update the generateMacrosWithAI method
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     // Set analyzing flag AND isLoading flag to show card in DashboardView
@@ -1859,18 +1869,23 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         self.analysisStage = (self.analysisStage + 1) % 4
     }
     
+    // Call the network manager to generate macros
     networkManager.generateMacrosWithAI(foodDescription: foodDescription, mealType: mealType) { [weak self] result in
-        guard let self = self else {
+        guard let self = self else { 
             timer.invalidate()
-            return
+            return 
         }
         
-        // Stop the analysis animation timer
+        // Stop the timer
         timer.invalidate()
         
         switch result {
         case .success(let loggedFood):
-            // Add to the beginning of the list
+            print("✅ AI macros generated successfully: \(loggedFood.food.displayName)")
+            self.aiGeneratedFood = loggedFood.food
+            self.lastLoggedItem = (name: loggedFood.food.displayName, calories: loggedFood.food.calories ?? 0)
+            
+            // Create a CombinedLog object for the new food
             let combinedLog = CombinedLog(
                 type: .food,
                 status: loggedFood.status,
@@ -1882,24 +1897,18 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
                 mealLogId: nil,
                 meal: nil,
                 mealTime: nil,
-                scheduledAt: nil,
+                scheduledAt: Date(), // Set to current date to make it appear in today's logs
                 recipeLogId: nil,
                 recipe: nil,
                 servingsConsumed: nil
             )
             
-            if self.combinedLogs.isEmpty {
-                self.combinedLogs = [combinedLog]
-            } else {
-                self.combinedLogs.insert(combinedLog, at: 0)
-            }
+            // Add the log to today's logs using the helper method
+            self.addLogToTodayAndUpdateDashboard(combinedLog)
             
-            // Track the recently added food
+            // Track the food in recently added - fdcId is non-optional
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
-            
-            // Save the generated food for the toast
-            self.aiGeneratedFood = loggedFood.food
             
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -1938,7 +1947,6 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         }
     }
 }
-
 func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
     guard let email = userEmail else {
         completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
@@ -2002,7 +2010,6 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
         }
     }
 }
-
 func generateFoodWithAI(
     foodDescription: String,
     completion: @escaping (Result<Food, Error>) -> Void
@@ -2058,10 +2065,8 @@ func generateFoodWithAI(
         }
     }
 }
-
 // Add the createManualFood function after the generateFoodWithAI function
 // This is around line 1879 after the last function in the file
-
 func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
     // Set generating food flag
     isGeneratingFood = true
@@ -2106,9 +2111,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
 }
-
 // Add these functions to the FoodManager class to handle deletion
-
     // Delete a food log
     func deleteFoodLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
         guard let email = userEmail else {
@@ -2264,7 +2267,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Food not found"])))
         }
     }
-
     // Delete a meal log
     func deleteMealLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
         guard let email = userEmail else {
@@ -2326,7 +2328,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Meal log not found"])))
         }
     }
-
     // Function to analyze food image and log it
     func analyzeFoodImage(image: UIImage, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
         // Update state to show loading in dashboard
@@ -2421,6 +2422,44 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         self.scannedImage = nil
                     }
                     
+                    // Create a CombinedLog for the scanned food
+                    if let loggedFood = responseData["loggedFood"] as? [String: Any],
+                       let status = loggedFood["status"] as? String,
+                       let loggedCalories = loggedFood["calories"] as? Double,
+                       let message = loggedFood["message"] as? String,
+                       let foodLogId = loggedFood["foodLogId"] as? Int {
+                        
+                        // Create a Food object from the food data
+                        if let foodData = try? JSONSerialization.data(withJSONObject: food),
+                           let foodObj = try? JSONDecoder().decode(Food.self, from: foodData) {
+                           
+                            // Create a combined log and add it to today's logs
+                            let combinedLog = CombinedLog(
+                                type: .food,
+                                status: status,
+                                calories: loggedCalories,
+                                message: message,
+                                foodLogId: foodLogId,
+                                food: foodObj.asLoggedFoodItem,
+                                mealType: loggedFood["mealType"] as? String ?? "Lunch",
+                                mealLogId: nil,
+                                meal: nil,
+                                mealTime: nil,
+                                scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                                recipeLogId: nil,
+                                recipe: nil,
+                                servingsConsumed: nil
+                            )
+                            
+                            // Add the log to today's logs using the helper method
+                            self.addLogToTodayAndUpdateDashboard(combinedLog)
+                            
+                            // Track the food in recently added
+                            self.lastLoggedFoodId = foodObj.fdcId
+                            self.trackRecentlyAdded(foodId: foodObj.fdcId)
+                        }
+                    }
+                    
                     // 4. Refresh logs to show the new food
                     self.refresh()
                     
@@ -2455,7 +2494,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
-
     // Add this function to handle the barcode scanning logic
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
         // Set scanning state for UI feedback
@@ -2486,6 +2524,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             switch result {
             case .success(let food):
                 // Success - show success toast
+                self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
                 self.showLogSuccess = true
                 
@@ -2498,11 +2537,37 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.showLogSuccess = false
                 }
                 
-                // Refresh logs to show the new food
+                // Create a CombinedLog for the barcode-scanned food
+                let combinedLog = CombinedLog(
+                    type: .food,
+                    status: "active",  // Default status for logged foods
+                    calories: food.calories ?? 0,
+                    message: "\(food.displayName) - Lunch",
+                    foodLogId: Int.random(in: 10000...999999),  // Temporary ID until refresh fetches the real one
+                    food: food.asLoggedFoodItem,
+                    mealType: "Lunch",  // Default meal type used in the barcode API call
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: nil,
+                    scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil
+                )
+                
+                // Add the log to today's logs using the helper method
+                self.addLogToTodayAndUpdateDashboard(combinedLog)
+                
+                // Track the food in recently added
+                self.lastLoggedFoodId = food.fdcId
+                self.trackRecentlyAdded(foodId: food.fdcId)
+                
+                
+                
+                // Still refresh for completeness
                 self.refresh()
                 
                 completion(true, nil)
-                
             case .failure(let error):
                 // Update scanner state on failure
                 self.isScanningFood = false
@@ -2525,9 +2590,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
-
     // MARK: - Voice Input Processing
-
     func processVoiceInput(audioData: Data) {
         // Set analyzing flag - same as when generating macros with AI
         isAnalyzingFood = true
@@ -2600,7 +2663,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
-
     // Helper method to transcribe audio using the NetworkManager
     private func transcribeAudio(audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
         // Use the enhanced transcription endpoint for more accurate food logging
@@ -2608,7 +2670,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             completion(result)
         }
     }
-
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
     func processVoiceRecording(audioData: Data) {
@@ -2669,7 +2730,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             return
                         }
                         
-                        // Add to the beginning of the list
+                        // Create a CombinedLog for the voice-recorded food
                         let combinedLog = CombinedLog(
                             type: .food,
                             status: loggedFood.status,
@@ -2681,19 +2742,16 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             mealLogId: nil,
                             meal: nil,
                             mealTime: nil,
-                            scheduledAt: nil,
+                            scheduledAt: Date(), // Set to current date to make it appear in today's logs
                             recipeLogId: nil,
                             recipe: nil,
                             servingsConsumed: nil
                         )
                         
-                        if self.combinedLogs.isEmpty {
-                            self.combinedLogs = [combinedLog]
-                        } else {
-                            self.combinedLogs.insert(combinedLog, at: 0)
-                        }
+                        // Add the log to today's logs using the helper method
+                        self.addLogToTodayAndUpdateDashboard(combinedLog)
                         
-                        // Track the recently added food
+                        // Track the food in recently added
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
@@ -2758,7 +2816,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
         }
     }
-
     // MARK: - Date-specific logs management
     
     /// Fetch logs for a specific date, with option to preload adjacent days
@@ -2982,6 +3039,108 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 case .failure(let error):
                     print("❌ Error preloading adjacent days: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+    /// Check if a date is adjacent to the currently selected date
+    private func isAdjacentToSelectedDate(_ date: Date) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.day], from: selectedDate, to: date)
+        guard let dayDifference = components.day else { return false }
+        return abs(dayDifference) <= 1
+    }
+    func finishLogging(food: Food, mealType: String, completion: @escaping () -> Void = {}) {
+        print("🍽️ Finalizing food logging for \(food.displayName) as \(mealType)")
+        
+        guard let email = userEmail else { 
+            completion()
+            return 
+        }
+        
+        self.isLoggingFood = true
+        self.lastLoggedFoodId = food.fdcId
+        
+        print("📡 Sending log request to server for \(food.displayName)")
+        // Call the correct NetworkManager logFood method with the required parameters
+        networkManager.logFood(
+            userEmail: email,
+            food: food,
+            mealType: mealType,
+            servings: 1,
+            date: Date()
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoggingFood = false
+                
+                // Check if this food already exists in our logs
+                let existingIndex = self.combinedLogs.firstIndex(where: {
+                    ($0.type == .food && $0.food?.fdcId == food.fdcId)
+                })
+                
+                switch result {
+                case .success(let loggedFood):
+                    print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
+                    
+                    // Create a new CombinedLog from the logged food
+                    let combinedLog = CombinedLog(
+                        type: .food,
+                        status: "success",
+                        calories: Double(loggedFood.food.calories),
+                        message: "\(loggedFood.food.displayName) - \(loggedFood.mealType)",
+                        foodLogId: loggedFood.foodLogId,
+                        food: loggedFood.food,
+                        mealType: loggedFood.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
+                    )
+                    
+                    // Add the log to today's logs using the helper method
+                    self.addLogToTodayAndUpdateDashboard(combinedLog)
+                    
+                    // Track the food in recently added - fdcId is non-optional
+                    self.lastLoggedFoodId = food.fdcId
+                    self.trackRecentlyAdded(foodId: food.fdcId)
+                    
+                    // Still refresh for completeness
+                    self.refresh()
+                    
+                    // Set data for success toast in dashboard
+                    self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
+                    self.showLogSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showLogSuccess = false
+                    }
+                    
+                    // Clear the lastLoggedFoodId after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            // Only clear if it still matches the food we logged
+                            if self.lastLoggedFoodId == food.fdcId {
+                                self.lastLoggedFoodId = nil
+                            }
+                        }
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to log food: \(error.localizedDescription)")
+                    
+                    // Display error message
+                    self.errorMessage = "Failed to log food: \(error.localizedDescription)"
+                   
+                    
+                    // Clear the lastLoggedFoodId immediately on error
+                    self.lastLoggedFoodId = nil
+                }
+                
+                // Call the completion handler
+                completion()
             }
         }
     }
