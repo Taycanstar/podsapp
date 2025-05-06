@@ -222,12 +222,11 @@ struct DashboardView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         if foodManager.currentDateLogs.isEmpty && !foodManager.isLoadingDateLogs {
                             print("📅 Fetching logs for today")
+                            // This will automatically preload adjacent days
                             foodManager.fetchLogsByDate(date: Date())
-                        }
-                        
-                        // Preload adjacent days for better navigation experience
-                        if !foodManager.isPreloadingAdjacent {
-                            foodManager.preloadAdjacentDays()
+                        } else {
+                            // If today's logs are already loaded, make sure we preload adjacent days
+                            foodManager.preloadAdjacentDays(silently: true)
                         }
                     }
                 } else {

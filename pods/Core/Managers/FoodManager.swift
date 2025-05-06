@@ -86,6 +86,27 @@ class FoodManager: ObservableObject {
     /// Cache of logs by date
     private var logsCache: [String: [CombinedLog]] = [:]
     
+    /// Flag to track which dates we've preloaded or are currently loading
+    private var loadingDates: Set<String> = []
+    
+    /// Dates for which we've attempted to load but found no logs
+    private var emptyDates: Set<String> = []
+    
+    /// Format a date as a string for cache keys
+    private func dateKey(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+    
+    /// Check if a date is adjacent to the currently selected date
+    private func isAdjacentToSelectedDate(_ date: Date) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.day], from: selectedDate, to: date)
+        guard let dayDifference = components.day else { return false }
+        return abs(dayDifference) <= 1
+    }
+    
     /// Loading state for date-specific logs
     @Published var isLoadingDateLogs = false
     
@@ -2747,46 +2768,93 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     func fetchLogsByDate(date: Date, preloadAdjacent: Bool = true) {
         guard let email = userEmail else { return }
         
-        // Format the date as a string for cache key
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
-        
+        // Update the selected date right away for UI
         selectedDate = date
+        
+        // Get date string for cache key
+        let dateString = dateKey(date)
         
         // Check if we already have this date in cache
         if let cachedLogs = logsCache[dateString] {
+            // If we have logs in cache, use them immediately
             currentDateLogs = cachedLogs
             print("📅 Using cached logs for \(dateString): \(cachedLogs.count) logs")
+            
+            // Still preload adjacent days in the background if requested
+            if preloadAdjacent {
+                preloadAdjacentDays(silently: true)
+            }
             return
         }
         
-        // If not in cache, fetch from server
-        isLoadingDateLogs = true
-        dateLogsError = nil
+        // Check if this is a known empty date
+        if emptyDates.contains(dateString) {
+            currentDateLogs = []
+            print("📅 Known empty date: \(dateString), showing empty state")
+            
+            // Still preload adjacent days in the background if requested
+            if preloadAdjacent {
+                preloadAdjacentDays(silently: true)
+            }
+            return
+        }
         
+        // If we're already loading this date, don't start another request
+        if loadingDates.contains(dateString) {
+            print("📅 Already loading logs for \(dateString), waiting for completion")
+            return
+        }
+        
+        // Track that we're loading this date
+        loadingDates.insert(dateString)
+        
+        // Only show the loading indicator if this isn't an adjacent date
+        // or we don't already have the adjacent day preloaded
+        let showLoading = !isAdjacentToSelectedDate(date) || logsCache[dateString] == nil
+        
+        if showLoading {
+            isLoadingDateLogs = true
+            dateLogsError = nil
+        }
+        
+        // Load from server
         NetworkManagerTwo.shared.getLogsByDate(
             userEmail: email,
             date: date,
-            includeAdjacent: preloadAdjacent
+            includeAdjacent: preloadAdjacent,
+            daysBefore: 1,
+            daysAfter: 1
         ) { [weak self] result in
             guard let self = self else { return }
             
+            // Mark this date as no longer loading
+            self.loadingDates.remove(dateString)
+            
             DispatchQueue.main.async {
+                // Always hide the loader when we get a response
                 self.isLoadingDateLogs = false
                 
                 switch result {
                 case .success(let response):
-                    // Process logs for target date
+                    // Process logs for all dates
                     let logs = response.logs
                     
+                    // Group logs by date
+                    let logsByDate = Dictionary(grouping: logs) { log in
+                        log.logDate ?? ""
+                    }
+                    
                     // Update cache with all logs by their date
-                    for log in logs {
-                        if let logDate = log.logDate {
-                            if self.logsCache[logDate] == nil {
-                                self.logsCache[logDate] = []
+                    for (logDate, dateLogs) in logsByDate {
+                        if !logDate.isEmpty {
+                            self.logsCache[logDate] = dateLogs
+                            
+                            // If a date has no logs, add it to emptyDates
+                            if dateLogs.isEmpty {
+                                self.emptyDates.insert(logDate)
+                            } else {
+                                self.emptyDates.remove(logDate)
                             }
-                            self.logsCache[logDate]?.append(log)
                         }
                     }
                     
@@ -2796,6 +2864,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
                     } else {
                         self.currentDateLogs = []
+                        self.emptyDates.insert(dateString)
                         print("📅 No logs found for \(dateString)")
                     }
                     
@@ -2811,12 +2880,24 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     /// Navigate to the previous day
     func goToPreviousDay() {
         let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        let previousDayString = dateKey(previousDay)
+        
+        // Check if we have the previous day in cache or it's a known empty date
+        let isCached = logsCache[previousDayString] != nil || emptyDates.contains(previousDayString)
+        
+        // Fetch logs with or without loading indicator based on cache status
         fetchLogsByDate(date: previousDay)
     }
     
     /// Navigate to the next day
     func goToNextDay() {
         let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        let nextDayString = dateKey(nextDay)
+        
+        // Check if we have the next day in cache or it's a known empty date
+        let isCached = logsCache[nextDayString] != nil || emptyDates.contains(nextDayString)
+        
+        // Fetch logs with or without loading indicator based on cache status
         fetchLogsByDate(date: nextDay)
     }
     
@@ -2826,7 +2907,12 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     }
     
     /// Preload logs for adjacent days (one day before and after the selected date)
-    func preloadAdjacentDays() {
+    func preloadAdjacentDays(silently: Bool = false) {
+        // If already preloading, don't start another request
+        if isPreloadingAdjacent && silently {
+            return
+        }
+        
         isPreloadingAdjacent = true
         
         // Set a flag to avoid duplicate preloading
@@ -2836,14 +2922,67 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         
         guard let email = userEmail else { return }
         
+        // Calculate dates to preload
+        let calendar = Calendar.current
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        let previousDayString = dateKey(previousDay)
+        let nextDayString = dateKey(nextDay)
+        
+        // Skip if we already have both adjacent days or are loading them
+        if (logsCache[previousDayString] != nil || emptyDates.contains(previousDayString) || loadingDates.contains(previousDayString)) &&
+           (logsCache[nextDayString] != nil || emptyDates.contains(nextDayString) || loadingDates.contains(nextDayString)) {
+            print("📅 Adjacent days already cached or loading, skipping preload")
+            return
+        }
+        
+        print("📅 Preloading adjacent days silently: \(silently)")
+        
+        // Track that we're loading these dates
+        loadingDates.insert(previousDayString)
+        loadingDates.insert(nextDayString)
+        
         NetworkManagerTwo.shared.getLogsByDate(
             userEmail: email,
             date: selectedDate,
             includeAdjacent: true,
             daysBefore: 1,
             daysAfter: 1
-        ) { _ in
-            // We don't need to handle the response here as the cache is updated in the callback
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            // Mark these dates as no longer loading
+            self.loadingDates.remove(previousDayString)
+            self.loadingDates.remove(nextDayString)
+            
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    // Group logs by date
+                    let logsByDate = Dictionary(grouping: response.logs) { log in
+                        log.logDate ?? ""
+                    }
+                    
+                    // Update cache with all logs by their date
+                    for (logDate, dateLogs) in logsByDate {
+                        if !logDate.isEmpty {
+                            self.logsCache[logDate] = dateLogs
+                            
+                            // If a date has no logs, add it to emptyDates
+                            if dateLogs.isEmpty {
+                                self.emptyDates.insert(logDate)
+                            } else {
+                                self.emptyDates.remove(logDate)
+                            }
+                        }
+                    }
+                    
+                    print("📅 Preloaded logs for adjacent days: prev=\(self.logsCache[previousDayString]?.count ?? 0), next=\(self.logsCache[nextDayString]?.count ?? 0)")
+                    
+                case .failure(let error):
+                    print("❌ Error preloading adjacent days: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }
