@@ -134,6 +134,28 @@ class FoodManager: ObservableObject {
             
             // Remove from empty dates if it was there
             self.emptyDates.remove(dateKey)
+            
+            // NEW CODE: Immediately update nutrition totals locally
+            // Update calories consumed and remaining
+            self.caloriesConsumed += log.displayCalories
+            self.remainingCalories = max(0, self.calorieGoal - self.caloriesConsumed)
+            
+            // Update macros if available
+            if let food = log.food {
+                self.proteinConsumed += food.protein ?? 0
+                self.carbsConsumed += food.carbs ?? 0
+                self.fatConsumed += food.fat ?? 0
+            } else if let meal = log.meal {
+                self.proteinConsumed += meal.protein ?? 0
+                self.carbsConsumed += meal.carbs ?? 0
+                self.fatConsumed += meal.fat ?? 0
+            } else if let recipe = log.recipe {
+                self.proteinConsumed += recipe.protein ?? 0
+                self.carbsConsumed += recipe.carbs ?? 0
+                self.fatConsumed += recipe.fat ?? 0
+            }
+            
+            print("📊 Updated goals after logging: Calories=\(self.caloriesConsumed), Protein=\(self.proteinConsumed)g, Carbs=\(self.carbsConsumed)g, Fat=\(self.fatConsumed)g, Remaining=\(self.remainingCalories)")
         }
         
         // Persist logs to UserDefaults so they don't disappear after app restart
@@ -1935,6 +1957,9 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
             
+            // NEW: Start background sync with server instead of immediate refresh
+            self.backgroundSyncWithServer()
+            
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.isAnalyzingFood = false
@@ -1972,6 +1997,94 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         }
     }
 }
+
+// 2. Add a new backgroundSyncWithServer method
+/// Sync with server in the background without blocking UI
+private func backgroundSyncWithServer() {
+    // Create a background task
+    DispatchQueue.global(qos: .utility).async { [weak self] in
+        guard let self = self else { return }
+        
+        // Fetch latest data from server without blocking UI
+        guard let email = self.userEmail else { return }
+        
+        // Only sync if we're looking at today
+        guard Calendar.current.isDateInToday(self.selectedDate) else { return }
+        
+        // Wait a short delay to allow server to process the log we just sent
+        Thread.sleep(forTimeInterval: 1.0)
+        
+        NetworkManagerTwo.shared.getLogsByDate(
+            userEmail: email,
+            date: self.selectedDate,
+            includeAdjacent: false) { [weak self] result in
+                
+            guard let self = self else { return }
+                
+            switch result {
+            case .success(let response):
+                // If goals are present in the response, update calorieGoal and related properties
+                if let goals = response.goals {
+                    let serverCalories = response.logs.reduce(0) { $0 + $1.displayCalories }
+                    
+                    // Check if server values differ significantly from our calculated values
+                    let difference = abs(serverCalories - self.caloriesConsumed)
+                    if difference > 1.0 { // 1 calorie threshold for floating point precision
+                        DispatchQueue.main.async {
+                            // Silently update values if needed
+                            self.recalculateNutrition(from: response.logs)
+                            
+                            // Update goal from backend if available
+                            self.calorieGoal = goals.calories
+                            self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
+                            print("📊 Background sync updated nutrition values and goals")
+                        }
+                    }
+                }
+                
+            case .failure:
+                // Ignore error - we already have local data
+                break
+            }
+        }
+    }
+}
+
+// 3. Add helper method to recalculate nutrition from logs
+private func recalculateNutrition(from logs: [CombinedLog]) {
+    var calories: Double = 0
+    var protein: Double = 0
+    var carbs: Double = 0
+    var fat: Double = 0
+    
+    for log in logs {
+        calories += log.displayCalories
+        
+        if let food = log.food {
+            protein += food.protein ?? 0
+            carbs += food.carbs ?? 0
+            fat += food.fat ?? 0
+        } else if let meal = log.meal {
+            protein += meal.protein ?? 0
+            carbs += meal.carbs ?? 0
+            fat += meal.fat ?? 0
+        } else if let recipe = log.recipe {
+            protein += recipe.protein ?? 0
+            carbs += recipe.carbs ?? 0
+            fat += recipe.fat ?? 0
+        }
+    }
+    
+    // Update our local values
+    self.caloriesConsumed = calories
+    self.proteinConsumed = protein
+    self.carbsConsumed = carbs
+    self.fatConsumed = fat
+    self.remainingCalories = max(0, self.calorieGoal - calories)
+    
+    print("📊 Background sync updated nutrition: Calories=\(calories), Protein=\(protein)g, Carbs=\(carbs)g, Fat=\(fat)g, Remaining=\(self.remainingCalories)")
+}
+
 func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
     guard let email = userEmail else {
         completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
