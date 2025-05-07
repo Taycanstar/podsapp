@@ -45,6 +45,134 @@ struct DashboardView: View {
                         }
                         .padding(.horizontal)
                         
+                        // Nutrition Summary Cards
+                        VStack(spacing: 12) {
+                            // Remaining Calories Card
+                            HStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Remaining")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text("\(Int(foodManager.remainingCalories))cal")
+                                        .font(.system(size: 32, weight: .bold))
+                                }
+                                
+                                Spacer()
+                                
+                                // Circular Progress Indicator
+                                ZStack {
+                                    Circle()
+                                        .stroke(lineWidth: 10)
+                                        .opacity(0.2)
+                                        .foregroundColor(Color.green)
+                                    
+                                    Circle()
+                                        .trim(from: 0.0, to: min(1.0, CGFloat(1 - (foodManager.remainingCalories / foodManager.calorieGoal))))
+                                        .stroke(style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
+                                        .foregroundColor(Color.green)
+                                        .rotationEffect(Angle(degrees: 270.0))
+                                        .animation(.linear, value: foodManager.remainingCalories)
+                                }
+                                .frame(width: 60, height: 60)
+                            }
+                            .padding()
+                            .background(Color("iosnp"))
+                            .cornerRadius(12)
+                            
+                            // Macronutrients Card
+                            VStack(spacing: 16) {
+                                // Calories
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.orange.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "flame.fill")
+                                            .foregroundColor(.orange)
+                                    }
+                                    
+                                    Text("Calories")
+                                        .font(.system(size: 16, weight: .medium))
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(Int(foodManager.caloriesConsumed))cal")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Protein
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "figure.walk")
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    Text("Protein")
+                                        .font(.system(size: 16, weight: .medium))
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(Int(foodManager.proteinConsumed))g")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Carbohydrates
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.purple.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chart.bar.fill")
+                                            .foregroundColor(.purple)
+                                    }
+                                    
+                                    Text("Carbohydrates")
+                                        .font(.system(size: 16, weight: .medium))
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(Int(foodManager.carbsConsumed))g")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Fat
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.pink.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "drop.fill")
+                                            .foregroundColor(.pink)
+                                    }
+                                    
+                                    Text("Fat")
+                                        .font(.system(size: 16, weight: .medium))
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(Int(foodManager.fatConsumed))g")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color("iosnp"))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                        
                         // Show food scanning card if analysis is in progress
                         if foodManager.isScanningFood {
                             FoodGenerationCard()

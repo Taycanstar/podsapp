@@ -16,6 +16,8 @@ extension Food {
         )
     }
 }
+
+
 class FoodManager: ObservableObject {
     @Published var loggedFoods: [LoggedFood] = []
     @Published var isLoading = false
@@ -178,9 +180,17 @@ class FoodManager: ObservableObject {
     // Add errorMessage property after other published properties, around line 85
     @Published var errorMessage: String? = nil
     
+    // Add the new published properties for nutrition tracking
+    @Published var caloriesConsumed: Double = 0
+    @Published var proteinConsumed: Double = 0
+    @Published var carbsConsumed: Double = 0
+    @Published var fatConsumed: Double = 0
+    @Published var calorieGoal: Double = 2000 // Default value, should be fetched from user settings
+    @Published var remainingCalories: Double = 2000 // Default equals goal
+    
     init() {
         self.networkManager = NetworkManager()
-        
+        fetchCalorieGoal()
     }
     
     
@@ -2843,6 +2853,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         // Update the selected date right away for UI
         selectedDate = date
         
+        // Fetch the calorie goal first
+        fetchCalorieGoal()
+        
         // Get date string for cache key
         let dateString = dateKey(date)
         
@@ -2856,6 +2869,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             if preloadAdjacent {
                 preloadAdjacentDays(silently: true)
             }
+            
+            // Calculate nutrition totals after logs are loaded
+            self.calculateDailyNutrition()
+            
             return
         }
         
@@ -2868,6 +2885,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             if preloadAdjacent {
                 preloadAdjacentDays(silently: true)
             }
+            
+            // Reset nutrition values when no logs exist
+            self.caloriesConsumed = 0
+            self.proteinConsumed = 0 
+            self.carbsConsumed = 0
+            self.fatConsumed = 0
+            self.remainingCalories = self.calorieGoal
+            
             return
         }
         
@@ -2934,10 +2959,20 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     if let targetLogs = self.logsCache[dateString] {
                         self.currentDateLogs = targetLogs
                         print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
+                        
+                        // Calculate nutrition totals after logs are loaded
+                        self.calculateDailyNutrition()
                     } else {
                         self.currentDateLogs = []
                         self.emptyDates.insert(dateString)
                         print("📅 No logs found for \(dateString)")
+                        
+                        // Reset nutrition values when no logs exist
+                        self.caloriesConsumed = 0
+                        self.proteinConsumed = 0 
+                        self.carbsConsumed = 0
+                        self.fatConsumed = 0
+                        self.remainingCalories = self.calorieGoal
                     }
                     
                 case .failure(let error):
@@ -3143,6 +3178,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         }
                     }
                     
+                    // Recalculate nutrition totals with the new log
+                    self.calculateDailyNutrition()
+                    
                 case .failure(let error):
                     print("❌ Failed to log food: \(error.localizedDescription)")
                     
@@ -3158,5 +3196,85 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 completion()
             }
         }
+    }
+    
+    // Add method to calculate nutrition totals after logs are loaded or modified
+    private func calculateDailyNutrition() {
+        // Reset all values
+        var totalCalories: Double = 0
+        var totalProtein: Double = 0
+        var totalCarbs: Double = 0
+        var totalFat: Double = 0
+        
+        // Sum up values from all logs for the selected date
+        for log in currentDateLogs {
+            totalCalories += log.displayCalories
+            
+            // Add nutrition values based on log type
+            switch log.type {
+            case .food:
+                if let food = log.food {
+                    totalProtein += food.protein ?? 0
+                    totalCarbs += food.carbs ?? 0
+                    totalFat += food.fat ?? 0
+                }
+            case .meal:
+                if let meal = log.meal {
+                    totalProtein += meal.protein ?? 0
+                    totalCarbs += meal.carbs ?? 0
+                    totalFat += meal.fat ?? 0
+                }
+            case .recipe:
+                if let recipe = log.recipe {
+                    totalProtein += recipe.protein ?? 0
+                    totalCarbs += recipe.carbs ?? 0
+                    totalFat += recipe.fat ?? 0
+                }
+            }
+        }
+        
+        // Update the published properties
+        DispatchQueue.main.async {
+            self.caloriesConsumed = totalCalories
+            self.proteinConsumed = totalProtein
+            self.carbsConsumed = totalCarbs
+            self.fatConsumed = totalFat
+            self.remainingCalories = max(0, self.calorieGoal - totalCalories)
+            
+            print("📊 Calculated daily nutrition: Calories=\(totalCalories), Protein=\(totalProtein)g, Carbs=\(totalCarbs)g, Fat=\(totalFat)g, Remaining=\(self.remainingCalories)")
+        }
+    }
+    
+    // Add method to fetch calorie goal from user settings/preferences
+    private func fetchCalorieGoal() {
+        // For now, we'll use UserDefaults as a simple solution
+        // In a production app, this should come from user settings or backend
+        if let goal = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double {
+            self.calorieGoal = goal
+            self.remainingCalories = max(0, goal - self.caloriesConsumed)
+            print("📊 Loaded calorie goal from dailyCalorieGoal: \(goal)")
+        } else if let onboardingData = UserDefaults.standard.data(forKey: "nutritionGoalsData") {
+            // Try to get it from onboarding data if available
+            let decoder = JSONDecoder()
+            if let goals = try? decoder.decode(NutritionGoals.self, from: onboardingData) {
+                self.calorieGoal = goals.calories
+                self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
+                print("📊 Loaded calorie goal from nutritionGoalsData: \(goals.calories)")
+            } else {
+                // Fallback to UserGoalsManager
+                loadDefaultGoals()
+            }
+        } else {
+            // Use UserGoalsManager as fallback
+            loadDefaultGoals()
+        }
+    }
+
+    // Add a helper method for loading default goals
+    private func loadDefaultGoals() {
+        let userGoals = UserGoalsManager.shared.dailyGoals
+        self.calorieGoal = Double(userGoals.calories)
+        self.remainingCalories = max(0, Double(userGoals.calories) - self.caloriesConsumed)
+        print("📊 Loaded calorie goal from UserGoalsManager: \(userGoals.calories)")
     }
 }
