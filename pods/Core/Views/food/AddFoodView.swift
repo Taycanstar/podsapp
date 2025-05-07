@@ -104,7 +104,7 @@ struct AddFoodView: View {
             }
             .onAppear {
                 // Load foods and populate selected IDs
-                foodManager.refresh()
+                foodManager.backgroundSyncWithServer()
                 
                 // Initialize selected food IDs
                 for food in selectedFoods {

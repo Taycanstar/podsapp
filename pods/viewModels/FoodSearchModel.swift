@@ -385,12 +385,134 @@ struct CombinedLog: Codable, Identifiable {
         return calories
     }
     
-    var id: Int {
+    // For Identifiable protocol - create unique ID based on type and specific ID
+    var id: String {
         switch type {
-        case .food: return foodLogId ?? 0
-        case .meal: return mealLogId ?? 0
-        case .recipe: return recipeLogId ?? 0
+        case .food:
+            return "food_\(foodLogId ?? 0)"
+        case .meal:
+            return "meal_\(mealLogId ?? 0)"
+        case .recipe:
+            return "recipe_\(recipeLogId ?? 0)"
         }
+    }
+    
+    // Custom coding keys to handle the 'id' field from the backend
+    enum CodingKeys: String, CodingKey {
+        case type, status, calories, message
+        case foodLogId, food, mealType
+        case mealLogId, meal, mealTime, scheduledAt
+        case recipeLogId, recipe, servingsConsumed
+        case logDate, dayOfWeek
+        // This field exists in the JSON but we don't want to use it directly
+        case backendId = "id" 
+    }
+    
+    // Custom init to handle the backend ID field
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Decode all standard properties
+        type = try container.decode(LogType.self, forKey: .type)
+        status = try container.decode(String.self, forKey: .status)
+        calories = try container.decode(Double.self, forKey: .calories)
+        message = try container.decode(String.self, forKey: .message)
+        
+        // Food-specific properties
+        foodLogId = try container.decodeIfPresent(Int.self, forKey: .foodLogId)
+        food = try container.decodeIfPresent(LoggedFoodItem.self, forKey: .food)
+        mealType = try container.decodeIfPresent(String.self, forKey: .mealType)
+        
+        // Meal-specific properties
+        mealLogId = try container.decodeIfPresent(Int.self, forKey: .mealLogId)
+        meal = try container.decodeIfPresent(MealSummary.self, forKey: .meal)
+        mealTime = try container.decodeIfPresent(String.self, forKey: .mealTime)
+        scheduledAt = try container.decodeIfPresent(Date.self, forKey: .scheduledAt)
+        
+        // Recipe-specific properties
+        recipeLogId = try container.decodeIfPresent(Int.self, forKey: .recipeLogId)
+        recipe = try container.decodeIfPresent(RecipeSummary.self, forKey: .recipe)
+        servingsConsumed = try container.decodeIfPresent(Int.self, forKey: .servingsConsumed)
+        
+        // Date properties
+        logDate = try container.decodeIfPresent(String.self, forKey: .logDate)
+        dayOfWeek = try container.decodeIfPresent(String.self, forKey: .dayOfWeek)
+        
+        // We explicitly ignore the "id" field from the backend
+        // by using a special coding key (backendId) that we don't store
+    }
+    
+    // We need to encode all fields including the backend ID
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        // Encode all standard properties
+        try container.encode(type, forKey: .type)
+        try container.encode(status, forKey: .status)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(message, forKey: .message)
+        
+        // Food-specific properties
+        try container.encodeIfPresent(foodLogId, forKey: .foodLogId)
+        try container.encodeIfPresent(food, forKey: .food)
+        try container.encodeIfPresent(mealType, forKey: .mealType)
+        
+        // Meal-specific properties
+        try container.encodeIfPresent(mealLogId, forKey: .mealLogId)
+        try container.encodeIfPresent(meal, forKey: .meal)
+        try container.encodeIfPresent(mealTime, forKey: .mealTime)
+        try container.encodeIfPresent(scheduledAt, forKey: .scheduledAt)
+        
+        // Recipe-specific properties
+        try container.encodeIfPresent(recipeLogId, forKey: .recipeLogId)
+        try container.encodeIfPresent(recipe, forKey: .recipe)
+        try container.encodeIfPresent(servingsConsumed, forKey: .servingsConsumed)
+        
+        // Date properties
+        try container.encodeIfPresent(logDate, forKey: .logDate)
+        try container.encodeIfPresent(dayOfWeek, forKey: .dayOfWeek)
+        
+        // For the backend ID, use the appropriate ID based on type
+        switch type {
+        case .food:
+            try container.encode(foodLogId, forKey: .backendId)
+        case .meal:
+            try container.encode(mealLogId, forKey: .backendId)
+        case .recipe:
+            try container.encode(recipeLogId, forKey: .backendId)
+        }
+    }
+}
+
+// Provide a standard init for creating CombinedLog instances in code
+extension CombinedLog {
+    // This init is used for creating new logs in the app
+    init(type: LogType, status: String, calories: Double, message: String,
+         foodLogId: Int? = nil, food: LoggedFoodItem? = nil, mealType: String? = nil,
+         mealLogId: Int? = nil, meal: MealSummary? = nil, mealTime: String? = nil, scheduledAt: Date? = nil,
+         recipeLogId: Int? = nil, recipe: RecipeSummary? = nil, servingsConsumed: Int? = nil,
+         logDate: String? = nil, dayOfWeek: String? = nil) {
+        
+        self.type = type
+        self.status = status
+        self.calories = calories
+        self.message = message
+        
+        self.foodLogId = foodLogId
+        self.food = food
+        self.mealType = mealType
+        
+        self.mealLogId = mealLogId
+        self.meal = meal
+        self.mealTime = mealTime
+        self.scheduledAt = scheduledAt
+        
+        self.recipeLogId = recipeLogId
+        self.recipe = recipe
+        self.servingsConsumed = servingsConsumed
+        
+        self.logDate = logDate
+        self.dayOfWeek = dayOfWeek
     }
 }
 

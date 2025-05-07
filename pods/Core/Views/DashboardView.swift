@@ -167,12 +167,7 @@ struct DashboardView: View {
                                 .transition(.opacity)
                         }
                         
-                        // Success card for food logged via camera
-                        else if foodManager.showLogSuccess {
-                            LogSuccessCard()
-                                .padding(.horizontal)
-                                .transition(.scale)
-                        }
+            
                         
                         // Loading state for logs
                         if foodManager.isLoadingDateLogs {
@@ -665,26 +660,6 @@ struct LogSuccessCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Header
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 20))
-                
-                Text("Food Logged")
-                    .font(.headline)
-                
-                Spacer()
-                
-                Text("New")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.1))
-                    .foregroundColor(.accentColor)
-                    .cornerRadius(12)
-            }
             
             // Success content
             if let (name, calories) = foodManager.lastLoggedItem {

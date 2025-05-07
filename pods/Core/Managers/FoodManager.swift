@@ -22,6 +22,7 @@ class FoodManager: ObservableObject {
     @Published var loggedFoods: [LoggedFood] = []
     @Published var isLoading = false
     @Published var isLoadingLogs = false
+    @Published var isLoadingMoreLogs = false  // Added missing variable
     @Published var isLoadingFood = false
     @Published var isLoadingMeals = false
     @Published var isLoadingMeal = false
@@ -50,7 +51,9 @@ class FoodManager: ObservableObject {
     @Published var meals: [Meal] = []
     @Published var isLoadingMealPage = false
     private var currentMealPage = 1
+    private var mealCurrentPage = 1  // Added missing variable
     private var hasMoreMeals = true
+    private var mealsHasMore = true  // Added missing variable
     @Published var combinedLogs: [CombinedLog] = []
     private var lastRefreshTime: Date?
     
@@ -107,71 +110,104 @@ class FoodManager: ObservableObject {
     /// Dates for which we've attempted to load but found no logs
     private var emptyDates: Set<String> = []
     
+    // Add a flag to track recent optimistic updates
+    private var justPerformedOptimisticUpdate = false
+    
     // MARK: - Helper methods for consistent food log updates
     /// Helper method to ensure a new food log appears in today's logs immediately
     /// - Parameter log: The CombinedLog object to add to today's logs
     private func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
-        // Add to the beginning of the main logs list
-        if self.combinedLogs.isEmpty {
-            self.combinedLogs = [log]
+        print("📝 Adding log to today and updating dashboard: \(log.message)")
+        
+        // Check for duplicate before adding
+        let existingIndex = self.currentDateLogs.firstIndex { existingLog in
+            return existingLog.id == log.id
+        }
+        
+        // If log with same ID already exists, replace it instead of adding a duplicate
+        if let index = existingIndex {
+            print("⚠️ Replacing existing log with ID: \(log.id) to avoid duplicate")
+            self.currentDateLogs[index] = log
         } else {
+            // Set the flag to indicate we just performed an optimistic update
+            justPerformedOptimisticUpdate = true
+            
+            // Reset the flag after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.justPerformedOptimisticUpdate = false
+            }
+            
+            // Add to main logs list - already gets displayed because it's a @Published property
             self.combinedLogs.insert(log, at: 0)
+            
+            // Update displayed logs if we're viewing today
+            if Calendar.current.isDateInToday(selectedDate) {
+                print("📊 Updating today's logs with new entry")
+                self.currentDateLogs.insert(log, at: 0)
+                
+                // OPTIMISTIC UPDATE - immediately update nutrition values
+                // This ensures the UI updates immediately without waiting for server or recalculation
+                self.caloriesConsumed += log.displayCalories
+                
+                // Update macros based on log type
+                switch log.type {
+                case .food:
+                    if let food = log.food {
+                        self.proteinConsumed += food.protein ?? 0
+                        self.carbsConsumed += food.carbs ?? 0
+                        self.fatConsumed += food.fat ?? 0
+                    }
+                case .meal:
+                    if let meal = log.meal {
+                        self.proteinConsumed += meal.protein ?? 0
+                        self.carbsConsumed += meal.carbs ?? 0
+                        self.fatConsumed += meal.fat ?? 0
+                    }
+                case .recipe:
+                    if let recipe = log.recipe {
+                        self.proteinConsumed += recipe.protein ?? 0
+                        self.carbsConsumed += recipe.carbs ?? 0
+                        self.fatConsumed += recipe.fat ?? 0
+                    }
+                }
+                
+                // Update remaining calories
+                self.remainingCalories = max(0, self.calorieGoal - self.caloriesConsumed)
+                
+                print("📊 Optimistic update: Calories now \(self.caloriesConsumed), Protein \(self.proteinConsumed)g, Carbs \(self.carbsConsumed)g, Fat \(self.fatConsumed)g, Remaining \(self.remainingCalories)")
+            }
         }
         
-        // Update currentDateLogs if the user is viewing today
-        if Calendar.current.isDateInToday(self.selectedDate) {
-            // Format today's date for cache key
-            let dateKey = self.dateKey(Date())
-            
-            // Add the log to today's logs in cache
-            if self.logsCache[dateKey] == nil {
-                self.logsCache[dateKey] = []
-            }
-            self.logsCache[dateKey]?.append(log)
-            
-            // Update the displayed logs
-            self.currentDateLogs = self.logsCache[dateKey] ?? []
-            
-            // Remove from empty dates if it was there
-            self.emptyDates.remove(dateKey)
-            
-            // NEW CODE: Immediately update nutrition totals locally
-            // Update calories consumed and remaining
-            self.caloriesConsumed += log.displayCalories
-            self.remainingCalories = max(0, self.calorieGoal - self.caloriesConsumed)
-            
-            // Update macros if available
-            if let food = log.food {
-                self.proteinConsumed += food.protein ?? 0
-                self.carbsConsumed += food.carbs ?? 0
-                self.fatConsumed += food.fat ?? 0
-            } else if let meal = log.meal {
-                self.proteinConsumed += meal.protein ?? 0
-                self.carbsConsumed += meal.carbs ?? 0
-                self.fatConsumed += meal.fat ?? 0
-            } else if let recipe = log.recipe {
-                self.proteinConsumed += recipe.protein ?? 0
-                self.carbsConsumed += recipe.carbs ?? 0
-                self.fatConsumed += recipe.fat ?? 0
+        // Persist to UserDefaults - Note this is different from server persistence
+        updateCombinedLogsCache()
+        
+        // Update cache for today's date
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Get today's logs from either cache or current logs
+        if var todayLogs = logsCache[todayKey] {
+            // Check if this log already exists in the cache
+            let existingCacheIndex = todayLogs.firstIndex { existingLog in
+                return existingLog.id == log.id
             }
             
-            print("📊 Updated goals after logging: Calories=\(self.caloriesConsumed), Protein=\(self.proteinConsumed)g, Carbs=\(self.carbsConsumed)g, Fat=\(self.fatConsumed)g, Remaining=\(self.remainingCalories)")
+            if let index = existingCacheIndex {
+                // Replace existing log to avoid duplicate
+                todayLogs[index] = log
+            } else {
+                // Add to cached logs (if they exist)
+                todayLogs.insert(log, at: 0)
+            }
+            logsCache[todayKey] = todayLogs
+        } else {
+            // Create new cache entry for today
+            logsCache[todayKey] = [log]
         }
         
-        // Persist logs to UserDefaults so they don't disappear after app restart
-        guard let userEmail = userEmail else { return }
-        
-        // Create a new CombinedLogsResponse with our updated combinedLogs
-        let response = CombinedLogsResponse(
-            logs: self.combinedLogs,
-            hasMore: self.hasMore,
-            totalPages: 1,
-            currentPage: 1
-        )
-        
-        // Use the existing cacheLogs function to persist to UserDefaults
-        cacheLogs(response, forPage: 1)
-        print("✅ Updated logs cache in UserDefaults")
+        // Remove from empty dates if it was previously empty
+        emptyDates.remove(todayKey)
     }
     /// Format a date as a string for cache keys
     private func dateKey(_ date: Date) -> String {
@@ -468,53 +504,46 @@ func loadMoreFoods(refresh: Bool = false) {
     func refresh() {
         print("🔄 FoodManager.refresh() called")
         
-        // Don't interrupt any active loading operations
-        if isLoadingLogs || isLoadingFood || isLoadingMeals || isLoadingMeal || isLoadingUserFoods {
-            print("⏸️ FoodManager.refresh() - Skipping refresh - another operation is in progress")
+        // Prevent refresh if loading, analyzing food, etc.
+        if isLoadingLogs || isLoadingMoreLogs || isLoadingMeals || isScanningFood || isAnalyzingFood || isGeneratingMeal || isGeneratingFood {
+            print("⚠️ Skipping refresh because another operation is in progress")
             return
         }
         
-        // Reset the pagination state
-        currentPage = 1
-        hasMore = true
-        
-        // Reset user foods pagination
-        currentUserFoodsPage = 1
-        hasMoreUserFoods = true
-        
-        // Clear the logs cache to ensure we get fresh data
-        print("🧹 FoodManager.refresh() - Clearing logs cache")
-        clearLogsCache()
-        clearUserFoodsCache()
-        
-        // If we're viewing today, clear today's cache to force a refresh
+        // If we're looking at today, use backgroundSyncWithServer instead to preserve optimistic updates
         if Calendar.current.isDateInToday(selectedDate) {
-            let todayKey = dateKey(Date())
-            logsCache.removeValue(forKey: todayKey)
-            emptyDates.remove(todayKey)
-            loadingDates.remove(todayKey)
-            
-            // Force reload of today's logs specifically
-            fetchLogsByDate(date: Date(), preloadAdjacent: false)
+            print("📊 Redirecting refresh() to backgroundSyncWithServer() for today's data")
+            backgroundSyncWithServer()
+            return
         }
         
-        // Force UI update before fetching new data
-        objectWillChange.send()
+        // Reset pagination states
+        currentPage = 1
+        mealCurrentPage = 1
+        hasMore = true
+        mealsHasMore = true
         
-        print("🔄 FoodManager.refresh() - Fetching fresh logs from server")
-        // Fetch logs with refresh flag to replace existing ones
-        loadMoreLogs(refresh: true)
+        // Clear logs cache for all dates except today (preserve today's optimistic updates)
+        let todayKey = dateKey(Date())
+        let todayLogs = logsCache[todayKey]
         
-        // Fetch user-created foods
-        loadUserFoods(refresh: true)
+        // Clear all cache except today
+        logsCache.removeAll()
         
-        // Force another UI update after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.objectWillChange.send()
+        // Restore today's logs if we had them
+        if let logs = todayLogs {
+            logsCache[todayKey] = logs
         }
         
-        // Update refresh timestamp
-        lastRefreshTime = Date()
+        emptyDates.removeAll()
+        loadingDates.removeAll()
+        
+        // Reset date logs loading state
+        isLoadingDateLogs = false
+        dateLogsError = nil
+        
+        // Fetch fresh logs for the selected date
+        fetchLogsByDate(date: selectedDate)
     }
     
     // MARK: - User Foods Methods
@@ -2000,20 +2029,30 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
 
 // 2. Add a new backgroundSyncWithServer method
 /// Sync with server in the background without blocking UI
-private func backgroundSyncWithServer() {
+func backgroundSyncWithServer() {
+    // Debug log
+    print("🔄 Starting background sync with server")
+    
     // Create a background task
     DispatchQueue.global(qos: .utility).async { [weak self] in
         guard let self = self else { return }
         
         // Fetch latest data from server without blocking UI
-        guard let email = self.userEmail else { return }
+        guard let email = self.userEmail else { 
+            print("⚠️ Background sync aborted: No user email")
+            return 
+        }
         
-        // Only sync if we're looking at today
-        guard Calendar.current.isDateInToday(self.selectedDate) else { return }
+        // Only sync if we're looking at today (we only care about today's nutrition values)
+        guard Calendar.current.isDateInToday(self.selectedDate) else {
+            print("⚠️ Background sync aborted: Not viewing today")
+            return
+        }
         
         // Wait a short delay to allow server to process the log we just sent
-        Thread.sleep(forTimeInterval: 1.0)
+        Thread.sleep(forTimeInterval: 0.5)
         
+        print("📡 Background sync: Fetching latest logs from server")
         NetworkManagerTwo.shared.getLogsByDate(
             userEmail: email,
             date: self.selectedDate,
@@ -2023,28 +2062,36 @@ private func backgroundSyncWithServer() {
                 
             switch result {
             case .success(let response):
-                // If goals are present in the response, update calorieGoal and related properties
+                // Log the response for debugging
+                print("✅ Background sync: Received \(response.logs.count) logs from server")
+                
+                // Only update date logs cache silently (don't update current values)
+                // This preserves the optimistic updates we've already calculated
+                let dateString = self.dateKey(self.selectedDate)
+                
+                // Deduplicate logs from server to prevent id collisions
+                let uniqueLogs = self.deduplicateLogs(response.logs)
+                if uniqueLogs.count != response.logs.count {
+                    print("🧹 Background sync: Deduplicated server logs (\(response.logs.count) → \(uniqueLogs.count))")
+                }
+                
+                self.logsCache[dateString] = uniqueLogs
+                
+                // If goals are present in the response, update calorieGoal (not the consumed values)
                 if let goals = response.goals {
-                    let serverCalories = response.logs.reduce(0) { $0 + $1.displayCalories }
-                    
-                    // Check if server values differ significantly from our calculated values
-                    let difference = abs(serverCalories - self.caloriesConsumed)
-                    if difference > 1.0 { // 1 calorie threshold for floating point precision
-                        DispatchQueue.main.async {
-                            // Silently update values if needed
-                            self.recalculateNutrition(from: response.logs)
-                            
-                            // Update goal from backend if available
-                            self.calorieGoal = goals.calories
-                            self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
-                            print("📊 Background sync updated nutrition values and goals")
-                        }
+                    DispatchQueue.main.async {
+                        // Only update the goal itself, not the consumed values
+                        self.calorieGoal = goals.calories
+                        
+                        // Update remaining calories based on our current consumption
+                        self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
+                        print("📊 Background sync: Updated calorie goal to \(goals.calories)")
                     }
                 }
                 
-            case .failure:
-                // Ignore error - we already have local data
-                break
+            case .failure(let error):
+                // Just log error - we don't want to disrupt the UI
+                print("⚠️ Background sync error: \(error)")
             }
         }
     }
@@ -2236,8 +2283,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.showFoodGenerationSuccess = false
                 }
                 
-                // Refresh food data
-                self.refresh()
+                // Sync with server in the background without UI interruption
+                self.backgroundSyncWithServer()
                 
                 // Call the completion handler
                 completion(.success(food))
@@ -2295,7 +2342,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             print("⚠️ Food log with ID \(id) not found in combinedLogs")
             
             // Check if this is potentially a log being mislabeled
-            if let index = combinedLogs.firstIndex(where: { $0.id == id && $0.type == .food }) {
+            if let index = combinedLogs.firstIndex(where: { $0.id == "food_\(id)" && $0.type == .food }) {
                 print("🔍 Found potential food log with ID \(id) by general ID match")
                 let log = combinedLogs[index]
                 print("  - Log details: type=\(log.type), foodLogId=\(log.foodLogId ?? -1), food.fdcId=\(log.food?.fdcId ?? -1)")
@@ -2450,7 +2497,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             print("⚠️ Meal log with ID \(id) not found in combinedLogs")
             
             // Check if this is potentially a food log being mislabeled as a meal log
-            if let index = combinedLogs.firstIndex(where: { $0.id == id && $0.type == .meal }) {
+            if let index = combinedLogs.firstIndex(where: { $0.id == "meal_\(id)" && $0.type == .meal }) {
                 print("🔍 Found potential meal log with ID \(id) by general ID match")
                 let log = combinedLogs[index]
                 print("  - Log details: type=\(log.type), mealLogId=\(log.mealLogId ?? -1), meal.id=\(log.meal?.id ?? -1)")
@@ -2783,8 +2830,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             self.showAIGenerationSuccess = false
                         }
                         
-                        // Refresh food data to include the new logged item
-                        self.refresh()
+                        // Sync with server in the background without UI interruption
+                        self.backgroundSyncWithServer()
                         
                     case .failure(let error):
                         print("Failed to generate AI macros: \(error.localizedDescription)")
@@ -2893,6 +2940,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
+                        // NEW: Use background sync instead of immediate refresh
+                        self.backgroundSyncWithServer()
+                        
                         // Save the generated food for the toast
                         self.aiGeneratedFood = loggedFood.food
                         
@@ -2966,25 +3016,22 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         // Update the selected date right away for UI
         selectedDate = date
         
-        // Remove fetchCalorieGoal() here, as we'll use backend goals if present
-        // fetchCalorieGoal()
-        
         // Get date string for cache key
         let dateString = dateKey(date)
         
         // Check if we already have this date in cache
         if let cachedLogs = logsCache[dateString] {
             // If we have logs in cache, use them immediately
-            currentDateLogs = cachedLogs
             print("📅 Using cached logs for \(dateString): \(cachedLogs.count) logs")
+            
+            // Always update currentDateLogs and recalculate nutrition
+            currentDateLogs = cachedLogs
+            self.calculateDailyNutrition()
             
             // Still preload adjacent days in the background if requested
             if preloadAdjacent {
                 preloadAdjacentDays(silently: true)
             }
-            
-            // Calculate nutrition totals after logs are loaded
-            self.calculateDailyNutrition()
             
             return
         }
@@ -3091,8 +3138,30 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     
                     // Update current date logs
                     if let targetLogs = self.logsCache[dateString] {
-                        self.currentDateLogs = targetLogs
-                        print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
+                        // Check for duplicate IDs before assigning
+                        let duplicateIds = self.checkForDuplicateIds(in: targetLogs)
+                        if !duplicateIds.isEmpty {
+                            print("🚨 WARNING: Found \(duplicateIds.count) duplicate IDs in logs: \(duplicateIds)")
+                            
+                            // Safety measure: Deduplicate logs if duplicates are found
+                            var uniqueLogs: [CombinedLog] = []
+                            var seenIds = Set<String>()
+                            
+                            for log in targetLogs {
+                                if !seenIds.contains(log.id) {
+                                    uniqueLogs.append(log)
+                                    seenIds.insert(log.id)
+                                } else {
+                                    print("🚫 Removing duplicate log with ID: \(log.id), type: \(log.type), message: \(log.message)")
+                                }
+                            }
+                            
+                            self.currentDateLogs = uniqueLogs
+                            print("📅 Loaded \(uniqueLogs.count) deduplicated logs for \(dateString) (original count: \(targetLogs.count))")
+                        } else {
+                            self.currentDateLogs = targetLogs
+                            print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
+                        }
                         
                         // Calculate nutrition totals after logs are loaded
                         self.calculateDailyNutrition()
@@ -3303,8 +3372,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.lastLoggedFoodId = food.fdcId
                     self.trackRecentlyAdded(foodId: food.fdcId)
                     
-                    // Still refresh for completeness
-                    self.refresh()
+                    // Start background sync with server (no UI disruption)
+                    // This will update the backend data if needed without affecting the UI
+                    self.backgroundSyncWithServer()
                     
                     // Set data for success toast in dashboard
                     self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
@@ -3323,8 +3393,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         }
                     }
                     
-                    // Recalculate nutrition totals with the new log
-                    self.calculateDailyNutrition()
+                    // No need to recalculate - already done in addLogToTodayAndUpdateDashboard
                     
                 case .failure(let error):
                     print("❌ Failed to log food: \(error.localizedDescription)")
@@ -3345,49 +3414,52 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     
     // Add method to calculate nutrition totals after logs are loaded or modified
     private func calculateDailyNutrition() {
-        // Reset all values
-        var totalCalories: Double = 0
-        var totalProtein: Double = 0
-        var totalCarbs: Double = 0
-        var totalFat: Double = 0
+        // Skip recalculation if we just performed an optimistic update
+        if justPerformedOptimisticUpdate && Calendar.current.isDateInToday(selectedDate) {
+            print("📊 Skipping calculateDailyNutrition() - just performed optimistic update")
+            return
+        }
+        
+        let isToday = Calendar.current.isDateInToday(selectedDate)
+        print("📊 Calculating nutrition for \(isToday ? "today" : "selected date")")
+        
+        // Reset values before calculation
+        caloriesConsumed = 0
+        proteinConsumed = 0
+        carbsConsumed = 0
+        fatConsumed = 0
         
         // Sum up values from all logs for the selected date
         for log in currentDateLogs {
-            totalCalories += log.displayCalories
+            caloriesConsumed += log.displayCalories
             
             // Add nutrition values based on log type
             switch log.type {
             case .food:
                 if let food = log.food {
-                    totalProtein += food.protein ?? 0
-                    totalCarbs += food.carbs ?? 0
-                    totalFat += food.fat ?? 0
+                    proteinConsumed += food.protein ?? 0
+                    carbsConsumed += food.carbs ?? 0
+                    fatConsumed += food.fat ?? 0
                 }
             case .meal:
                 if let meal = log.meal {
-                    totalProtein += meal.protein ?? 0
-                    totalCarbs += meal.carbs ?? 0
-                    totalFat += meal.fat ?? 0
+                    proteinConsumed += meal.protein ?? 0
+                    carbsConsumed += meal.carbs ?? 0
+                    fatConsumed += meal.fat ?? 0
                 }
             case .recipe:
                 if let recipe = log.recipe {
-                    totalProtein += recipe.protein ?? 0
-                    totalCarbs += recipe.carbs ?? 0
-                    totalFat += recipe.fat ?? 0
+                    proteinConsumed += recipe.protein ?? 0
+                    carbsConsumed += recipe.carbs ?? 0
+                    fatConsumed += recipe.fat ?? 0
                 }
             }
         }
         
-        // Update the published properties
-        DispatchQueue.main.async {
-            self.caloriesConsumed = totalCalories
-            self.proteinConsumed = totalProtein
-            self.carbsConsumed = totalCarbs
-            self.fatConsumed = totalFat
-            self.remainingCalories = max(0, self.calorieGoal - totalCalories)
-            
-            print("📊 Calculated daily nutrition: Calories=\(totalCalories), Protein=\(totalProtein)g, Carbs=\(totalCarbs)g, Fat=\(totalFat)g, Remaining=\(self.remainingCalories)")
-        }
+        // Update remaining calories
+        remainingCalories = max(0, calorieGoal - caloriesConsumed)
+        
+        print("📊 Calculated nutrition: Calories=\(caloriesConsumed), Protein=\(proteinConsumed)g, Carbs=\(carbsConsumed)g, Fat=\(fatConsumed)g, Remaining=\(remainingCalories)")
     }
     
     // Add method to fetch calorie goal from user settings/preferences
@@ -3421,5 +3493,38 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         self.calorieGoal = Double(userGoals.calories)
         self.remainingCalories = max(0, Double(userGoals.calories) - self.caloriesConsumed)
         print("📊 Loaded calorie goal from UserGoalsManager: \(userGoals.calories)")
+    }
+
+    /// Helper function to check for duplicate IDs in a collection of logs
+    private func checkForDuplicateIds(in logs: [CombinedLog]) -> [String] {
+        var idCounts: [String: Int] = [:]
+        var duplicateIds: [String] = []
+        
+        for log in logs {
+            let id = log.id
+            idCounts[id, default: 0] += 1
+            
+            if idCounts[id, default: 0] > 1 && !duplicateIds.contains(id) {
+                duplicateIds.append(id)
+                print("⚠️ DUPLICATE ID FOUND: \(id) for log type \(log.type)")
+            }
+        }
+        
+        return duplicateIds
+    }
+
+    // Helper function to deduplicate logs preserving only the first occurrence of each ID
+    private func deduplicateLogs(_ logs: [CombinedLog]) -> [CombinedLog] {
+        var uniqueLogs: [CombinedLog] = []
+        var seenIds = Set<String>()
+        
+        for log in logs {
+            if !seenIds.contains(log.id) {
+                uniqueLogs.append(log)
+                seenIds.insert(log.id)
+            }
+        }
+        
+        return uniqueLogs
     }
 }

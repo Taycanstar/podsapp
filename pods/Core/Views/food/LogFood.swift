@@ -112,10 +112,10 @@ struct LogFood: View {
                 }
                 
                 if foodManager.recipes.isEmpty {
-                    foodManager.refresh()
+                    foodManager.backgroundSyncWithServer()
                 }
                 
-                foodManager.refresh()
+                foodManager.backgroundSyncWithServer()
                 
                 // Set focus to the search field after a slight delay
                 DispatchQueue.main.asyncAfter(deadline: .now()) {
