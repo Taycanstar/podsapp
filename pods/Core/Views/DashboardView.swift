@@ -22,28 +22,7 @@ struct DashboardView: View {
             ZStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("Dashboard")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
-                        
-                        // Log Food button
-                        Button(action: {
-                            viewModel.showFoodContainer()
-                        }) {
-                            HStack {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("Log Food")
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.accentColor)
-                            .cornerRadius(10)
-                        }
-                        .padding(.horizontal)
+           
                         
                         // Nutrition Summary Cards
                         VStack(spacing: 12) {

@@ -2853,8 +2853,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         // Update the selected date right away for UI
         selectedDate = date
         
-        // Fetch the calorie goal first
-        fetchCalorieGoal()
+        // Remove fetchCalorieGoal() here, as we'll use backend goals if present
+        // fetchCalorieGoal()
         
         // Get date string for cache key
         let dateString = dateKey(date)
@@ -2933,12 +2933,33 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 
                 switch result {
                 case .success(let response):
+                    // If goals are present in the response, update calorieGoal and related properties
+                    if let goals = response.goals {
+                        self.calorieGoal = goals.calories
+                        self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
+                        // Optionally update other macro goals if you have UI for them
+                        print("📊 Loaded calorie goal from backend: \(goals.calories)")
+                    } else {
+                        // Fallback to local fetch if backend goals are missing
+                        self.fetchCalorieGoal()
+                    }
                     // Process logs for all dates
                     let logs = response.logs
                     
                     // Group logs by date
                     let logsByDate = Dictionary(grouping: logs) { log in
-                        log.logDate ?? ""
+                        if let scheduledAt = log.scheduledAt {
+                            let localDate = Calendar.current.startOfDay(for: scheduledAt)
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            formatter.timeZone = .current
+                            return formatter.string(from: localDate)
+                        }
+                        // Fallback to logDate if scheduledAt is missing
+                        if let logDate = log.logDate, logDate.count >= 10 {
+                            return String(logDate.prefix(10))
+                        }
+                        return ""
                     }
                     
                     // Update cache with all logs by their date
@@ -3067,7 +3088,18 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 case .success(let response):
                     // Group logs by date
                     let logsByDate = Dictionary(grouping: response.logs) { log in
-                        log.logDate ?? ""
+                        if let scheduledAt = log.scheduledAt {
+                            let localDate = Calendar.current.startOfDay(for: scheduledAt)
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            formatter.timeZone = .current
+                            return formatter.string(from: localDate)
+                        }
+                        // Fallback to logDate if scheduledAt is missing
+                        if let logDate = log.logDate, logDate.count >= 10 {
+                            return String(logDate.prefix(10))
+                        }
+                        return ""
                     }
                     
                     // Update cache with all logs by their date

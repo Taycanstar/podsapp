@@ -716,10 +716,12 @@ struct LogsByDateResponse: Codable {
     var logs: [CombinedLog]
     var targetDate: String
     var adjacentDaysIncluded: Bool
+    var goals: NutritionGoals?
     
     enum CodingKeys: String, CodingKey {
         case logs
         case targetDate = "target_date"
         case adjacentDaysIncluded = "adjacent_days_included"
+        case goals
     }
 } 
