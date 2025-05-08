@@ -1103,8 +1103,13 @@ func logMeal(
             case .success(let loggedMeal):
                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
                 
-                // Instead of optimistically updating UI, fetch fresh logs from server
-                self.fetchLogsByDate(date: Date())
+                // Reload logs instead of just fetching
+                self.reloadCurrentDateLogs()
+                
+                // Add delayed reload to ensure the dashboard updates properly
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.reloadCurrentDateLogs()
+                }
                 
                 // Set data for success toast in dashboard
                 self.lastLoggedItem = (name: meal.title, calories: calories)
@@ -1887,8 +1892,20 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
             
-            // NEW: Start background sync with server instead of immediate refresh
-            self.backgroundSyncWithServer()
+            // Clear cache for the current date to ensure fresh data
+            let currentDateStr = self.dateKey(Date())
+            self.logsCache.removeValue(forKey: currentDateStr)
+            self.emptyDates.remove(currentDateStr)
+            
+            // Reload logs to ensure UI is updated
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.reloadCurrentDateLogs()
+            }
+            
+            // Add a second reload for more reliability
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.reloadCurrentDateLogs()
+            }
             
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -1934,62 +1951,9 @@ func backgroundSyncWithServer() {
     // Debug log
     print("🔄 Starting background sync with server")
     
-    // Create a background task
-    DispatchQueue.global(qos: .utility).async { [weak self] in
-        guard let self = self else { return }
-        
-        // Fetch latest data from server without blocking UI
-        guard let email = self.userEmail else { 
-            print("⚠️ Background sync aborted: No user email")
-            return 
-        }
-        
-        // Only sync if we're looking at today (we only care about today's nutrition values)
-        guard Calendar.current.isDateInToday(self.selectedDate) else {
-            print("⚠️ Background sync aborted: Not viewing today")
-            return
-        }
-        
-        // Wait a short delay to allow server to process the log we just sent
-        Thread.sleep(forTimeInterval: 0.5)
-        
-        print("📡 Background sync: Fetching latest logs from server")
-        NetworkManagerTwo.shared.getLogsByDate(
-            userEmail: email,
-            date: self.selectedDate,
-            includeAdjacent: false) { [weak self] result in
-                
-            guard let self = self else { return }
-                
-            switch result {
-            case .success(let response):
-                // Log the response for debugging
-                print("✅ Background sync: Received \(response.logs.count) logs from server")
-                
-                // Deduplicate logs before updating the cache
-                let dedupedLogs = self.deduplicateLogs(response.logs)
-                
-                // Only update date logs cache silently (don't update current values)
-                let dateString = self.dateKey(self.selectedDate)
-                self.logsCache[dateString] = dedupedLogs
-                
-                // If goals are present in the response, update calorieGoal (not the consumed values)
-                if let goals = response.goals {
-                    DispatchQueue.main.async {
-                        // Only update the goal itself, not the consumed values
-                        self.calorieGoal = goals.calories
-                        
-                        // Update remaining calories based on our current consumption
-                        self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
-                        print("📊 Background sync: Updated calorie goal to \(goals.calories)")
-                    }
-                }
-                
-            case .failure(let error):
-                // Just log error - we don't want to disrupt the UI
-                print("⚠️ Background sync error: \(error)")
-            }
-        }
+    // Simply delegate to reloadCurrentDateLogs for a consistent approach
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        self.reloadCurrentDateLogs()
     }
 }
 
@@ -2915,8 +2879,12 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         // Get date string for cache key
         let dateString = dateKey(date)
         
-        // Check if we already have this date in cache
-        if let cachedLogs = logsCache[dateString] {
+        // Always fetch fresh data for today to ensure we have the latest logs
+        let isToday = Calendar.current.isDateInToday(date)
+        let forceRefresh = isToday
+        
+        // Check if we already have this date in cache and we're not forcing a refresh
+        if !forceRefresh, let cachedLogs = logsCache[dateString] {
             // If we have logs in cache, use them immediately
             print("📅 Using cached logs for \(dateString): \(cachedLogs.count) logs")
             
@@ -2932,8 +2900,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             return
         }
         
-        // Check if this is a known empty date
-        if emptyDates.contains(dateString) {
+        // Check if this is a known empty date and we're not forcing a refresh
+        if !forceRefresh, emptyDates.contains(dateString) {
             currentDateLogs = []
             print("📅 Known empty date: \(dateString), showing empty state")
             
@@ -2968,6 +2936,13 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         if showLoading {
             isLoadingDateLogs = true
             dateLogsError = nil
+        }
+        
+        // Log whether we're fetching fresh data
+        if forceRefresh {
+            print("📅 Fetching fresh data for \(dateString) (today)")
+        } else {
+            print("📅 Fetching data for \(dateString)")
         }
         
         // Load from server
@@ -3253,9 +3228,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.lastLoggedFoodId = food.fdcId
                     self.trackRecentlyAdded(foodId: food.fdcId)
                     
-                    // Start background sync with server (no UI disruption)
-                    // This will update the backend data if needed without affecting the UI
-                    self.backgroundSyncWithServer()
+                    // Reload the current date logs to ensure the UI is up to date
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.reloadCurrentDateLogs()
+                    }
                     
                     // Set data for success toast in dashboard
                     self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
@@ -3395,5 +3371,27 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
         
         return uniqueLogs
+    }
+
+    /// Reloads logs for the currently selected date from the server
+    /// This ensures the UI is in sync with the latest data
+    func reloadCurrentDateLogs() {
+        print("🔄 Explicitly reloading logs for current date: \(selectedDate)")
+        
+        // Invalidate the cache for the selected date to force a fresh fetch
+        let dateStr = dateKey(selectedDate)
+        logsCache.removeValue(forKey: dateStr)
+        emptyDates.remove(dateStr)
+        
+        // Force the UI to update by sending objectWillChange
+        objectWillChange.send()
+        
+        // Fetch fresh logs from the server
+        fetchLogsByDate(date: selectedDate)
+        
+        // Force UI update after a short delay to ensure changes are reflected
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.objectWillChange.send()
+        }
     }
 }

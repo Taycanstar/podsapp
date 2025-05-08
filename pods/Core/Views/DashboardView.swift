@@ -303,12 +303,24 @@ struct DashboardView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showDatePicker()
-                    }) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.accentColor)
+                    HStack(spacing: 16) {
+                        // Refresh button
+                        Button(action: {
+                            foodManager.reloadCurrentDateLogs()
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        }
+                        
+                        // Calendar button
+                        Button(action: {
+                            showDatePicker()
+                        }) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        }
                     }
                 }
             }
@@ -324,8 +336,8 @@ struct DashboardView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         if foodManager.currentDateLogs.isEmpty && !foodManager.isLoadingDateLogs {
                             print("📅 Fetching logs for today")
-                            // This will automatically preload adjacent days
-                            foodManager.fetchLogsByDate(date: Date())
+                            // Use reloadCurrentDateLogs instead of fetchLogsByDate for more reliability
+                            foodManager.reloadCurrentDateLogs()
                         } else {
                             // If today's logs are already loaded, make sure we preload adjacent days
                             foodManager.preloadAdjacentDays(silently: true)
