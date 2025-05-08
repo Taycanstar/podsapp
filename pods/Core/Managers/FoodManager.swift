@@ -2909,6 +2909,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     func fetchLogsByDate(date: Date, preloadAdjacent: Bool = true) {
         guard let email = userEmail else { return }
         
+        // wipe summaries so UI doesn't display stale numbers
+        resetDailyNutrition()
+        
         // Update the selected date right away for UI
         selectedDate = date
         
@@ -2926,7 +2929,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             
             // Always update currentDateLogs and recalculate nutrition
             currentDateLogs = cachedLogs
-            self.calculateDailyNutrition()
+            calculateDailyNutrition()
             
             // Still preload adjacent days in the background if requested
             if preloadAdjacent {
@@ -2947,11 +2950,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             }
             
             // Reset nutrition values when no logs exist
-            self.caloriesConsumed = 0
-            self.proteinConsumed = 0 
-            self.carbsConsumed = 0
-            self.fatConsumed = 0
-            self.remainingCalories = self.calorieGoal
+            resetDailyNutrition()
             
             return
         }
@@ -3076,11 +3075,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             print("📅 No logs found for \(dateString)")
                             
                             // Reset nutrition values when no logs exist
-                            self.caloriesConsumed = 0
-                            self.proteinConsumed = 0 
-                            self.carbsConsumed = 0
-                            self.fatConsumed = 0
-                            self.remainingCalories = self.calorieGoal
+                            self.resetDailyNutrition()
                         } else {
                             // Keep the optimistic logs even if server returned none
                             self.currentDateLogs = pendingOptimisticLogs
@@ -3384,6 +3379,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         remainingCalories = max(0, calorieGoal - caloriesConsumed)
         
         print("📊 Calculated nutrition: Calories=\(caloriesConsumed), Protein=\(proteinConsumed)g, Carbs=\(carbsConsumed)g, Fat=\(fatConsumed)g, Remaining=\(remainingCalories)")
+    }
+    
+    private func resetDailyNutrition() {
+        caloriesConsumed   = 0
+        proteinConsumed    = 0
+        carbsConsumed      = 0
+        fatConsumed        = 0
+        remainingCalories  = calorieGoal      // show full goal until fresh data arrives
     }
     
     // Add method to fetch calorie goal from user settings/preferences
