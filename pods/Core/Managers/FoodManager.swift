@@ -127,13 +127,17 @@ class FoodManager: ObservableObject {
             self.justPerformedOptimisticUpdate = false
         }
         
+        // Mark the log as optimistic
+        var optimisticLog = log
+        optimisticLog.isOptimistic = true
+        
         // Add to main logs list - already gets displayed because it's a @Published property
-        self.combinedLogs.insert(log, at: 0)
+        self.combinedLogs.insert(optimisticLog, at: 0)
         
         // Update displayed logs if we're viewing today
         if Calendar.current.isDateInToday(selectedDate) {
             print("📊 Updating today's logs with new entry")
-            self.currentDateLogs.insert(log, at: 0)
+            self.currentDateLogs.insert(optimisticLog, at: 0)
             
             // OPTIMISTIC UPDATE - immediately update nutrition values
             // This ensures the UI updates immediately without waiting for server or recalculation
@@ -178,11 +182,11 @@ class FoodManager: ObservableObject {
         // Get today's logs from either cache or current logs
         if var todayLogs = logsCache[todayKey] {
             // Add to cached logs (if they exist)
-            todayLogs.insert(log, at: 0)
+            todayLogs.insert(optimisticLog, at: 0)
             logsCache[todayKey] = todayLogs
         } else {
             // Create new cache entry for today
-            logsCache[todayKey] = [log]
+            logsCache[todayKey] = [optimisticLog]
         }
         
         // Remove from empty dates if it was previously empty
@@ -1082,6 +1086,39 @@ func logMeal(
     // Immediately mark as recently logged for UI feedback
     self.lastLoggedMealId = meal.id
     
+    // Create an optimistic log entry before server response
+    let combinedLog = CombinedLog(
+        type: .meal,
+        status: "completed",
+        calories: calories,
+        message: "\(meal.title) - \(mealTime)",
+        foodLogId: nil,
+        food: nil,
+        mealType: nil,
+        mealLogId: -Int.random(in: 10000...99999), // Temp negative ID until server responds
+        meal: MealSummary(
+            mealId: meal.id, 
+            title: meal.title, 
+            description: meal.description ?? "",
+            image: meal.image,
+            calories: calories,
+            servings: meal.servings,
+            protein: meal.totalProtein,
+            carbs: meal.totalCarbs,
+            fat: meal.totalFat,
+            scheduledAt: date
+        ),
+        mealTime: mealTime,
+        scheduledAt: date,
+        recipeLogId: nil,
+        recipe: nil,
+        servingsConsumed: nil,
+        isOptimistic: true
+    )
+    
+    // Add optimistic log to UI immediately
+    self.addLogToTodayAndUpdateDashboard(combinedLog)
+    
     // REMOVED: Check for existing meal logs - we'll wait for server response
     
     networkManager.logMeal(
@@ -1103,12 +1140,13 @@ func logMeal(
             case .success(let loggedMeal):
                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
                 
-                // Reload logs instead of just fetching
-                self.reloadCurrentDateLogs()
+                // Clear cache for the current date
+                let dateStr = self.dateKey(date)
+                self.clearCache(for: dateStr)
                 
-                // Add delayed reload to ensure the dashboard updates properly
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.reloadCurrentDateLogs()
+                // Give backend time to index the new log before syncing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.backgroundSyncWithServer()
                 }
                 
                 // Set data for success toast in dashboard
@@ -1897,14 +1935,9 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.logsCache.removeValue(forKey: currentDateStr)
             self.emptyDates.remove(currentDateStr)
             
-            // Reload logs to ensure UI is updated
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.reloadCurrentDateLogs()
-            }
-            
-            // Add a second reload for more reliability
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.reloadCurrentDateLogs()
+            // Give backend time to index the new log before syncing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.backgroundSyncWithServer()
             }
             
             // Reset analysis state and show success toast in dashboard
@@ -1951,10 +1984,13 @@ func backgroundSyncWithServer() {
     // Debug log
     print("🔄 Starting background sync with server")
     
-    // Simply delegate to reloadCurrentDateLogs for a consistent approach
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.reloadCurrentDateLogs()
-    }
+    // Clear cache for current date to ensure we get fresh data next time we need it
+    let currentDateStr = self.dateKey(self.selectedDate)
+    self.clearCache(for: currentDateStr)
+    print("🧹 Cleared cache for current date during background sync")
+    
+    // We don't immediately reload from server to prevent overwriting local changes
+    // This allows optimistic updates to remain visible while ensuring cache is fresh for next fetch
 }
 
 // 3. Add helper method to recalculate nutrition from logs
@@ -2996,8 +3032,11 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     // Update cache with all logs by their date
                     for (logDate, dateLogs) in logsByDate {
                         if !logDate.isEmpty {
-                            // Deduplicate logs before adding to cache
-                            let uniqueLogs = self.deduplicateLogs(dateLogs)
+                            // Save existing optimistic logs for this date
+                            let existingOptimisticLogs = self.logsCache[logDate]?.filter(\.isOptimistic) ?? []
+                            
+                            // Deduplicate logs before adding to cache, keeping optimistic entries
+                            let uniqueLogs = self.deduplicateLogs(dateLogs + existingOptimisticLogs)
                             self.logsCache[logDate] = uniqueLogs
                             
                             // If a date has no logs, add it to emptyDates
@@ -3008,36 +3047,64 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             }
                             
                             // Log deduplication results
-                            if uniqueLogs.count < dateLogs.count {
-                                print("🧹 Deduplication for \(logDate) removed \(dateLogs.count - uniqueLogs.count) logs")
+                            if uniqueLogs.count < dateLogs.count + existingOptimisticLogs.count {
+                                print("🧹 Deduplication for \(logDate) removed \(dateLogs.count + existingOptimisticLogs.count - uniqueLogs.count) logs")
                             }
                         }
                     }
                     
                     // Update current date logs
                     if let targetLogs = self.logsCache[dateString] {
-                        self.currentDateLogs = targetLogs
-                        print("📅 Loaded \(targetLogs.count) logs for \(dateString)")
+                        // Get any pending optimistic logs that haven't been saved yet
+                        let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
+                        
+                        // Merge server logs with any optimistic ones that haven't returned yet
+                        let merged = self.deduplicateLogs(targetLogs + pendingOptimisticLogs)
+                        self.currentDateLogs = merged
+                        
+                        print("📅 Loaded \(merged.count) logs for \(dateString) (including \(pendingOptimisticLogs.count) optimistic logs)")
                         
                         // Calculate nutrition totals after logs are loaded
                         self.calculateDailyNutrition()
                     } else {
-                        self.currentDateLogs = []
-                        self.emptyDates.insert(dateString)
-                        print("📅 No logs found for \(dateString)")
+                        // Save any optimistic logs from the current display
+                        let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
                         
-                        // Reset nutrition values when no logs exist
-                        self.caloriesConsumed = 0
-                        self.proteinConsumed = 0 
-                        self.carbsConsumed = 0
-                        self.fatConsumed = 0
-                        self.remainingCalories = self.calorieGoal
+                        if pendingOptimisticLogs.isEmpty {
+                            self.currentDateLogs = []
+                            self.emptyDates.insert(dateString)
+                            print("📅 No logs found for \(dateString)")
+                            
+                            // Reset nutrition values when no logs exist
+                            self.caloriesConsumed = 0
+                            self.proteinConsumed = 0 
+                            self.carbsConsumed = 0
+                            self.fatConsumed = 0
+                            self.remainingCalories = self.calorieGoal
+                        } else {
+                            // Keep the optimistic logs even if server returned none
+                            self.currentDateLogs = pendingOptimisticLogs
+                            self.logsCache[dateString] = pendingOptimisticLogs
+                            print("📅 No server logs found for \(dateString), but keeping \(pendingOptimisticLogs.count) optimistic logs")
+                            
+                            // Calculate nutrition from optimistic logs
+                            self.calculateDailyNutrition()
+                        }
                     }
                     
                 case .failure(let error):
-                    self.dateLogsError = error
-                    self.currentDateLogs = []
-                    print("❌ Error loading logs for \(dateString): \(error.localizedDescription)")
+                    // Don't clear optimistic logs on error - keep them visible
+                    let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
+                    
+                    if pendingOptimisticLogs.isEmpty {
+                        self.dateLogsError = error
+                        self.currentDateLogs = []
+                        print("❌ Error loading logs for \(dateString): \(error.localizedDescription)")
+                    } else {
+                        print("❌ Error loading logs for \(dateString): \(error.localizedDescription), but keeping \(pendingOptimisticLogs.count) optimistic logs")
+                        // Keep optimistic logs visible on error
+                        self.currentDateLogs = pendingOptimisticLogs
+                    }
                 }
             }
         }
@@ -3353,16 +3420,33 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
     }
 
     /// Helper function to deduplicate logs by their ID
+    /// This version prioritizes non-optimistic (server) logs over optimistic logs
     private func deduplicateLogs(_ logs: [CombinedLog]) -> [CombinedLog] {
         var uniqueLogs: [CombinedLog] = []
         var seenIds = Set<String>()
+        var optimisticLogIds = Set<String>()
         
+        // First pass: add all non-optimistic logs and track optimistic log IDs
         for log in logs {
-            if !seenIds.contains(log.id) {
+            if log.isOptimistic {
+                // Just track optimistic log IDs for now
+                optimisticLogIds.insert(log.id)
+            } else if !seenIds.contains(log.id) {
+                // Add non-optimistic logs immediately
                 uniqueLogs.append(log)
                 seenIds.insert(log.id)
+                print("✅ Adding server log with ID: \(log.id), type: \(log.type)")
             } else {
-                print("🚫 Removing duplicate log with ID: \(log.id), type: \(log.type), message: \(log.message)")
+                print("🚫 Removing duplicate server log with ID: \(log.id), type: \(log.type)")
+            }
+        }
+        
+        // Second pass: add optimistic logs only if no server log with the same ID exists
+        for log in logs {
+            if log.isOptimistic && !seenIds.contains(log.id) {
+                uniqueLogs.append(log)
+                seenIds.insert(log.id)
+                print("✅ Adding optimistic log with ID: \(log.id), type: \(log.type)")
             }
         }
         
@@ -3393,5 +3477,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.objectWillChange.send()
         }
+    }
+
+    /// Helper method to clear cache for a specific date
+    func clearCache(for dateString: String) {
+        // Remove from logs cache
+        logsCache.removeValue(forKey: dateString)
+        // Remove from known empty dates
+        emptyDates.remove(dateString)
+        print("🧹 Cleared cache for date: \(dateString)")
     }
 }

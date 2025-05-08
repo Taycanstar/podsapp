@@ -327,12 +327,13 @@ enum LogType: String, Codable {
     case recipe
 }
 
-struct CombinedLog: Codable, Identifiable {
+struct CombinedLog: Codable, Identifiable, Equatable {
     // MARK: - Common Properties
     let type: LogType
     let status: String
     var calories: Double
     let message: String
+    var isOptimistic: Bool = false   // NEW flag for optimistic updates
     
     // MARK: - Food-specific properties
     let foodLogId: Int?
@@ -399,7 +400,7 @@ struct CombinedLog: Codable, Identifiable {
     
     // Custom coding keys to handle the 'id' field from the backend
     enum CodingKeys: String, CodingKey {
-        case type, status, calories, message
+        case type, status, calories, message, isOptimistic
         case foodLogId, food, mealType
         case mealLogId, meal, mealTime, scheduledAt
         case recipeLogId, recipe, servingsConsumed
@@ -417,6 +418,7 @@ struct CombinedLog: Codable, Identifiable {
         status = try container.decode(String.self, forKey: .status)
         calories = try container.decode(Double.self, forKey: .calories)
         message = try container.decode(String.self, forKey: .message)
+        isOptimistic = try container.decodeIfPresent(Bool.self, forKey: .isOptimistic) ?? false
         
         // Food-specific properties
         foodLogId = try container.decodeIfPresent(Int.self, forKey: .foodLogId)
@@ -451,6 +453,7 @@ struct CombinedLog: Codable, Identifiable {
         try container.encode(status, forKey: .status)
         try container.encode(calories, forKey: .calories)
         try container.encode(message, forKey: .message)
+        try container.encode(isOptimistic, forKey: .isOptimistic)
         
         // Food-specific properties
         try container.encodeIfPresent(foodLogId, forKey: .foodLogId)
@@ -491,12 +494,13 @@ extension CombinedLog {
          foodLogId: Int? = nil, food: LoggedFoodItem? = nil, mealType: String? = nil,
          mealLogId: Int? = nil, meal: MealSummary? = nil, mealTime: String? = nil, scheduledAt: Date? = nil,
          recipeLogId: Int? = nil, recipe: RecipeSummary? = nil, servingsConsumed: Int? = nil,
-         logDate: String? = nil, dayOfWeek: String? = nil) {
+         logDate: String? = nil, dayOfWeek: String? = nil, isOptimistic: Bool = false) {
         
         self.type = type
         self.status = status
         self.calories = calories
         self.message = message
+        self.isOptimistic = isOptimistic
         
         self.foodLogId = foodLogId
         self.food = food
@@ -513,6 +517,14 @@ extension CombinedLog {
         
         self.logDate = logDate
         self.dayOfWeek = dayOfWeek
+    }
+}
+
+// Implement == operator for Equatable conformance
+extension CombinedLog {
+    static func == (lhs: CombinedLog, rhs: CombinedLog) -> Bool {
+        // Two logs are considered equal if they have the same id
+        return lhs.id == rhs.id
     }
 }
 
