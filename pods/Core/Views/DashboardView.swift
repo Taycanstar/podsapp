@@ -28,7 +28,7 @@ struct DashboardView: View {
            
                         
                         // Nutrition Summary Cards
-                        VStack(spacing: 12) {
+                        VStack(spacing: 10) {
                             // Remaining Calories Card
                             HStack(spacing: 16) {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -64,88 +64,107 @@ struct DashboardView: View {
                             
                             // Macronutrients Card
                             VStack(spacing: 16) {
-                                // Calories
-                                HStack(spacing: 16) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.orange.opacity(0.2))
-                                            .frame(width: 40, height: 40)
+                                // First row: Calories and Protein
+                                HStack(spacing: 0) {
+                                    // Calories
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.orange.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                            
+                                            Image(systemName: "flame.fill")
+                                                .foregroundColor(.orange)
+                                        }
                                         
-                                        Image(systemName: "flame.fill")
-                                            .foregroundColor(.orange)
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            Text("Calories")
+                                                .font(.system(size: 16, weight: .regular))
+                                            
+                                            Text("\(Int(foodManager.caloriesConsumed))")
+                                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.orange)
+                                        }
+                                        
+                                        Spacer(minLength: 0)
                                     }
+                                    .frame(maxWidth: .infinity)
                                     
-                                    Text("Calories")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(Int(foodManager.caloriesConsumed))cal")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
+                                    // Protein
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.blue.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                            
+                                            Image(systemName: "fish")
+                                                .foregroundColor(.blue)
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            Text("Protein")
+                                                 .font(.system(size: 16, weight: .regular))
+                                            
+                                            Text("\(Int(foodManager.proteinConsumed))g")
+                                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.blue)
+                                        }
+                                        
+                                        Spacer(minLength: 0)
+                                    }
+                                    .frame(maxWidth: .infinity)
                                 }
                                 
-                                // Protein
-                                HStack(spacing: 16) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.blue.opacity(0.2))
-                                            .frame(width: 40, height: 40)
+                                // Second row: Carbs and Fat
+                                HStack(spacing: 0) {
+                                    // Carbs
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.purple.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                            
+                                            Image(systemName: "laurel.leading")
+                                                .foregroundColor(.purple)
+                                                .font(.system(size: 20))
+                                        }
                                         
-                                        Image(systemName: "figure.walk")
-                                            .foregroundColor(.blue)
-                                    }
-                                    
-                                    Text("Protein")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(Int(foodManager.proteinConsumed))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                // Carbohydrates
-                                HStack(spacing: 16) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.purple.opacity(0.2))
-                                            .frame(width: 40, height: 40)
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            Text("Carbs")
+                                                .font(.system(size: 16, weight: .regular))
+                                            
+                                            Text("\(Int(foodManager.carbsConsumed))g")
+                                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.purple)
+                                        }
                                         
-                                        Image(systemName: "chart.bar.fill")
-                                            .foregroundColor(.purple)
+                                        Spacer(minLength: 0)
                                     }
+                                    .frame(maxWidth: .infinity)
                                     
-                                    Text("Carbohydrates")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(Int(foodManager.carbsConsumed))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                // Fat
-                                HStack(spacing: 16) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.pink.opacity(0.2))
-                                            .frame(width: 40, height: 40)
+                                    // Fat
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.pink.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                            
+                                            Image(systemName: "drop.fill")
+                                                .foregroundColor(.pink)
+                                        }
                                         
-                                        Image(systemName: "drop.fill")
-                                            .foregroundColor(.pink)
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            Text("Fat")
+                                                .font(.system(size: 16, weight: .regular))
+                                            
+                                            Text("\(Int(foodManager.fatConsumed))g")
+                                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.pink)
+                                        }
+                                        
+                                        Spacer(minLength: 0)
                                     }
-                                    
-                                    Text("Fat")
-                                        .font(.system(size: 16, weight: .medium))
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(Int(foodManager.fatConsumed))g")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity)
                                 }
                             }
                             .padding()
@@ -228,8 +247,7 @@ struct DashboardView: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 // Logs section header
                                 Text("Recent Logs")
-                                    .font(.headline)
-                                    .padding(.horizontal)
+                                    .font(.title)                                    .padding(.horizontal)
                                 
                                 LazyVStack(spacing: 12) {
                                     ForEach(foodManager.currentDateLogs) { log in
