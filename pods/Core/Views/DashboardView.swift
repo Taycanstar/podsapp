@@ -20,6 +20,9 @@ struct DashboardView: View {
     var body: some View {
         NavigationView {
             ZStack {
+                Color("iosbg2")
+                    .edgesIgnoringSafeArea(.all)
+                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
            
@@ -224,7 +227,7 @@ struct DashboardView: View {
                         else {
                             VStack(alignment: .leading, spacing: 16) {
                                 // Logs section header
-                                Text("Today's Food")
+                                Text("Recent Logs")
                                     .font(.headline)
                                     .padding(.horizontal)
                                 
