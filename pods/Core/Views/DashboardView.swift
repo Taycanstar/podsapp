@@ -244,10 +244,12 @@ struct DashboardView: View {
                         }
                         // Logs for the selected date
                         else {
-                            VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 10) {
                                 // Logs section header
                                 Text("Recent Logs")
-                                    .font(.title)                                    .padding(.horizontal)
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                                                        .padding(.horizontal)
                                 
                                 LazyVStack(spacing: 12) {
                                     ForEach(foodManager.currentDateLogs) { log in
