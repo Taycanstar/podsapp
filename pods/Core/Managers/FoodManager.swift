@@ -3090,15 +3090,16 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     // Update cache with all logs by their date
                     for (logDate, dateLogs) in logsByDate {
                         if !logDate.isEmpty {
+                            // Instead of overwriting, merge with existing logs
                             let existing = self.logsCache[logDate] ?? []
                             let merged = self.deduplicateLogs(dateLogs + existing)
-
+                            
                             // If server sent nothing but we already have data, keep the old cache
-                            if merged.isEmpty, !existing.isEmpty {
+                            if merged.isEmpty && !existing.isEmpty {
                                 print("🔍 Server sent ZERO logs for \(logDate) but we have \(existing.count) cached logs - keeping cache")
                                 continue
                             }
-
+                            
                             self.logsCache[logDate] = merged
                             print("🔄 Updated cache for \(logDate): \(dateLogs.count) server logs + \(existing.count) existing logs -> \(merged.count) merged logs")
                             
