@@ -710,12 +710,17 @@ func loadMoreFoods(refresh: Bool = false) {
                     servingsConsumed: nil
                 )
                 
-                // Instead of optimistically updating, fetch fresh logs from server
-                self.fetchLogsByDate(date: Date())
+                // Add the log to today's logs using the helper method for optimistic update
+                self.addLogToTodayAndUpdateDashboard(combinedLog)
                 
                 // Track the food in recently added - fdcId is non-optional
                 self.lastLoggedFoodId = food.fdcId
                 self.trackRecentlyAdded(foodId: food.fdcId)
+                
+                // Give backend time to index the new log before syncing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.backgroundSyncWithServer()
+                }
                 
                 // Set data for success toast in dashboard
                 self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
