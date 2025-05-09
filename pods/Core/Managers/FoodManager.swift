@@ -127,9 +127,12 @@ class FoodManager: ObservableObject {
             self.justPerformedOptimisticUpdate = false
         }
         
-        // Mark the log as optimistic
+        // Mark the log as optimistic and ensure it has the current time to stay at the top
         var optimisticLog = log
         optimisticLog.isOptimistic = true
+        
+        // Always set scheduledAt to now to ensure it stays at the top of the list when sorted
+        optimisticLog.scheduledAt = Date()
         
         // Add to main logs list - already gets displayed because it's a @Published property
         self.combinedLogs.insert(optimisticLog, at: 0)
@@ -3529,6 +3532,16 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             print("🧹 Deduplication removed \(logs.count - uniqueLogs.count) logs. Original: \(logs.count), Now: \(uniqueLogs.count)")
         }
         
+        // Sort logs by scheduledAt date (most recent first)
+        uniqueLogs.sort { (log1, log2) -> Bool in
+            guard let date1 = log1.scheduledAt, let date2 = log2.scheduledAt else {
+                // If dates not available, keep optimistic logs first
+                return log1.isOptimistic && !log2.isOptimistic
+            }
+            return date1 > date2 // Most recent first
+        }
+        
+        print("🔄 Logs sorted by date (newest first)")
         return uniqueLogs
     }
 

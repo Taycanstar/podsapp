@@ -232,7 +232,13 @@ struct DashboardView: View {
                                     ForEach(foodManager.currentDateLogs) { log in
                                         LogRow(log: log)
                                             .padding(.horizontal)
+                                            .transition(.asymmetric(
+                                                insertion: .scale(scale: 0.9).combined(with: .opacity).animation(.spring(response: 0.3, dampingFraction: 0.7)),
+                                                removal: .opacity.animation(.easeOut(duration: 0.2))
+                                            ))
+                                            .id(log.id) // Ensure proper animation by giving each row a stable identity
                                     }
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: foodManager.currentDateLogs.map { $0.id })
                                 }
                             }
                         }
@@ -567,6 +573,7 @@ struct DatePickerView: View {
 // MARK: - LogRow View
 struct LogRow: View {
     let log: CombinedLog
+    @State private var isHighlighted = false
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -620,8 +627,30 @@ struct LogRow: View {
             }
         }
         .padding(12)
-        .background(Color("iosnp"))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color("iosnp"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.accentColor.opacity(isHighlighted ? 0.5 : 0), lineWidth: 2)
+                )
+        )
         .cornerRadius(12)
+        .onAppear {
+            // Apply highlight animation for new (optimistic) logs
+            if log.isOptimistic {
+                withAnimation(.easeInOut(duration: 0.5).repeatCount(3, autoreverses: true)) {
+                    isHighlighted = true
+                }
+                
+                // Remove highlight after animation finishes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        isHighlighted = false
+                    }
+                }
+            }
+        }
     }
     
     // Helper properties
