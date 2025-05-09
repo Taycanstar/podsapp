@@ -191,6 +191,12 @@ class FoodManager: ObservableObject {
         
         // Remove from empty dates if it was previously empty
         emptyDates.remove(todayKey)
+        
+        // Debug dump after adding log to see cache state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("\n📝 Cache state after adding log:")
+            self.debugDumpLogs()
+        }
     }
     /// Format a date as a string for cache keys
     private func dateKey(_ date: Date) -> String {
@@ -1981,16 +1987,61 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
 // 2. Add a new backgroundSyncWithServer method
 /// Sync with server in the background without blocking UI
 func backgroundSyncWithServer() {
+    guard let email = userEmail else { return }
+    
     // Debug log
     print("🔄 Starting background sync with server")
     
-    // Clear cache for current date to ensure we get fresh data next time we need it
+    // Get date string for current date
     let currentDateStr = self.dateKey(self.selectedDate)
-    self.clearCache(for: currentDateStr)
-    print("🧹 Cleared cache for current date during background sync")
     
-    // We don't immediately reload from server to prevent overwriting local changes
-    // This allows optimistic updates to remain visible while ensuring cache is fresh for next fetch
+    // Save optimistic logs from the current day
+    let optimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
+    print("📝 Found \(optimisticLogs.count) optimistic logs that need to be preserved during sync")
+    
+    // Fetch fresh data from server without invalidating optimistic logs
+    NetworkManagerTwo.shared.getLogsByDate(
+        userEmail: email,
+        date: self.selectedDate,
+        includeAdjacent: false
+    ) { [weak self] result in
+        guard let self = self else { return }
+        
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let response):
+                // Get server logs for current date
+                let serverLogs = response.logs
+                print("📥 Received \(serverLogs.count) logs from server for \(currentDateStr)")
+                
+                // Merge any optimistic logs with server logs
+                let combinedLogs = self.deduplicateLogs(serverLogs + optimisticLogs)
+                
+                // Update cache with merged logs
+                self.logsCache[currentDateStr] = combinedLogs
+                
+                // Update current logs if we're still on the same date
+                if self.dateKey(self.selectedDate) == currentDateStr {
+                    self.currentDateLogs = combinedLogs
+                    
+                    // Recalculate nutrition values
+                    self.calculateDailyNutrition()
+                }
+                
+                print("🔄 Background sync complete: \(serverLogs.count) server logs merged with \(optimisticLogs.count) optimistic logs")
+                
+                // Debug the logs after sync
+                self.debugDumpLogs()
+                
+            case .failure(let error):
+                print("❌ Background sync failed: \(error.localizedDescription)")
+                // On failure, keep optimistic logs
+                if !optimisticLogs.isEmpty {
+                    print("📝 Keeping \(optimisticLogs.count) optimistic logs after failed sync")
+                }
+            }
+        }
+    }
 }
 
 // 3. Add helper method to recalculate nutrition from logs
@@ -3031,23 +3082,22 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     // Update cache with all logs by their date
                     for (logDate, dateLogs) in logsByDate {
                         if !logDate.isEmpty {
-                            // Save existing optimistic logs for this date
-                            let existingOptimisticLogs = self.logsCache[logDate]?.filter(\.isOptimistic) ?? []
+                            let existing = self.logsCache[logDate] ?? []
+                            let merged = self.deduplicateLogs(dateLogs + existing)
+
+                            // If server sent nothing but we already have data, keep the old cache
+                            if merged.isEmpty, !existing.isEmpty {
+                                print("🔍 Server sent ZERO logs for \(logDate) but we have \(existing.count) cached logs - keeping cache")
+                                continue
+                            }
+
+                            self.logsCache[logDate] = merged
+                            print("🔄 Updated cache for \(logDate): \(dateLogs.count) server logs + \(existing.count) existing logs -> \(merged.count) merged logs")
                             
-                            // Deduplicate logs before adding to cache, keeping optimistic entries
-                            let uniqueLogs = self.deduplicateLogs(dateLogs + existingOptimisticLogs)
-                            self.logsCache[logDate] = uniqueLogs
-                            
-                            // If a date has no logs, add it to emptyDates
-                            if uniqueLogs.isEmpty {
+                            if merged.isEmpty {
                                 self.emptyDates.insert(logDate)
                             } else {
                                 self.emptyDates.remove(logDate)
-                            }
-                            
-                            // Log deduplication results
-                            if uniqueLogs.count < dateLogs.count + existingOptimisticLogs.count {
-                                print("🧹 Deduplication for \(logDate) removed \(dateLogs.count + existingOptimisticLogs.count - uniqueLogs.count) logs")
                             }
                         }
                     }
@@ -3110,11 +3160,17 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
         let previousDayString = dateKey(previousDay)
         
+        print("\n🔄 Navigating to previous day: \(previousDayString)")
         // Check if we have the previous day in cache or it's a known empty date
         let isCached = logsCache[previousDayString] != nil || emptyDates.contains(previousDayString)
         
         // Fetch logs with or without loading indicator based on cache status
         fetchLogsByDate(date: previousDay)
+        
+        // Debug what logs look like after navigation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.debugDumpLogs()
+        }
     }
     
     /// Navigate to the next day
@@ -3122,16 +3178,27 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
         let nextDayString = dateKey(nextDay)
         
+        print("\n🔄 Navigating to next day: \(nextDayString)")
         // Check if we have the next day in cache or it's a known empty date
         let isCached = logsCache[nextDayString] != nil || emptyDates.contains(nextDayString)
         
         // Fetch logs with or without loading indicator based on cache status
         fetchLogsByDate(date: nextDay)
+        
+        // Debug what logs look like after navigation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.debugDumpLogs()
+        }
     }
     
     /// Navigate to today
     func goToToday() {
         fetchLogsByDate(date: Date())
+        
+        // Debug what logs look like after navigation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.debugDumpLogs()
+        }
     }
     
     /// Preload logs for adjacent days (one day before and after the selected date)
@@ -3480,6 +3547,12 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.objectWillChange.send()
         }
+        
+        // Debug what logs look like after reload
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("\n🔄 Cache state after reloading logs:")
+            self.debugDumpLogs()
+        }
     }
 
     /// Helper method to clear cache for a specific date
@@ -3489,5 +3562,71 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         // Remove from known empty dates
         emptyDates.remove(dateString)
         print("🧹 Cleared cache for date: \(dateString)")
+    }
+    
+    /// Debug function to print the contents of logs cache for a specific date
+    func debugPrintLogsForDate(date: Date) {
+        let dateStr = dateKey(date)
+        print("\n🐞 DEBUG: Logs for date \(dateStr)")
+        print("------------------------------------")
+        
+        if let logs = logsCache[dateStr] {
+            print("📋 Found \(logs.count) logs in cache for \(dateStr)")
+            
+            for (index, log) in logs.enumerated() {
+                var logDetails = "[\(index)] "
+                
+                switch log.type {
+                case .food:
+                    logDetails += "FOOD: \(log.food?.displayName ?? "Unknown") - \(log.mealType ?? "No meal type")"
+                case .meal:
+                    logDetails += "MEAL: \(log.meal?.title ?? "Unknown") - \(log.mealTime ?? "No meal time")"
+                case .recipe:
+                    logDetails += "RECIPE: \(log.recipe?.title ?? "Unknown")"
+                }
+                
+                logDetails += " | Calories: \(log.displayCalories)"
+                
+                if let scheduledAt = log.scheduledAt {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    logDetails += " | Scheduled: \(formatter.string(from: scheduledAt))"
+                }
+                
+                logDetails += " | Optimistic: \(log.isOptimistic)"
+                
+                print(logDetails)
+            }
+        } else {
+            print("❌ No logs found in cache for \(dateStr)")
+        }
+        
+        if emptyDates.contains(dateStr) {
+            print("⚠️ Date \(dateStr) is marked as empty in emptyDates")
+        }
+        
+        if loadingDates.contains(dateStr) {
+            print("⏳ Date \(dateStr) is currently loading")
+        }
+        
+        print("------------------------------------\n")
+    }
+    
+    /// Dumps the cache + currentDateLogs so you can see what the UI will show
+    func debugDumpLogs() {
+        print("──────── DEBUG DUMP ────────")
+        let sorted = logsCache.sorted { $0.key < $1.key }
+        for (dateKey, logs) in sorted {
+            print("🗓  \(dateKey)  →  \(logs.count) logs")
+            for log in logs {
+                let name = log.food?.displayName ??
+                           log.meal?.title ??
+                           log.recipe?.title ?? "–"
+                let opt  = log.isOptimistic ? "🟡" : "  "
+                print("   \(opt) \(name)  (\(log.type))")
+            }
+        }
+        print("➡️  currently selected: \(dateKey(selectedDate))  →  \(currentDateLogs.count) logs")
+        print("────────────────────────────")
     }
 }
