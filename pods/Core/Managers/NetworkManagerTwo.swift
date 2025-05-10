@@ -605,6 +605,7 @@ class NetworkManagerTwo {
     ///   - includeAdjacent: Whether to include logs from adjacent days
     ///   - daysBefore: Number of days before the target date to include (default: 1)
     ///   - daysAfter: Number of days after the target date to include (default: 1)
+    ///   - timezoneOffset: User's timezone offset in minutes (default: 0)
     ///   - completion: Result callback with logs data or error
     func getLogsByDate(
         userEmail: String,
@@ -612,6 +613,7 @@ class NetworkManagerTwo {
         includeAdjacent: Bool = false,
         daysBefore: Int = 1,
         daysAfter: Int = 1,
+        timezoneOffset: Int = 0,
         completion: @escaping (Result<LogsByDateResponse, Error>) -> Void
     ) {
         // Format the date as YYYY-MM-DD
@@ -624,7 +626,8 @@ class NetworkManagerTwo {
         urlComponents?.queryItems = [
             URLQueryItem(name: "user_email", value: userEmail),
             URLQueryItem(name: "date", value: dateString),
-            URLQueryItem(name: "include_adjacent", value: includeAdjacent ? "true" : "false")
+            URLQueryItem(name: "include_adjacent", value: includeAdjacent ? "true" : "false"),
+            URLQueryItem(name: "timezone_offset", value: "\(timezoneOffset)")
         ]
         
         if includeAdjacent {
@@ -637,7 +640,7 @@ class NetworkManagerTwo {
             return
         }
         
-        print("📆 Fetching logs for date: \(dateString), include adjacent: \(includeAdjacent)")
+        print("📆 Fetching logs for date: \(dateString), include adjacent: \(includeAdjacent), timezone offset: \(timezoneOffset) minutes")
         
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {

@@ -2011,7 +2011,8 @@ func backgroundSyncWithServer() {
     NetworkManagerTwo.shared.getLogsByDate(
         userEmail: email,
         date: self.selectedDate,
-        includeAdjacent: false
+        includeAdjacent: false,
+        timezoneOffset: getTimezoneOffsetInMinutes()
     ) { [weak self] result in
         guard let self = self else { return }
         
@@ -3044,7 +3045,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             date: date,
             includeAdjacent: preloadAdjacent,
             daysBefore: 1,
-            daysAfter: 1
+            daysAfter: 1,
+            timezoneOffset: getTimezoneOffsetInMinutes()
         ) { [weak self] result in
             guard let self = self else { return }
             
@@ -3250,7 +3252,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             date: selectedDate,
             includeAdjacent: true,
             daysBefore: 1,
-            daysAfter: 1
+            daysAfter: 1,
+            timezoneOffset: getTimezoneOffsetInMinutes()
         ) { [weak self] result in
             guard let self = self else { return }
             
@@ -3646,5 +3649,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
         print("➡️  currently selected: \(dateKey(selectedDate))  →  \(currentDateLogs.count) logs")
         print("────────────────────────────")
+    }
+
+    // Helper method to get the device's timezone offset in minutes
+    private func getTimezoneOffsetInMinutes() -> Int {
+        return TimeZone.current.secondsFromGMT() / 60
     }
 }
