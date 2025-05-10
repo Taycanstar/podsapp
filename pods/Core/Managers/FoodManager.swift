@@ -2818,9 +2818,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         isLoading = true  // This is what makes the loading card visible in DashboardView
         analysisStage = 0
         showAIGenerationSuccess = false
-        
-        // Do NOT set isScanningFood - that's for image scanning only!
-        // isScanningFood = true  <- REMOVE this, it's for a different card
+        loadingMessage = "Transcribing your voice…"  // Initial stage message
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -2831,6 +2829,14 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             
             // Cycle through stages 0-3
             self.analysisStage = (self.analysisStage + 1) % 4
+            
+            // Update loading message based on current stage
+            self.loadingMessage = [
+                "Transcribing your voice…",
+                "Analyzing food description…",
+                "Generating nutritional data…",
+                "Finalizing your food log…"
+            ][self.analysisStage]
         }
         
         // First step: Transcribe the audio
@@ -2846,8 +2852,17 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 
                 // Second step: Generate AI macros from the transcribed text
                 self.generateMacrosWithAI(foodDescription: text, mealType: "Lunch") { result in
-                    // Stop the analysis animation timer no matter what
-                    timer.invalidate()
+                    // Use defer to ensure flags are always reset
+                    defer {
+                        // Stop the analysis animation timer
+                        timer.invalidate()
+                        
+                        // Reset state flags
+                        self.isAnalyzingFood = false
+                        self.isLoading = false
+                        self.analysisStage = 0
+                        self.loadingMessage = ""
+                    }
                     
                     switch result {
                     case .success(let loggedFood):
@@ -2858,11 +2873,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         if loggedFood.food.displayName.lowercased().contains("unknown food") || 
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
-                            
-                            // Handle as error even though server returned success
-                            self.isAnalyzingFood = false
-                            self.isLoading = false
-                            self.analysisStage = 0
                             
                             // Set error for user notification
                             self.scanningFoodError = "Food not identified. Please try again."
@@ -2901,19 +2911,13 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         // Save the generated food for the toast
                         self.aiGeneratedFood = loggedFood.food
                         
-                        // Reset analysis state and show success toast in dashboard
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.isAnalyzingFood = false
-                            self.analysisStage = 0
-                            
-                            // Show success toast
-                            self.showAIGenerationSuccess = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                self.showAIGenerationSuccess = false
-                            }
+                        // Show success toast
+                        self.showAIGenerationSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.showAIGenerationSuccess = false
                         }
                         
-                        // Clear the lastLoggedFoodId after 2 seconds, similar to logFood()
+                        // Clear the lastLoggedFoodId after 2 seconds
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                             withAnimation {
                                 // Only clear if it still matches the food we logged
@@ -2924,12 +2928,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         }
                         
                     case .failure(let error):
-                        // Reset analysis state
-                        self.isScanningFood = false
-                        self.isAnalyzingFood = false
-                        self.isLoading = false
-                        self.analysisStage = 0
-                        
                         // Set error message for user notification in DashboardView
                         if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
                             self.scanningFoodError = message
@@ -2947,6 +2945,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 self.isAnalyzingFood = false
                 self.isLoading = false
                 self.analysisStage = 0
+                self.loadingMessage = ""
                 
                 // Set error message for user notification in DashboardView
                 if let networkError = error as? NetworkError, case .serverError(let message) = networkError {

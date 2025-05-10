@@ -182,28 +182,32 @@ struct VoiceLogView: View {
                         
                         // Checkmark button (right) - only enabled when food data is available
                         Button(action: {
-                            print("Checkmark button tapped")
+                            // Guard against double-taps during processing
+                            guard !foodManager.isAnalyzingFood && !foodManager.isLoading else {
+                                return
+                            }
+                            
+                            // First stop the recording if active
                             if audioRecorder.isRecording {
-                                // Stop recording and process in FoodManager (this will show loading UI)
-                                audioRecorder.stopRecording(cancel: false)
-                                // Close immediately after stopping - FoodManager will continue processing
-                                isPresented = false
-                            } else if let food = audioRecorder.foodData {
-                                // The processFoodAndSubmit method is removed to prevent double-processing
-                                // FoodManager.processVoiceRecording already handles the entire workflow
+                                audioRecorder.stopRecording()
+                                // Wait a short moment for the recording to finish
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    isPresented = false
+                                }
                             } else {
-                                // Just close if there's nothing to process
+                                // If not recording, just dismiss
                                 isPresented = false
                             }
                         }) {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 22))
-                                .foregroundColor(.primary)
-                                .frame(width: 44, height: 44)
-                                .background(Color(UIColor.secondarySystemFill))
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color.green)
                                 .clipShape(Circle())
+                                .opacity(foodManager.isAnalyzingFood || foodManager.isLoading ? 0.5 : 1.0) // Visual feedback for disabled state
                         }
-                        .disabled(audioRecorder.foodData == nil && audioRecorder.isProcessing)
+                        .disabled(foodManager.isAnalyzingFood || foodManager.isLoading)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 40)
