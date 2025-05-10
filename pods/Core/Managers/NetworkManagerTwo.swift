@@ -49,7 +49,7 @@ class NetworkManagerTwo {
         userEmail: String,
         imageData: String? = nil,
         mealType: String = "Lunch",
-        completion: @escaping (Result<Food, Error>) -> Void
+        completion: @escaping (Result<BarcodeLookupResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/lookup_food_by_barcode/"
         
@@ -112,13 +112,14 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 
-                // Try to parse the food response
-                let food = try decoder.decode(Food.self, from: data)
+                // Try to parse as BarcodeLookupResponse
+                let response = try decoder.decode(BarcodeLookupResponse.self, from: data)
                 
                 DispatchQueue.main.async {
-                    print("✅ Successfully looked up food by barcode: \(food.displayName)")
-                    completion(.success(food))
+                    print("✅ Successfully looked up food by barcode: \(response.food.displayName), foodLogId: \(response.foodLogId)")
+                    completion(.success(response))
                 }
+                
             } catch {
                 print("❌ Decoding error in barcode lookup: \(error)")
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

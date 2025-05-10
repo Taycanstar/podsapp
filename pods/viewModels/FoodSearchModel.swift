@@ -10,7 +10,27 @@ struct FoodSearchResponse: Codable {
     let foods: [Food]
 }
 
-
+// New struct to handle barcode lookup responses
+struct BarcodeLookupResponse: Codable {
+    let food: Food
+    let foodLogId: Int
+    
+    // Custom init to handle the fact that barcode response has Food properties at the top level
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Extract foodLogId directly
+        foodLogId = try container.decode(Int.self, forKey: .foodLogId)
+        
+        // For the food, we need to decode the entire response again
+        // This handles the case where food properties are at the top level
+        food = try Food(from: decoder)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case foodLogId
+    }
+}
 
 struct Food: Codable, Identifiable, Hashable{
     let fdcId: Int

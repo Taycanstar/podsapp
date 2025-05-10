@@ -2663,7 +2663,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             self.uploadProgress = 1.0
             
             switch result {
-            case .success(let food):
+            case .success(let payload):
+                let food = payload.food
+                let serverLogId = payload.foodLogId      // real ID 👍
+                
                 // Success - show success toast
                 self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
@@ -2678,22 +2681,23 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.showLogSuccess = false
                 }
                 
-                // Create a CombinedLog for the barcode-scanned food
+                // Build ONE optimistic log using the server's id
                 let combinedLog = CombinedLog(
                     type: .food,
-                    status: "active",  // Default status for logged foods
+                    status: "active",
                     calories: food.calories ?? 0,
                     message: "\(food.displayName) - Lunch",
-                    foodLogId: Int.random(in: 10000...999999),  // Temporary ID until refresh fetches the real one
+                    foodLogId: serverLogId,      // ✅ real id
                     food: food.asLoggedFoodItem,
-                    mealType: "Lunch",  // Default meal type used in the barcode API call
+                    mealType: "Lunch",
                     mealLogId: nil,
                     meal: nil,
                     mealTime: nil,
-                    scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                    scheduledAt: Date(),
                     recipeLogId: nil,
                     recipe: nil,
-                    servingsConsumed: nil
+                    servingsConsumed: nil,
+                    isOptimistic: true           // will be replaced on background sync
                 )
                 
                 // Add the log to today's logs using the helper method
@@ -2703,12 +2707,11 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 self.lastLoggedFoodId = food.fdcId
                 self.trackRecentlyAdded(foodId: food.fdcId)
                 
-                
-                
-                // Still refresh for completeness
-                self.refresh()
+                // ❌ REMOVE the immediate refresh that follows
+                // backgroundSyncWithServer() will run shortly anyway
                 
                 completion(true, nil)
+                
             case .failure(let error):
                 // Update scanner state on failure
                 self.isScanningFood = false
