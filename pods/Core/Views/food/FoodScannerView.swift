@@ -345,7 +345,8 @@ struct FoodScannerView: View {
                 barcode: barcode,
                 userEmail: userEmail,
                 imageData: nil,
-                mealType: "Lunch"
+                mealType: "Lunch",
+                shouldLog: false
             ) { result in
                 self.isAnalyzing = false
                 self.isProcessingBarcode = false

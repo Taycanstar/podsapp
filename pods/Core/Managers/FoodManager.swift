@@ -2655,7 +2655,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             barcode: barcode,
             userEmail: userEmail,
             imageData: imageBase64,
-            mealType: "Lunch"
+            mealType: "Lunch",
+            shouldLog: false
         ) { [weak self] result in
             guard let self = self else { return }
             
@@ -2722,7 +2723,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             barcode: barcode,
             userEmail: userEmail,
             imageData: imageBase64,
-            mealType: "Lunch"
+            mealType: "Lunch",
+            shouldLog: false
         ) { [weak self] result in
             guard let self = self else { return }
             
@@ -2732,48 +2734,19 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             switch result {
             case .success(let payload):
                 let food = payload.food
-                let serverLogId = payload.foodLogId      // real ID 👍
+                let serverLogId = payload.foodLogId
                 
-                // Success - show success toast
+                // Store the food for confirmation, but DON'T add it to the logs yet
                 self.aiGeneratedFood = food.asLoggedFoodItem
-                self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
-                self.showLogSuccess = true
+                
+                // Track ID for later use when confirmed
+                self.lastLoggedFoodId = food.fdcId
                 
                 // Update scanner state
                 self.isScanningFood = false
                 self.scannedImage = nil
                 
-                // Auto-hide the success message after 3 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.showLogSuccess = false
-                }
-                
-                // Build ONE optimistic log using the server's id
-                let combinedLog = CombinedLog(
-                    type: .food,
-                    status: "active",
-                    calories: food.calories ?? 0,
-                    message: "\(food.displayName) - Lunch",
-                    foodLogId: serverLogId,      // ✅ real id
-                    food: food.asLoggedFoodItem,
-                    mealType: "Lunch",
-                    mealLogId: nil,
-                    meal: nil,
-                    mealTime: nil,
-                    scheduledAt: Date(),
-                    recipeLogId: nil,
-                    recipe: nil,
-                    servingsConsumed: nil,
-                    isOptimistic: true           // will be replaced on background sync
-                )
-                
-                // Add the log to today's logs using the helper method
-                self.addLogToTodayAndUpdateDashboard(combinedLog)
-                
-                // Track the food in recently added
-                self.lastLoggedFoodId = food.fdcId
-                self.trackRecentlyAdded(foodId: food.fdcId)
-                
+                // Return success so the scanner can close
                 completion(true, nil)
                 
             case .failure(let error):
