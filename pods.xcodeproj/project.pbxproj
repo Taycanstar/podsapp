@@ -167,6 +167,7 @@
 		36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C742BB3B5E7003CDAB9 /* PhotoEditorViewController.swift */; };
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
 		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
+		36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -356,6 +357,7 @@
 		36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditorRepresentable.swift; sourceTree = "<group>"; };
 		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPreviewView.swift; sourceTree = "<group>"; };
+		36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmFoodView.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -511,6 +513,7 @@
 				36CB033C2D64E0CC006A74E9 /* CardDetailView.swift */,
 				36CB03432D72C1B9006A74E9 /* BottomPopup.swift */,
 				364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */,
+				36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1025,6 +1028,7 @@
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
 				36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */,
 				36B8516B2D4FEEB700A876C3 /* HomePodView.swift in Sources */,
+				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,

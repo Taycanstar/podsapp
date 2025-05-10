@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var selectedCameraMode = CameraMode.fifteen
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var foodManager: FoodManager
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
@@ -37,6 +38,11 @@ struct ContentView: View {
     @State private var showQuickPodView = false
     @State private var showFoodScanner = false
     @State private var showVoiceLog = false
+    
+    // New states for barcode confirmation
+    @State private var showConfirmFoodView = false
+    @State private var scannedFood: Food?
+    @State private var scannedFoodLogId: Int?
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -148,8 +154,16 @@ struct ContentView: View {
                 }
 
                 .sheet(isPresented: $showFoodScanner) {
-                    FoodScannerView(isPresented: $showFoodScanner)
-                        .edgesIgnoringSafeArea(.all)
+                    FoodScannerView(isPresented: $showFoodScanner, onFoodScanned: { food, foodLogId in
+                        // When a barcode is scanned and food is returned, show the confirmation view
+                        scannedFood = food
+                        scannedFoodLogId = foodLogId
+                        // Small delay to ensure transitions are smooth
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            showConfirmFoodView = true
+                        }
+                    })
+                    .edgesIgnoringSafeArea(.all)
                 }
 
                 .fullScreenCover(isPresented: $showVoiceLog) {
@@ -168,6 +182,23 @@ struct ContentView: View {
                 .fullScreenCover(item: $deepLinkHandler.activeTeamInvitation) { invitation in
                                  TeamInvitationView(invitation: invitation)
                              }
+                
+                // Add presentation for ConfirmFoodView when food is scanned
+                .sheet(isPresented: $showConfirmFoodView, onDismiss: {
+                    // Reset scanned food data
+                    scannedFood = nil
+                    scannedFoodLogId = nil
+                }) {
+                    if let food = scannedFood {
+                        NavigationView {
+                            ConfirmFoodView(
+                                path: .constant(NavigationPath()), // Dummy navigation path since we're using sheets
+                                food: food,
+                                foodLogId: scannedFoodLogId
+                            )
+                        }
+                    }
+                }
                 
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {

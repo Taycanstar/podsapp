@@ -43,12 +43,14 @@ class NetworkManagerTwo {
     ///   - userEmail: User's email address
     ///   - imageData: Optional base64 image data from the photo taken during barcode scanning
     ///   - mealType: Type of meal (Breakfast, Lunch, Dinner, Snack)
+    ///   - shouldLog: Whether to log the lookup
     ///   - completion: Result callback with Food object or error
     func lookupFoodByBarcode(
         barcode: String,
         userEmail: String,
         imageData: String? = nil,
         mealType: String = "Lunch",
+        shouldLog: Bool = false,
         completion: @escaping (Result<BarcodeLookupResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/lookup_food_by_barcode/"
@@ -62,7 +64,8 @@ class NetworkManagerTwo {
         var parameters: [String: Any] = [
             "user_email": userEmail,
             "barcode": barcode,
-            "meal_type": mealType
+            "meal_type": mealType,
+            "should_log": shouldLog
         ]
         
         // Add optional image data if available

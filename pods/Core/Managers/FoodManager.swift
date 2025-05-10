@@ -116,7 +116,7 @@ class FoodManager: ObservableObject {
     // MARK: - Helper methods for consistent food log updates
     /// Helper method to ensure a new food log appears in today's logs immediately
     /// - Parameter log: The CombinedLog object to add to today's logs
-    private func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
+     func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
         print("📝 Adding log to today and updating dashboard: \(log.message)")
         
         // Set the flag to indicate we just performed an optimistic update
@@ -2636,7 +2636,74 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
     // Add this function to handle the barcode scanning logic
+    func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, navigationPath: Binding<NavigationPath>, completion: @escaping (Bool, String?) -> Void) {
+        // Set scanning state for UI feedback
+        isScanningFood = true
+        loadingMessage = "Looking up barcode..."
+        uploadProgress = 0.3
+        
+        // Convert image to base64 if available
+        var imageBase64: String? = nil
+        if let image = image {
+            if let imageData = image.jpegData(compressionQuality: 0.7) {
+                imageBase64 = imageData.base64EncodedString()
+            }
+        }
+        
+        // Call NetworkManagerTwo to look up the barcode
+        NetworkManagerTwo.shared.lookupFoodByBarcode(
+            barcode: barcode,
+            userEmail: userEmail,
+            imageData: imageBase64,
+            mealType: "Lunch"
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            // Update progress for UI
+            self.uploadProgress = 1.0
+            
+            switch result {
+            case .success(let response):
+                // Reset scanning state since we'll show the confirmation screen
+                self.isScanningFood = false
+                self.scannedImage = nil
+                
+                // Show the ConfirmFoodView with the barcode data
+                DispatchQueue.main.async {
+                    // Add the ConfirmFoodView to the navigation path using BarcodeFood
+                    navigationPath.wrappedValue.append(BarcodeFood(food: response.food, foodLogId: response.foodLogId))
+                    completion(true, nil)
+                }
+                
+            case .failure(let error):
+                // Update scanner state on failure
+                self.isScanningFood = false
+                self.scannedImage = nil
+                
+                // Set error message for display
+                let errorMsg: String
+                if let networkError = error as? NetworkManagerTwo.NetworkError,
+                   case .serverError(let message) = networkError {
+                    // Use server error message
+                    errorMsg = message
+                } else {
+                    // General error message
+                    errorMsg = "Could not find food for barcode"
+                }
+                
+                print("Barcode scan error: \(errorMsg)")
+                self.scanningFoodError = errorMsg
+                completion(false, errorMsg)
+            }
+        }
+    }
+    
+    // Original method for backwards compatibility (calls the new method)
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+        // If we don't have a navigation path, we can't show the confirmation screen
+        // This is just a placeholder for backward compatibility
+        print("Warning: Using deprecated barcode lookup method without navigation path")
+        
         // Set scanning state for UI feedback
         isScanningFood = true
         loadingMessage = "Looking up barcode..."
@@ -2706,9 +2773,6 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 // Track the food in recently added
                 self.lastLoggedFoodId = food.fdcId
                 self.trackRecentlyAdded(foodId: food.fdcId)
-                
-                // ❌ REMOVE the immediate refresh that follows
-                // backgroundSyncWithServer() will run shortly anyway
                 
                 completion(true, nil)
                 

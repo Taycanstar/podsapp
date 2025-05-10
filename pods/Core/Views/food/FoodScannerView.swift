@@ -12,6 +12,13 @@ import PhotosUI
 // Notification names - moved to file scope
 extension Notification.Name {
     static let capturePhoto = Notification.Name("capturePhoto")
+    static let toggleFlash = Notification.Name("toggleFlash")
+}
+
+// Simple enum for navigating to confirmation screen without external dependencies
+struct BarcodeFood: Hashable {
+    let food: Food
+    let foodLogId: Int?
 }
 
 struct FoodScannerView: View {
@@ -28,240 +35,224 @@ struct FoodScannerView: View {
     @State private var isGalleryImageLoaded = false
     @EnvironmentObject var foodManager: FoodManager
     
+    // Callback for when food is scanned via barcode
+    var onFoodScanned: ((Food, Int?) -> Void)?
+    
+    // Navigation state for transitioning to the confirmation screen
+    @State private var navigationPath = NavigationPath()
+    
     enum ScanMode {
         case food, barcode, gallery
     }
     
     var body: some View {
-        ZStack {
-            // Camera view (or error overlay)
-            if cameraPermissionDenied {
-                ZStack {
-                    Color.black.edgesIgnoringSafeArea(.all)
-                    VStack(spacing: 20) {
-                        Image(systemName: "camera.slash.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.white)
-                            
-                        Text("Camera Access Required")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            
-                        Text("Please allow camera access in Settings to use barcode scanning.")
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(.horizontal)
-                            
-                        Button(action: {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
+        NavigationStack(path: $navigationPath) {
+            ZStack {
+                // Camera view (or error overlay)
+                if cameraPermissionDenied {
+                    ZStack {
+                        Color.black.edgesIgnoringSafeArea(.all)
+                        VStack(spacing: 20) {
+                            Image(systemName: "camera.slash.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.white)
+                                
+                            Text("Camera Access Required")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                
+                            Text("Please allow camera access in Settings to use barcode scanning.")
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(.horizontal)
+                                
+                            Button(action: {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }) {
+                                Text("Open Settings")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 30)
+                                    .padding(.vertical, 12)
+                                    .background(Color.blue)
+                                    .cornerRadius(10)
                             }
+                            .padding(.top)
+                        }
+                    }
+                } else {
+                    CameraPreviewView(
+                        selectedMode: $selectedMode,
+                        flashEnabled: flashEnabled, 
+                        onCapture: { image in
+                            guard let image = image else { return }
+                            print("Food scanned with captured image")
+                            if selectedMode == .food {
+                                analyzeImage(image)
+                            }
+                        },
+                        onBarcodeDetected: { barcode in
+                            guard selectedMode == .barcode else { 
+                                print("🚫 Barcode detected but ignored - not in barcode mode")
+                                return 
+                            }
+                            
+                            guard !isProcessingBarcode && barcode != lastProcessedBarcode else {
+                                print("⏱️ Ignoring barcode - already being processed or same as last")
+                                return
+                            }
+                            
+                            print("🔍 BARCODE DETECTED IN UI: \(barcode) - preparing to process")
+                            
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.prepare()
+                            impactFeedback.impactOccurred()
+                            
+                            isProcessingBarcode = true
+                            lastProcessedBarcode = barcode
+                            
+                            self.scannedBarcode = barcode
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                print("📸 Auto-capturing photo for barcode: \(barcode)")
+                                takePhoto()
+                                
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    processBarcodeDirectly(barcode)
+                                }
+                            }
+                        }
+                    )
+                    .edgesIgnoringSafeArea(.all)
+                }
+                
+                // UI Overlay
+                VStack {
+                    // Top controls
+                    HStack {
+                        // Close button
+                        Button(action: {
+                            isPresented = false
                         }) {
-                            Text("Open Settings")
+                            Image(systemName: "xmark")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(Circle())
+                        }
+                        .padding(.leading)
+
+                        Spacer()
+
+                        // Flash toggle button
+                        Button(action: {
+                            toggleFlash()
+                        }) {
+                            Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(Circle())
+                        }
+                        .padding(.trailing)
+                    }
+                    .padding(.top, 50)
+                    
+                    Spacer()
+                    
+                    // Barcode indicator (when in barcode mode)
+                    if selectedMode == .barcode {
+                        VStack {
+                            Text("Barcode Scanner")
+                                .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 30)
-                                .padding(.vertical, 12)
-                                .background(Color.blue)
-                                .cornerRadius(10)
-                        }
-                        .padding(.top)
-                    }
-                }
-            } else {
-                CameraPreviewView(
-                    selectedMode: $selectedMode,
-                    flashEnabled: flashEnabled, 
-                    onCapture: { image in
-                        guard let image = image else { return }
-                        print("Food scanned with captured image")
-                        if selectedMode == .food {
-                            analyzeImage(image)
-                        }
-                    },
-                    onBarcodeDetected: { barcode in
-                        guard selectedMode == .barcode else { 
-                            print("🚫 Barcode detected but ignored - not in barcode mode")
-                            return 
-                        }
-                        
-                        guard !isProcessingBarcode && barcode != lastProcessedBarcode else {
-                            print("⏱️ Ignoring barcode - already being processed or same as last")
-                            return
-                        }
-                        
-                        print("🔍 BARCODE DETECTED IN UI: \(barcode) - preparing to process")
-                        
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.prepare()
-                        impactFeedback.impactOccurred()
-                        
-                        isProcessingBarcode = true
-                        lastProcessedBarcode = barcode
-                        
-                        self.scannedBarcode = barcode
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            print("📸 Auto-capturing photo for barcode: \(barcode)")
-                            takePhoto()
+                                .padding(.bottom, 20)
                             
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                processBarcodeDirectly(barcode)
-                            }
+                            // Just show a clearly defined border for the scanning area
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.white, lineWidth: 3)
+                                .frame(width: 280, height: 160)
+                                .background(Color.clear)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     }
-                )
-                .edgesIgnoringSafeArea(.all)
-            }
-            
-            // UI Overlay
-            VStack {
-                // Top controls
-                HStack {
-                    // Close button
-                    Button(action: {
-                        isPresented = false
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(12)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                    }
-                    .padding(.leading)
-
-                    Spacer()
-
-                    // Flash toggle button
-                    Button(action: {
-                        toggleFlash()
-                    }) {
-                        Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(12)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                    }
-                    .padding(.trailing)
-                }
-                .padding(.top, 50)
-                
-                Spacer()
-                
-                // Barcode indicator (when in barcode mode)
-                if selectedMode == .barcode {
-                    VStack {
-                        Text("Barcode Scanner")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.bottom, 20)
-                        
-                        // Just show a clearly defined border for the scanning area
-                        RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(Color.white, lineWidth: 3)
-                            .frame(width: 280, height: 160)
-                            .background(Color.clear)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                }
-                
-                Spacer()
-                
-                // Bottom controls
-                VStack(spacing: 30) {
-                    // Mode selection buttons
-                    HStack(spacing: 20) {
-                        // Food Scan Button
-                        ScanOptionButton(
-                            icon: "text.viewfinder",
-                            title: "Food",
-                            isSelected: selectedMode == .food,
-                            action: { selectedMode = .food }
-                        )
-                        
-                        // Barcode Button
-                        ScanOptionButton(
-                            icon: "barcode.viewfinder",
-                            title: "Barcode",
-                            isSelected: selectedMode == .barcode,
-                            action: { selectedMode = .barcode }
-                        )
-                        
-                        // Gallery Button
-                        ScanOptionButton(
-                            icon: "photo",
-                            title: "Gallery",
-                            isSelected: selectedMode == .gallery,
-                            action: {
-                                openGallery()
-                            }
-                        )
-                    }
-                    .padding(.horizontal, 20)
                     
-                    // Shutter button - hidden when in barcode mode
-                    if selectedMode != .barcode {
-                        Button(action: {
-                            takePhoto()
-                        }) {
-                            ZStack {
+                    Spacer()
+                    
+                    // Bottom controls
+                    VStack(spacing: 30) {
+                        // Mode selection buttons
+                        HStack(spacing: 20) {
+                            // Food Scan Button
+                            ScanOptionButton(
+                                icon: "text.viewfinder",
+                                title: "Food",
+                                isSelected: selectedMode == .food,
+                                action: { selectedMode = .food }
+                            )
+                            
+                            // Barcode Button
+                            ScanOptionButton(
+                                icon: "barcode.viewfinder",
+                                title: "Barcode",
+                                isSelected: selectedMode == .barcode,
+                                action: { selectedMode = .barcode }
+                            )
+                            
+                            // Gallery Button
+                            ScanOptionButton(
+                                icon: "photo",
+                                title: "Gallery",
+                                isSelected: selectedMode == .gallery,
+                                action: {
+                                    openGallery()
+                                }
+                            )
+                        }
+                        
+                        // Capture button
+                        if selectedMode != .gallery {
+                            Button(action: {
+                                takePhoto()
+                            }) {
                                 Circle()
                                     .fill(Color.white)
                                     .frame(width: 70, height: 70)
-                                
-                                Circle()
-                                    .stroke(Color.white, lineWidth: 4)
-                                    .frame(width: 80, height: 80)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 6)
+                                            .frame(width: 80, height: 80)
+                                    )
                             }
                         }
-                        .padding(.bottom, 40)
-                        .transition(.opacity)
-                        .animation(.easeInOut(duration: 0.3), value: selectedMode)
-                    } else {
-                        // Empty spacer with the same size to maintain layout
-                        Color.clear
-                            .frame(width: 80, height: 80)
-                            .padding(.bottom, 40)
                     }
+                    .padding(.bottom, 40)
                 }
             }
-            
-            // Loading overlay
-            if isAnalyzing {
-                Color.black.opacity(0.7)
-                    .edgesIgnoringSafeArea(.all)
-                
-                VStack(spacing: 20) {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1.5)
-                    
-                    Text(foodManager.loadingMessage.isEmpty ? "Analyzing food..." : foodManager.loadingMessage)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 30)
-                }
-            }
-        }
-        .sheet(isPresented: $showPhotosPicker) {
-            PhotosPickerView(selectedImage: $selectedImage)
-                .onDisappear {
-                    print("📥 PhotoPicker disappeared - Image selected: \(selectedImage != nil)")
-                    
-                    if let image = selectedImage {
-                        // Use a slight delay to ensure any async operations complete
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            .sheet(isPresented: $showPhotosPicker) {
+                PhotosPickerView(selectedImage: $selectedImage)
+                    .ignoresSafeArea()
+                    .onDisappear {
+                        if let image = selectedImage {
+                            isGalleryImageLoaded = true
                             analyzeImage(image)
                         }
-                    } else {
-                        // Reset to Food mode if no image was selected
-                        selectedMode = .food
                     }
-                }
+            }
+            .background(Color.black)
+            // Add navigation destination for ConfirmFoodView using BarcodeFood struct
+            .navigationDestination(for: BarcodeFood.self) { barcodeFood in
+                ConfirmFoodView(
+                    path: $navigationPath,
+                    food: barcodeFood.food,
+                    foodLogId: barcodeFood.foodLogId
+                )
+            }
         }
         .onAppear {
             // Check camera permissions when the view appears
@@ -273,90 +264,115 @@ struct FoodScannerView: View {
     // MARK: - Functions
     
     private func takePhoto() {
-        // Trigger photo capture - flash will be handled by AVFoundation
+        print("📸 Taking photo")
         NotificationCenter.default.post(name: .capturePhoto, object: nil)
     }
     
+    private func toggleFlash() {
+        flashEnabled.toggle()
+        NotificationCenter.default.post(name: .toggleFlash, object: flashEnabled)
+    }
+    
     private func analyzeImage(_ image: UIImage) {
-        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("User email not found")
+        guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
             return
         }
         
-        print("📊 Analyzing image: \(image.size.width)x\(image.size.height) - Mode: \(selectedMode)")
-        
-        // Close the scanner view immediately
+        // Start analysis and close camera
         isPresented = false
         
-        // If we have a barcode and are in barcode mode, use barcode lookup instead of image analysis
-        if selectedMode == .barcode, let barcode = scannedBarcode {
-            // Process barcode scanning
-            print("🔍 Processing barcode scan: \(barcode)")
-            
-            isAnalyzing = true  // Show loading indicator
-            
-            // Call the barcode lookup function in FoodManager
+        // Set image first to show user what was captured
+        foodManager.scannedImage = image
+        
+        // Then set scanning state
+        foodManager.isScanningFood = true
+        foodManager.loadingMessage = "Analyzing image..."
+        foodManager.uploadProgress = 0.1
+        
+        print("🔍 Starting food image analysis via server")
+        
+        // Call the AI analysis function in FoodManager
+        foodManager.analyzeFoodImage(image: image, userEmail: userEmail) { success, message in
+            if !success {
+                print("❌ Food scan failed: \(message ?? "Unknown error")")
+            } else {
+                print("✅ Food scan successful")
+            }
+        }
+    }
+    
+    private func processBarcodeDirectly(_ barcode: String) {
+        guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
+            return
+        }
+        
+        // Keep the scanner open until the confirmation view is ready to show
+        isAnalyzing = true
+        
+        print("🧩 Processing barcode directly (without photo): \(barcode)")
+        
+        // Check if we're using the callback pattern (preferred) or the navigation path
+        if let onFoodScanned = onFoodScanned {
+            // Use the callback approach with separate food lookup
             foodManager.lookupFoodByBarcode(
-                barcode: barcode, 
-                image: image,
+                barcode: barcode,
+                image: nil,
                 userEmail: userEmail
             ) { success, message in
                 self.isAnalyzing = false
                 self.isProcessingBarcode = false
                 
-                if !success {
-                    print("❌ Barcode lookup failed: \(message ?? "Unknown error")")
+                if success, let loggedFoodItem = self.foodManager.aiGeneratedFood {
+                
+                    // Convert LoggedFoodItem back to a Food object
+                    let food = loggedFoodItem.asFood
+                    
+                    // Get the food log ID (if available)
+                    let foodLogId = self.foodManager.lastLoggedFoodId
+                    
+                    // Call the callback with the food and log ID
+                    onFoodScanned(food, foodLogId)
+                    
+                    // Close the scanner
+                    self.isPresented = false
                 } else {
-                    print("✅ Barcode lookup success for: \(barcode)")
+                    print("❌ Barcode direct lookup failed: \(message ?? "Unknown error")")
                 }
             }
         } else {
-            // Regular food image analysis (from camera or gallery)
-            print("🍽️ Starting food analysis for \(selectedMode == .gallery ? "gallery" : "camera") image")
-            isAnalyzing = true
-            foodManager.analyzeFoodImage(image: image, userEmail: userEmail) { success, message in
+            // Fall back to the navigation path approach - but don't dismiss the scanner view yet
+            NetworkManagerTwo.shared.lookupFoodByBarcode(
+                barcode: barcode,
+                userEmail: userEmail,
+                imageData: nil,
+                mealType: "Lunch"
+            ) { result in
                 self.isAnalyzing = false
+                self.isProcessingBarcode = false
                 
-                if !success {
-                    print("❌ Food analysis failed: \(message ?? "Unknown error")")
-                } else {
-                    print("✅ Food analysis succeeded")
+                switch result {
+                case .success(let response):
+                    print("✅ Barcode lookup success for: \(barcode) - navigation to confirmation view")
+                    
+                    // Add the food to the navigation path
+                    DispatchQueue.main.async {
+                        // Navigate to confirmation view with the food data
+                        self.navigationPath.append(BarcodeFood(food: response.food, foodLogId: response.foodLogId))
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Barcode lookup failed: \(error.localizedDescription)")
                 }
             }
         }
     }
     
-    private func toggleFlash() {
-        // Access the camera device directly
-        guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              backCamera.hasFlash else {
-            print("No back camera with flash available")
-            return
-        }
-        
-        // Toggle the state
-        flashEnabled.toggle()
-        print("🔦 Flash toggled to: \(flashEnabled ? "ON" : "OFF")")
-        
-        // Configure camera hardware
-        do {
-            try backCamera.lockForConfiguration()
-            
-            // Toggle torch mode based on the flashEnabled state
-            if backCamera.hasTorch {
-                if flashEnabled {
-                    backCamera.torchMode = .on
-                    print("Torch turned ON for preview")
-                } else {
-                    backCamera.torchMode = .off
-                    print("Torch turned OFF for preview")
-                }
-            }
-            
-            backCamera.unlockForConfiguration()
-        } catch {
-            print("❌ Error configuring flash: \(error)")
-        }
+    private func openGallery() {
+        // Reset selection state to prevent using old images
+        selectedImage = nil
+        selectedMode = .gallery
+        showPhotosPicker = true
+        print("🖼️ Gallery opened - awaiting image selection")
     }
     
     private func checkCameraPermissions() {
@@ -387,42 +403,6 @@ struct FoodScannerView: View {
             cameraPermissionDenied = true
             print("❓ Unknown camera permission status")
         }
-    }
-    
-    private func processBarcodeDirectly(_ barcode: String) {
-        guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            return
-        }
-        
-        // Close the scanner view
-        isPresented = false
-        isAnalyzing = true
-        
-        print("🧩 Processing barcode directly (without photo): \(barcode)")
-        
-        // Call the barcode lookup function in FoodManager (without image)
-        foodManager.lookupFoodByBarcode(
-            barcode: barcode,
-            image: nil,
-            userEmail: userEmail
-        ) { success, message in
-            self.isAnalyzing = false
-            self.isProcessingBarcode = false
-            
-            if !success {
-                print("❌ Barcode direct lookup failed: \(message ?? "Unknown error")")
-            } else {
-                print("✅ Barcode direct lookup success for: \(barcode)")
-            }
-        }
-    }
-    
-    private func openGallery() {
-        // Reset selection state to prevent using old images
-        selectedImage = nil
-        selectedMode = .gallery
-        showPhotosPicker = true
-        print("🖼️ Gallery opened - awaiting image selection")
     }
 }
 
