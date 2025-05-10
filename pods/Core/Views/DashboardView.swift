@@ -458,7 +458,14 @@ struct DashboardView: View {
     
     // Update view after picking a date from the date picker
     private func onDateSelected() {
-        foodManager.fetchLogsByDate(date: selectedDate)
+        // Check if the selected date is today
+        if Calendar.current.isDateInToday(selectedDate) {
+            // Use goToToday to ensure fresh data when returning to today
+            foodManager.goToToday()
+        } else {
+            // For other dates, use normal fetch
+            foodManager.fetchLogsByDate(date: selectedDate)
+        }
     }
 }
 

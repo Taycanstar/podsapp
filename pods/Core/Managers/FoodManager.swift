@@ -3019,7 +3019,21 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         
         // Always fetch fresh data for today to ensure we have the latest logs
         let isToday = Calendar.current.isDateInToday(date)
-        let forceRefresh = isToday
+        let forceRefresh = isToday  // Always refresh today's data
+        
+        // Keep optimistic logs visible even during a forced refresh of today
+        if forceRefresh,
+           let optimistic = logsCache[dateString]?.filter(\.isOptimistic),
+           !optimistic.isEmpty {
+            currentDateLogs = optimistic
+            calculateDailyNutrition()
+        }
+        
+        // When navigating to today, always clear the cache first
+        if isToday {
+            logsCache.removeValue(forKey: dateString)
+            emptyDates.remove(dateString)
+        }
         
         // Check if we already have this date in cache and we're not forcing a refresh
         if !forceRefresh, let cachedLogs = logsCache[dateString] {
@@ -3241,14 +3255,26 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
     
-    /// Navigate to today
-    func goToToday() {
-        fetchLogsByDate(date: Date())
-        
-        // Debug what logs look like after navigation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.debugDumpLogs()
+    /// Navigate to "today" without dropping optimistic logs
+    func goToToday(forceRefresh: Bool = false) {
+        let today = Date()
+        selectedDate = today                 // update toolbar
+
+        if forceRefresh {
+            clearCache(for: dateKey(today))  // caller-requested hard reload
         }
+
+        // 1. show cached/optimistic logs instantly
+        if let cached = logsCache[dateKey(today)] {
+            currentDateLogs = cached
+            calculateDailyNutrition()
+        }
+
+        // 2. silently fetch fresh data and merge on arrival
+        fetchLogsByDate(date: today, preloadAdjacent: true)
+
+        // 3. let server eventually reconcile
+        backgroundSyncWithServer()
     }
     
     /// Preload logs for adjacent days (one day before and after the selected date)
@@ -3274,9 +3300,15 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         let previousDayString = dateKey(previousDay)
         let nextDayString = dateKey(nextDay)
         
+        // Today should always be fetched fresh
+        let todayString = dateKey(Date())
+        let isPreviousDayToday = Calendar.current.isDateInToday(previousDay)
+        let isNextDayToday = Calendar.current.isDateInToday(nextDay)
+        
         // Skip if we already have both adjacent days or are loading them
-        if (logsCache[previousDayString] != nil || emptyDates.contains(previousDayString) || loadingDates.contains(previousDayString)) &&
-           (logsCache[nextDayString] != nil || emptyDates.contains(nextDayString) || loadingDates.contains(nextDayString)) {
+        // But always fetch today to ensure we have the latest data
+        if (!isPreviousDayToday && (logsCache[previousDayString] != nil || emptyDates.contains(previousDayString) || loadingDates.contains(previousDayString))) &&
+           (!isNextDayToday && (logsCache[nextDayString] != nil || emptyDates.contains(nextDayString) || loadingDates.contains(nextDayString))) {
             print("📅 Adjacent days already cached or loading, skipping preload")
             return
         }
