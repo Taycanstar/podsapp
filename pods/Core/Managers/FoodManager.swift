@@ -3428,18 +3428,31 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     }
                     
                     // Update cache with all logs by their date
-                    for (logDate, dateLogs) in logsByDate {
-                        if !logDate.isEmpty {
-                            self.logsCache[logDate] = dateLogs
-                            
-                            // If a date has no logs, add it to emptyDates
-                            if dateLogs.isEmpty {
+             // --- BEGIN PATCH ---
+                        for (logDate, dateLogs) in logsByDate {
+                            guard !logDate.isEmpty else { continue }
+
+                            // pull forward optimistic rows we cached earlier for this day
+                            let optimistic = self.logsCache[logDate]?.filter(\.isOptimistic) ?? []
+
+                            // ALWAYS merge + dedupe
+                            let merged = self.deduplicateLogs(dateLogs + optimistic)
+                            self.logsCache[logDate] = merged      // ✅ keeps Coke row alive
+
+                            // if the user is *currently* looking at this date, refresh the list
+                            if self.dateKey(self.selectedDate) == logDate {
+                                self.currentDateLogs = merged
+                            }
+
+                            // maintain emptyDates bookkeeping
+                            if merged.isEmpty {
                                 self.emptyDates.insert(logDate)
                             } else {
                                 self.emptyDates.remove(logDate)
                             }
                         }
-                    }
+                        // --- END PATCH ---
+
                     
                     print("📅 Preloaded logs for adjacent days: prev=\(self.logsCache[previousDayString]?.count ?? 0), next=\(self.logsCache[nextDayString]?.count ?? 0)")
                     
