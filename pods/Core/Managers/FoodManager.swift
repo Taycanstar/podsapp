@@ -2712,19 +2712,32 @@ func analyzeFoodImage(
   uploadProgress = 0
 
   // ─── 2) Fake progress ticker ─────────────────
-  let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] t in
-    guard let self = self else { t.invalidate(); return }
-    self.analysisStage = (self.analysisStage + 1) % 4
-  }
+
+
+  uploadProgress = 0
+let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
+  guard let self = self else { t.invalidate(); return }
+  // bump progress up to, say, 90%
+  self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+}
 
   // ─── 3) Call backend ─────────────────────────
   networkManager.analyzeFoodImage(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
     guard let self = self else { return }
     DispatchQueue.main.async {
       // stop ticker + UI
-      timer.invalidate()
-      self.isScanningFood = false
-      self.isLoading      = false
+      progressTimer.invalidate()
+
+     withAnimation {
+      self.uploadProgress = 1.0
+    }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        self.isScanningFood = false
+        self.isLoading      = false
+
+        // reset for next time
+        self.uploadProgress = 0
+      }
 
       // failure path
       guard success, let payload = payload else {
@@ -2769,6 +2782,14 @@ func analyzeFoodImage(
         )
 
         completion(.success(combined))
+           self.lastLoggedItem = (
+     name:     loggedFood.food.displayName,
+     calories: loggedFood.calories
+   )
+   self.showLogSuccess = true
+   DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+     self.showLogSuccess = false
+   }
       }
       catch {
         //── 7) On decode error, print the bad JSON + error
