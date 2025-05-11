@@ -570,7 +570,8 @@ struct ConfirmFoodView: View {
         foodManager.showLogSuccess = true
         
         // Add the log to today's logs
-        foodManager.addLogToTodayAndUpdateDashboard(combinedLog)
+        //foodManager.addLogToTodayAndUpdateDashboard(combinedLog)
+        foodManager.addLog(combinedLog, for: Date())
         
         // Track as recently added
         foodManager.trackRecentlyAdded(foodId: updatedFood.fdcId)

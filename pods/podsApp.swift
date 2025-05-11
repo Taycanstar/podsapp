@@ -21,6 +21,7 @@ struct podsApp: App {
     @StateObject private var foodManager = FoodManager()
     @StateObject private var deepLinkHandler = DeepLinkHandler()
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var dayLogsVM    = DayLogsViewModel()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
@@ -42,6 +43,7 @@ struct podsApp: App {
                 .environmentObject(deepLinkHandler)
                 .environmentObject(videoPreloader)
                 .environmentObject(subscriptionManager)
+                .environmentObject(dayLogsVM)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {

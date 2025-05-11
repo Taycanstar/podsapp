@@ -168,6 +168,8 @@
 		36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E97C762BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift */; };
 		36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */; };
 		36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */; };
+		36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED359C2DD0DE1600D174FB /* LogRepository.swift */; };
+		36ED35A32DD0DE6000D174FB /* DayLogsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -358,6 +360,8 @@
 		36EAFD3E2B79BBCE0001013F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		36EAFD3F2B79BEAC0001013F /* VideoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPreviewView.swift; sourceTree = "<group>"; };
 		36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmFoodView.swift; sourceTree = "<group>"; };
+		36ED359C2DD0DE1600D174FB /* LogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogRepository.swift; sourceTree = "<group>"; };
+		36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayLogsViewModel.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -429,6 +433,7 @@
 				36CB03382D5E4B2A006A74E9 /* FoodManager.swift */,
 				36CB033E2D659B11006A74E9 /* VersionManager.swift */,
 				364A83CB2DACA02F009D2620 /* NetworkManagerTwo.swift */,
+				36ED359C2DD0DE1600D174FB /* LogRepository.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -454,6 +459,7 @@
 				3629CE972BCECCA100040725 /* UploadViewModel.swift */,
 				363AFA1A2D474FB400C91A14 /* PodsViewModel.swift */,
 				36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */,
+				36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */,
 			);
 			path = viewModels;
 			sourceTree = "<group>";
@@ -1073,6 +1079,7 @@
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
+				36ED35A32DD0DE6000D174FB /* DayLogsViewModel.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
@@ -1143,6 +1150,7 @@
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
+				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
 				36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,

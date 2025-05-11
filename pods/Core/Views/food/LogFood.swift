@@ -377,6 +377,7 @@ private struct FoodListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     @State private var isShowingMinimumLoader = false
+    @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
     var body: some View {
         VStack(spacing: 12) {
@@ -459,7 +460,10 @@ private struct FoodListView: View {
                         case .success(_):
                             // Success is handled by FoodManager (shows toast, updates lists)
                             print("Successfully generated macros with AI")
-                            
+
+                             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
+  }
                         case .failure(let error):
                             // Show error alert
                             if let networkError = error as? NetworkError, case .serverError(let message) = networkError {

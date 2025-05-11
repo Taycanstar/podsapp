@@ -114,93 +114,51 @@ class FoodManager: ObservableObject {
     private var justPerformedOptimisticUpdate = false
     
 
-func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
-    // ------------------------------------------------------------------
-    // 0️⃣  Build the day-key *first* – we’ll use it several times.
-    // ------------------------------------------------------------------
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    let todayKey = dateFormatter.string(from: Date())
+ 
 
-    print("📝 Adding log to today (\(todayKey)) and updating dashboard: \(log.message)")
 
-    // ------------------------------------------------------------------
-    // 1️⃣  Flag that we just did an optimistic update (prevents double
-    //     nutrition recalcs elsewhere).
-    // ------------------------------------------------------------------
+// MARK: ––– Add a log to an arbitrary day (not “today” hard-coded)
+func addLog(_ log: CombinedLog, for date: Date) {
+    // ➊ Correct bucket key
+    let dayKey = dateKey(date)
+
+    // ➋ Make the optimistic copy *use the same scheduled date*
+    var optimisticLog         = log
+    optimisticLog.isOptimistic = true
+    optimisticLog.scheduledAt  = date
+
+    // ➌ Flag so other threads know not to recalc immediately
     justPerformedOptimisticUpdate = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
         self.justPerformedOptimisticUpdate = false
     }
 
-    // ------------------------------------------------------------------
-    // 2️⃣  Make a local optimistic copy of the log (timestamp = now).
-    // ------------------------------------------------------------------
-    var optimisticLog          = log
-
-    optimisticLog.scheduledAt  = Date()      // keep it at the top
-
-    // ------------------------------------------------------------------
-    // 3️⃣  Push it into the main timeline & (if viewing today) the list
-    //     that backs DashboardView.
-    // ------------------------------------------------------------------
+    // ➍ Push into global timeline
     combinedLogs.insert(optimisticLog, at: 0)
 
-    if Calendar.current.isDateInToday(selectedDate) {
-        print("📊 Updating today’s on-screen logs")
+    // ➎ If the UI is showing this same day, update that list + nutrition
+    if Calendar.current.isDate(selectedDate, inSameDayAs: date) {
         currentDateLogs.insert(optimisticLog, at: 0)
-
-        // ---- instant nutrition tweak ---------------------------------
         caloriesConsumed += log.displayCalories
-        switch log.type {
-        case .food:
-            if let f = log.food {
-                proteinConsumed += f.protein ?? 0
-                carbsConsumed   += f.carbs   ?? 0
-                fatConsumed     += f.fat     ?? 0
-            }
-        case .meal:
-            if let m = log.meal {
-                proteinConsumed += m.protein ?? 0
-                carbsConsumed   += m.carbs   ?? 0
-                fatConsumed     += m.fat     ?? 0
-            }
-        case .recipe:
-            if let r = log.recipe {
-                proteinConsumed += r.protein ?? 0
-                carbsConsumed   += r.carbs   ?? 0
-                fatConsumed     += r.fat     ?? 0
-            }
+        if let f = log.food {
+            proteinConsumed += f.protein ?? 0
+            carbsConsumed   += f.carbs   ?? 0
+            fatConsumed     += f.fat     ?? 0
         }
         remainingCalories = max(0, calorieGoal - caloriesConsumed)
-
-        print("📊 Optimistic totals  →  cal \(caloriesConsumed) · P \(proteinConsumed)g · C \(carbsConsumed)g · F \(fatConsumed)g · rem \(remainingCalories)")
     }
 
-    // ------------------------------------------------------------------
-    // 4️⃣  Update the in-memory day-cache.
-    // ------------------------------------------------------------------
-    if var cached = logsCache[todayKey] {
-        cached.insert(optimisticLog, at: 0)
-        logsCache[todayKey] = cached
-    } else {
-        logsCache[todayKey] = [optimisticLog]
-    }
-    emptyDates.remove(todayKey)   // it’s definitely not empty now
+    // ➏ Update in-memory cache and persist to disk
+    logsCache[dayKey, default: []].insert(optimisticLog, at: 0)
+    persistDayCache(dayKey, logs: logsCache[dayKey]!)
 
-    // ------------------------------------------------------------------
-    // 5️⃣  Persist that *updated* array to disk.
-    // ------------------------------------------------------------------
-    persistDayCache(todayKey, logs: logsCache[todayKey] ?? [])
-
-    // ------------------------------------------------------------------
-    // 6️⃣  Debug dump (delayed so prints appear after any UI work).
-    // ------------------------------------------------------------------
+    // ➐ Debug
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        print("\n📝 Cache state after adding log:")
+        print("\n📝 Cache after optimistic insert into \(dayKey):")
         self.debugDumpLogs()
     }
 }
+
 
 
 
@@ -259,6 +217,11 @@ func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
     func initialize(userEmail: String) {
         print("🏁 FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
+
+          for key in UserDefaults.standard.dictionaryRepresentation().keys
+        where key.hasPrefix("logs_by_date_\(userEmail)_") {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
         
         print("📋 FoodManager: Starting initialization sequence")
         resetAndFetchFoods()
@@ -273,6 +236,25 @@ func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
         self.recentlyAddedFoodIds.remove(foodId)
         }
     }
+
+    // MARK: - Optimistic-row helpers
+private func optimisticLogs(for dayKey: String) -> [CombinedLog] {
+    let cal = Calendar.current
+    return currentDateLogs.filter {
+        $0.isOptimistic &&
+        cal.isDate($0.scheduledAt ?? .distantPast,
+                   equalTo: keyToDate(dayKey),
+                   toGranularity: .day)
+    }
+}
+
+private func keyToDate(_ key: String) -> Date {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    f.timeZone   = .current
+    return f.date(from: key) ?? Date()
+}
+
     
     private func resetAndFetchFoods() {
         print("🍔 FoodManager: Reset and fetch foods called")
@@ -719,14 +701,16 @@ func loadMoreFoods(refresh: Bool = false) {
                     mealLogId: nil,
                     meal: nil,
                     mealTime: nil,
-                    scheduledAt: Date(), // Set to current date to make it appear in today's logs
+                    // scheduledAt: Date(),
+                    scheduledAt: date,
                     recipeLogId: nil,
                     recipe: nil,
                     servingsConsumed: nil
                 )
                 
                 // Add the log to today's logs using the helper method for optimistic update
-                self.addLogToTodayAndUpdateDashboard(combinedLog)
+                // self.addLogToTodayAndUpdateDashboard(combinedLog)
+                self.addLog(combinedLog, for: date)
                 
                 // Track the food in recently added - fdcId is non-optional
                 self.lastLoggedFoodId = food.fdcId
@@ -1143,7 +1127,8 @@ func logMeal(
     )
     
     // Add optimistic log to UI immediately
-    self.addLogToTodayAndUpdateDashboard(combinedLog)
+    // self.addLogToTodayAndUpdateDashboard(combinedLog)
+    self.addLog(combinedLog, for: date)
     
     // REMOVED: Check for existing meal logs - we'll wait for server response
     
@@ -1949,9 +1934,6 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
                 servingsConsumed: nil
             )
             
-            // Add the log to today's logs using the helper method
-            self.addLogToTodayAndUpdateDashboard(combinedLog)
-            
             // Track the food in recently added - fdcId is non-optional
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
@@ -2668,7 +2650,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                             )
                             
                             // Add the log to today's logs using the helper method
-                            self.addLogToTodayAndUpdateDashboard(combinedLog)
+                            // self.addLogToTodayAndUpdateDashboard(combinedLog)
+                            self.addLog(combinedLog, for: Date())
                             
                             // Track the food in recently added
                             self.lastLoggedFoodId = foodObj.fdcId
@@ -3015,7 +2998,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         )
                         
                         // Add the log to today's logs using the helper method
-                        self.addLogToTodayAndUpdateDashboard(combinedLog)
+                        // self.addLogToTodayAndUpdateDashboard(combinedLog)
+                        self.addLog(combinedLog, for: Date())
                         
                         // Track the food in recently added
                         self.lastLoggedFoodId = loggedFood.food.fdcId
@@ -3218,28 +3202,32 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     }
                     
                     // Update cache with all logs by their date
-                    for (logDate, dateLogs) in logsByDate {
-                        if !logDate.isEmpty {
-                            // Instead of overwriting, merge with existing logs
-                            let existing = self.logsCache[logDate] ?? []
-                            let merged = self.deduplicateLogs(dateLogs + existing)
-                            
-                            // If server sent nothing but we already have data, keep the old cache
-                            if merged.isEmpty && !existing.isEmpty {
-                                print("🔍 Server sent ZERO logs for \(logDate) but we have \(existing.count) cached logs - keeping cache")
-                                continue
-                            }
-                            
-                            self.logsCache[logDate] = merged
-                            print("🔄 Updated cache for \(logDate): \(dateLogs.count) server logs + \(existing.count) existing logs -> \(merged.count) merged logs")
-                            
-                            if merged.isEmpty {
-                                self.emptyDates.insert(logDate)
-                            } else {
-                                self.emptyDates.remove(logDate)
-                            }
-                        }
-                    }
+      // ─── Update cache with all logs by their date ─────────────────────────────
+// ─── Update cache with all logs by their date ─────────────────────────────
+for (logDate, serverLogs) in logsByDate {
+    guard !logDate.isEmpty else { continue }
+
+    // merge server rows with JUST the optimistic rows that belong to *this* day
+    let merged = self.deduplicateLogs(serverLogs + self.optimisticLogs(for: logDate))
+    self.logsCache[logDate] = merged
+
+    // refresh the list if we’re currently looking at this date
+    if logDate == self.dateKey(self.selectedDate) {
+        self.currentDateLogs = merged
+    }
+
+    // keep empty-date bookkeeping in sync
+    if merged.isEmpty {
+        self.emptyDates.insert(logDate)
+    } else {
+        self.emptyDates.remove(logDate)
+    }
+}
+// ──────────────────────────────────────────────────────────────────────────
+
+// ──────────────────────────────────────────────────────────────────────────
+
+
                     
                     // Update current date logs
                     if let targetLogs = self.logsCache[dateString] {
@@ -3522,7 +3510,8 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     )
                     
                     // Add the log to today's logs using the helper method
-                    self.addLogToTodayAndUpdateDashboard(combinedLog)
+                    // self.addLogToTodayAndUpdateDashboard(combinedLog)
+                    self.addLog(combinedLog, for: Date())
                     
                     // Track the food in recently added - fdcId is non-optional
                     self.lastLoggedFoodId = food.fdcId
