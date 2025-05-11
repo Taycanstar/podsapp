@@ -318,6 +318,16 @@ private func analyzeImage(_ image: UIImage) {
       // Instant optimistic insert
       dayLogsVM.addPending(combinedLog)
 
+      DispatchQueue.main.async {
+  // 1) see if there’s an existing entry with that foodLogId
+  if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+    foodManager.combinedLogs.remove(at: idx)
+  }
+  // 2) prepend the fresh log
+  foodManager.combinedLogs.insert(combinedLog, at: 0)
+}
+
+
     case .failure(let error):
       print("❌ scan failed:", error.localizedDescription)
     }
