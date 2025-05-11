@@ -835,7 +835,31 @@ struct DashboardView: View {
                     }
                     .padding(.vertical)
                 }
-            }
+
+                   if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
+        VStack {
+          Spacer()
+          BottomPopup(message: "Food logged")
+            .padding(.bottom, 55)
+        }
+        .zIndex(1)
+        .transition(.opacity)
+        .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
+      }
+      else if foodMgr.showLogSuccess, let item = foodMgr.lastLoggedItem {
+        VStack {
+          Spacer()
+          BottomPopup(message: "\(item.name) logged")
+            .padding(.bottom, 55)
+        }
+        .zIndex(1)
+        .transition(.opacity)
+        .animation(.spring(), value: foodMgr.showLogSuccess)
+      }
+    }
+            
+                 
+            
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showDatePicker) {
