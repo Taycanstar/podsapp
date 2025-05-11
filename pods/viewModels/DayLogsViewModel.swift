@@ -56,29 +56,7 @@ final class DayLogsViewModel: ObservableObject {
     email = newEmail
   }
 
-//   func loadLogs(for date: Date) {
-//     guard !email.isEmpty else { return }
-//     isLoading = true
-//     error     = nil
 
-//     repo.fetchLogs(email: email, for: date) { [weak self] result in
-//       guard let self = self else { return }
-//       self.isLoading = false
-//       switch result {
-//       case .success(let serverLogs):
-//         self.logs = serverLogs   // ← triggers didSet → recalc
-//       case .failure(let e):
-//         self.error = e
-//       }
-//     }
-//   }
-//   func addPending(_ log: CombinedLog) {
-//     let key = Calendar.current.startOfDay(for: log.scheduledAt!)
-//     pendingByDate[key, default: []].insert(log, at: 0)
-//     if Calendar.current.isDate(log.scheduledAt!, inSameDayAs: selectedDate) {
-//       logs.insert(log, at: 0)
-//     }
-//   }
 func addPending(_ log: CombinedLog) {
   let key = Calendar.current.startOfDay(for: log.scheduledAt!)
   var arr = pendingByDate[key] ?? []
