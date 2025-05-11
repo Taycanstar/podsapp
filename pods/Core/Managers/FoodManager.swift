@@ -113,94 +113,106 @@ class FoodManager: ObservableObject {
     // Add a flag to track recent optimistic updates
     private var justPerformedOptimisticUpdate = false
     
-    // MARK: - Helper methods for consistent food log updates
-    /// Helper method to ensure a new food log appears in today's logs immediately
-    /// - Parameter log: The CombinedLog object to add to today's logs
-     func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
-        print("📝 Adding log to today and updating dashboard: \(log.message)")
-        
-        // Set the flag to indicate we just performed an optimistic update
-        justPerformedOptimisticUpdate = true
-        
-        // Reset the flag after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.justPerformedOptimisticUpdate = false
-        }
-        
-        // Mark the log as optimistic and ensure it has the current time to stay at the top
-        var optimisticLog = log
-        optimisticLog.isOptimistic = true
-        
-        // Always set scheduledAt to now to ensure it stays at the top of the list when sorted
-        optimisticLog.scheduledAt = Date()
-        
-        // Add to main logs list - already gets displayed because it's a @Published property
-        self.combinedLogs.insert(optimisticLog, at: 0)
-        
-        // Update displayed logs if we're viewing today
-        if Calendar.current.isDateInToday(selectedDate) {
-            print("📊 Updating today's logs with new entry")
-            self.currentDateLogs.insert(optimisticLog, at: 0)
-            
-            // OPTIMISTIC UPDATE - immediately update nutrition values
-            // This ensures the UI updates immediately without waiting for server or recalculation
-            self.caloriesConsumed += log.displayCalories
-            
-            // Update macros based on log type
-            switch log.type {
-            case .food:
-                if let food = log.food {
-                    self.proteinConsumed += food.protein ?? 0
-                    self.carbsConsumed += food.carbs ?? 0
-                    self.fatConsumed += food.fat ?? 0
-                }
-            case .meal:
-                if let meal = log.meal {
-                    self.proteinConsumed += meal.protein ?? 0
-                    self.carbsConsumed += meal.carbs ?? 0
-                    self.fatConsumed += meal.fat ?? 0
-                }
-            case .recipe:
-                if let recipe = log.recipe {
-                    self.proteinConsumed += recipe.protein ?? 0
-                    self.carbsConsumed += recipe.carbs ?? 0
-                    self.fatConsumed += recipe.fat ?? 0
-                }
-            }
-            
-            // Update remaining calories
-            self.remainingCalories = max(0, self.calorieGoal - self.caloriesConsumed)
-            
-            print("📊 Optimistic update: Calories now \(self.caloriesConsumed), Protein \(self.proteinConsumed)g, Carbs \(self.carbsConsumed)g, Fat \(self.fatConsumed)g, Remaining \(self.remainingCalories)")
-        }
-        
-        // Persist to UserDefaults - Note this is different from server persistence
-        updateCombinedLogsCache()
-        
-        // Update cache for today's date
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let todayKey = dateFormatter.string(from: Date())
-        
-        // Get today's logs from either cache or current logs
-        if var todayLogs = logsCache[todayKey] {
-            // Add to cached logs (if they exist)
-            todayLogs.insert(optimisticLog, at: 0)
-            logsCache[todayKey] = todayLogs
-        } else {
-            // Create new cache entry for today
-            logsCache[todayKey] = [optimisticLog]
-        }
-        
-        // Remove from empty dates if it was previously empty
-        emptyDates.remove(todayKey)
-        
-        // Debug dump after adding log to see cache state
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("\n📝 Cache state after adding log:")
-            self.debugDumpLogs()
-        }
+
+func addLogToTodayAndUpdateDashboard(_ log: CombinedLog) {
+    // ------------------------------------------------------------------
+    // 0️⃣  Build the day-key *first* – we’ll use it several times.
+    // ------------------------------------------------------------------
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+    let todayKey = dateFormatter.string(from: Date())
+
+    print("📝 Adding log to today (\(todayKey)) and updating dashboard: \(log.message)")
+
+    // ------------------------------------------------------------------
+    // 1️⃣  Flag that we just did an optimistic update (prevents double
+    //     nutrition recalcs elsewhere).
+    // ------------------------------------------------------------------
+    justPerformedOptimisticUpdate = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        self.justPerformedOptimisticUpdate = false
     }
+
+    // ------------------------------------------------------------------
+    // 2️⃣  Make a local optimistic copy of the log (timestamp = now).
+    // ------------------------------------------------------------------
+    var optimisticLog          = log
+
+    optimisticLog.scheduledAt  = Date()      // keep it at the top
+
+    // ------------------------------------------------------------------
+    // 3️⃣  Push it into the main timeline & (if viewing today) the list
+    //     that backs DashboardView.
+    // ------------------------------------------------------------------
+    combinedLogs.insert(optimisticLog, at: 0)
+
+    if Calendar.current.isDateInToday(selectedDate) {
+        print("📊 Updating today’s on-screen logs")
+        currentDateLogs.insert(optimisticLog, at: 0)
+
+        // ---- instant nutrition tweak ---------------------------------
+        caloriesConsumed += log.displayCalories
+        switch log.type {
+        case .food:
+            if let f = log.food {
+                proteinConsumed += f.protein ?? 0
+                carbsConsumed   += f.carbs   ?? 0
+                fatConsumed     += f.fat     ?? 0
+            }
+        case .meal:
+            if let m = log.meal {
+                proteinConsumed += m.protein ?? 0
+                carbsConsumed   += m.carbs   ?? 0
+                fatConsumed     += m.fat     ?? 0
+            }
+        case .recipe:
+            if let r = log.recipe {
+                proteinConsumed += r.protein ?? 0
+                carbsConsumed   += r.carbs   ?? 0
+                fatConsumed     += r.fat     ?? 0
+            }
+        }
+        remainingCalories = max(0, calorieGoal - caloriesConsumed)
+
+        print("📊 Optimistic totals  →  cal \(caloriesConsumed) · P \(proteinConsumed)g · C \(carbsConsumed)g · F \(fatConsumed)g · rem \(remainingCalories)")
+    }
+
+    // ------------------------------------------------------------------
+    // 4️⃣  Update the in-memory day-cache.
+    // ------------------------------------------------------------------
+    if var cached = logsCache[todayKey] {
+        cached.insert(optimisticLog, at: 0)
+        logsCache[todayKey] = cached
+    } else {
+        logsCache[todayKey] = [optimisticLog]
+    }
+    emptyDates.remove(todayKey)   // it’s definitely not empty now
+
+    // ------------------------------------------------------------------
+    // 5️⃣  Persist that *updated* array to disk.
+    // ------------------------------------------------------------------
+    persistDayCache(todayKey, logs: logsCache[todayKey] ?? [])
+
+    // ------------------------------------------------------------------
+    // 6️⃣  Debug dump (delayed so prints appear after any UI work).
+    // ------------------------------------------------------------------
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        print("\n📝 Cache state after adding log:")
+        self.debugDumpLogs()
+    }
+}
+
+
+
+    private func persistDayCache(_ dateKey: String, logs: [CombinedLog]) {
+    logsCache[dateKey] = logs           // keep it in RAM as usual
+
+    guard let userEmail = userEmail,
+          let data = try? JSONEncoder().encode(logs) else { return }
+
+    UserDefaults.standard.set(data,
+        forKey: "logs_by_date_\(userEmail)_\(dateKey)")
+}
     /// Format a date as a string for cache keys
     private func dateKey(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -1994,64 +2006,127 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
 
 // 2. Add a new backgroundSyncWithServer method
 /// Sync with server in the background without blocking UI
+// func backgroundSyncWithServer() {
+//     guard let email = userEmail else { return }
+    
+//     // Debug log
+//     print("🔄 Starting background sync with server")
+    
+//     // Get date string for current date
+//     let currentDateStr = self.dateKey(self.selectedDate)
+    
+//     // Save optimistic logs from the current day
+//     let optimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
+//     print("📝 Found \(optimisticLogs.count) optimistic logs that need to be preserved during sync")
+    
+//     // Fetch fresh data from server without invalidating optimistic logs
+//     NetworkManagerTwo.shared.getLogsByDate(
+//         userEmail: email,
+//         date: self.selectedDate,
+//         includeAdjacent: false,
+//         timezoneOffset: getTimezoneOffsetInMinutes()
+//     ) { [weak self] result in
+//         guard let self = self else { return }
+        
+//         DispatchQueue.main.async {
+//             switch result {
+//             case .success(let response):
+//                 // Get server logs for current date
+//                 let serverLogs = response.logs
+//                 print("📥 Received \(serverLogs.count) logs from server for \(currentDateStr)")
+                
+//                 // Merge any optimistic logs with server logs
+//                 let combinedLogs = self.deduplicateLogs(serverLogs + optimisticLogs)
+                
+//                 // Update cache with merged logs
+//                 self.logsCache[currentDateStr] = combinedLogs
+                
+//                 // Update current logs if we're still on the same date
+//                 if self.dateKey(self.selectedDate) == currentDateStr {
+//                     self.currentDateLogs = combinedLogs
+                    
+//                     // Recalculate nutrition values
+//                     self.calculateDailyNutrition()
+//                 }
+                
+//                 print("🔄 Background sync complete: \(serverLogs.count) server logs merged with \(optimisticLogs.count) optimistic logs")
+                
+//                 // Debug the logs after sync
+//                 self.debugDumpLogs()
+                
+//             case .failure(let error):
+//                 print("❌ Background sync failed: \(error.localizedDescription)")
+//                 // On failure, keep optimistic logs
+//                 if !optimisticLogs.isEmpty {
+//                     print("📝 Keeping \(optimisticLogs.count) optimistic logs after failed sync")
+//                 }
+//             }
+//         }
+//     }
+// }
+/// Re-fetch the logs for the currently selected day without letting
+/// anything that’s already on-screen vanish if the backend hasn’t
+/// indexed it yet.
 func backgroundSyncWithServer() {
     guard let email = userEmail else { return }
-    
-    // Debug log
+
     print("🔄 Starting background sync with server")
-    
-    // Get date string for current date
-    let currentDateStr = self.dateKey(self.selectedDate)
-    
-    // Save optimistic logs from the current day
-    let optimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
-    print("📝 Found \(optimisticLogs.count) optimistic logs that need to be preserved during sync")
-    
-    // Fetch fresh data from server without invalidating optimistic logs
+
+    let dayKey      = dateKey(selectedDate)
+    let uiLogs      = currentDateLogs          // <-- keep *all* rows the UI shows now
+
     NetworkManagerTwo.shared.getLogsByDate(
-        userEmail: email,
-        date: self.selectedDate,
+        userEmail:       email,
+        date:            selectedDate,
         includeAdjacent: false,
-        timezoneOffset: getTimezoneOffsetInMinutes()
+        timezoneOffset:  getTimezoneOffsetInMinutes()
     ) { [weak self] result in
         guard let self = self else { return }
-        
+
         DispatchQueue.main.async {
             switch result {
+
+            // ----------------------- SUCCESS ----------------------------
             case .success(let response):
-                // Get server logs for current date
                 let serverLogs = response.logs
-                print("📥 Received \(serverLogs.count) logs from server for \(currentDateStr)")
-                
-                // Merge any optimistic logs with server logs
-                let combinedLogs = self.deduplicateLogs(serverLogs + optimisticLogs)
-                
-                // Update cache with merged logs
-                self.logsCache[currentDateStr] = combinedLogs
-                
-                // Update current logs if we're still on the same date
-                if self.dateKey(self.selectedDate) == currentDateStr {
-                    self.currentDateLogs = combinedLogs
-                    
-                    // Recalculate nutrition values
+                print("📥 Received \(serverLogs.count) logs from server for \(dayKey)")
+
+                // Merge what the server sent with *everything* we were already
+                // displaying.  deduplicateLogs() prefers the non-optimistic
+                // (server) copy when IDs collide.
+                var merged = self.deduplicateLogs(serverLogs + uiLogs)
+
+                // Optional: if the server copy for a given ID is present,
+                // clear the optimistic flag so the row stops pulsing, etc.
+                for i in merged.indices {
+                    if merged[i].isOptimistic,
+                       serverLogs.contains(where:{ $0.id == merged[i].id }) {
+                        merged[i].isOptimistic = false
+                    }
+                }
+
+                // Cache & push to UI
+                self.logsCache[dayKey]   = merged
+                self.persistDayCache(dayKey, logs: merged)
+
+                if self.dateKey(self.selectedDate) == dayKey {
+                    self.currentDateLogs = merged
                     self.calculateDailyNutrition()
                 }
-                
-                print("🔄 Background sync complete: \(serverLogs.count) server logs merged with \(optimisticLogs.count) optimistic logs")
-                
-                // Debug the logs after sync
-                self.debugDumpLogs()
-                
+
+                print("✅ Background sync complete – "
+                      + "\(serverLogs.count) server rows + "
+                      + "\(uiLogs.count) UI rows → \(merged.count) merged")
+
+            // ----------------------- FAILURE ----------------------------
             case .failure(let error):
                 print("❌ Background sync failed: \(error.localizedDescription)")
-                // On failure, keep optimistic logs
-                if !optimisticLogs.isEmpty {
-                    print("📝 Keeping \(optimisticLogs.count) optimistic logs after failed sync")
-                }
+                // Nothing to do; we simply keep whatever is already on screen.
             }
         }
     }
 }
+
 
 // 3. Add helper method to recalculate nutrition from logs
 private func recalculateNutrition(from logs: [CombinedLog]) {
@@ -3174,7 +3249,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                         // Merge server logs with any optimistic ones that haven't returned yet
                         let merged = self.deduplicateLogs(targetLogs + pendingOptimisticLogs)
                         self.currentDateLogs = merged
-                        
+                        self.logsCache[dateString]    = merged 
                         print("📅 Loaded \(merged.count) logs for \(dateString) (including \(pendingOptimisticLogs.count) optimistic logs)")
                         
                         // Calculate nutrition totals after logs are loaded
