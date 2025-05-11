@@ -852,9 +852,11 @@ struct DashboardView: View {
                  //                     // Initialize food manager with user email
                     foodMgr.initialize(userEmail: onboarding.email)
                  }
-            .onChange(of: vm.selectedDate) { newDate in   // reload when day changes
-                vm.loadLogs(for: newDate)
-            }
+            .onChange(of: vm.selectedDate) { newDate in
+
+  vm.loadLogs(for: newDate)   // fetch fresh ones
+}
+
         }
         .navigationViewStyle(.stack)
     }

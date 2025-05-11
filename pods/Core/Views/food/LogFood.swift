@@ -457,12 +457,28 @@ private struct FoodListView: View {
                         mealType: selectedMeal
                     ) { result in
                         switch result {
-                        case .success(_):
+                        case .success(let loggedFood):
                             // Success is handled by FoodManager (shows toast, updates lists)
                             print("Successfully generated macros with AI")
 
-                             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
+                          let combinedLog = CombinedLog(
+                                type: .food,
+                                status: loggedFood.status,
+                                calories: loggedFood.calories,
+                                message: loggedFood.message,
+                                foodLogId: loggedFood.foodLogId,
+                                food: loggedFood.food,
+                                mealType: loggedFood.mealType,
+                                mealLogId: nil, meal: nil, mealTime: nil,
+                                 scheduledAt: dayLogsVM.selectedDate,
+                                recipeLogId: nil, recipe: nil, servingsConsumed: nil
+                                )
+
+//                              DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+//     dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
+//   }
+DispatchQueue.main.async {
+    dayLogsVM.addPending(combinedLog)
   }
                         case .failure(let error):
                             // Show error alert

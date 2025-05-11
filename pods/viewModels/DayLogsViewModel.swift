@@ -34,6 +34,7 @@ final class DayLogsViewModel: ObservableObject {
       @Published var logs         : [CombinedLog] = [] {
     didSet { recalculateTotals() }
   }
+  private var pendingByDate: [Date: [CombinedLog]] = [:]
   @Published var error        : Error?
   @Published var isLoading    = false
   @Published var selectedDate = Date()
@@ -55,22 +56,75 @@ final class DayLogsViewModel: ObservableObject {
     email = newEmail
   }
 
-  func loadLogs(for date: Date) {
-    guard !email.isEmpty else { return }
-    isLoading = true
-    error     = nil
+//   func loadLogs(for date: Date) {
+//     guard !email.isEmpty else { return }
+//     isLoading = true
+//     error     = nil
 
-    repo.fetchLogs(email: email, for: date) { [weak self] result in
-      guard let self = self else { return }
-      self.isLoading = false
-      switch result {
-      case .success(let serverLogs):
-        self.logs = serverLogs   // ← triggers didSet → recalc
-      case .failure(let e):
-        self.error = e
-      }
+//     repo.fetchLogs(email: email, for: date) { [weak self] result in
+//       guard let self = self else { return }
+//       self.isLoading = false
+//       switch result {
+//       case .success(let serverLogs):
+//         self.logs = serverLogs   // ← triggers didSet → recalc
+//       case .failure(let e):
+//         self.error = e
+//       }
+//     }
+//   }
+//   func addPending(_ log: CombinedLog) {
+//     let key = Calendar.current.startOfDay(for: log.scheduledAt!)
+//     pendingByDate[key, default: []].insert(log, at: 0)
+//     if Calendar.current.isDate(log.scheduledAt!, inSameDayAs: selectedDate) {
+//       logs.insert(log, at: 0)
+//     }
+//   }
+func addPending(_ log: CombinedLog) {
+  let key = Calendar.current.startOfDay(for: log.scheduledAt!)
+  var arr = pendingByDate[key] ?? []
+
+  // don’t double-insert the same ID
+  guard !arr.contains(where: { $0.id == log.id }) else { return }
+
+  arr.insert(log, at: 0)
+  pendingByDate[key] = arr
+
+  if Calendar.current.isDate(log.scheduledAt!, inSameDayAs: selectedDate) {
+    // again, guard against duplicates in the live `logs` array
+    if !logs.contains(where: { $0.id == log.id }) {
+      logs.insert(log, at: 0)
     }
   }
+}
+
+
+func loadLogs(for date: Date) {
+  selectedDate = date
+  isLoading = true; error = nil
+
+  repo.fetchLogs(email: email, for: date) { [weak self] result in
+    guard let self = self else { return }
+    self.isLoading = false
+
+    switch result {
+    case .success(let serverLogs):
+      let key = Calendar.current.startOfDay(for: date)
+      let pending = self.pendingByDate[key] ?? []
+
+      // ↓ new: drop any pending that the server also sent back
+      let dedupedPending = pending.filter { p in
+        !serverLogs.contains(where: { $0.id == p.id })
+      }
+
+      self.logs = dedupedPending + serverLogs
+
+    case .failure(let err):
+      self.error = err
+    }
+  }
+}
+
+
 
     private func recalculateTotals() {
       totalCalories = logs.reduce(0.0) { $0 + $1.displayCalories }
