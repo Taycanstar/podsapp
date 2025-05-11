@@ -762,18 +762,7 @@
 //     }
 // }
 
-//
-//  DashboardView.swift
-//  Pods
-//
-//  Back-to-basics implementation that uses:
-//
-//  • DayLogsViewModel   – pulls the list of logs for a given date
-//  • FoodManager        – still provides calorie / macro totals + date helpers
-//
-//  Styling, colours and animations are identical to the original version.
-//  Created by Dimi Nunez on 1/26/25.
-//
+
 
 import SwiftUI
 
@@ -826,6 +815,12 @@ struct DashboardView: View {
       .transition(.opacity)
 
   }
+
+  if foodMgr.isScanningFood {
+    FoodGenerationCard()
+        .padding(.horizontal)
+        .transition(.opacity)
+}
 
                         // ② list / loading / error / empty states
                         Group {

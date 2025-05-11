@@ -474,12 +474,10 @@ private struct FoodListView: View {
                                 recipeLogId: nil, recipe: nil, servingsConsumed: nil
                                 )
 
-//                              DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-//     dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
-//   }
-DispatchQueue.main.async {
-    dayLogsVM.addPending(combinedLog)
-  }
+
+                        DispatchQueue.main.async {
+                            dayLogsVM.addPending(combinedLog)
+                        }
                         case .failure(let error):
                             // Show error alert
                             if let networkError = error as? NetworkError, case .serverError(let message) = networkError {

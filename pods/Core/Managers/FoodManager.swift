@@ -1943,10 +1943,10 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.logsCache.removeValue(forKey: currentDateStr)
             self.emptyDates.remove(currentDateStr)
             
-            // Give backend time to index the new log before syncing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.backgroundSyncWithServer()
-            }
+            // // Give backend time to index the new log before syncing
+            // DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            //     self.backgroundSyncWithServer()
+            // }
             
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -2527,172 +2527,269 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
     // Function to analyze food image and log it
-    func analyzeFoodImage(image: UIImage, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
-        // Update state to show loading in dashboard
-        isScanningFood = true
-        scannedImage = image
-        uploadProgress = 0.0
-        loadingMessage = "Analyzing Scan"
-        analysisStage = 0
-        isLoading = true
+    // func analyzeFoodImage(image: UIImage, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+    //     // Update state to show loading in dashboard
+    //     isScanningFood = true
+    //     scannedImage = image
+    //     uploadProgress = 0.0
+    //     loadingMessage = "Analyzing Scan"
+    //     analysisStage = 0
+    //     isLoading = true
         
-        // Start time to calculate elapsed time
-        let startTime = Date()
+    //     // Start time to calculate elapsed time
+    //     let startTime = Date()
         
-        // Estimated typical response time (in seconds)
-        // This is used to calibrate the progress curve
-        let expectedDuration: TimeInterval = 8.0
+    //     // Estimated typical response time (in seconds)
+    //     // This is used to calibrate the progress curve
+    //     let expectedDuration: TimeInterval = 8.0
         
-        // Use a smooth continuous animation with frequent updates
-        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
+    //     // Use a smooth continuous animation with frequent updates
+    //     let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+    //         guard let self = self else {
+    //             timer.invalidate()
+    //             return
+    //         }
             
-            // Calculate current progress as a function of elapsed time
-            let elapsedTime = Date().timeIntervalSince(startTime)
+    //         // Calculate current progress as a function of elapsed time
+    //         let elapsedTime = Date().timeIntervalSince(startTime)
             
-            // Non-linear curve that approaches but never reaches 1.0 until complete
-            // f(x) = 1 - e^(-k*x) where k controls the rate
-            // This creates a realistic loading curve that starts fast and slows down
-            let k = 3.0 / expectedDuration  // Tuning parameter
-            let calculatedProgress = 1.0 - exp(-k * elapsedTime)
+    //         // Non-linear curve that approaches but never reaches 1.0 until complete
+    //         // f(x) = 1 - e^(-k*x) where k controls the rate
+    //         // This creates a realistic loading curve that starts fast and slows down
+    //         let k = 3.0 / expectedDuration  // Tuning parameter
+    //         let calculatedProgress = 1.0 - exp(-k * elapsedTime)
             
-            // Cap at 95% until we get actual server response
-            self.uploadProgress = min(0.95, calculatedProgress)
+    //         // Cap at 95% until we get actual server response
+    //         self.uploadProgress = min(0.95, calculatedProgress)
             
-            // Update loading messages based on progress thresholds
-            if calculatedProgress > 0.25 && self.analysisStage < 1 {
-                self.analysisStage = 1
-                self.loadingMessage = "Identifying Food Items"
-            } else if calculatedProgress > 0.5 && self.analysisStage < 2 {
-                self.analysisStage = 2
-                self.loadingMessage = "Calculating Nutrition"
-            } else if calculatedProgress > 0.75 && self.analysisStage < 3 {
-                self.analysisStage = 3
-                self.loadingMessage = "Finalizing Results"
-            }
+    //         // Update loading messages based on progress thresholds
+    //         if calculatedProgress > 0.25 && self.analysisStage < 1 {
+    //             self.analysisStage = 1
+    //             self.loadingMessage = "Identifying Food Items"
+    //         } else if calculatedProgress > 0.5 && self.analysisStage < 2 {
+    //             self.analysisStage = 2
+    //             self.loadingMessage = "Calculating Nutrition"
+    //         } else if calculatedProgress > 0.75 && self.analysisStage < 3 {
+    //             self.analysisStage = 3
+    //             self.loadingMessage = "Finalizing Results"
+    //         }
             
-            // Safety stop if taking too long (3x expected duration)
-            if elapsedTime > expectedDuration * 3 {
-                timer.invalidate()
-            }
-        }
+    //         // Safety stop if taking too long (3x expected duration)
+    //         if elapsedTime > expectedDuration * 3 {
+    //             timer.invalidate()
+    //         }
+    //     }
         
-        // Call the API to analyze the image
-        networkManager.analyzeFoodImage(
-            image: image, 
-            userEmail: userEmail
-        ) { [weak self] success, data, errorMessage in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
+    //     // Call the API to analyze the image
+    //     networkManager.analyzeFoodImage(
+    //         image: image, 
+    //         userEmail: userEmail
+    //     ) { [weak self] success, data, errorMessage in
+    //         DispatchQueue.main.async {
+    //             guard let self = self else { return }
                 
-                // Calculate actual response time for data collection
-                // This could be stored to adjust future expectedDuration values
-                let actualDuration = Date().timeIntervalSince(startTime)
-                print("📊 Food scan analysis took \(String(format: "%.2f", actualDuration)) seconds")
+    //             // Calculate actual response time for data collection
+    //             // This could be stored to adjust future expectedDuration values
+    //             let actualDuration = Date().timeIntervalSince(startTime)
+    //             print("📊 Food scan analysis took \(String(format: "%.2f", actualDuration)) seconds")
                 
-                // Stop the progress timer
-                progressTimer.invalidate()
+    //             // Stop the progress timer
+    //             progressTimer.invalidate()
                 
-                // Reset loading state
-                self.isScanningFood = false
-                self.isLoading = false
+    //             // Reset loading state
+    //             self.isScanningFood = false
+    //             self.isLoading = false
                 
-                if success, let responseData = data, 
-                   let food = responseData["food"] as? [String: Any],
-                   let displayName = food["displayName"] as? String,
-                   !displayName.isEmpty,
-                   let calories = food["calories"] as? Double {
+    //             if success, let responseData = data, 
+    //                let food = responseData["food"] as? [String: Any],
+    //                let displayName = food["displayName"] as? String,
+    //                !displayName.isEmpty,
+    //                let calories = food["calories"] as? Double {
                     
-                    // Only in case of successful food identification:
-                    // 1. Set progress to 100%
-                    self.uploadProgress = 1.0
+    //                 // Only in case of successful food identification:
+    //                 // 1. Set progress to 100%
+    //                 self.uploadProgress = 1.0
                     
-                    // 2. Set success data for toast
-                    self.lastLoggedItem = (name: displayName, calories: calories)
-                    self.showLogSuccess = true
+    //                 // 2. Set success data for toast
+    //                 self.lastLoggedItem = (name: displayName, calories: calories)
+    //                 self.showLogSuccess = true
                     
-                    // 3. Auto-hide the success message after 3 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showLogSuccess = false
-                        self.scannedImage = nil
-                    }
+    //                 // 3. Auto-hide the success message after 3 seconds
+    //                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+    //                     self.showLogSuccess = false
+    //                     self.scannedImage = nil
+    //                 }
                     
-                    // Create a CombinedLog for the scanned food
-                    if let loggedFood = responseData["loggedFood"] as? [String: Any],
-                       let status = loggedFood["status"] as? String,
-                       let loggedCalories = loggedFood["calories"] as? Double,
-                       let message = loggedFood["message"] as? String,
-                       let foodLogId = loggedFood["foodLogId"] as? Int {
+    //                 // Create a CombinedLog for the scanned food
+    //                 if let loggedFood = responseData["loggedFood"] as? [String: Any],
+    //                    let status = loggedFood["status"] as? String,
+    //                    let loggedCalories = loggedFood["calories"] as? Double,
+    //                    let message = loggedFood["message"] as? String,
+    //                    let foodLogId = loggedFood["foodLogId"] as? Int {
                         
-                        // Create a Food object from the food data
-                        if let foodData = try? JSONSerialization.data(withJSONObject: food),
-                           let foodObj = try? JSONDecoder().decode(Food.self, from: foodData) {
+    //                     // Create a Food object from the food data
+    //                     if let foodData = try? JSONSerialization.data(withJSONObject: food),
+    //                        let foodObj = try? JSONDecoder().decode(Food.self, from: foodData) {
                            
-                            // Create a combined log and add it to today's logs
-                            let combinedLog = CombinedLog(
-                                type: .food,
-                                status: status,
-                                calories: loggedCalories,
-                                message: message,
-                                foodLogId: foodLogId,
-                                food: foodObj.asLoggedFoodItem,
-                                mealType: loggedFood["mealType"] as? String ?? "Lunch",
-                                mealLogId: nil,
-                                meal: nil,
-                                mealTime: nil,
-                                scheduledAt: Date(), // Set to current date to make it appear in today's logs
-                                recipeLogId: nil,
-                                recipe: nil,
-                                servingsConsumed: nil
-                            )
+    //                         // Create a combined log and add it to today's logs
+    //                         let combinedLog = CombinedLog(
+    //                             type: .food,
+    //                             status: status,
+    //                             calories: loggedCalories,
+    //                             message: message,
+    //                             foodLogId: foodLogId,
+    //                             food: foodObj.asLoggedFoodItem,
+    //                             mealType: loggedFood["mealType"] as? String ?? "Lunch",
+    //                             mealLogId: nil,
+    //                             meal: nil,
+    //                             mealTime: nil,
+    //                             scheduledAt: Date(), // Set to current date to make it appear in today's logs
+    //                             recipeLogId: nil,
+    //                             recipe: nil,
+    //                             servingsConsumed: nil
+    //                         )
                             
-                            // Add the log to today's logs using the helper method
-                            // self.addLogToTodayAndUpdateDashboard(combinedLog)
-                            self.addLog(combinedLog, for: Date())
+    //                         // Add the log to today's logs using the helper method
+    //                         // self.addLogToTodayAndUpdateDashboard(combinedLog)
+    //                         self.addLog(combinedLog, for: Date())
                             
-                            // Track the food in recently added
-                            self.lastLoggedFoodId = foodObj.fdcId
-                            self.trackRecentlyAdded(foodId: foodObj.fdcId)
-                        }
-                    }
+    //                         // Track the food in recently added
+    //                         self.lastLoggedFoodId = foodObj.fdcId
+    //                         self.trackRecentlyAdded(foodId: foodObj.fdcId)
+    //                     }
+    //                 }
                     
-                    // 4. Refresh logs to show the new food
-                    self.refresh()
+    //                 // 4. Refresh logs to show the new food
+    //                 self.refresh()
                     
-                    completion(true, nil)
-                } else {
-                    // For any failure case (including "No food identified"):
-                    // Clear the scanned image
-                    self.scannedImage = nil
+    //                 completion(true, nil)
+    //             } else {
+    //                 // For any failure case (including "No food identified"):
+    //                 // Clear the scanned image
+    //                 self.scannedImage = nil
                     
-                    // Set error message - do NOT set showLogSuccess
-                    let errorMsg: String
-                    if let error = errorMessage {
-                        // Check if the error is about no food identified
-                        if error.contains("No food identified") || error.contains("Could not determine nutritional information") {
-                            errorMsg = "Food not indentified."
-                        } else if error.starts(with: "Server error: HTTP") {
-                            // Handle HTTP errors, especially 400 which might be "no food identified"
-                            errorMsg = "Food not indentified."
-                        } else {
-                            // Other network or server error
-                            errorMsg = error
-                        }
-                    } else {
-                        // Fallback for when no error message is provided
-                        errorMsg = "Failed to analyze food image"
-                    }
+    //                 // Set error message - do NOT set showLogSuccess
+    //                 let errorMsg: String
+    //                 if let error = errorMessage {
+    //                     // Check if the error is about no food identified
+    //                     if error.contains("No food identified") || error.contains("Could not determine nutritional information") {
+    //                         errorMsg = "Food not indentified."
+    //                     } else if error.starts(with: "Server error: HTTP") {
+    //                         // Handle HTTP errors, especially 400 which might be "no food identified"
+    //                         errorMsg = "Food not indentified."
+    //                     } else {
+    //                         // Other network or server error
+    //                         errorMsg = error
+    //                     }
+    //                 } else {
+    //                     // Fallback for when no error message is provided
+    //                     errorMsg = "Failed to analyze food image"
+    //                 }
                     
-                    print("Food scan error: \(errorMsg)")
-                    self.scanningFoodError = errorMsg
-                    completion(false, errorMsg)
-                }
-            }
+    //                 print("Food scan error: \(errorMsg)")
+    //                 self.scanningFoodError = errorMsg
+    //                 completion(false, errorMsg)
+    //             }
+    //         }
+    //     }
+    // }
+
+    
+  /// Analyze an image of food, animate a smooth progress curve, and callback with the real LoggedFoodItem.
+
+// MARK: - Scan-an-image → CombinedLog
+@MainActor
+func analyzeFoodImage(
+  image: UIImage,
+  userEmail: String,
+  completion: @escaping (Result<CombinedLog, Error>) -> Void
+) {
+  // ─── 1) UI state ─────────────────────────────
+  isScanningFood = true
+  isLoading      = true
+  analysisStage  = 0
+  loadingMessage = "Analyzing image…"
+  uploadProgress = 0
+
+  // ─── 2) Fake progress ticker ─────────────────
+  let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] t in
+    guard let self = self else { t.invalidate(); return }
+    self.analysisStage = (self.analysisStage + 1) % 4
+  }
+
+  // ─── 3) Call backend ─────────────────────────
+  networkManager.analyzeFoodImage(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
+    guard let self = self else { return }
+    DispatchQueue.main.async {
+      // stop ticker + UI
+      timer.invalidate()
+      self.isScanningFood = false
+      self.isLoading      = false
+
+      // failure path
+      guard success, let payload = payload else {
+        let msg = errMsg ?? "Unknown error"
+        print("🔴 [analyzeFoodImage] error: \(msg)")
+        completion(.failure(NSError(
+          domain: "FoodScan", code: -1,
+          userInfo: [NSLocalizedDescriptionKey: msg])))
+        return
+      }
+
+      //── 4) Dump raw payload for debugging
+      if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+         let str     = String(data: rawJSON, encoding: .utf8) {
+        print("🔍 [analyzeFoodImage] raw payload:\n\(str)")
+      }
+
+      do {
+        //── 5) Decode directly into your LoggedFood
+        let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+        let decoder  = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+
+        //── 6) Wrap it in a CombinedLog
+        let combined = CombinedLog(
+          type:        .food,
+          status:      loggedFood.status,
+          calories:    loggedFood.calories,
+          message:     loggedFood.message,
+          foodLogId:   loggedFood.foodLogId,
+          food:        loggedFood.food,
+          mealType:    loggedFood.mealType,
+          mealLogId:   nil,
+          meal:        nil,
+          mealTime:    nil,
+          scheduledAt: Date(),
+          recipeLogId: nil,
+          recipe:      nil,
+          servingsConsumed: nil
+        )
+
+        completion(.success(combined))
+      }
+      catch {
+        //── 7) On decode error, print the bad JSON + error
+        print("❌ [analyzeFoodImage] decoding LoggedFood failed:", error)
+        if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+           let str     = String(data: rawJSON, encoding: .utf8) {
+          print("❌ [analyzeFoodImage] payload was:\n\(str)")
         }
+        completion(.failure(error))
+      }
     }
+  }
+}
+
+
+
+
+
+
+
+
     // Add this function to handle the barcode scanning logic
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, navigationPath: Binding<NavigationPath>, completion: @escaping (Bool, String?) -> Void) {
         // Set scanning state for UI feedback

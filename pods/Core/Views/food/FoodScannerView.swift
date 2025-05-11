@@ -34,7 +34,7 @@ struct FoodScannerView: View {
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
     @EnvironmentObject var foodManager: FoodManager
-    
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     // Callback for when food is scanned via barcode
     var onFoodScanned: ((Food, Int?) -> Void)?
     
@@ -247,11 +247,7 @@ struct FoodScannerView: View {
             .background(Color.black)
             // Add navigation destination for ConfirmFoodView using BarcodeFood struct
             .navigationDestination(for: BarcodeFood.self) { barcodeFood in
-                ConfirmFoodView(
-                    path: $navigationPath,
-                    food: barcodeFood.food,
-                    foodLogId: barcodeFood.foodLogId
-                )
+                ConfirmFoodView(path: $navigationPath, food: barcodeFood.food, foodLogId: barcodeFood.foodLogId)
             }
         }
         .onAppear {
@@ -273,33 +269,64 @@ struct FoodScannerView: View {
         NotificationCenter.default.post(name: .toggleFlash, object: flashEnabled)
     }
     
-    private func analyzeImage(_ image: UIImage) {
-        guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            return
-        }
-        
-        // Start analysis and close camera
-        isPresented = false
-        
-        // Set image first to show user what was captured
-        foodManager.scannedImage = image
-        
-        // Then set scanning state
-        foodManager.isScanningFood = true
-        foodManager.loadingMessage = "Analyzing image..."
-        foodManager.uploadProgress = 0.1
-        
-        print("🔍 Starting food image analysis via server")
-        
-        // Call the AI analysis function in FoodManager
-        foodManager.analyzeFoodImage(image: image, userEmail: userEmail) { success, message in
-            if !success {
-                print("❌ Food scan failed: \(message ?? "Unknown error")")
-            } else {
-                print("✅ Food scan successful")
-            }
-        }
+// private func analyzeImage(_ image: UIImage) {
+//   guard !isAnalyzing,
+//         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+//   else { return }
+
+//   isPresented = false                      // close camera sheet
+
+//   foodManager.scannedImage   = image       // tiny “preview”
+//   foodManager.isScanningFood = true
+//   foodManager.loadingMessage = "Analyzing image…"
+//   foodManager.uploadProgress = 0.1
+
+//   print("🔍 sending image to server")
+
+//   foodManager.analyzeFoodImage(
+//     image: image,
+//     userEmail: userEmail
+//   ) { result in
+//       switch result {
+//       case .success(let combinedLog):
+//           // instant optimistic insert
+//           dayLogsVM.addPending(combinedLog)
+
+//       case .failure(let error):
+//           // show whatever UI you like here
+//           print("❌ scan failed: \(error.localizedDescription)")
+//       }
+//   }
+// }
+private func analyzeImage(_ image: UIImage) {
+  guard !isAnalyzing,
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+  else { return }
+
+  isPresented                  = false
+  foodManager.scannedImage     = image
+  foodManager.isScanningFood   = true
+  foodManager.loadingMessage   = "Analyzing image..."
+  foodManager.uploadProgress   = 0.1
+
+  print("🔍 Starting food image analysis via server")
+
+  foodManager.analyzeFoodImage(image: image,
+                               userEmail: userEmail) { result in
+    switch result {
+    case .success(let combinedLog):
+      // Instant optimistic insert
+      dayLogsVM.addPending(combinedLog)
+
+    case .failure(let error):
+      print("❌ scan failed:", error.localizedDescription)
     }
+  }
+}
+
+
+
+
     
     private func processBarcodeDirectly(_ barcode: String) {
         guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
@@ -319,19 +346,19 @@ struct FoodScannerView: View {
                 image: nil,
                 userEmail: userEmail
             ) { success, message in
+               
+                
                 self.isAnalyzing = false
                 self.isProcessingBarcode = false
                 
-                if success, let loggedFoodItem = self.foodManager.aiGeneratedFood {
-                
-                    // Convert LoggedFoodItem back to a Food object
-                    let food = loggedFoodItem.asFood
+                if success, let food = self.foodManager.aiGeneratedFood {
+                    print("✅ Barcode lookup success for: \(barcode) - using callback for confirmation")
                     
                     // Get the food log ID (if available)
                     let foodLogId = self.foodManager.lastLoggedFoodId
-                    
+                    let foodasFood = food.asFood
                     // Call the callback with the food and log ID
-                    onFoodScanned(food, foodLogId)
+                    onFoodScanned(foodasFood, foodLogId)
                     
                     // Close the scanner
                     self.isPresented = false
@@ -340,29 +367,22 @@ struct FoodScannerView: View {
                 }
             }
         } else {
-            // Fall back to the navigation path approach - but don't dismiss the scanner view yet
-            NetworkManagerTwo.shared.lookupFoodByBarcode(
+            // Fall back to the old navigation path approach
+            foodManager.lookupFoodByBarcode(
                 barcode: barcode,
+                image: nil,
                 userEmail: userEmail,
-                imageData: nil,
-                mealType: "Lunch",
-                shouldLog: false
-            ) { result in
+                navigationPath: $navigationPath
+            ) { success, message in
                 self.isAnalyzing = false
                 self.isProcessingBarcode = false
                 
-                switch result {
-                case .success(let response):
-                    print("✅ Barcode lookup success for: \(barcode) - navigation to confirmation view")
-                    
-                    // Add the food to the navigation path
-                    DispatchQueue.main.async {
-                        // Navigate to confirmation view with the food data
-                        self.navigationPath.append(BarcodeFood(food: response.food, foodLogId: response.foodLogId))
-                    }
-                    
-                case .failure(let error):
-                    print("❌ Barcode lookup failed: \(error.localizedDescription)")
+                if success {
+                    print("✅ Barcode lookup success for: \(barcode) - confirmation view should appear")
+                    // Now that the confirmation view is in the navigation stack, close the scanner
+                    self.isPresented = false
+                } else {
+                    print("❌ Barcode direct lookup failed: \(message ?? "Unknown error")")
                 }
             }
         }
