@@ -238,10 +238,16 @@ struct FoodScannerView: View {
                 PhotosPickerView(selectedImage: $selectedImage)
                     .ignoresSafeArea()
                     .onDisappear {
-                        if let image = selectedImage {
-                            isGalleryImageLoaded = true
-                            analyzeImage(image)
-                        }
+                        // if let image = selectedImage {
+                        //     isGalleryImageLoaded = true
+                        //     analyzeImage(image)
+                        // }
+                               if let image = selectedImage {
+          // switch back into "food scan" UI
+          selectedMode = .food
+          // kick off the exact same analyzeImage(_:) path
+          analyzeImage(image)
+        }
                     }
             }
             .background(Color.black)

@@ -1290,6 +1290,7 @@ struct FoodRow: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     var onItemAdded: ((Food) -> Void)?
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
 
     var body: some View {
         HStack {
@@ -1422,6 +1423,34 @@ struct FoodRow: View {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
                 // Success is handled by FoodManager (shows toast, updates lists)
+                        let combinedLog = CombinedLog(
+                        type:         .food,
+                        status:       loggedFood.status,
+                        calories:     Double(loggedFood.food.calories),
+                        message:      "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                        foodLogId:    loggedFood.foodLogId,
+                        food:         loggedFood.food,
+                        mealType:     loggedFood.mealType,
+                        mealLogId:    nil,
+                        meal:         nil,
+                        mealTime:     nil,
+                        scheduledAt:  Date(),
+                        recipeLogId:  nil,
+                        recipe:       nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+
+                    // 2. Tell the day-logs view model about it
+                    dayLogsVM.addPending(combinedLog)
+
+                    // 3. Prepend it into the global `combinedLogs` so your dashboard’s “All” feed updates
+                    DispatchQueue.main.async {
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    }
                 
             case .failure(let error):
                 print("Error logging food: \(error)")
