@@ -46,6 +46,8 @@ struct ConfirmFoodView: View {
     @State private var originalFood: Food? = nil
     @State private var barcodeFoodLogId: Int? = nil
     @State private var servingUnit: String = "serving"
+
+    @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
     // Default initializer for manual food creation
     init(path: Binding<NavigationPath>) {
@@ -569,9 +571,16 @@ struct ConfirmFoodView: View {
         foodManager.lastLoggedItem = (name: title, calories: caloriesValue * userNumberOfServings / originalNumberOfServings)
         foodManager.showLogSuccess = true
         
-        // Add the log to today's logs
-        //foodManager.addLogToTodayAndUpdateDashboard(combinedLog)
-        foodManager.addLog(combinedLog, for: Date())
+         dayLogsVM.addPending(combinedLog)
+
+          DispatchQueue.main.async {
+      // remove any old entry
+      if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+        foodManager.combinedLogs.remove(at: idx)
+      }
+      // prepend the new one
+      foodManager.combinedLogs.insert(combinedLog, at: 0)
+          }
         
         // Track as recently added
         foodManager.trackRecentlyAdded(foodId: updatedFood.fdcId)
