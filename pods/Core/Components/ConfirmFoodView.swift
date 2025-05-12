@@ -501,99 +501,186 @@ struct ConfirmFoodView: View {
     // MARK: - Actions for barcode food logging
     
     // Method to log barcode food with user-adjusted values
+    // private func logBarcodeFood() {
+    //     guard !title.isEmpty, !calories.isEmpty else {
+    //         errorMessage = "Title and calories are required"
+    //         showErrorAlert = true
+    //         return
+    //     }
+        
+    //     guard let caloriesValue = Double(calories) else {
+    //         errorMessage = "Calories must be a valid number"
+    //         showErrorAlert = true
+    //         return
+    //     }
+        
+    //     // Mark as processing
+    //     isCreating = true
+        
+    //     // Make sure we have the original food
+    //     guard var food = originalFood else {
+    //         errorMessage = "Original food data not found"
+    //         showErrorAlert = true
+    //         isCreating = false
+    //         return
+    //     }
+        
+    //     // Update the food with user adjustments
+        
+    //     // Calculate scale factor for nutrient values based on number of servings
+    //     let originalNumberOfServings = food.numberOfServings ?? 1.0
+    //     let userNumberOfServings = numberOfServings
+        
+    //     // Create copy of the food with updated values
+    //     var updatedFood = food
+    //     updatedFood.numberOfServings = userNumberOfServings
+        
+    //     // Create a LoggedFoodItem to log
+    //     let loggedFoodItem = LoggedFoodItem(
+    //         fdcId: updatedFood.fdcId,
+    //         displayName: title,
+    //         calories: caloriesValue * userNumberOfServings / originalNumberOfServings,
+    //         servingSizeText: servingSize.isEmpty ? "1 serving" : servingSize,
+    //         numberOfServings: userNumberOfServings,
+    //         brandText: updatedFood.brandName ?? updatedFood.brandOwner,
+    //         protein: Double(protein).map { $0 * userNumberOfServings / originalNumberOfServings },
+    //         carbs: Double(carbs).map { $0 * userNumberOfServings / originalNumberOfServings },
+    //         fat: Double(fat).map { $0 * userNumberOfServings / originalNumberOfServings }
+    //     )
+        
+    //     // Create the optimistic log to immediately display
+    //     let combinedLog = CombinedLog(
+    //         type: .food,
+    //         status: "active",
+    //         calories: caloriesValue * userNumberOfServings / originalNumberOfServings,
+    //         message: "\(title) - Lunch",
+    //         foodLogId: barcodeFoodLogId ?? Int.random(in: 1000000..<9999999),
+    //         food: loggedFoodItem,
+    //         mealType: "Lunch",
+    //         mealLogId: nil,
+    //         meal: nil,
+    //         mealTime: nil,
+    //         scheduledAt: Date(),
+    //         recipeLogId: nil,
+    //         recipe: nil,
+    //         servingsConsumed: nil,
+    //         isOptimistic: true
+    //     )
+        
+    //     // Set success state
+    //     foodManager.lastLoggedItem = (name: title, calories: caloriesValue * userNumberOfServings / originalNumberOfServings)
+    //     foodManager.showLogSuccess = true
+        
+    //      dayLogsVM.addPending(combinedLog)
+
+    //       DispatchQueue.main.async {
+    //   // remove any old entry
+    //   if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+    //     foodManager.combinedLogs.remove(at: idx)
+    //   }
+    //   // prepend the new one
+    //   foodManager.combinedLogs.insert(combinedLog, at: 0)
+    //       }
+        
+    //     // Track as recently added
+    //     foodManager.trackRecentlyAdded(foodId: updatedFood.fdcId)
+        
+    //     // Auto-hide the success message after 3 seconds
+    //     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+    //         foodManager.showLogSuccess = false
+    //     }
+
+    //     // Dismiss the view
+    //     dismiss()
+    //     isCreating = false
+    // }
     private func logBarcodeFood() {
-        guard !title.isEmpty, !calories.isEmpty else {
-            errorMessage = "Title and calories are required"
-            showErrorAlert = true
-            return
-        }
-        
-        guard let caloriesValue = Double(calories) else {
-            errorMessage = "Calories must be a valid number"
-            showErrorAlert = true
-            return
-        }
-        
-        // Mark as processing
-        isCreating = true
-        
-        // Make sure we have the original food
-        guard var food = originalFood else {
-            errorMessage = "Original food data not found"
-            showErrorAlert = true
-            isCreating = false
-            return
-        }
-        
-        // Update the food with user adjustments
-        
-        // Calculate scale factor for nutrient values based on number of servings
-        let originalNumberOfServings = food.numberOfServings ?? 1.0
-        let userNumberOfServings = numberOfServings
-        
-        // Create copy of the food with updated values
-        var updatedFood = food
-        updatedFood.numberOfServings = userNumberOfServings
-        
-        // Create a LoggedFoodItem to log
-        let loggedFoodItem = LoggedFoodItem(
-            fdcId: updatedFood.fdcId,
-            displayName: title,
-            calories: caloriesValue * userNumberOfServings / originalNumberOfServings,
-            servingSizeText: servingSize.isEmpty ? "1 serving" : servingSize,
-            numberOfServings: userNumberOfServings,
-            brandText: updatedFood.brandName ?? updatedFood.brandOwner,
-            protein: Double(protein).map { $0 * userNumberOfServings / originalNumberOfServings },
-            carbs: Double(carbs).map { $0 * userNumberOfServings / originalNumberOfServings },
-            fat: Double(fat).map { $0 * userNumberOfServings / originalNumberOfServings }
-        )
-        
-        // Create the optimistic log to immediately display
-        let combinedLog = CombinedLog(
-            type: .food,
-            status: "active",
-            calories: caloriesValue * userNumberOfServings / originalNumberOfServings,
-            message: "\(title) - Lunch",
-            foodLogId: barcodeFoodLogId ?? Int.random(in: 1000000..<9999999),
-            food: loggedFoodItem,
-            mealType: "Lunch",
-            mealLogId: nil,
-            meal: nil,
-            mealTime: nil,
-            scheduledAt: Date(),
-            recipeLogId: nil,
-            recipe: nil,
-            servingsConsumed: nil,
-            isOptimistic: true
-        )
-        
-        // Set success state
-        foodManager.lastLoggedItem = (name: title, calories: caloriesValue * userNumberOfServings / originalNumberOfServings)
-        foodManager.showLogSuccess = true
-        
-         dayLogsVM.addPending(combinedLog)
-
-          DispatchQueue.main.async {
-      // remove any old entry
-      if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-        foodManager.combinedLogs.remove(at: idx)
-      }
-      // prepend the new one
-      foodManager.combinedLogs.insert(combinedLog, at: 0)
-          }
-        
-        // Track as recently added
-        foodManager.trackRecentlyAdded(foodId: updatedFood.fdcId)
-        
-        // Auto-hide the success message after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            foodManager.showLogSuccess = false
-        }
-
-        // Dismiss the view
-        dismiss()
-        isCreating = false
+    // 1. Validate inputs
+    guard !title.isEmpty, !calories.isEmpty else {
+        errorMessage = "Title and calories are required"
+        showErrorAlert = true
+        return
     }
+    guard let caloriesValue = Double(calories) else {
+        errorMessage = "Calories must be a valid number"
+        showErrorAlert = true
+        return
+    }
+
+    guard let food = originalFood else {
+        errorMessage = "Original food data not found"
+        showErrorAlert = true
+        return
+    }
+
+    isCreating = true
+
+    // 2. Compute adjusted food with user servings
+    let originalServings = food.numberOfServings ?? 1
+    let userServings     = numberOfServings
+    var updatedFood      = food
+    updatedFood.numberOfServings = userServings
+
+    // 3. Fire the real network call
+    foodManager.logFood(
+        email:    viewModel.email,
+        food:     updatedFood,
+        meal:     "Lunch",                     // or pass in a variable
+        servings: Int(userServings),
+        date:     Date(),
+        notes:    nil
+    ) { result in
+        DispatchQueue.main.async {
+            self.isCreating = false
+            switch result {
+            case .success(let logged):
+                // 4. Build your CombinedLog from the server response
+                let combined = CombinedLog(
+                    type:            .food,
+                    status:          logged.status,
+                    calories:        Double(logged.food.calories),
+                    message:         "\(logged.food.displayName) - \(logged.mealType)",
+                    foodLogId:       logged.foodLogId,
+                    food:            logged.food,
+                    mealType:        logged.mealType,
+                    mealLogId:       nil,
+                    meal:            nil,
+                    mealTime:        nil,
+                    scheduledAt:     Date(),
+                    recipeLogId:     nil,
+                    recipe:          nil,
+                    servingsConsumed:nil
+                )
+
+                // 5. Optimistically insert into today's view
+                dayLogsVM.addPending(combined)
+
+                // 6. Also insert into the global timeline, de-duplicating first
+                if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combined.foodLogId }) {
+                    foodManager.combinedLogs.remove(at: idx)
+                }
+                foodManager.combinedLogs.insert(combined, at: 0)
+
+                // 7. Show the success toast
+                foodManager.lastLoggedItem = (name: combined.food?.displayName ?? title,
+                                              calories: combined.displayCalories)
+                foodManager.showLogSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    foodManager.showLogSuccess = false
+                }
+
+                // 8. Finally dismiss
+                dismiss()
+
+            case .failure(let error):
+                // 9. Show error to the user
+                errorMessage = error.localizedDescription
+                showErrorAlert = true
+            }
+        }
+    }
+}
+
     
     // Function to create the food (for manual food creation)
     private func createFood() {
