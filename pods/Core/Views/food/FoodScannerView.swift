@@ -269,35 +269,7 @@ struct FoodScannerView: View {
         NotificationCenter.default.post(name: .toggleFlash, object: flashEnabled)
     }
     
-// private func analyzeImage(_ image: UIImage) {
-//   guard !isAnalyzing,
-//         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-//   else { return }
 
-//   isPresented = false                      // close camera sheet
-
-//   foodManager.scannedImage   = image       // tiny “preview”
-//   foodManager.isScanningFood = true
-//   foodManager.loadingMessage = "Analyzing image…"
-//   foodManager.uploadProgress = 0.1
-
-//   print("🔍 sending image to server")
-
-//   foodManager.analyzeFoodImage(
-//     image: image,
-//     userEmail: userEmail
-//   ) { result in
-//       switch result {
-//       case .success(let combinedLog):
-//           // instant optimistic insert
-//           dayLogsVM.addPending(combinedLog)
-
-//       case .failure(let error):
-//           // show whatever UI you like here
-//           print("❌ scan failed: \(error.localizedDescription)")
-//       }
-//   }
-// }
 private func analyzeImage(_ image: UIImage) {
   guard !isAnalyzing,
         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
