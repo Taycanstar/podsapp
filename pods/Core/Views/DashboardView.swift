@@ -924,18 +924,7 @@ private extension DashboardView {
             .background(Color("iosnp"))
             .cornerRadius(12)
 
-            // Macro cards ----------------------------------------------------
-            // VStack(spacing: 16) {
-            //     macroRow(left: ("Calories", foodMgr.caloriesConsumed,
-            //                     "flame.fill",    .orange),
-            //              right:("Protein",  foodMgr.proteinConsumed,
-            //                     "fish",        .blue))
-
-            //     macroRow(left: ("Carbs",    foodMgr.carbsConsumed,
-            //                     "laurel.leading", .purple),
-            //              right:("Fat",      foodMgr.fatConsumed,
-            //                     "drop.fill",     .pink))
-            // }
+  
             VStack(spacing: 16) {
   macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    .orange),
            right: ("Protein",  vm.totalProtein,   "fish",        .blue))

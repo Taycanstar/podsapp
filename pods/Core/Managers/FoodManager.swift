@@ -1076,92 +1076,182 @@ func refreshMeals() {
     }
 }
 // Log a meal (from meal history)
-func logMeal(
-    meal: Meal,
-    mealTime: String,
-    date: Date = Date(),
-    notes: String? = nil,
-    calories: Double,
-    completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
-    statusCompletion: ((Bool) -> Void)? = nil
-) {
-    guard let email = userEmail else { 
-        statusCompletion?(false)
-        return 
-    }
+// func logMeal(
+//     meal: Meal,
+//     mealTime: String,
+//     date: Date = Date(),
+//     notes: String? = nil,
+//     calories: Double,
+//     completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
+//     statusCompletion: ((Bool) -> Void)? = nil
+// ) {
+//     guard let email = userEmail else { 
+//         statusCompletion?(false)
+//         return 
+//     }
     
-    // Show loading state
-    isLoadingMeal = true
+//     // Show loading state
+//     isLoadingMeal = true
     
-    // Immediately mark as recently logged for UI feedback
-    self.lastLoggedMealId = meal.id
+//     // Immediately mark as recently logged for UI feedback
+//     self.lastLoggedMealId = meal.id
     
-    // Create an optimistic log entry before server response
-    let combinedLog = CombinedLog(
-        type: .meal,
-        status: "completed",
-        calories: calories,
-        message: "\(meal.title) - \(mealTime)",
-        foodLogId: nil,
-        food: nil,
-        mealType: nil,
-        mealLogId: -Int.random(in: 10000...99999), // Temp negative ID until server responds
-        meal: MealSummary(
-            mealId: meal.id, 
-            title: meal.title, 
-            description: meal.description ?? "",
-            image: meal.image,
-            calories: calories,
-            servings: meal.servings,
-            protein: meal.totalProtein,
-            carbs: meal.totalCarbs,
-            fat: meal.totalFat,
-            scheduledAt: date
-        ),
-        mealTime: mealTime,
-        scheduledAt: date,
-        recipeLogId: nil,
-        recipe: nil,
-        servingsConsumed: nil,
-        isOptimistic: true
-    )
+//     // Create an optimistic log entry before server response
+//     let combinedLog = CombinedLog(
+//         type: .meal,
+//         status: "completed",
+//         calories: calories,
+//         message: "\(meal.title) - \(mealTime)",
+//         foodLogId: nil,
+//         food: nil,
+//         mealType: nil,
+//         mealLogId: -Int.random(in: 10000...99999), // Temp negative ID until server responds
+//         meal: MealSummary(
+//             mealId: meal.id, 
+//             title: meal.title, 
+//             description: meal.description ?? "",
+//             image: meal.image,
+//             calories: calories,
+//             servings: meal.servings,
+//             protein: meal.totalProtein,
+//             carbs: meal.totalCarbs,
+//             fat: meal.totalFat,
+//             scheduledAt: date
+//         ),
+//         mealTime: mealTime,
+//         scheduledAt: date,
+//         recipeLogId: nil,
+//         recipe: nil,
+//         servingsConsumed: nil,
+//         isOptimistic: true
+//     )
     
-    // Add optimistic log to UI immediately
-    // self.addLogToTodayAndUpdateDashboard(combinedLog)
-    self.addLog(combinedLog, for: date)
+//     // Add optimistic log to UI immediately
+//     // self.addLogToTodayAndUpdateDashboard(combinedLog)
+//     self.addLog(combinedLog, for: date)
     
-    // REMOVED: Check for existing meal logs - we'll wait for server response
+//     // REMOVED: Check for existing meal logs - we'll wait for server response
     
-    networkManager.logMeal(
-        userEmail: email,
-        mealId: meal.id,
-        mealTime: mealTime,
-        date: date,
-        notes: notes,
-        calories: calories
-    ) { [weak self] result in
-        DispatchQueue.main.async {
-            guard let self = self else { 
-                statusCompletion?(false)
-                return 
-            }
-            self.isLoadingMeal = false
+//     networkManager.logMeal(
+//         userEmail: email,
+//         mealId: meal.id,
+//         mealTime: mealTime,
+//         date: date,
+//         notes: notes,
+//         calories: calories
+//     ) { [weak self] result in
+//         DispatchQueue.main.async {
+//             guard let self = self else { 
+//                 statusCompletion?(false)
+//                 return 
+//             }
+//             self.isLoadingMeal = false
             
-            switch result {
-            case .success(let loggedMeal):
-                print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
+//             switch result {
+//             case .success(let loggedMeal):
+//                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
                 
-                // Clear cache for the current date
-                let dateStr = self.dateKey(date)
-                self.clearCache(for: dateStr)
+//                 // Clear cache for the current date
+//                 let dateStr = self.dateKey(date)
+//                 self.clearCache(for: dateStr)
                 
-                // Give backend time to index the new log before syncing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.backgroundSyncWithServer()
+//                 // Give backend time to index the new log before syncing
+//                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+//                     self.backgroundSyncWithServer()
+//                 }
+                
+//                 // Set data for success toast in dashboard
+//                 self.lastLoggedItem = (name: meal.title, calories: calories)
+//                 self.showLogSuccess = true
+//                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+//                     self.showLogSuccess = false
+//                 }
+                
+//                 // Show the local toast
+//                 self.showToast = true
+//                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+//                     self.showToast = false
+//                 }
+                
+//                 // Clear the flag and toast after 2 seconds
+//                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+//                     withAnimation {
+//                         // Only clear if it still matches the meal we logged
+//                         if self.lastLoggedMealId == meal.id {
+//                             self.lastLoggedMealId = nil
+//                         }
+//                         self.showMealLoggedToast = false
+//                     }
+//                 }
+                
+//                 statusCompletion?(true)
+//                 completion?(.success(loggedMeal))
+                
+//             case .failure(let error):
+//                 print("❌ Failed to log meal: \(error)")
+//                 self.error = error
+                
+//                 // Clear the lastLoggedMealId immediately on error
+//                 withAnimation {
+//                     // Only clear if it still matches the meal we tried to log
+//                     if self.lastLoggedMealId == meal.id {
+//                         self.lastLoggedMealId = nil
+//                     }
+//                 }
+                
+//                 statusCompletion?(false)
+//                 completion?(.failure(error))
+//             }
+//         }
+//     }
+// }
+
+//  FoodManager.swift
+//  Replace the whole old version with this one
+//  --------------------------------------------------------
+
+ func logMeal(
+        meal: Meal,
+        mealTime: String,
+        date: Date = Date(),
+        notes: String? = nil,
+        calories: Double,
+        completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
+        statusCompletion: ((Bool) -> Void)? = nil
+    ) {
+         guard let email = userEmail else { return }
+
+        // basic UI flags so the plus button flashes green
+        lastLoggedMealId   = meal.id
+        isLoadingMeal      = true
+        showMealLoggedToast = true
+
+        networkManager.logMeal(
+            userEmail: email,
+            mealId:    meal.id,
+            mealTime:  mealTime,
+            date:      date,
+            notes:     notes,
+            calories:  calories
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+
+                // reset simple loading flags
+                self.isLoadingMeal = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.showMealLoggedToast = false
+                    self.lastLoggedMealId = nil
                 }
-                
-                // Set data for success toast in dashboard
-                self.lastLoggedItem = (name: meal.title, calories: calories)
+
+
+
+                switch result {
+                case .success(let logged):
+                    // caller will build CombinedLog & update DayLogsVM
+                    completion?(.success(logged))
+
+                                    self.lastLoggedItem = (name: meal.title, calories: calories)
                 self.showLogSuccess = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.showLogSuccess = false
@@ -1172,6 +1262,12 @@ func logMeal(
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     self.showToast = false
                 }
+
+                    // Give backend time to index the new log before syncing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.backgroundSyncWithServer()
+                }
+                
                 
                 // Clear the flag and toast after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -1183,28 +1279,17 @@ func logMeal(
                         self.showMealLoggedToast = false
                     }
                 }
-                
-                statusCompletion?(true)
-                completion?(.success(loggedMeal))
-                
-            case .failure(let error):
-                print("❌ Failed to log meal: \(error)")
-                self.error = error
-                
-                // Clear the lastLoggedMealId immediately on error
-                withAnimation {
-                    // Only clear if it still matches the meal we tried to log
-                    if self.lastLoggedMealId == meal.id {
-                        self.lastLoggedMealId = nil
-                    }
+                    statusCompletion?(true)
+
+                case .failure(let error):
+                    self.error = error
+                    completion?(.failure(error))
+                    statusCompletion?(false)
                 }
-                
-                statusCompletion?(false)
-                completion?(.failure(error))
             }
         }
     }
-}
+
 func prefetchMealImages() {
     for meal in meals {
         if let imageUrlString = meal.image, let imageUrl = URL(string: imageUrlString) {

@@ -11,26 +11,6 @@ import Combine
 
 @MainActor
 final class DayLogsViewModel: ObservableObject {
-
-    // // ── published state
-    // @Published var logs      : [CombinedLog] = []
-
-
-    // @Published var error     : Error?        = nil
-    // @Published var isLoading : Bool          = false
-    // @Published var selectedDate : Date = Date()
-
-    // // ── private
-    // private let repo = LogRepository()
-    // private(set) var email  : String         // <- can change later
-
-    // /// you may start with an empty string and set it afterwards
-    // init(email: String = "") { self.email = email }
-
-
-
-    // /// call this once you learn the user’s e-mail
-    // func setEmail(_ newEmail: String) { email = newEmail }
       @Published var logs         : [CombinedLog] = [] {
     didSet { recalculateTotals() }
   }
@@ -59,6 +39,8 @@ final class DayLogsViewModel: ObservableObject {
 
 func addPending(_ log: CombinedLog) {
   let key = Calendar.current.startOfDay(for: log.scheduledAt!)
+    print("[DayLogsVM] addPending( id:\(log.id), dateKey:\(key) )")
+
   var arr = pendingByDate[key] ?? []
 
   // don’t double-insert the same ID
@@ -71,6 +53,8 @@ func addPending(_ log: CombinedLog) {
     // again, guard against duplicates in the live `logs` array
     if !logs.contains(where: { $0.id == log.id }) {
       logs.insert(log, at: 0)
+            print("[DayLogsVM] logs.inserted \(log.id), logs now = \(logs.map { $0.id })")
+
     }
   }
 }

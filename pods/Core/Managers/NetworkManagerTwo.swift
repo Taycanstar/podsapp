@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 //    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: Error, LocalizedError {
@@ -602,15 +602,6 @@ class NetworkManagerTwo {
 
     // MARK: - Logs Management
 
-    /// Fetch logs for a specific date, with option to include logs from adjacent days
-    /// - Parameters:
-    ///   - userEmail: User's email address
-    ///   - date: The target date to fetch logs for
-    ///   - includeAdjacent: Whether to include logs from adjacent days
-    ///   - daysBefore: Number of days before the target date to include (default: 1)
-    ///   - daysAfter: Number of days after the target date to include (default: 1)
-    ///   - timezoneOffset: User's timezone offset in minutes (default: 0)
-    ///   - completion: Result callback with logs data or error
     func getLogsByDate(
         userEmail: String,
         date: Date,

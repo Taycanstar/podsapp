@@ -377,7 +377,7 @@ private struct FoodListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     @State private var isShowingMinimumLoader = false
-    @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     var body: some View {
         VStack(spacing: 12) {
@@ -480,7 +480,7 @@ private struct FoodListView: View {
 
 
                                             
-                        // 1) see if there’s an existing entry with that foodLogId
+                        // 1) see if there's an existing entry with that foodLogId
                             if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                                 foodManager.combinedLogs.remove(at: idx)
                             }
@@ -1444,7 +1444,7 @@ struct FoodRow: View {
                     // 2. Tell the day-logs view model about it
                     dayLogsVM.addPending(combinedLog)
 
-                    // 3. Prepend it into the global `combinedLogs` so your dashboard’s “All” feed updates
+                    // 3. Prepend it into the global `combinedLogs` so your dashboard's "All" feed updates
                     DispatchQueue.main.async {
                         if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                         foodManager.combinedLogs.remove(at: idx)
@@ -1524,6 +1524,7 @@ struct CombinedLogMealRow: View {
     @Binding var path: NavigationPath
     var onItemAdded: ((Food) -> Void)?
     @State private var showLoggingErrorAlert: Bool = false
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     init(log: CombinedLog, 
          meal: MealSummary, 
@@ -1581,21 +1582,59 @@ struct CombinedLogMealRow: View {
                             totalProtein: meal.protein,
                             totalCarbs: meal.carbs,
                             totalFat: meal.fat,
-                            scheduledAt: nil
-                        ), 
+                            scheduledAt: Date()
+                        ),
                         mealTime: selectedMeal,
-                        calories: log.displayCalories,
-                        statusCompletion: { success in
-                            if !success {
-                                withAnimation {
-                                    if self.foodManager.lastLoggedMealId == self.meal.id {
-                                        self.foodManager.lastLoggedMealId = nil
-                                    }
+                        calories: log.displayCalories
+                    ) { result in
+                        switch result {
+                        case .success(let loggedMeal):
+                            // 1) Build your CombinedLog
+                            let combinedLog = CombinedLog(
+                                type:        .meal,
+                                status:      loggedMeal.status,
+                                calories:    loggedMeal.calories,
+                                message:     "\(loggedMeal.meal.title) – \(loggedMeal.mealTime)",
+                                foodLogId:   nil,
+                                food:        nil,
+                                mealType:    loggedMeal.mealTime,
+                                mealLogId:   loggedMeal.mealLogId,
+                                meal:        loggedMeal.meal,
+                                mealTime:    loggedMeal.mealTime,
+                                scheduledAt: Date(),
+                                recipeLogId: nil,
+                                recipe:      nil,
+                                servingsConsumed: nil,
+                                isOptimistic: true
+                            )
+                             
+      
+                            // 2) Tell the DayLogs VM
+                            // DispatchQueue.main.async {
+                             
+       dayLogsVM.addPending(combinedLog)
+                                
+                              
+                                // Check if meal was added to logs array
+                                print("After addPending, logs contains meal? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+                                
+                                if let idx = foodManager.combinedLogs.firstIndex(where: { $0.mealLogId == combinedLog.mealLogId }) {
+                                    foodManager.combinedLogs.remove(at: idx)
                                 }
-                                showLoggingErrorAlert = true
+                                foodManager.combinedLogs.insert(combinedLog, at: 0)
+                            // }
+
+                        case .failure(let error):
+                            // your existing failure UI
+                            print("❌ Failed to log meal:", error)
+                            withAnimation {
+                            if foodManager.lastLoggedMealId == meal.id {
+                                foodManager.lastLoggedMealId = nil
                             }
+                            }
+                            showLoggingErrorAlert = true
                         }
-                    )
+                    }
                 case .addToMeal, .addToRecipe:
                     addMealItemsToSelection()
                 }
