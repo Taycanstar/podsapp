@@ -784,9 +784,9 @@ struct DashboardView: View {
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
-    private var calorieGoal : Double { foodMgr.calorieGoal }
-    // private var remainingCal: Double { max(0, calorieGoal - foodMgr.caloriesConsumed) }
-    private var remainingCal: Double { max(0, calorieGoal - vm.totalCalories) }
+  private var calorieGoal : Double { vm.calorieGoal }
+private var remainingCal: Double { vm.remainingCalories }
+
 
     private var navTitle: String {
         if isToday      { return "Today" }

@@ -111,11 +111,7 @@ struct LogFood: View {
                     foodManager.prefetchMealImages()
                 }
                 
-                if foodManager.recipes.isEmpty {
-                    foodManager.backgroundSyncWithServer()
-                }
-                
-                foodManager.backgroundSyncWithServer()
+             
                 
                 // Set focus to the search field after a slight delay
                 DispatchQueue.main.asyncAfter(deadline: .now()) {

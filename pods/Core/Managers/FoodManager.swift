@@ -95,122 +95,19 @@ class FoodManager: ObservableObject {
     @Published var scanningFoodError: String? = nil
     @Published var scannedImage: UIImage? = nil
     @Published var uploadProgress: Double = 0.0
-    
-    // MARK: - Date-specific logs management
-    
-    /// Current selected date in dashboard view
-    @Published var selectedDate = Date()
-    
-    /// Cache of logs by date
-    private var logsCache: [String: [CombinedLog]] = [:]
-    
-    /// Flag to track which dates we've preloaded or are currently loading
-    private var loadingDates: Set<String> = []
-    
-    /// Dates for which we've attempted to load but found no logs
-    private var emptyDates: Set<String> = []
-    
-    // Add a flag to track recent optimistic updates
-    private var justPerformedOptimisticUpdate = false
-    
 
- 
-
-
-// MARK: ––– Add a log to an arbitrary day (not “today” hard-coded)
-func addLog(_ log: CombinedLog, for date: Date) {
-    // ➊ Correct bucket key
-    let dayKey = dateKey(date)
-
-    // ➋ Make the optimistic copy *use the same scheduled date*
-    var optimisticLog         = log
-    optimisticLog.isOptimistic = true
-    optimisticLog.scheduledAt  = date
-
-    // ➌ Flag so other threads know not to recalc immediately
-    justPerformedOptimisticUpdate = true
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.justPerformedOptimisticUpdate = false
-    }
-
-    // ➍ Push into global timeline
-    combinedLogs.insert(optimisticLog, at: 0)
-
-    // ➎ If the UI is showing this same day, update that list + nutrition
-    if Calendar.current.isDate(selectedDate, inSameDayAs: date) {
-        currentDateLogs.insert(optimisticLog, at: 0)
-        caloriesConsumed += log.displayCalories
-        if let f = log.food {
-            proteinConsumed += f.protein ?? 0
-            carbsConsumed   += f.carbs   ?? 0
-            fatConsumed     += f.fat     ?? 0
-        }
-        remainingCalories = max(0, calorieGoal - caloriesConsumed)
-    }
-
-    // ➏ Update in-memory cache and persist to disk
-    logsCache[dayKey, default: []].insert(optimisticLog, at: 0)
-    persistDayCache(dayKey, logs: logsCache[dayKey]!)
-
-    // ➐ Debug
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        print("\n📝 Cache after optimistic insert into \(dayKey):")
-        self.debugDumpLogs()
-    }
-}
-
-
-
-
-    private func persistDayCache(_ dateKey: String, logs: [CombinedLog]) {
-    logsCache[dateKey] = logs           // keep it in RAM as usual
-
-    guard let userEmail = userEmail,
-          let data = try? JSONEncoder().encode(logs) else { return }
-
-    UserDefaults.standard.set(data,
-        forKey: "logs_by_date_\(userEmail)_\(dateKey)")
-}
-    /// Format a date as a string for cache keys
-    private func dateKey(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-    /// Format a date as a string for cache keys (alternative signature)
-    private func dateKey(for date: Date) -> String {
-        return dateKey(date)
-    }
-    
-    /// Loading state for date-specific logs
-    @Published var isLoadingDateLogs = false
-    
-    /// Error state for date-specific logs
-    @Published var dateLogsError: Error? = nil
-    
-    /// Logs for the currently selected date
-    @Published var currentDateLogs: [CombinedLog] = []
-    
-    /// Flag indicating if adjacent days are being preloaded
-    @Published var isPreloadingAdjacent = false
     
     // Add the new property
     @Published var isLoggingFood = false
     
     // Add errorMessage property after other published properties, around line 85
     @Published var errorMessage: String? = nil
-    
-    // Add the new published properties for nutrition tracking
-    @Published var caloriesConsumed: Double = 0
-    @Published var proteinConsumed: Double = 0
-    @Published var carbsConsumed: Double = 0
-    @Published var fatConsumed: Double = 0
-    @Published var calorieGoal: Double = 2000 // Default value, should be fetched from user settings
-    @Published var remainingCalories: Double = 2000 // Default equals goal
+
+
     
     init() {
         self.networkManager = NetworkManager()
-        fetchCalorieGoal()
+   
     }
     
     
@@ -237,23 +134,7 @@ func addLog(_ log: CombinedLog, for date: Date) {
         }
     }
 
-    // MARK: - Optimistic-row helpers
-private func optimisticLogs(for dayKey: String) -> [CombinedLog] {
-    let cal = Calendar.current
-    return currentDateLogs.filter {
-        $0.isOptimistic &&
-        cal.isDate($0.scheduledAt ?? .distantPast,
-                   equalTo: keyToDate(dayKey),
-                   toGranularity: .day)
-    }
-}
 
-private func keyToDate(_ key: String) -> Date {
-    let f = DateFormatter()
-    f.dateFormat = "yyyy-MM-dd"
-    f.timeZone   = .current
-    return f.date(from: key) ?? Date()
-}
 
     
     private func resetAndFetchFoods() {
@@ -496,12 +377,6 @@ func loadMoreFoods(refresh: Bool = false) {
             return
         }
         
-        // If we're looking at today, use backgroundSyncWithServer instead to preserve optimistic updates
-        if Calendar.current.isDateInToday(selectedDate) {
-            print("📊 Redirecting refresh() to backgroundSyncWithServer() for today's data")
-            backgroundSyncWithServer()
-            return
-        }
         
         // Reset pagination states
         currentPage = 1
@@ -509,27 +384,7 @@ func loadMoreFoods(refresh: Bool = false) {
         hasMore = true
         mealsHasMore = true
         
-        // Clear logs cache for all dates except today (preserve today's optimistic updates)
-        let todayKey = dateKey(Date())
-        let todayLogs = logsCache[todayKey]
         
-        // Clear all cache except today
-        logsCache.removeAll()
-        
-        // Restore today's logs if we had them
-        if let logs = todayLogs {
-            logsCache[todayKey] = logs
-        }
-        
-        emptyDates.removeAll()
-        loadingDates.removeAll()
-        
-        // Reset date logs loading state
-        isLoadingDateLogs = false
-        dateLogsError = nil
-        
-        // Fetch fresh logs for the selected date
-        fetchLogsByDate(date: selectedDate)
     }
     
     // MARK: - User Foods Methods
@@ -708,18 +563,13 @@ func loadMoreFoods(refresh: Bool = false) {
                     servingsConsumed: nil
                 )
                 
-                // Add the log to today's logs using the helper method for optimistic update
-                // self.addLogToTodayAndUpdateDashboard(combinedLog)
-                self.addLog(combinedLog, for: date)
+           
                 
                 // Track the food in recently added - fdcId is non-optional
                 self.lastLoggedFoodId = food.fdcId
                 self.trackRecentlyAdded(foodId: food.fdcId)
                 
-                // Give backend time to index the new log before syncing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.backgroundSyncWithServer()
-                }
+               
                 
                 // Set data for success toast in dashboard
                 self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
@@ -1075,140 +925,6 @@ func refreshMeals() {
         self.objectWillChange.send()
     }
 }
-// Log a meal (from meal history)
-// func logMeal(
-//     meal: Meal,
-//     mealTime: String,
-//     date: Date = Date(),
-//     notes: String? = nil,
-//     calories: Double,
-//     completion: ((Result<LoggedMeal, Error>) -> Void)? = nil,
-//     statusCompletion: ((Bool) -> Void)? = nil
-// ) {
-//     guard let email = userEmail else { 
-//         statusCompletion?(false)
-//         return 
-//     }
-    
-//     // Show loading state
-//     isLoadingMeal = true
-    
-//     // Immediately mark as recently logged for UI feedback
-//     self.lastLoggedMealId = meal.id
-    
-//     // Create an optimistic log entry before server response
-//     let combinedLog = CombinedLog(
-//         type: .meal,
-//         status: "completed",
-//         calories: calories,
-//         message: "\(meal.title) - \(mealTime)",
-//         foodLogId: nil,
-//         food: nil,
-//         mealType: nil,
-//         mealLogId: -Int.random(in: 10000...99999), // Temp negative ID until server responds
-//         meal: MealSummary(
-//             mealId: meal.id, 
-//             title: meal.title, 
-//             description: meal.description ?? "",
-//             image: meal.image,
-//             calories: calories,
-//             servings: meal.servings,
-//             protein: meal.totalProtein,
-//             carbs: meal.totalCarbs,
-//             fat: meal.totalFat,
-//             scheduledAt: date
-//         ),
-//         mealTime: mealTime,
-//         scheduledAt: date,
-//         recipeLogId: nil,
-//         recipe: nil,
-//         servingsConsumed: nil,
-//         isOptimistic: true
-//     )
-    
-//     // Add optimistic log to UI immediately
-//     // self.addLogToTodayAndUpdateDashboard(combinedLog)
-//     self.addLog(combinedLog, for: date)
-    
-//     // REMOVED: Check for existing meal logs - we'll wait for server response
-    
-//     networkManager.logMeal(
-//         userEmail: email,
-//         mealId: meal.id,
-//         mealTime: mealTime,
-//         date: date,
-//         notes: notes,
-//         calories: calories
-//     ) { [weak self] result in
-//         DispatchQueue.main.async {
-//             guard let self = self else { 
-//                 statusCompletion?(false)
-//                 return 
-//             }
-//             self.isLoadingMeal = false
-            
-//             switch result {
-//             case .success(let loggedMeal):
-//                 print("✅ Successfully logged meal with ID: \(loggedMeal.mealLogId)")
-                
-//                 // Clear cache for the current date
-//                 let dateStr = self.dateKey(date)
-//                 self.clearCache(for: dateStr)
-                
-//                 // Give backend time to index the new log before syncing
-//                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-//                     self.backgroundSyncWithServer()
-//                 }
-                
-//                 // Set data for success toast in dashboard
-//                 self.lastLoggedItem = (name: meal.title, calories: calories)
-//                 self.showLogSuccess = true
-//                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-//                     self.showLogSuccess = false
-//                 }
-                
-//                 // Show the local toast
-//                 self.showToast = true
-//                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//                     self.showToast = false
-//                 }
-                
-//                 // Clear the flag and toast after 2 seconds
-//                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//                     withAnimation {
-//                         // Only clear if it still matches the meal we logged
-//                         if self.lastLoggedMealId == meal.id {
-//                             self.lastLoggedMealId = nil
-//                         }
-//                         self.showMealLoggedToast = false
-//                     }
-//                 }
-                
-//                 statusCompletion?(true)
-//                 completion?(.success(loggedMeal))
-                
-//             case .failure(let error):
-//                 print("❌ Failed to log meal: \(error)")
-//                 self.error = error
-                
-//                 // Clear the lastLoggedMealId immediately on error
-//                 withAnimation {
-//                     // Only clear if it still matches the meal we tried to log
-//                     if self.lastLoggedMealId == meal.id {
-//                         self.lastLoggedMealId = nil
-//                     }
-//                 }
-                
-//                 statusCompletion?(false)
-//                 completion?(.failure(error))
-//             }
-//         }
-//     }
-// }
-
-//  FoodManager.swift
-//  Replace the whole old version with this one
-//  --------------------------------------------------------
 
  func logMeal(
         meal: Meal,
@@ -1263,11 +979,7 @@ func refreshMeals() {
                     self.showToast = false
                 }
 
-                    // Give backend time to index the new log before syncing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.backgroundSyncWithServer()
-                }
-                
+              
                 
                 // Clear the flag and toast after 2 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -1796,8 +1508,7 @@ func logRecipe(
             
             switch result {
             case .success(let recipeLog):
-                // Instead of optimistically updating UI, fetch fresh logs from server
-                self.fetchLogsByDate(date: Date())
+       
                 
                 // Update last logged recipe ID for UI feedback
                 self.lastLoggedRecipeId = recipe.id
@@ -2023,16 +1734,8 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             self.lastLoggedFoodId = loggedFood.food.fdcId
             self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
             
-            // Clear cache for the current date to ensure fresh data
-            let currentDateStr = self.dateKey(Date())
-            self.logsCache.removeValue(forKey: currentDateStr)
-            self.emptyDates.remove(currentDateStr)
-            
-            // // Give backend time to index the new log before syncing
-            // DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            //     self.backgroundSyncWithServer()
-            // }
-            
+      
+  
             // Reset analysis state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.isAnalyzingFood = false
@@ -2071,164 +1774,7 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
     }
 }
 
-// 2. Add a new backgroundSyncWithServer method
-/// Sync with server in the background without blocking UI
-// func backgroundSyncWithServer() {
-//     guard let email = userEmail else { return }
-    
-//     // Debug log
-//     print("🔄 Starting background sync with server")
-    
-//     // Get date string for current date
-//     let currentDateStr = self.dateKey(self.selectedDate)
-    
-//     // Save optimistic logs from the current day
-//     let optimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
-//     print("📝 Found \(optimisticLogs.count) optimistic logs that need to be preserved during sync")
-    
-//     // Fetch fresh data from server without invalidating optimistic logs
-//     NetworkManagerTwo.shared.getLogsByDate(
-//         userEmail: email,
-//         date: self.selectedDate,
-//         includeAdjacent: false,
-//         timezoneOffset: getTimezoneOffsetInMinutes()
-//     ) { [weak self] result in
-//         guard let self = self else { return }
-        
-//         DispatchQueue.main.async {
-//             switch result {
-//             case .success(let response):
-//                 // Get server logs for current date
-//                 let serverLogs = response.logs
-//                 print("📥 Received \(serverLogs.count) logs from server for \(currentDateStr)")
-                
-//                 // Merge any optimistic logs with server logs
-//                 let combinedLogs = self.deduplicateLogs(serverLogs + optimisticLogs)
-                
-//                 // Update cache with merged logs
-//                 self.logsCache[currentDateStr] = combinedLogs
-                
-//                 // Update current logs if we're still on the same date
-//                 if self.dateKey(self.selectedDate) == currentDateStr {
-//                     self.currentDateLogs = combinedLogs
-                    
-//                     // Recalculate nutrition values
-//                     self.calculateDailyNutrition()
-//                 }
-                
-//                 print("🔄 Background sync complete: \(serverLogs.count) server logs merged with \(optimisticLogs.count) optimistic logs")
-                
-//                 // Debug the logs after sync
-//                 self.debugDumpLogs()
-                
-//             case .failure(let error):
-//                 print("❌ Background sync failed: \(error.localizedDescription)")
-//                 // On failure, keep optimistic logs
-//                 if !optimisticLogs.isEmpty {
-//                     print("📝 Keeping \(optimisticLogs.count) optimistic logs after failed sync")
-//                 }
-//             }
-//         }
-//     }
-// }
-/// Re-fetch the logs for the currently selected day without letting
-/// anything that’s already on-screen vanish if the backend hasn’t
-/// indexed it yet.
-func backgroundSyncWithServer() {
-    guard let email = userEmail else { return }
 
-    print("🔄 Starting background sync with server")
-
-    let dayKey      = dateKey(selectedDate)
-    let uiLogs      = currentDateLogs          // <-- keep *all* rows the UI shows now
-
-    NetworkManagerTwo.shared.getLogsByDate(
-        userEmail:       email,
-        date:            selectedDate,
-        includeAdjacent: false,
-        timezoneOffset:  getTimezoneOffsetInMinutes()
-    ) { [weak self] result in
-        guard let self = self else { return }
-
-        DispatchQueue.main.async {
-            switch result {
-
-            // ----------------------- SUCCESS ----------------------------
-            case .success(let response):
-                let serverLogs = response.logs
-                print("📥 Received \(serverLogs.count) logs from server for \(dayKey)")
-
-                // Merge what the server sent with *everything* we were already
-                // displaying.  deduplicateLogs() prefers the non-optimistic
-                // (server) copy when IDs collide.
-                var merged = self.deduplicateLogs(serverLogs + uiLogs)
-
-                // Optional: if the server copy for a given ID is present,
-                // clear the optimistic flag so the row stops pulsing, etc.
-                for i in merged.indices {
-                    if merged[i].isOptimistic,
-                       serverLogs.contains(where:{ $0.id == merged[i].id }) {
-                        merged[i].isOptimistic = false
-                    }
-                }
-
-                // Cache & push to UI
-                self.logsCache[dayKey]   = merged
-                self.persistDayCache(dayKey, logs: merged)
-
-                if self.dateKey(self.selectedDate) == dayKey {
-                    self.currentDateLogs = merged
-                    self.calculateDailyNutrition()
-                }
-
-                print("✅ Background sync complete – "
-                      + "\(serverLogs.count) server rows + "
-                      + "\(uiLogs.count) UI rows → \(merged.count) merged")
-
-            // ----------------------- FAILURE ----------------------------
-            case .failure(let error):
-                print("❌ Background sync failed: \(error.localizedDescription)")
-                // Nothing to do; we simply keep whatever is already on screen.
-            }
-        }
-    }
-}
-
-
-// 3. Add helper method to recalculate nutrition from logs
-private func recalculateNutrition(from logs: [CombinedLog]) {
-    var calories: Double = 0
-    var protein: Double = 0
-    var carbs: Double = 0
-    var fat: Double = 0
-    
-    for log in logs {
-        calories += log.displayCalories
-        
-        if let food = log.food {
-            protein += food.protein ?? 0
-            carbs += food.carbs ?? 0
-            fat += food.fat ?? 0
-        } else if let meal = log.meal {
-            protein += meal.protein ?? 0
-            carbs += meal.carbs ?? 0
-            fat += meal.fat ?? 0
-        } else if let recipe = log.recipe {
-            protein += recipe.protein ?? 0
-            carbs += recipe.carbs ?? 0
-            fat += recipe.fat ?? 0
-        }
-    }
-    
-    // Update our local values
-    self.caloriesConsumed = calories
-    self.proteinConsumed = protein
-    self.carbsConsumed = carbs
-    self.fatConsumed = fat
-    self.remainingCalories = max(0, self.calorieGoal - calories)
-    
-    print("📊 Background sync updated nutrition: Calories=\(calories), Protein=\(protein)g, Carbs=\(carbs)g, Fat=\(fat)g, Remaining=\(self.remainingCalories)")
-}
 
 func generateMealWithAI(mealDescription: String, mealType: String, completion: @escaping (Result<Meal, Error>) -> Void) {
     guard let email = userEmail else {
@@ -2381,8 +1927,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                     self.showFoodGenerationSuccess = false
                 }
                 
-                // Sync with server in the background without UI interruption
-                self.backgroundSyncWithServer()
+          
                 
                 // Call the completion handler
                 completion(.success(food))
@@ -2921,8 +2466,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                             self.showAIGenerationSuccess = false
                         }
                         
-                        // Sync with server in the background without UI interruption
-                        self.backgroundSyncWithServer()
+                 
                         
                     case .failure(let error):
                         print("Failed to generate AI macros: \(error.localizedDescription)")
@@ -3034,16 +2578,13 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                             servingsConsumed: nil
                         )
                         
-                        // Add the log to today's logs using the helper method
-                        // self.addLogToTodayAndUpdateDashboard(combinedLog)
-                        self.addLog(combinedLog, for: Date())
+                      
                         
                         // Track the food in recently added
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
-                        // NEW: Use background sync instead of immediate refresh
-                        self.backgroundSyncWithServer()
+              
                         
                         // Save the generated food for the toast
                         self.aiGeneratedFood = loggedFood.food
@@ -3095,405 +2636,8 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             }
         }
     }
-    // MARK: - Date-specific logs management
     
-    /// Fetch logs for a specific date, with option to preload adjacent days
-    /// - Parameters:
-    ///   - date: Target date to fetch logs for
-    ///   - preloadAdjacent: Whether to preload logs for adjacent days
-    func fetchLogsByDate(date: Date, preloadAdjacent: Bool = true) {
-        guard let email = userEmail else { return }
-        
-        // wipe summaries so UI doesn't display stale numbers
-        resetDailyNutrition()
-        
-        // Update the selected date right away for UI
-        selectedDate = date
-        
-        // Get date string for cache key
-        let dateString = dateKey(date)
-        
-        // Always fetch fresh data for today to ensure we have the latest logs
-        let isToday = Calendar.current.isDateInToday(date)
-        let forceRefresh = isToday  // Always refresh today's data
-        
-        // Keep optimistic logs visible even during a forced refresh of today
-        if forceRefresh,
-           let optimistic = logsCache[dateString]?.filter(\.isOptimistic),
-           !optimistic.isEmpty {
-            currentDateLogs = optimistic
-            calculateDailyNutrition()
-        }
-        
-        // When navigating to today, always clear the cache first
-        if isToday {
-            logsCache.removeValue(forKey: dateString)
-            emptyDates.remove(dateString)
-        }
-        
-        // Check if we already have this date in cache and we're not forcing a refresh
-        if !forceRefresh, let cachedLogs = logsCache[dateString] {
-            // If we have logs in cache, use them immediately
-            print("📅 Using cached logs for \(dateString): \(cachedLogs.count) logs")
-            
-            // Always update currentDateLogs and recalculate nutrition
-            currentDateLogs = cachedLogs
-            calculateDailyNutrition()
-            
-            // Still preload adjacent days in the background if requested
-            if preloadAdjacent {
-                preloadAdjacentDays(silently: true)
-            }
-            
-            return
-        }
-        
-        // Check if this is a known empty date and we're not forcing a refresh
-        if !forceRefresh, emptyDates.contains(dateString) {
-            currentDateLogs = []
-            print("📅 Known empty date: \(dateString), showing empty state")
-            
-            // Still preload adjacent days in the background if requested
-            if preloadAdjacent {
-                preloadAdjacentDays(silently: true)
-            }
-            
-            // Reset nutrition values when no logs exist
-            resetDailyNutrition()
-            
-            return
-        }
-        
-        // If we're already loading this date, don't start another request
-        if loadingDates.contains(dateString) {
-            print("📅 Already loading logs for \(dateString), waiting for completion")
-            return
-        }
-        
-        // Track that we're loading this date
-        loadingDates.insert(dateString)
-        
-        // Only show the loading indicator if this isn't an adjacent date
-        // or we don't already have the adjacent day preloaded
-        let showLoading = !isAdjacentToSelectedDate(date) || logsCache[dateString] == nil
-        
-        if showLoading {
-            isLoadingDateLogs = true
-            dateLogsError = nil
-        }
-        
-        // Log whether we're fetching fresh data
-        if forceRefresh {
-            print("📅 Fetching fresh data for \(dateString) (today)")
-        } else {
-            print("📅 Fetching data for \(dateString)")
-        }
-        
-        // Load from server
-        NetworkManagerTwo.shared.getLogsByDate(
-            userEmail: email,
-            date: date,
-            includeAdjacent: preloadAdjacent,
-            daysBefore: 1,
-            daysAfter: 1,
-            timezoneOffset: getTimezoneOffsetInMinutes()
-        ) { [weak self] result in
-            guard let self = self else { return }
-            
-            // Mark this date as no longer loading
-            self.loadingDates.remove(dateString)
-            
-            DispatchQueue.main.async {
-                // Always hide the loader when we get a response
-                self.isLoadingDateLogs = false
-                
-                switch result {
-                case .success(let response):
-                    // If goals are present in the response, update calorieGoal and related properties
-                    if let goals = response.goals {
-                        self.calorieGoal = goals.calories
-                        self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
-                        // Optionally update other macro goals if you have UI for them
-                        print("📊 Loaded calorie goal from backend: \(goals.calories)")
-                    } else {
-                        // Fallback to local fetch if backend goals are missing
-                        self.fetchCalorieGoal()
-                    }
-                    // Process logs for all dates
-                    let logs = response.logs
-                    
-                    // Group logs by date
-                    let logsByDate = Dictionary(grouping: logs) { log in
-                        if let scheduledAt = log.scheduledAt {
-                            let localDate = Calendar.current.startOfDay(for: scheduledAt)
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd"
-                            formatter.timeZone = .current
-                            return formatter.string(from: localDate)
-                        }
-                        // Fallback to logDate if scheduledAt is missing
-                        if let logDate = log.logDate, logDate.count >= 10 {
-                            return String(logDate.prefix(10))
-                        }
-                        return ""
-                    }
-                    
-                    // Update cache with all logs by their date
-      // ─── Update cache with all logs by their date ─────────────────────────────
-// ─── Update cache with all logs by their date ─────────────────────────────
-for (logDate, serverLogs) in logsByDate {
-    guard !logDate.isEmpty else { continue }
 
-    // merge server rows with JUST the optimistic rows that belong to *this* day
-    let merged = self.deduplicateLogs(serverLogs + self.optimisticLogs(for: logDate))
-    self.logsCache[logDate] = merged
-
-    // refresh the list if we’re currently looking at this date
-    if logDate == self.dateKey(self.selectedDate) {
-        self.currentDateLogs = merged
-    }
-
-    // keep empty-date bookkeeping in sync
-    if merged.isEmpty {
-        self.emptyDates.insert(logDate)
-    } else {
-        self.emptyDates.remove(logDate)
-    }
-}
-// ──────────────────────────────────────────────────────────────────────────
-
-// ──────────────────────────────────────────────────────────────────────────
-
-
-                    
-                    // Update current date logs
-                    if let targetLogs = self.logsCache[dateString] {
-                        // Get any pending optimistic logs that haven't been saved yet
-                        let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
-                        
-                        // Merge server logs with any optimistic ones that haven't returned yet
-                        let merged = self.deduplicateLogs(targetLogs + pendingOptimisticLogs)
-                        self.currentDateLogs = merged
-                        self.logsCache[dateString]    = merged 
-                        print("📅 Loaded \(merged.count) logs for \(dateString) (including \(pendingOptimisticLogs.count) optimistic logs)")
-                        
-                        // Calculate nutrition totals after logs are loaded
-                        self.calculateDailyNutrition()
-                    } else {
-                        // Save any optimistic logs from the current display
-                        let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
-                        
-                        if pendingOptimisticLogs.isEmpty {
-                            self.currentDateLogs = []
-                            self.emptyDates.insert(dateString)
-                            print("📅 No logs found for \(dateString)")
-                            
-                            // Reset nutrition values when no logs exist
-                            self.resetDailyNutrition()
-                        } else {
-                            // Keep the optimistic logs even if server returned none
-                            self.currentDateLogs = pendingOptimisticLogs
-                            self.logsCache[dateString] = pendingOptimisticLogs
-                            print("📅 No server logs found for \(dateString), but keeping \(pendingOptimisticLogs.count) optimistic logs")
-                            
-                            // Calculate nutrition from optimistic logs
-                            self.calculateDailyNutrition()
-                        }
-                    }
-                    
-                case .failure(let error):
-                    // Don't clear optimistic logs on error - keep them visible
-                    let pendingOptimisticLogs = self.currentDateLogs.filter(\.isOptimistic)
-                    
-                    if pendingOptimisticLogs.isEmpty {
-                        self.dateLogsError = error
-                        self.currentDateLogs = []
-                        print("❌ Error loading logs for \(dateString): \(error.localizedDescription)")
-                    } else {
-                        print("❌ Error loading logs for \(dateString): \(error.localizedDescription), but keeping \(pendingOptimisticLogs.count) optimistic logs")
-                        // Keep optimistic logs visible on error
-                        self.currentDateLogs = pendingOptimisticLogs
-                    }
-                }
-            }
-        }
-    }
-    
-    /// Navigate to the previous day
-    func goToPreviousDay() {
-        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-        let previousDayString = dateKey(previousDay)
-        
-        print("\n🔄 Navigating to previous day: \(previousDayString)")
-        // Check if we have the previous day in cache or it's a known empty date
-        let isCached = logsCache[previousDayString] != nil || emptyDates.contains(previousDayString)
-        
-        // Fetch logs with or without loading indicator based on cache status
-        fetchLogsByDate(date: previousDay)
-        
-        // Debug what logs look like after navigation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.debugDumpLogs()
-        }
-    }
-    
-    /// Navigate to the next day
-    func goToNextDay() {
-        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        let nextDayString = dateKey(nextDay)
-        
-        print("\n🔄 Navigating to next day: \(nextDayString)")
-        // Check if we have the next day in cache or it's a known empty date
-        let isCached = logsCache[nextDayString] != nil || emptyDates.contains(nextDayString)
-        
-        // Fetch logs with or without loading indicator based on cache status
-        fetchLogsByDate(date: nextDay)
-        
-        // Debug what logs look like after navigation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.debugDumpLogs()
-        }
-    }
-    
-    /// Navigate to "today" without dropping optimistic logs
-    func goToToday(forceRefresh: Bool = false) {
-        let today = Date()
-        selectedDate = today                 // update toolbar
-
-        if forceRefresh {
-            clearCache(for: dateKey(today))  // caller-requested hard reload
-        }
-
-        // 1. show cached/optimistic logs instantly
-        if let cached = logsCache[dateKey(today)] {
-            currentDateLogs = cached
-            calculateDailyNutrition()
-        }
-
-        // 2. silently fetch fresh data and merge on arrival
-        fetchLogsByDate(date: today, preloadAdjacent: true)
-
-        // 3. let server eventually reconcile
-        backgroundSyncWithServer()
-    }
-    
-    /// Preload logs for adjacent days (one day before and after the selected date)
-    func preloadAdjacentDays(silently: Bool = false) {
-        // If already preloading, don't start another request
-        if isPreloadingAdjacent && silently {
-            return
-        }
-        
-        isPreloadingAdjacent = true
-        
-        // Set a flag to avoid duplicate preloading
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.isPreloadingAdjacent = false
-        }
-        
-        guard let email = userEmail else { return }
-        
-        // Calculate dates to preload
-        let calendar = Calendar.current
-        let previousDay = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-        let nextDay = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        let previousDayString = dateKey(previousDay)
-        let nextDayString = dateKey(nextDay)
-        
-        // Today should always be fetched fresh
-        let todayString = dateKey(Date())
-        let isPreviousDayToday = Calendar.current.isDateInToday(previousDay)
-        let isNextDayToday = Calendar.current.isDateInToday(nextDay)
-        
-        // Skip if we already have both adjacent days or are loading them
-        // But always fetch today to ensure we have the latest data
-        if (!isPreviousDayToday && (logsCache[previousDayString] != nil || emptyDates.contains(previousDayString) || loadingDates.contains(previousDayString))) &&
-           (!isNextDayToday && (logsCache[nextDayString] != nil || emptyDates.contains(nextDayString) || loadingDates.contains(nextDayString))) {
-            print("📅 Adjacent days already cached or loading, skipping preload")
-            return
-        }
-        
-        print("📅 Preloading adjacent days silently: \(silently)")
-        
-        // Track that we're loading these dates
-        loadingDates.insert(previousDayString)
-        loadingDates.insert(nextDayString)
-        
-        NetworkManagerTwo.shared.getLogsByDate(
-            userEmail: email,
-            date: selectedDate,
-            includeAdjacent: true,
-            daysBefore: 1,
-            daysAfter: 1,
-            timezoneOffset: getTimezoneOffsetInMinutes()
-        ) { [weak self] result in
-            guard let self = self else { return }
-            
-            // Mark these dates as no longer loading
-            self.loadingDates.remove(previousDayString)
-            self.loadingDates.remove(nextDayString)
-            
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    // Group logs by date
-                    let logsByDate = Dictionary(grouping: response.logs) { log in
-                        if let scheduledAt = log.scheduledAt {
-                            let localDate = Calendar.current.startOfDay(for: scheduledAt)
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd"
-                            formatter.timeZone = .current
-                            return formatter.string(from: localDate)
-                        }
-                        // Fallback to logDate if scheduledAt is missing
-                        if let logDate = log.logDate, logDate.count >= 10 {
-                            return String(logDate.prefix(10))
-                        }
-                        return ""
-                    }
-                    
-                    // Update cache with all logs by their date
-             // --- BEGIN PATCH ---
-                        for (logDate, dateLogs) in logsByDate {
-                            guard !logDate.isEmpty else { continue }
-
-                            // pull forward optimistic rows we cached earlier for this day
-                            let optimistic = self.logsCache[logDate]?.filter(\.isOptimistic) ?? []
-
-                            // ALWAYS merge + dedupe
-                            let merged = self.deduplicateLogs(dateLogs + optimistic)
-                            self.logsCache[logDate] = merged      // ✅ keeps Coke row alive
-
-                            // if the user is *currently* looking at this date, refresh the list
-                            if self.dateKey(self.selectedDate) == logDate {
-                                self.currentDateLogs = merged
-                            }
-
-                            // maintain emptyDates bookkeeping
-                            if merged.isEmpty {
-                                self.emptyDates.insert(logDate)
-                            } else {
-                                self.emptyDates.remove(logDate)
-                            }
-                        }
-                        // --- END PATCH ---
-
-                    
-                    print("📅 Preloaded logs for adjacent days: prev=\(self.logsCache[previousDayString]?.count ?? 0), next=\(self.logsCache[nextDayString]?.count ?? 0)")
-                    
-                case .failure(let error):
-                    print("❌ Error preloading adjacent days: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-    /// Check if a date is adjacent to the currently selected date
-    private func isAdjacentToSelectedDate(_ date: Date) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.day], from: selectedDate, to: date)
-        guard let dayDifference = components.day else { return false }
-        return abs(dayDifference) <= 1
-    }
     func finishLogging(food: Food, mealType: String, completion: @escaping () -> Void = {}) {
         print("🍽️ Finalizing food logging for \(food.displayName) as \(mealType)")
         
@@ -3547,17 +2691,13 @@ for (logDate, serverLogs) in logsByDate {
                     )
                     
                     // Add the log to today's logs using the helper method
-                    // self.addLogToTodayAndUpdateDashboard(combinedLog)
-                    self.addLog(combinedLog, for: Date())
+                
                     
                     // Track the food in recently added - fdcId is non-optional
                     self.lastLoggedFoodId = food.fdcId
                     self.trackRecentlyAdded(foodId: food.fdcId)
                     
-                    // Reload the current date logs to ensure the UI is up to date
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.reloadCurrentDateLogs()
-                    }
+            
                     
                     // Set data for success toast in dashboard
                     self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
@@ -3576,7 +2716,7 @@ for (logDate, serverLogs) in logsByDate {
                         }
                     }
                     
-                    // No need to recalculate - already done in addLogToTodayAndUpdateDashboard
+             
                     
                 case .failure(let error):
                     print("❌ Failed to log food: \(error.localizedDescription)")
@@ -3595,248 +2735,12 @@ for (logDate, serverLogs) in logsByDate {
         }
     }
     
-    // Add method to calculate nutrition totals after logs are loaded or modified
-    private func calculateDailyNutrition() {
-        // Skip recalculation if we just performed an optimistic update
-        if justPerformedOptimisticUpdate && Calendar.current.isDateInToday(selectedDate) {
-            print("📊 Skipping calculateDailyNutrition() - just performed optimistic update")
-            return
-        }
-        
-        let isToday = Calendar.current.isDateInToday(selectedDate)
-        print("📊 Calculating nutrition for \(isToday ? "today" : "selected date")")
-        
-        // Reset values before calculation
-        caloriesConsumed = 0
-        proteinConsumed = 0
-        carbsConsumed = 0
-        fatConsumed = 0
-        
-        // Sum up values from all logs for the selected date
-        for log in currentDateLogs {
-            caloriesConsumed += log.displayCalories
-            
-            // Add nutrition values based on log type
-            switch log.type {
-            case .food:
-                if let food = log.food {
-                    proteinConsumed += food.protein ?? 0
-                    carbsConsumed += food.carbs ?? 0
-                    fatConsumed += food.fat ?? 0
-                }
-            case .meal:
-                if let meal = log.meal {
-                    proteinConsumed += meal.protein ?? 0
-                    carbsConsumed += meal.carbs ?? 0
-                    fatConsumed += meal.fat ?? 0
-                }
-            case .recipe:
-                if let recipe = log.recipe {
-                    proteinConsumed += recipe.protein ?? 0
-                    carbsConsumed += recipe.carbs ?? 0
-                    fatConsumed += recipe.fat ?? 0
-                }
-            }
-        }
-        
-        // Update remaining calories
-        remainingCalories = max(0, calorieGoal - caloriesConsumed)
-        
-        print("📊 Calculated nutrition: Calories=\(caloriesConsumed), Protein=\(proteinConsumed)g, Carbs=\(carbsConsumed)g, Fat=\(fatConsumed)g, Remaining=\(remainingCalories)")
-    }
     
-    private func resetDailyNutrition() {
-        caloriesConsumed   = 0
-        proteinConsumed    = 0
-        carbsConsumed      = 0
-        fatConsumed        = 0
-        remainingCalories  = calorieGoal      // show full goal until fresh data arrives
-    }
-    
-    // Add method to fetch calorie goal from user settings/preferences
-    private func fetchCalorieGoal() {
-        // For now, we'll use UserDefaults as a simple solution
-        // In a production app, this should come from user settings or backend
-        if let goal = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double {
-            self.calorieGoal = goal
-            self.remainingCalories = max(0, goal - self.caloriesConsumed)
-            print("📊 Loaded calorie goal from dailyCalorieGoal: \(goal)")
-        } else if let onboardingData = UserDefaults.standard.data(forKey: "nutritionGoalsData") {
-            // Try to get it from onboarding data if available
-            let decoder = JSONDecoder()
-            if let goals = try? decoder.decode(NutritionGoals.self, from: onboardingData) {
-                self.calorieGoal = goals.calories
-                self.remainingCalories = max(0, goals.calories - self.caloriesConsumed)
-                print("📊 Loaded calorie goal from nutritionGoalsData: \(goals.calories)")
-            } else {
-                // Fallback to UserGoalsManager
-                loadDefaultGoals()
-            }
-        } else {
-            // Use UserGoalsManager as fallback
-            loadDefaultGoals()
-        }
-    }
+ 
 
-    // Add a helper method for loading default goals
-    private func loadDefaultGoals() {
-        let userGoals = UserGoalsManager.shared.dailyGoals
-        self.calorieGoal = Double(userGoals.calories)
-        self.remainingCalories = max(0, Double(userGoals.calories) - self.caloriesConsumed)
-        print("📊 Loaded calorie goal from UserGoalsManager: \(userGoals.calories)")
-    }
 
-    /// Helper function to deduplicate logs by their ID
-    /// This version prioritizes non-optimistic (server) logs over optimistic logs
-    private func deduplicateLogs(_ logs: [CombinedLog]) -> [CombinedLog] {
-        var uniqueLogs: [CombinedLog] = []
-        var seenIds = Set<String>()
-        var optimisticLogIds = Set<String>()
-        
-        // First pass: add all non-optimistic logs and track optimistic log IDs
-        for log in logs {
-            if log.isOptimistic {
-                // Just track optimistic log IDs for now
-                optimisticLogIds.insert(log.id)
-            } else if !seenIds.contains(log.id) {
-                // Add non-optimistic logs immediately
-                uniqueLogs.append(log)
-                seenIds.insert(log.id)
-                print("✅ Adding server log with ID: \(log.id), type: \(log.type)")
-            } else {
-                print("🚫 Removing duplicate server log with ID: \(log.id), type: \(log.type)")
-            }
-        }
-        
-        // Second pass: add optimistic logs only if no server log with the same ID exists
-        for log in logs {
-            if log.isOptimistic && !seenIds.contains(log.id) {
-                uniqueLogs.append(log)
-                seenIds.insert(log.id)
-                print("✅ Adding optimistic log with ID: \(log.id), type: \(log.type)")
-            }
-        }
-        
-        if uniqueLogs.count < logs.count {
-            print("🧹 Deduplication removed \(logs.count - uniqueLogs.count) logs. Original: \(logs.count), Now: \(uniqueLogs.count)")
-        }
-        
-        // Sort logs by scheduledAt date (most recent first)
-        uniqueLogs.sort { (log1, log2) -> Bool in
-            guard let date1 = log1.scheduledAt, let date2 = log2.scheduledAt else {
-                // If dates not available, keep optimistic logs first
-                return log1.isOptimistic && !log2.isOptimistic
-            }
-            return date1 > date2 // Most recent first
-        }
-        
-        print("🔄 Logs sorted by date (newest first)")
-        return uniqueLogs
-    }
-
-    /// Reloads logs for the currently selected date from the server
-    /// This ensures the UI is in sync with the latest data
-    func reloadCurrentDateLogs() {
-        print("🔄 Explicitly reloading logs for current date: \(selectedDate)")
-        
-        // Invalidate the cache for the selected date to force a fresh fetch
-        let dateStr = dateKey(selectedDate)
-        logsCache.removeValue(forKey: dateStr)
-        emptyDates.remove(dateStr)
-        
-        // Force the UI to update by sending objectWillChange
-        objectWillChange.send()
-        
-        // Fetch fresh logs from the server
-        fetchLogsByDate(date: selectedDate)
-        
-        // Force UI update after a short delay to ensure changes are reflected
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.objectWillChange.send()
-        }
-        
-        // Debug what logs look like after reload
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            print("\n🔄 Cache state after reloading logs:")
-            self.debugDumpLogs()
-        }
-    }
-
-    /// Helper method to clear cache for a specific date
-    func clearCache(for dateString: String) {
-        // Remove from logs cache
-        logsCache.removeValue(forKey: dateString)
-        // Remove from known empty dates
-        emptyDates.remove(dateString)
-        print("🧹 Cleared cache for date: \(dateString)")
-    }
-    
-    /// Debug function to print the contents of logs cache for a specific date
-    func debugPrintLogsForDate(date: Date) {
-        let dateStr = dateKey(date)
-        print("\n🐞 DEBUG: Logs for date \(dateStr)")
-        print("------------------------------------")
-        
-        if let logs = logsCache[dateStr] {
-            print("📋 Found \(logs.count) logs in cache for \(dateStr)")
-            
-            for (index, log) in logs.enumerated() {
-                var logDetails = "[\(index)] "
-                
-                switch log.type {
-                case .food:
-                    logDetails += "FOOD: \(log.food?.displayName ?? "Unknown") - \(log.mealType ?? "No meal type")"
-                case .meal:
-                    logDetails += "MEAL: \(log.meal?.title ?? "Unknown") - \(log.mealTime ?? "No meal time")"
-                case .recipe:
-                    logDetails += "RECIPE: \(log.recipe?.title ?? "Unknown")"
-                }
-                
-                logDetails += " | Calories: \(log.displayCalories)"
-                
-                if let scheduledAt = log.scheduledAt {
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd"
-                    logDetails += " | Scheduled: \(formatter.string(from: scheduledAt))"
-                }
-                
-                logDetails += " | Optimistic: \(log.isOptimistic)"
-                
-                print(logDetails)
-            }
-        } else {
-            print("❌ No logs found in cache for \(dateStr)")
-        }
-        
-        if emptyDates.contains(dateStr) {
-            print("⚠️ Date \(dateStr) is marked as empty in emptyDates")
-        }
-        
-        if loadingDates.contains(dateStr) {
-            print("⏳ Date \(dateStr) is currently loading")
-        }
-        
-        print("------------------------------------\n")
-    }
-    
-    /// Dumps the cache + currentDateLogs so you can see what the UI will show
-    func debugDumpLogs() {
-        print("──────── DEBUG DUMP ────────")
-        let sorted = logsCache.sorted { $0.key < $1.key }
-        for (dateKey, logs) in sorted {
-            print("🗓  \(dateKey)  →  \(logs.count) logs")
-            for log in logs {
-                let name = log.food?.displayName ??
-                           log.meal?.title ??
-                           log.recipe?.title ?? "–"
-                let opt  = log.isOptimistic ? "🟡" : "  "
-                print("   \(opt) \(name)  (\(log.type))")
-            }
-        }
-        print("➡️  currently selected: \(dateKey(selectedDate))  →  \(currentDateLogs.count) logs")
-        print("────────────────────────────")
-    }
-
+   
+   
     // Helper method to get the device's timezone offset in minutes
     private func getTimezoneOffsetInMinutes() -> Int {
         return TimeZone.current.secondsFromGMT() / 60

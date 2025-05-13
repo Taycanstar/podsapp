@@ -14,6 +14,9 @@ final class DayLogsViewModel: ObservableObject {
       @Published var logs         : [CombinedLog] = [] {
     didSet { recalculateTotals() }
   }
+  @Published var calorieGoal      : Double = 2_000
+@Published var remainingCalories: Double = 2_000   // always ≥ 0
+
   private var pendingByDate: [Date: [CombinedLog]] = [:]
   @Published var error        : Error?
   @Published var isLoading    = false
@@ -34,7 +37,23 @@ final class DayLogsViewModel: ObservableObject {
 
   func setEmail(_ newEmail: String) {
     email = newEmail
+    fetchCalorieGoal()
   }
+
+
+  // MARK: – Goal helpers ------------------------------------------------------
+ func fetchCalorieGoal() {
+    if let g = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double {
+        calorieGoal = g
+    } else if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+              let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
+        calorieGoal = goals.calories
+    } else {
+        calorieGoal = Double(UserGoalsManager.shared.dailyGoals.calories)
+    }
+    remainingCalories = max(0, calorieGoal - totalCalories)
+}
+
 
 
 func addPending(_ log: CombinedLog) {
@@ -111,6 +130,8 @@ func loadLogs(for date: Date) {
         let f3 = log.recipe?.fat ?? 0
         return sum + f1 + f2 + f3
       }
+
+      remainingCalories = max(0, calorieGoal - totalCalories)
     }
 
 
