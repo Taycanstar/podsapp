@@ -1115,7 +1115,9 @@ private struct MealListView: View {
                     .scrollContentBackground(.hidden)
                     .scrollIndicators(.hidden)
                 }
-                .frame(minHeight: min(CGFloat(foodManager.meals.count * 70), 400))
+                                // .frame(minHeight: min(CGFloat(foodManager.meals.count * 70), 400))
+
+                .frame(height: CGFloat(foodManager.meals.count * 55 + 16)) // 80 points per row + 16 for padding
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
             } else if foodManager.isLoadingMeals {
