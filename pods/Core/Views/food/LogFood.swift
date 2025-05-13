@@ -1420,34 +1420,36 @@ struct FoodRow: View {
             case .success(let loggedFood):
                 print("Food logged successfully: \(loggedFood)")
                 // Success is handled by FoodManager (shows toast, updates lists)
-                        let combinedLog = CombinedLog(
-                        type:         .food,
-                        status:       loggedFood.status,
-                        calories:     Double(loggedFood.food.calories),
-                        message:      "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
-                        foodLogId:    loggedFood.foodLogId,
-                        food:         loggedFood.food,
-                        mealType:     loggedFood.mealType,
-                        mealLogId:    nil,
-                        meal:         nil,
-                        mealTime:     nil,
-                        scheduledAt:  Date(),
-                        recipeLogId:  nil,
-                        recipe:       nil,
-                        servingsConsumed: nil,
-                        isOptimistic: true
-                    )
+                let combinedLog = CombinedLog(
+                    type:         .food,
+                    status:       loggedFood.status,
+                    calories:     Double(loggedFood.food.calories),
+                    message:      "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                    foodLogId:    loggedFood.foodLogId,
+                    food:         loggedFood.food,
+                    mealType:     loggedFood.mealType,
+                    mealLogId:    nil,
+                    meal:         nil,
+                    mealTime:     nil,
+                    scheduledAt:  Date(),
+                    recipeLogId:  nil,
+                    recipe:       nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
 
-                    // 2. Tell the day-logs view model about it
+                // Ensure all UI updates happen on the main thread
+                DispatchQueue.main.async {
+                    // Tell the day-logs view model about it
                     dayLogsVM.addPending(combinedLog)
+                    print("After addPending from FoodRow, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
 
-                    // 3. Prepend it into the global `combinedLogs` so your dashboard's "All" feed updates
-                    DispatchQueue.main.async {
-                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                    // Prepend it into the global `combinedLogs` so dashboard's "All" feed updates
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                         foodManager.combinedLogs.remove(at: idx)
-                        }
-                        foodManager.combinedLogs.insert(combinedLog, at: 0)
                     }
+                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                }
                 
             case .failure(let error):
                 print("Error logging food: \(error)")
