@@ -977,7 +977,7 @@ private extension DashboardView {
     var macrosCard: some View {
         VStack(spacing: 16) {
             macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
-                    right: ("Protein",  vm.totalProtein,   "fish",        .blue))
+                    right: ("Protein",  vm.totalProtein,   "fish.fill",        .blue))
             macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
                     right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
         }
@@ -1565,14 +1565,14 @@ private extension DashboardView {
                     color: .green
                 )
                 
-                // Step Distance from HealthKit
-                healthMetricCell(
-                    title: "Distance",
-                    value: String(format: "%.2f", healthViewModel.distance),
-                    unit: "km",
-                    systemImage: "figure.walk.motion",
-                    color: .purple
-                )
+                            // Step Distance from HealthKit
+            healthMetricCell(
+                title: "Distance",
+                value: String(format: "%.2f", healthViewModel.distance),
+                unit: "mi",
+                systemImage: "figure.walk.motion",
+                color: .purple
+            )
             }
         }
         .padding()

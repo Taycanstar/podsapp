@@ -206,9 +206,9 @@ class HealthKitManager {
                 return
             }
             
-            // Convert to kilometers
-            let distanceInKm = sum.doubleValue(for: HKUnit.meter()) / 1000
-            completion(distanceInKm, nil)
+            // Convert to miles
+            let distanceInMiles = sum.doubleValue(for: HKUnit.mile())
+            completion(distanceInMiles, nil)
         }
         
         healthStore.execute(query)
