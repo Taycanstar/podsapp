@@ -890,27 +890,39 @@ private extension DashboardView {
     // ① Nutrition summary ----------------------------------------------------
     var nutritionSummaryCard: some View {
         VStack(spacing: 0) {
-            TabView {
-                // Page 1: Original cards
-                VStack(spacing: 10) {
-                    remainingCaloriesCard
-                    macrosCard
+            GeometryReader { geometry in
+                TabView {
+                    // Page 1: Original cards
+                    VStack(spacing: 10) {
+                        remainingCaloriesCard
+                        macrosCard
+                    }
+                    .frame(width: geometry.size.width)
+                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
+                    
+                    // Page 2: Macro circles
+                    VStack(spacing: 10) {
+                        macroCirclesCard
+                        macrosCard
+                    }
+                    .frame(width: geometry.size.width)
+                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
+                    
+                    // Page 3: Water Tracking placeholder
+                    VStack(spacing: 10) {
+                        placeholderCard(title: "Coming Soon", subtitle: "Water Tracking", color: .teal)
+                        macrosCard
+                    }
+                    .frame(width: geometry.size.width)
+                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                 }
-                // Page 2: Macro circles
-                VStack(spacing: 10) {
-                    macroCirclesCard
-                    macrosCard
-                }
-                // Page 3: Water Tracking placeholder
-                VStack(spacing: 10) {
-                    placeholderCard(title: "Coming Soon", subtitle: "Water Tracking", color: .teal)
-                    macrosCard
-                }
+                // .background(.blue)
+                .frame(height: 300) // Enough height so cards fully visible, with 8px above page dots
+                .tabViewStyle(PageTabViewStyle())
+                .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
             }
-            .frame(height: 335) // Enough height so cards fully visible, with 8px above page dots
-            .tabViewStyle(PageTabViewStyle())
-            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-            .padding(.bottom, 22) // Dot indicators sit below the cards
+            // .padding(.bottom, 22)
+            .frame(height: 300) // Set the same height for GeometryReader
         }
         .padding(.horizontal)
     }
