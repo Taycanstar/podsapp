@@ -833,7 +833,8 @@ private var remainingCal: Double { vm.remainingCalories }
 
                         Spacer(minLength: 80)            // room for the tab bar
                     }
-                    .padding(.bottom) // Only pad the bottom, not the top
+                    .padding(.top, 8) // 8px space between navbar and first card
+                    .padding(.bottom)
                 }
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
@@ -906,7 +907,7 @@ private extension DashboardView {
                     macrosCard
                 }
             }
-            .frame(height: 320) // Enough height so cards fully visible
+            .frame(height: 335) // Enough height so cards fully visible, with 8px above page dots
             .tabViewStyle(PageTabViewStyle())
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
             .padding(.bottom, 22) // Dot indicators sit below the cards
