@@ -765,6 +765,7 @@
 
 
 import SwiftUI
+import HealthKit
 
 struct DashboardView: View {
 
@@ -776,6 +777,9 @@ struct DashboardView: View {
     // ─── Logs state for the currently selected day ─────────────────────────
     // @StateObject private var vm = DayLogsViewModel()
     @EnvironmentObject var vm: DayLogsViewModel
+    
+    // ─── Health data state ───────────────────────────────────────────────────
+    @StateObject private var healthViewModel = HealthKitViewModel()
 
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
@@ -871,6 +875,9 @@ private var remainingCal: Double { vm.remainingCalories }
                  configureOnAppear() 
                  //                     // Initialize food manager with user email
                     foodMgr.initialize(userEmail: onboarding.email)
+                    
+                    // Load health data
+                    healthViewModel.reloadHealthData()
                  }
             .onChange(of: vm.selectedDate) { newDate in
 
@@ -901,21 +908,21 @@ private extension DashboardView {
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                     
-                    // Page 2: Macro circles
+                    // Page 2: Health data summary
                     VStack(spacing: 10) {
                         macroCirclesCard
-                        macrosCard
+                        healthSummaryCard
                     }
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                     
-                    // Page 3: Water Tracking placeholder
+                    // Page 3: Health Data
                     VStack(spacing: 10) {
-                        placeholderCard(title: "Coming Soon", subtitle: "Water Tracking", color: .teal)
+                        HealthDataCard()
                         macrosCard
                     }
-                   
+                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                 }
@@ -1519,5 +1526,85 @@ private extension DashboardView {
     
     var fatGoal: Double {
         return calorieGoal * 0.25 / 9 // 25% of calories from fat (9 calories per gram)
+    }
+}
+
+private extension DashboardView {
+    // Health summary card for page 2
+    var healthSummaryCard: some View {
+        VStack(spacing: 16) {
+            // First row: Calories Burned and Water
+            HStack(spacing: 0) {
+                // Calories Burned
+                healthMetricCell(
+                    title: "Calories Burned",
+                    value: Int(healthViewModel.activeEnergy),
+                    unit: "",
+                    systemImage: "flame.fill",
+                    color: Color("brightOrange")
+                )
+                
+                // Water
+                healthMetricCell(
+                    title: "Water",
+                    value: String(format: "%.1f", healthViewModel.waterIntake),
+                    unit: "L",
+                    systemImage: "drop.fill",
+                    color: .blue
+                )
+            }
+            
+            // Second row: Step Count and Step Distance
+            HStack(spacing: 0) {
+                // Step Count
+                healthMetricCell(
+                    title: "Steps",
+                    value: Int(healthViewModel.stepCount),
+                    unit: "",
+                    systemImage: "figure.walk",
+                    color: .green
+                )
+                
+                // Step Distance from HealthKit
+                healthMetricCell(
+                    title: "Distance",
+                    value: String(format: "%.2f", healthViewModel.distance),
+                    unit: "km",
+                    systemImage: "figure.walk.motion",
+                    color: .purple
+                )
+            }
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    /// Re‑usable metric cell used by healthSummaryCard
+    func healthMetricCell(title: String, value: Any, unit: String, systemImage: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                Image(systemName: systemImage)
+                    .foregroundColor(color)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.system(size: 16))
+                if let intValue = value as? Int {
+                    Text("\(intValue)\(unit)")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(color)
+                } else if let stringValue = value as? String {
+                    Text("\(stringValue)\(unit)")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(color)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
