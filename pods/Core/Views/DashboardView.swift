@@ -919,9 +919,10 @@ private extension DashboardView {
                     macrosCard
                 }
             }
-            .frame(height: 305) // Fine-tuned height
+            .frame(height: 290) // Reduced height to fit smaller cards
             .tabViewStyle(PageTabViewStyle())
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+            .padding(.bottom, 20) // Add padding to push page indicators below the second card
         }
         .padding(.horizontal)
         .padding(.vertical, 0) // No vertical padding
@@ -958,7 +959,9 @@ private extension DashboardView {
             }
             .frame(width: 60, height: 60)
         }
-        .padding()
+        .frame(height: 85) // Reduced height
+        .padding(.vertical, 12) // Slightly reduced vertical padding
+        .padding(.horizontal)
         .background(Color("iosnp"))
         .cornerRadius(12)
     }
@@ -979,8 +982,6 @@ private extension DashboardView {
     // Macro Circles Card for page 2
     var macroCirclesCard: some View {
         HStack(spacing: 8) {
-            // Spacer(minLength: 16)
-            
             // Protein Circle
             macroCircle(
                 title: "Protein",
@@ -1004,10 +1005,10 @@ private extension DashboardView {
                 goal: fatGoal,
                 color: .pink
             )
-            
-            // Spacer(minLength: 16)
         }
-        .padding() // Match the padding of the remaining calories card
+        .frame(height: 85) // Reduced height
+        .padding(.vertical, 12) // Slightly reduced vertical padding
+        .padding(.horizontal)
         .background(Color("iosnp"))
         .cornerRadius(12)
     }
@@ -1016,10 +1017,12 @@ private extension DashboardView {
     func macroCircle(title: String, value: Double, goal: Double, color: Color) -> some View {
         let percentage = min(value / max(goal, 1) * 100, 100)
         
-        return VStack(spacing: 6) {
+        return VStack(spacing: 1) {
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.primary)
+                .padding(.top, 2)
+                .padding(.bottom, 6) // Added bottom padding for the label
             
             ZStack {
                 // Background circle
@@ -1039,14 +1042,14 @@ private extension DashboardView {
                 // Percentage and grams inside the circle
                 VStack(spacing: 0) {
                     Text("\(Int(percentage))%")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                     
                     Text("\(Int(value))/\(Int(goal))g")
-                        .font(.system(size: 9))
+                        .font(.system(size: 8))
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(width: 60, height: 60)
+            .frame(width: 65, height: 65) // Larger circles to fill space
         }
         .frame(maxWidth: .infinity)
     }
