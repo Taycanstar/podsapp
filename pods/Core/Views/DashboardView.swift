@@ -808,7 +808,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     VStack(alignment: .leading, spacing: 0) {
 
                         nutritionSummaryCard            // ① macros + remaining kcals
-                        Spacer().frame(height: 22) // 22px between page dots and Recent Logs
+                     
 
                         if foodMgr.isAnalyzingFood {
                             FoodAnalysisCard()
