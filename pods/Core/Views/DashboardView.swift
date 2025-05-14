@@ -1134,7 +1134,6 @@ private extension DashboardView {
             LazyVStack(spacing: 12) {
                 ForEach(vm.logs) { log in
                     LogRow(log: log)
-                        .padding(.horizontal)
                         .id(log.id)
                 }
             }
