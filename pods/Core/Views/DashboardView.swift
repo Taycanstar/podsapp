@@ -967,10 +967,10 @@ private extension DashboardView {
     // Macros card as a separate component
     var macrosCard: some View {
         VStack(spacing: 16) {
-            macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    .orange),
+            macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
                     right: ("Protein",  vm.totalProtein,   "fish",        .blue))
-            macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", .purple),
-                    right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
+            macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
+                    right: ("Fat",       vm.totalFat,      "drop.fill",     .purple))
         }
         .padding()
         .background(Color("iosnp"))
