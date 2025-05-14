@@ -970,7 +970,7 @@ private extension DashboardView {
             macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
                     right: ("Protein",  vm.totalProtein,   "fish",        .blue))
             macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
-                    right: ("Fat",       vm.totalFat,      "drop.fill",     .purple))
+                    right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
         }
         .padding()
         .background(Color("iosnp"))
