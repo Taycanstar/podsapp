@@ -899,12 +899,10 @@ private extension DashboardView {
                     macrosCard
                 }
                 
-                // Page 2: Workout Summary with matching macros
+                // Page 2: Macro circles
                 VStack(spacing: 10) {
-                    // Workout Summary placeholder
-                    placeholderCard(title: "Coming Soon", 
-                                    subtitle: "Workout Summary",
-                                    color: .blue)
+                    // Macro circles card
+                    macroCirclesCard
                     
                     // Keep same macros card for consistency
                     macrosCard
@@ -922,7 +920,8 @@ private extension DashboardView {
                 }
             }
             .frame(height: 305) // Fine-tuned height
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+            .tabViewStyle(PageTabViewStyle())
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         }
         .padding(.horizontal)
         .padding(.vertical, 0) // No vertical padding
@@ -975,6 +974,91 @@ private extension DashboardView {
         .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
+    }
+
+    // Macro Circles Card for page 2
+    var macroCirclesCard: some View {
+        VStack(spacing: 8) {
+            
+            HStack(spacing: 20) {
+                // Protein Circle
+                macroCircle(
+                    title: "Protein",
+                    value: vm.totalProtein,
+                    goal: proteinGoal,
+                    color: .blue
+                )
+                
+                // Carbs Circle
+                macroCircle(
+                    title: "Carbs",
+                    value: vm.totalCarbs,
+                    goal: carbsGoal,
+                    color: Color("darkYellow")
+                )
+                
+                // Fat Circle
+                macroCircle(
+                    title: "Fat",
+                    value: vm.totalFat,
+                    goal: fatGoal,
+                    color: .pink
+                )
+            }
+            .padding(.vertical, 4)
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    // Helper function to create each macro circle
+    func macroCircle(title: String, value: Double, goal: Double, color: Color) -> some View {
+        let percentage = min(value / max(goal, 1) * 100, 100)
+        
+        return VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+            
+            ZStack {
+                // Background circle
+                Circle()
+                    .stroke(lineWidth: 8)
+                    .opacity(0.2)
+                    .foregroundColor(color)
+                
+                // Progress circle
+                Circle()
+                    .trim(from: 0, to: CGFloat(percentage / 100))
+                    .stroke(style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .foregroundColor(color)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut, value: percentage)
+                
+                // Percentage text
+                VStack(spacing: 0) {
+                    Text("\(Int(percentage))%")
+                        .font(.system(size: 14, weight: .bold))
+                    
+                    HStack(spacing: 1) {
+                        Text("\(Int(value))")
+                            .font(.system(size: 10, weight: .medium))
+                        Text("/")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text("\(Int(goal))")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text("g")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(width: 80, height: 80)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // Placeholder card template for carousel
@@ -1429,4 +1513,19 @@ func macroCell(title: String, value: Double,
         Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity)
+}
+
+// Calculated macro goals based on total calories
+private extension DashboardView {
+    var proteinGoal: Double {
+        return calorieGoal * 0.3 / 4 // 30% of calories from protein (4 calories per gram)
+    }
+    
+    var carbsGoal: Double {
+        return calorieGoal * 0.45 / 4 // 45% of calories from carbs (4 calories per gram)
+    }
+    
+    var fatGoal: Double {
+        return calorieGoal * 0.25 / 9 // 25% of calories from fat (9 calories per gram)
+    }
 }
