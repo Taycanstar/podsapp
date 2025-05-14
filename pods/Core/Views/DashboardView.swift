@@ -897,6 +897,7 @@ private extension DashboardView {
                         remainingCaloriesCard
                         macrosCard
                     }
+                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                     
@@ -905,6 +906,7 @@ private extension DashboardView {
                         macroCirclesCard
                         macrosCard
                     }
+                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                     
@@ -913,15 +915,14 @@ private extension DashboardView {
                         placeholderCard(title: "Coming Soon", subtitle: "Water Tracking", color: .teal)
                         macrosCard
                     }
+                   
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
                 }
-                // .background(.blue)
                 .frame(height: 300) // Enough height so cards fully visible, with 8px above page dots
                 .tabViewStyle(PageTabViewStyle())
                 .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
             }
-            // .padding(.bottom, 22)
             .frame(height: 300) // Set the same height for GeometryReader
         }
         .padding(.horizontal)
