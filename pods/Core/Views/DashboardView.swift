@@ -804,23 +804,22 @@ private var remainingCal: Double { vm.remainingCalories }
             ZStack {
                 Color("iosbg2").ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
 
                         nutritionSummaryCard            // ① macros + remaining kcals
 
                         if foodMgr.isAnalyzingFood {
-    FoodAnalysisCard()
-      .padding(.horizontal)
-      .transition(.opacity)
+                            FoodAnalysisCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
 
-  }
-
-  if foodMgr.isScanningFood {
-    FoodGenerationCard()
-        .padding(.horizontal)
-        .transition(.opacity)
-}
+                        if foodMgr.isScanningFood {
+                            FoodGenerationCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
 
                         // ② list / loading / error / empty states
                         Group {
@@ -833,7 +832,7 @@ private var remainingCal: Double { vm.remainingCalories }
 
                         Spacer(minLength: 80)            // room for the tab bar
                     }
-                    .padding(.vertical)
+                    .padding(.bottom) // Only pad the bottom, not the top
                 }
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
@@ -888,88 +887,123 @@ private extension DashboardView {
  
     // ① Nutrition summary ----------------------------------------------------
     var nutritionSummaryCard: some View {
-        VStack(spacing: 10) {
-
-            // Remaining kcal -------------------------------------------------
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Remaining")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Text("\(Int(remainingCal))cal")
-                        .font(.system(size: 32, weight: .bold))
+        VStack(spacing: 0) {
+            // Wrap everything in a TabView with proper height
+            TabView {
+                // Page 1: Original cards
+                VStack(spacing: 10) {
+                    // Remaining calories card
+                    remainingCaloriesCard
+                    
+                    // Macros card
+                    macrosCard
                 }
-
-                Spacer()
-
-                ZStack {
-                    Circle()
-                        .stroke(lineWidth: 10)
-                        .opacity(0.2)
-                        .foregroundColor(.green)
-
-                    Circle()
-                        .trim(from: 0,
-                              to: CGFloat(1 - (remainingCal / calorieGoal)))
-                        .stroke(style: StrokeStyle(lineWidth: 10,
-                                                   lineCap: .round))
-                        .foregroundColor(.green)
-                        .rotationEffect(.degrees(270))
-                        .animation(.linear, value: remainingCal)
+                
+                // Page 2: Workout Summary with matching macros
+                VStack(spacing: 10) {
+                    // Workout Summary placeholder
+                    placeholderCard(title: "Coming Soon", 
+                                    subtitle: "Workout Summary",
+                                    color: .blue)
+                    
+                    // Keep same macros card for consistency
+                    macrosCard
                 }
-                .frame(width: 60, height: 60)
+                
+                // Page 3: Water Tracking with matching macros
+                VStack(spacing: 10) {
+                    // Water Tracking placeholder
+                    placeholderCard(title: "Coming Soon", 
+                                    subtitle: "Water Tracking",
+                                    color: .teal)
+                    
+                    // Keep same macros card for consistency
+                    macrosCard
+                }
             }
-            .padding()
-            .background(Color("iosnp"))
-            .cornerRadius(12)
-
-  
-            VStack(spacing: 16) {
-  macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    .orange),
-           right: ("Protein",  vm.totalProtein,   "fish",        .blue))
-  macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", .purple),
-           right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
-}
-
-            .padding()
-            .background(Color("iosnp"))
-            .cornerRadius(12)
+            .frame(height: 305) // Fine-tuned height
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         }
         .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-
-    @ViewBuilder
-    func macroRow(left:  (String, Double, String, Color),
-                  right: (String, Double, String, Color)) -> some View {
-        HStack(spacing: 0) {
-            macroCell(title: left.0,  value: left.1,
-                      sf:    left.2,  colour: left.3)
-            macroCell(title: right.0, value: right.1,
-                      sf:    right.2, colour: right.3)
-        }
+        .padding(.vertical, 0) // No vertical padding
     }
     
+    // Remaining calories card
+    var remainingCaloriesCard: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Remaining")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
 
-    @ViewBuilder
-    func macroCell(title:  String, value: Double,
-                   sf:     String, colour: Color) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+                Text("\(Int(remainingCal))cal")
+                    .font(.system(size: 32, weight: .bold))
+            }
+
+            Spacer()
+
             ZStack {
-                Circle().fill(colour.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                Image(systemName: sf).foregroundColor(colour)
+                Circle()
+                    .stroke(lineWidth: 10)
+                    .opacity(0.2)
+                    .foregroundColor(.green)
+
+                Circle()
+                    .trim(from: 0,
+                          to: CGFloat(1 - (remainingCal / calorieGoal)))
+                    .stroke(style: StrokeStyle(lineWidth: 10,
+                                               lineCap: .round))
+                    .foregroundColor(.green)
+                    .rotationEffect(.degrees(270))
+                    .animation(.linear, value: remainingCal)
             }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.system(size: 16))
-                Text("\(Int(value))\(title == "Calories" ? "" : "g")")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(colour)
-            }
-            Spacer(minLength: 0)
+            .frame(width: 60, height: 60)
         }
-        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+    
+    // Macros card as a separate component
+    var macrosCard: some View {
+        VStack(spacing: 16) {
+            macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    .orange),
+                    right: ("Protein",  vm.totalProtein,   "fish",        .blue))
+            macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", .purple),
+                    right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    // Placeholder card template for carousel
+    func placeholderCard(title: String, subtitle: String, color: Color) -> some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Text(subtitle)
+                    .font(.system(size: 32, weight: .bold))
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.2))
+                    .frame(width: 60, height: 60)
+                
+                Image(systemName: title == "Coming Soon" ? "hourglass" : "checkmark")
+                    .font(.system(size: 24))
+                    .foregroundColor(color)
+            }
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
     }
 
     // ② Loading / error / empty / list --------------------------------------
@@ -1364,4 +1398,35 @@ struct FoodAnalysisCard: View {
             }
         }
     }
+}
+
+@ViewBuilder
+func macroRow(left: (String, Double, String, Color),
+                  right: (String, Double, String, Color)) -> some View {
+    HStack(spacing: 0) {
+        macroCell(title: left.0, value: left.1,
+                  sf: left.2, colour: left.3)
+        macroCell(title: right.0, value: right.1,
+                  sf: right.2, colour: right.3)
+    }
+}
+
+@ViewBuilder
+func macroCell(title: String, value: Double,
+                   sf: String, colour: Color) -> some View {
+    HStack(alignment: .top, spacing: 12) {
+        ZStack {
+            Circle().fill(colour.opacity(0.2))
+                    .frame(width: 40, height: 40)
+            Image(systemName: sf).foregroundColor(colour)
+        }
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).font(.system(size: 16))
+            Text("\(Int(value))\(title == "Calories" ? "" : "g")")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(colour)
+        }
+        Spacer(minLength: 0)
+    }
+    .frame(maxWidth: .infinity)
 }
