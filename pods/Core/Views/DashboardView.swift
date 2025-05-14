@@ -805,9 +805,10 @@ private var remainingCal: Double { vm.remainingCalories }
                 Color("iosbg2").ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 0) {
 
                         nutritionSummaryCard            // ① macros + remaining kcals
+                        Spacer().frame(height: 22) // 22px between page dots and Recent Logs
 
                         if foodMgr.isAnalyzingFood {
                             FoodAnalysisCard()
@@ -888,44 +889,29 @@ private extension DashboardView {
     // ① Nutrition summary ----------------------------------------------------
     var nutritionSummaryCard: some View {
         VStack(spacing: 0) {
-            // Wrap everything in a TabView with proper height
             TabView {
                 // Page 1: Original cards
                 VStack(spacing: 10) {
-                    // Remaining calories card
                     remainingCaloriesCard
-                    
-                    // Macros card
                     macrosCard
                 }
-                
                 // Page 2: Macro circles
                 VStack(spacing: 10) {
-                    // Macro circles card
                     macroCirclesCard
-                    
-                    // Keep same macros card for consistency
                     macrosCard
                 }
-                
-                // Page 3: Water Tracking with matching macros
+                // Page 3: Water Tracking placeholder
                 VStack(spacing: 10) {
-                    // Water Tracking placeholder
-                    placeholderCard(title: "Coming Soon", 
-                                    subtitle: "Water Tracking",
-                                    color: .teal)
-                    
-                    // Keep same macros card for consistency
+                    placeholderCard(title: "Coming Soon", subtitle: "Water Tracking", color: .teal)
                     macrosCard
                 }
             }
-            .frame(height: 290) // Reduced height to fit smaller cards
+            .frame(height: 320) // Enough height so cards fully visible
             .tabViewStyle(PageTabViewStyle())
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-            .padding(.bottom, 20) // Add padding to push page indicators below the second card
+            .padding(.bottom, 22) // Dot indicators sit below the cards
         }
         .padding(.horizontal)
-        .padding(.vertical, 0) // No vertical padding
     }
     
     // Remaining calories card
@@ -1042,10 +1028,10 @@ private extension DashboardView {
                 // Percentage and grams inside the circle
                 VStack(spacing: 0) {
                     Text("\(Int(percentage))%")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                     
                     Text("\(Int(value))/\(Int(goal))g")
-                        .font(.system(size: 8))
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
             }
@@ -1128,11 +1114,10 @@ private extension DashboardView {
     }
 
     var logsList: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Recent Logs")
-                .font(.title).fontWeight(.bold)
-                .padding(.horizontal)
-
+                .font(.title)
+                .fontWeight(.bold)
             LazyVStack(spacing: 12) {
                 ForEach(vm.logs) { log in
                     LogRow(log: log)
@@ -1141,6 +1126,7 @@ private extension DashboardView {
                 }
             }
         }
+        .padding(.horizontal)
     }
 
     // ③ Toolbar --------------------------------------------------------------
