@@ -435,11 +435,27 @@ class NetworkManagerTwo {
             "height_cm": userData.heightCm,
             "weight_kg": userData.weightKg,
             "desired_weight_kg": userData.desiredWeightKg,
-            "diet_goal": userData.dietGoal,
             "workout_frequency": userData.workoutFrequency,
             "rollover_calories": userData.rolloverCalories,
             "add_calories_burned": userData.addCaloriesBurned
         ]
+        
+        // Use serverDietGoal which has the correct values for the server
+        if let serverDietGoal = UserDefaults.standard.string(forKey: "serverDietGoal") {
+            parameters["diet_goal"] = serverDietGoal
+            print("✅ Using server-compatible diet goal: \(serverDietGoal)")
+        } else {
+            // Fallback to the original dietGoal with mapping
+            let mappedDietGoal: String
+            switch userData.dietGoal {
+            case "loseWeight": mappedDietGoal = "lose"
+            case "gainWeight": mappedDietGoal = "gain"
+            case "maintain": mappedDietGoal = "maintain"
+            default: mappedDietGoal = "maintain"
+            }
+            parameters["diet_goal"] = mappedDietGoal
+            print("⚠️ No serverDietGoal found, mapping from dietGoal: \(userData.dietGoal) -> \(mappedDietGoal)")
+        }
         
         // Add optional fields if they exist
         if !userData.dietPreference.isEmpty {

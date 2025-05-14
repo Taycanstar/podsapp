@@ -1,13 +1,23 @@
-
-
 import SwiftUI
 
 struct OnboardingPlanOverview: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var nutritionGoals: NutritionGoals?
-    @State private var completionDate: String = ""
     @State private var weightDifferenceFormatted: String = ""
     @State private var weightUnit: String = ""
+    
+    // Computed property to format the completion date
+    private var formattedCompletionDate: String {
+        if let dateString = UserDefaults.standard.string(forKey: "goalCompletionDate") {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let date = formatter.date(from: dateString) {
+                formatter.dateFormat = "MMMM d, yyyy"
+                return formatter.string(from: date)
+            }
+        }
+        return ""
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -25,10 +35,9 @@ struct OnboardingPlanOverview: View {
                             .font(.system(size: 20, weight: .bold))
                         
                         // Weight goal with date
-                        let completionDate = UserDefaults.standard.string(forKey: "goalCompletionDate") ?? ""
                         let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
-                        if fitnessGoal != "maintain" && !completionDate.isEmpty {
-                            Text("\(weightDifferenceFormatted) \(weightUnit) by \(completionDate)")
+                        if fitnessGoal != "maintain" && !formattedCompletionDate.isEmpty {
+                            Text("\(weightDifferenceFormatted) \(weightUnit) by \(formattedCompletionDate)")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -292,15 +301,7 @@ struct OnboardingPlanOverview: View {
             self.weightDifferenceFormatted = "\(Int(weightDifference))"
             self.weightUnit = UserDefaults.standard.bool(forKey: "isImperial") ? "lbs" : "kg"
             
-            // Calculate completion date
-            if let dateString = UserDefaults.standard.string(forKey: "goalCompletionDate") {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                if let date = formatter.date(from: dateString) {
-                    formatter.dateFormat = "MMMM d"
-                    self.completionDate = formatter.string(from: date)
-                }
-            }
+            // Remove formatting of completion date since we now use the computed property
         }
     }
     
