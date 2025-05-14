@@ -783,6 +783,7 @@ struct DashboardView: View {
 
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
+    @State private var showWaterLogSheet = false
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -883,6 +884,10 @@ private var remainingCal: Double { vm.remainingCalories }
 
   vm.loadLogs(for: newDate)   // fetch fresh ones
 }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
+                // Refresh health data when water is logged
+                healthViewModel.reloadHealthData()
+            }
 
         }
         .navigationViewStyle(.stack)
@@ -1544,14 +1549,14 @@ private extension DashboardView {
                     color: Color("brightOrange")
                 )
                 
-                // Water
-                healthMetricCell(
-                    title: "Water",
-                    value: String(format: "%.1f", healthViewModel.waterIntake),
-                    unit: "L",
-                    systemImage: "drop.fill",
-                    color: .blue
-                )
+                            // Water with add button
+            waterMetricCell(
+                title: "Water",
+                value: String(format: "%.1f", healthViewModel.waterIntake),
+                unit: "L",
+                systemImage: "drop.fill",
+                color: .blue
+            )
             }
             
             // Second row: Step Count and Step Distance
@@ -1587,9 +1592,11 @@ private extension DashboardView {
                 Circle()
                     .fill(color.opacity(0.2))
                     .frame(width: 40, height: 40)
+                
                 Image(systemName: systemImage)
                     .foregroundColor(color)
             }
+            
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(.system(size: 16))
@@ -1603,8 +1610,59 @@ private extension DashboardView {
                         .foregroundColor(color)
                 }
             }
+            
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Special metric cell for water with add button
+    func waterMetricCell(title: String, value: Any, unit: String, systemImage: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: systemImage)
+                    .foregroundColor(color)
+            }
+            
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.system(size: 16))
+                if let intValue = value as? Int {
+                    Text("\(intValue)\(unit)")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(color)
+                } else if let stringValue = value as? String {
+                    Text("\(stringValue)\(unit)")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(color)
+                }
+            }
+            
+            Spacer(minLength: 0)
+            
+            // Add water button
+            Button(action: {
+                showWaterLogSheet = true
+            }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(color)
+            }
+            .padding(.trailing, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .sheet(isPresented: $showWaterLogSheet) {
+            LogWaterView()
+                .onDisappear {
+                    // Refresh health data when sheet is dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        healthViewModel.reloadHealthData()
+                    }
+                }
+        }
     }
 }

@@ -174,6 +174,7 @@
 		36ED35A72DD5294300D174FB /* HealthDataCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35A62DD5294300D174FB /* HealthDataCard.swift */; };
 		36ED35A92DD529B600D174FB /* HealthDataDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */; };
 		36ED35AB2DD529D600D174FB /* HealthKitViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */; };
+		36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -370,6 +371,7 @@
 		36ED35A62DD5294300D174FB /* HealthDataCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDataCard.swift; sourceTree = "<group>"; };
 		36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDataDetailView.swift; sourceTree = "<group>"; };
 		36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitViewModel.swift; sourceTree = "<group>"; };
+		36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWaterView.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -474,13 +476,6 @@
 			path = viewModels;
 			sourceTree = "<group>";
 		};
-		364A83BD2D9B7DC7009D2620 /* foodsv2 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = foodsv2;
-			sourceTree = "<group>";
-		};
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -538,7 +533,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				364A83BD2D9B7DC7009D2620 /* foodsv2 */,
+				36ED35AC2DD53B5C00D174FB /* dashboard */,
 				36CB032A2D5AAD4A006A74E9 /* food */,
 				36B8516C2D507BD000A876C3 /* friends */,
 				363AFA162D4746A900C91A14 /* pods */,
@@ -569,8 +564,6 @@
 				3638CCA72C93EEFF00CCA675 /* TeamOptionsView.swift */,
 				363201322C96257100BC1815 /* TeamInfoView.swift */,
 				363201362C97812B00BC1815 /* MyTeamMembersView.swift */,
-				363AFA182D47471B00C91A14 /* DashboardView.swift */,
-				36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -749,6 +742,16 @@
 				364A83CD2DAEC017009D2620 /* VoiceLogView.swift */,
 			);
 			path = food;
+			sourceTree = "<group>";
+		};
+		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */,
+				363AFA182D47471B00C91A14 /* DashboardView.swift */,
+				36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */,
+			);
+			path = dashboard;
 			sourceTree = "<group>";
 		};
 		A8CF5237E841CC0CB47CFC88 /* Frameworks */ = {
@@ -1050,6 +1053,7 @@
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
+				36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */,
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
