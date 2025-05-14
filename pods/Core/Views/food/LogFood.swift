@@ -115,11 +115,11 @@ struct LogFood: View {
                 
              
                 
-                // Set focus to the search field after a slight delay
-                DispatchQueue.main.asyncAfter(deadline: .now()) {
-                    isSearchFieldFocused = true
-                    activateSearch = true
-                }
+                // // Set focus to the search field after a slight delay
+                // DispatchQueue.main.asyncAfter(deadline: .now()) {
+                //     isSearchFieldFocused = true
+                //     activateSearch = true
+                // }
                 
                 // Set up keyboard observers
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
