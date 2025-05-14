@@ -978,8 +978,8 @@ private extension DashboardView {
 
     // Macro Circles Card for page 2
     var macroCirclesCard: some View {
-        HStack(spacing: 12) {
-            Spacer()
+        HStack(spacing: 8) {
+            // Spacer(minLength: 16)
             
             // Protein Circle
             macroCircle(
@@ -1005,10 +1005,9 @@ private extension DashboardView {
                 color: .pink
             )
             
-            Spacer()
+            // Spacer(minLength: 16)
         }
-        .padding(.vertical, 10) // Match the vertical padding of remainingCaloriesCard
-        .padding(.horizontal)
+        .padding() // Match the padding of the remaining calories card
         .background(Color("iosnp"))
         .cornerRadius(12)
     }
@@ -1017,46 +1016,37 @@ private extension DashboardView {
     func macroCircle(title: String, value: Double, goal: Double, color: Color) -> some View {
         let percentage = min(value / max(goal, 1) * 100, 100)
         
-        return VStack(spacing: 1) {
+        return VStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.primary)
             
             ZStack {
                 // Background circle
                 Circle()
-                    .stroke(lineWidth: 4)
+                    .stroke(lineWidth: 6)
                     .opacity(0.2)
                     .foregroundColor(color)
                 
                 // Progress circle
                 Circle()
                     .trim(from: 0, to: CGFloat(percentage / 100))
-                    .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .stroke(style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .foregroundColor(color)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut, value: percentage)
                 
-                // Percentage text
-                Text("\(Int(percentage))%")
-                    .font(.system(size: 10, weight: .bold))
+                // Percentage and grams inside the circle
+                VStack(spacing: 0) {
+                    Text("\(Int(percentage))%")
+                        .font(.system(size: 12, weight: .bold))
+                    
+                    Text("\(Int(value))/\(Int(goal))g")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                }
             }
-            .frame(width: 50, height: 50)
-            
-            // Show the gram values under the circle
-            HStack(spacing: 1) {
-                Text("\(Int(value))")
-                    .font(.system(size: 8, weight: .medium))
-                Text("/")
-                    .font(.system(size: 7))
-                    .foregroundColor(.secondary)
-                Text("\(Int(goal))")
-                    .font(.system(size: 7))
-                    .foregroundColor(.secondary)
-                Text("g")
-                    .font(.system(size: 7))
-                    .foregroundColor(.secondary)
-            }
+            .frame(width: 60, height: 60)
         }
         .frame(maxWidth: .infinity)
     }
