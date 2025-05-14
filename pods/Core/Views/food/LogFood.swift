@@ -84,17 +84,19 @@ struct LogFood: View {
                         .background(Color.gray.opacity(0.3))
                 }
                 
-                .background(Color("iosbg2"))
-                .zIndex(1) // Keep header on top
+               .background(Color("iosbg2"))
+               .zIndex(1) // Keep header on top
                 
                 // Main content
                 mainContentView
                 Spacer()
             }
+            // .padding(.top, isSearchFieldFocused ? 52 : 0)
             .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
             .searchable(
                 text: $searchText, 
-                placement: .navigationBarDrawer(displayMode: .always), 
+                // placement: .navigationBarDrawer(displayMode: .always), 
+                placement: .automatic,
                 prompt: selectedFoodTab.searchPrompt
             )
             .focused($isSearchFieldFocused)
@@ -170,7 +172,7 @@ struct LogFood: View {
             }
             .padding(.horizontal)
         }
-        .padding(.vertical, 10)
+        .padding(.bottom, 10)
     }
     
     private var mainContentView: some View {
@@ -224,6 +226,8 @@ struct LogFood: View {
             }
         }
     }
+
+
     
     private var toastMessages: some View {
         ZStack {
@@ -379,7 +383,8 @@ private struct FoodListView: View {
         VStack(spacing: 12) {
             // Add invisible spacing at the top to prevent overlap with header
             Color.clear.frame(height: 4)
-            
+
+          
             // Show Create Food button in Foods tab when there's no search text
             if searchText.isEmpty && selectedFoodTab == .foods {
         
@@ -601,12 +606,14 @@ private struct FoodListView: View {
             // Main content card
             if searchResults.isEmpty && !isSearching {
                 // Main content for All/Foods tabs
+               
                 VStack(spacing: 0) {
                     // Use the helper function to get filtered logs
                     let validLogs = getFilteredLogs()
                     
                     // Main content List with native swipe-to-delete
                     if !validLogs.isEmpty {
+                        let cardHeight = min(CGFloat(validLogs.count) * 55 + 16, UIScreen.main.bounds.height * 0.6)
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
@@ -649,7 +656,7 @@ private struct FoodListView: View {
                                                     // If we're close to the end of the list, automatically load more
                                                     if let index = validLogs.firstIndex(where: { $0.id == log.id }),
                                                     index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
-                                                        showMinimumLoader()
+                                                         showMinimumLoader()
                                                         foodManager.loadMoreLogs()
                                                     }
                                                 }
@@ -673,6 +680,7 @@ private struct FoodListView: View {
                             .scrollContentBackground(.hidden)
                             .scrollIndicators(.hidden)
                         }
+                        .frame(maxHeight: cardHeight, alignment: .top)
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
                     } else if foodManager.isLoadingLogs {
@@ -700,9 +708,11 @@ private struct FoodListView: View {
                     .padding()
             } else {
                 // Search results - using List for native swipe-to-delete
+                
                 VStack(spacing: 0) {
                     // Main content List with native swipe-to-delete
                     if !searchResults.isEmpty {
+                        let searchCardHeight = min(CGFloat(searchResults.count) * 55 + 16, UIScreen.main.bounds.height * 0.6)
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
@@ -733,6 +743,7 @@ private struct FoodListView: View {
                             .scrollContentBackground(.hidden)
                             .scrollIndicators(.hidden)
                         }
+                        .frame(maxHeight: searchCardHeight, alignment: .top)
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
                     } else {
