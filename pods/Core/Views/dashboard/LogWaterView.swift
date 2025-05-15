@@ -84,7 +84,7 @@ struct LogWaterView: View {
                 
                 Spacer()
             }
-            .padding(.top, 16)
+            // .padding(.top, 16)
             .background(Color("iosbg2").ignoresSafeArea())
             .navigationTitle("Add Water")
             .navigationBarTitleDisplayMode(.inline)
