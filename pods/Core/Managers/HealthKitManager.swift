@@ -2,6 +2,18 @@ import Foundation
 import HealthKit
 
 class HealthKitManager {
+    /// Human‑readable name for the HKCategoryValueSleepAnalysis value.
+    private static func sleepStageName(for value: Int) -> String {
+        switch value {
+        case HKCategoryValueSleepAnalysis.inBed.rawValue:            return "inBed"
+        case HKCategoryValueSleepAnalysis.awake.rawValue:            return "awake"
+        case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:return "asleepUnspecified"
+        case HKCategoryValueSleepAnalysis.asleepCore.rawValue:       return "asleepCore"
+        case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:       return "asleepDeep"
+        case HKCategoryValueSleepAnalysis.asleepREM.rawValue:        return "asleepREM"
+        default:                                                     return "unknown(\(value))"
+        }
+    }
     // Singleton instance
     static let shared = HealthKitManager()
     
@@ -506,7 +518,9 @@ class HealthKitManager {
     // Fetch sleep data for a specific date
     func fetchSleepData(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            completion(nil, NSError(domain: "com.pods.healthkit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"]))
+            DispatchQueue.main.async {
+                completion(nil, NSError(domain: "com.pods.healthkit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"]))
+            }
             return
         }
         
@@ -515,11 +529,13 @@ class HealthKitManager {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        // Include any sleep samples that overlap with the selected day
+        // Apple credits a sleep segment to the calendar day on which it **ends**,
+        // so the simplest filter is:  endDate ∈ [startOfDay, endOfDay).
+        // `.strictEndDate` guarantees exactly that.
         let predicate = HKQuery.predicateForSamples(
             withStart: startOfDay,
             end: endOfDay,
-            options: []
+            options: .strictEndDate
         )
         
         let query = HKSampleQuery(
@@ -529,93 +545,109 @@ class HealthKitManager {
             sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
         ) { (_, samples, error) in
             if let error = error {
-                completion(nil, error)
+                DispatchQueue.main.async {
+                    completion(nil, error)
+                }
                 return
             }
-            
+
             let sleepSamples = samples as? [HKCategorySample] ?? []
+            // ─── DEBUG: print EVERY raw sleep sample ───────────────────────────
+            print("──────── Sleep samples for selected date (\(date)) ────────")
+            for s in sleepSamples {
+                let stage = HealthKitManager.sleepStageName(for: s.value)
+                let mins  = Int(s.endDate.timeIntervalSince(s.startDate) / 60)
+                print(" • \(stage)  \(s.startDate) → \(s.endDate)  (\(mins) min)")
+            }
+            print("───────────────────────────────────────────────────────────")
             print("🛌 Found \(sleepSamples.count) sleep samples for date: \(date)")
-            
-            // First, filter to only include actual sleep (not "in bed" time)
-            var actualSleepSamples: [HKCategorySample] = []
-            
-            for sample in sleepSamples {
-                let value = sample.value
-                
-                // Only include actual sleep time (asleep)
-                if value == HKCategoryValueSleepAnalysis.asleep.rawValue {
-                    actualSleepSamples.append(sample)
-                    print("🛌 Adding asleep sample: \(sample.startDate) to \(sample.endDate), duration: \(sample.endDate.timeIntervalSince(sample.startDate)/60) min")
+
+            // ──────────────────────────────────────────────────────────────
+            // 1.  Classify samples into three buckets
+            //     • sleepCandidates =  inBed  OR  any “asleep*” value
+            //     • awakeIntervals =  value == awake
+            // ──────────────────────────────────────────────────────────────
+            var sleepCandidates: [(Date,Date)] = []
+            var awakeIntervals : [(Date,Date)] = []
+
+            for s in sleepSamples {
+                switch s.value {
+                case HKCategoryValueSleepAnalysis.awake.rawValue:
+                    awakeIntervals.append((s.startDate, s.endDate))
+                case HKCategoryValueSleepAnalysis.inBed.rawValue,
+                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                     HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                     HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                     HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+                    sleepCandidates.append((s.startDate, s.endDate))
+                default:
+                    break
                 }
-                
-                // For newer iOS versions with detailed sleep stages
-                if #available(iOS 16.0, *) {
-                    if value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-                       value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-                       value == HKCategoryValueSleepAnalysis.asleepREM.rawValue {
-                        actualSleepSamples.append(sample)
-                        print("🛌 Adding sleep stage sample: \(sample.startDate) to \(sample.endDate), duration: \(sample.endDate.timeIntervalSince(sample.startDate)/60) min")
+            }
+
+            // Nothing to do?
+            guard !sleepCandidates.isEmpty else {
+                print("🛌 No sleep candidates found")
+                DispatchQueue.main.async { completion(0, nil) }
+                return
+            }
+
+            // ──────────────────────────────────────────────────────────────
+            // 2.  Merge overlapping sleepCandidate intervals
+            // ──────────────────────────────────────────────────────────────
+            let sortedSleep = sleepCandidates.sorted { $0.0 < $1.0 }
+            var mergedSleep: [(Date,Date)] = []
+
+            var curStart = sortedSleep[0].0
+            var curEnd   = sortedSleep[0].1
+
+            for i in 1..<sortedSleep.count {
+                let next = sortedSleep[i]
+                if next.0 <= curEnd {                       // overlap
+                    curEnd = max(curEnd, next.1)
+                } else {
+                    mergedSleep.append((curStart, curEnd))
+                    curStart = next.0
+                    curEnd   = next.1
+                }
+            }
+            mergedSleep.append((curStart, curEnd))
+
+            // Keep only sessions that END inside (startOfDay, endOfDay].
+            mergedSleep = mergedSleep.filter { $0.1 > startOfDay && $0.1 <= endOfDay }
+
+            // ──────────────────────────────────────────────────────────────
+            // 3.  Calculate total “candidate sleep” seconds
+            // ──────────────────────────────────────────────────────────────
+            var totalSleepSeconds: TimeInterval = 0
+            for (s,e) in mergedSleep {
+                let dur = e.timeIntervalSince(s)
+                totalSleepSeconds += dur
+                print("🛌 Candidate sleep interval: \(s) → \(e)  (\(dur/60) min)")
+            }
+
+            // ──────────────────────────────────────────────────────────────
+            // 4.  Subtract any overlap with AWAKE intervals (micro‑awakenings)
+            //    Apple subtracts these from “Time Asleep”.
+            // ──────────────────────────────────────────────────────────────
+            for (awakeStart, awakeEnd) in awakeIntervals {
+                for (sleepIdx, sleepInt) in mergedSleep.enumerated() {
+                    let overlapStart = max(awakeStart, sleepInt.0)
+                    let overlapEnd   = min(awakeEnd,   sleepInt.1)
+                    if overlapStart < overlapEnd {
+                        let overlap = overlapEnd.timeIntervalSince(overlapStart)
+                        totalSleepSeconds -= overlap
+                        print("   ⤷ Subtracting awake overlap \(overlap/60) min at \(overlapStart)")
                     }
                 }
             }
-            
-            // Early return if no valid sleep samples
-            if actualSleepSamples.isEmpty {
-                print("🛌 No actual sleep samples found")
-                completion(0, nil)
-                return
-            }
-            
-            // Calculate total sleep time using non-overlapping intervals
-            var totalSleepSeconds = 0.0
 
-            // Sort samples by start time
-            let sortedSamples = actualSleepSamples.sorted { $0.startDate < $1.startDate }
-            
-            // Create non-overlapping intervals
-            var mergedIntervals: [(Date, Date)] = []
-            var currentStart = sortedSamples[0].startDate
-            var currentEnd = sortedSamples[0].endDate
-            
-            for i in 1..<sortedSamples.count {
-                let sample = sortedSamples[i]
-                
-                if sample.startDate <= currentEnd {
-                    // Overlapping interval - extend if needed
-                    currentEnd = max(currentEnd, sample.endDate)
-                } else {
-                    // Non-overlapping - add previous interval and start new one
-                    mergedIntervals.append((currentStart, currentEnd))
-                    currentStart = sample.startDate
-                    currentEnd = sample.endDate
-                }
+            // Make sure we never go negative
+            totalSleepSeconds = max(totalSleepSeconds, 0)
+            print("🛌 Total sleep seconds (after subtracting awake): \(totalSleepSeconds) hr: \(totalSleepSeconds/3600)")
+            DispatchQueue.main.async {
+                completion(totalSleepSeconds, nil)
             }
-            
-            // Add the last interval
-            mergedIntervals.append((currentStart, currentEnd))
-            
-            for (intervalStart, intervalEnd) in mergedIntervals {
-                // Apple credits the full sleep interval to the day on which it ENDS.
-                //  • If the interval ends before endOfDay, include it in full,
-                //  • If it runs past endOfDay, count only the part up to endOfDay.
-                var duration: TimeInterval = 0
-
-                if intervalEnd <= endOfDay {
-                    // Whole interval belongs to the selected day.
-                    duration = intervalEnd.timeIntervalSince(intervalStart)
-                } else if intervalStart < endOfDay {
-                    // Interval spills into tomorrow – clip at endOfDay.
-                    duration = endOfDay.timeIntervalSince(intervalStart)
-                }
-
-                if duration > 0 {
-                    totalSleepSeconds += duration
-                    print("🛌 Counting interval: \(intervalStart) → \(min(intervalEnd, endOfDay)), \(duration/60) min")
-                }
-            }
-            
-            print("🛌 Total sleep seconds: \(totalSleepSeconds), hours: \(totalSleepSeconds/3600)")
-            completion(totalSleepSeconds, nil)
         }
         
         healthStore.execute(query)
