@@ -150,6 +150,7 @@ struct LogWaterView: View {
                 let healthStore = HKHealthStore()
                 let waterType = HKQuantityType.quantityType(forIdentifier: .dietaryWater)!
                 
+                
                 // Check authorization status first before requesting authorization
                 let status = healthStore.authorizationStatus(for: waterType)
                 
