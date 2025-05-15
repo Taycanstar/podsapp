@@ -6,8 +6,24 @@ struct HealthDataDetailView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = HealthKitViewModel()
     
+    // Date to display health data for
+    var date: Date
+    
     let dailyStepGoal: Double = 10000
     let dailyWaterGoal: Double = 2.5 // liters
+    
+    // Format date for display
+    private var dateTitle: String {
+        if Calendar.current.isDateInToday(date) {
+            return "Today's Health Data"
+        } else if Calendar.current.isDateInYesterday(date) {
+            return "Yesterday's Health Data"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d, yyyy"
+            return "\(formatter.string(from: date)) Health Data"
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -97,7 +113,7 @@ struct HealthDataDetailView: View {
                 .padding(.top)
             }
             .background(Color("iosbg2").ignoresSafeArea())
-            .navigationTitle("Health Data")
+            .navigationTitle(dateTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -112,7 +128,7 @@ struct HealthDataDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        viewModel.reloadHealthData()
+                        viewModel.reloadHealthData(for: date)
                     }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 16, weight: .medium))
@@ -121,7 +137,7 @@ struct HealthDataDetailView: View {
                 }
             }
             .onAppear {
-                viewModel.reloadHealthData()
+                viewModel.reloadHealthData(for: date)
             }
         }
     }
@@ -361,6 +377,6 @@ struct HealthDataDetailView: View {
 
 struct HealthDataDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        HealthDataDetailView()
+        HealthDataDetailView(date: Date())
     }
 } 

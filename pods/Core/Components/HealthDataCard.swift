@@ -6,6 +6,9 @@ struct HealthDataCard: View {
     @State private var showHealthDetail = false
     @State private var showPermissionAlert = false
     
+    // Date to display health data for
+    var date: Date?
+    
     let dailyStepGoal: Double = 10000 // Default step goal
     let dailyWaterGoal: Double = 2.5 // Default water goal in liters
     
@@ -40,7 +43,18 @@ struct HealthDataCard: View {
         .background(Color("iosnp"))
         .cornerRadius(12)
         .onAppear {
-            viewModel.reloadHealthData()
+            // Use the provided date or default to today
+            if let date = date {
+                viewModel.reloadHealthData(for: date)
+            } else {
+                viewModel.reloadHealthData()
+            }
+        }
+        .onChange(of: date) { newDate in
+            // Update health data when the date changes
+            if let newDate = newDate {
+                viewModel.reloadHealthData(for: newDate)
+            }
         }
         .onTapGesture {
             if !viewModel.isAuthorized && HealthKitManager.shared.isHealthDataAvailable {
@@ -52,7 +66,8 @@ struct HealthDataCard: View {
             }
         }
         .sheet(isPresented: $showHealthDetail) {
-            HealthDataDetailView()
+            // Pass the current date to the detail view
+            HealthDataDetailView(date: date ?? Date())
         }
         .alert("Health Permissions Required", isPresented: $showPermissionAlert) {
             Button("Cancel", role: .cancel) {}

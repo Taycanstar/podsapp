@@ -881,8 +881,8 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Check health permissions and request if needed
                 checkHealthPermissions()
                 
-                // Load health data regardless (will show connect UI if not authorized)
-                healthViewModel.reloadHealthData()
+                // Load health data for the selected date
+                healthViewModel.reloadHealthData(for: vm.selectedDate)
             }
             .alert("Health Permissions Required", isPresented: $showHealthPermissionAlert) {
                 Button("Cancel", role: .cancel) {}
@@ -894,14 +894,17 @@ private var remainingCal: Double { vm.remainingCalories }
             }
             .onChange(of: vm.selectedDate) { newDate in
                 vm.loadLogs(for: newDate)   // fetch fresh ones
+                
+                // Update health data for the selected date
+                healthViewModel.reloadHealthData(for: newDate)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
-                // Refresh health data when water is logged
-                healthViewModel.reloadHealthData()
+                // Refresh health data when water is logged (for current selected date)
+                healthViewModel.reloadHealthData(for: vm.selectedDate)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
-                healthViewModel.reloadHealthData()
+                healthViewModel.reloadHealthData(for: vm.selectedDate)
             }
 
         }
@@ -939,7 +942,7 @@ private extension DashboardView {
                     
                     // Page 3: Health Data
                     VStack(spacing: 10) {
-                        HealthDataCard()
+                        HealthDataCard(date: vm.selectedDate)
                         macrosCard
                     }
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
@@ -1691,7 +1694,7 @@ private extension DashboardView {
                 .onDisappear {
                     // Refresh health data when sheet is dismissed
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        healthViewModel.reloadHealthData()
+                        healthViewModel.reloadHealthData(for: vm.selectedDate)
                     }
                 }
         }
