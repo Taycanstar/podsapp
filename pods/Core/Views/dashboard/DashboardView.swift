@@ -942,7 +942,7 @@ private extension DashboardView {
                     
                     // Page 3: Health Data
                     VStack(spacing: 10) {
-                        HealthDataCard(date: vm.selectedDate)
+                        sleepCard
                         macrosCard
                     }
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
@@ -1109,6 +1109,70 @@ private extension DashboardView {
             }
         }
         .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    // Sleep card for page 3
+    var sleepCard: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "bed.double.fill")
+                        .foregroundColor(.teal)
+                        .font(.system(size: 16))
+                    
+                    Text("Sleep")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.teal)
+                }
+                
+                Text("Time Asleep")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("\(Int(healthViewModel.sleepHours))")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("hr")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 4)
+                    
+                    Text("\(healthViewModel.sleepMinutes)")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("min")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(lineWidth: 10)
+                    .opacity(0.2)
+                    .foregroundColor(.teal)
+
+                Circle()
+                    .trim(from: 0,
+                          to: CGFloat(healthViewModel.sleepProgress))
+                    .stroke(style: StrokeStyle(lineWidth: 10,
+                                               lineCap: .round))
+                    .foregroundColor(.teal)
+                    .rotationEffect(.degrees(270))
+                    .animation(.linear, value: healthViewModel.sleepProgress)
+            }
+            .frame(width: 60, height: 60)
+        }
+        .frame(height: 85) // Same height as the remaining calories card
+        .padding(.vertical, 12) // Same padding as the remaining calories card
+        .padding(.horizontal)
         .background(Color("iosnp"))
         .cornerRadius(12)
     }

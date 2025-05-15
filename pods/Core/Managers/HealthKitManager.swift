@@ -503,6 +503,61 @@ class HealthKitManager {
         healthStore.execute(query)
     }
     
+    // Fetch sleep data for a specific date
+    func fetchSleepData(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            completion(nil, NSError(domain: "com.pods.healthkit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"]))
+            return
+        }
+        
+        // Create a predicate for a specific day from the start of the day to the end
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        
+        // We're only interested in "asleep" samples (not "inBed" or other states)
+        // Create a predicate that filters for sleep samples where the value is "asleep"
+        // Different iOS versions have different API methods, so we'll create the predicate directly
+        let asleepValue = HKCategoryValueSleepAnalysis.asleep.rawValue
+        let asleepPredicate = NSPredicate(format: "value == %d", asleepValue)
+        
+        // Combine both predicates
+        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, asleepPredicate])
+        
+        let query = HKSampleQuery(
+            sampleType: sleepType,
+            predicate: compoundPredicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+        ) { (_, samples, error) in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+            
+            // Calculate total sleep duration
+            let sleepSamples = samples as? [HKCategorySample] ?? []
+            var totalSleepSeconds = 0.0
+            
+            for sample in sleepSamples {
+                let sleepStart = max(sample.startDate, startOfDay)
+                let sleepEnd = min(sample.endDate, endOfDay)
+                let sleepDuration = sleepEnd.timeIntervalSince(sleepStart)
+                
+                // Only add valid duration values
+                if sleepDuration > 0 {
+                    totalSleepSeconds += sleepDuration
+                }
+            }
+            
+            completion(totalSleepSeconds, nil)
+        }
+        
+        healthStore.execute(query)
+    }
+    
     // MARK: - Helper Methods
     
     // Create a predicate for a specific day (midnight to midnight)

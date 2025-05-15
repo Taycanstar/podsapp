@@ -17,11 +17,18 @@ class HealthKitViewModel: ObservableObject {
     @Published var recentWorkouts: [HKWorkout] = []
     @Published var nutritionData: [HKQuantityTypeIdentifier: Double] = [:]
     
+    // Sleep data properties
+    @Published var sleepHours: Double = 0 // Total sleep time in hours
+    @Published var sleepMinutes: Int = 0  // Remaining minutes after hours
+    @Published var recommendedSleepHours: Double = 8.0 // Default recommended amount
+    
     // Track the currently displayed date
     @Published var currentDate: Date = Date()
     
     private let healthKitManager = HealthKitManager.shared
     private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Initialization
     
     init() {
         // Check if HealthKit is authorized when the ViewModel is created
@@ -45,6 +52,8 @@ class HealthKitViewModel: ObservableObject {
         // Check permissions on startup
         checkAndRequestPermissionsIfNeeded()
     }
+    
+    // MARK: - Authorization methods
     
     // Check if HealthKit is available and authorized
     func checkAuthorization() {
@@ -91,6 +100,8 @@ class HealthKitViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Data loading methods
     
     // Reload health data for the specified date
     func reloadHealthData(for date: Date) {
@@ -177,6 +188,29 @@ class HealthKitViewModel: ObservableObject {
             }
         }
         
+        // Fetch sleep data for the specified date
+        group.enter()
+        healthKitManager.fetchSleepData(for: date) { [weak self] sleepDuration, error in
+            DispatchQueue.main.async {
+                if let sleepDuration = sleepDuration {
+                    // Convert sleep duration to hours and minutes
+                    let totalHours = sleepDuration / 3600 // Total hours including fraction
+                    self?.sleepHours = floor(totalHours) // Just the whole hours
+                    
+                    // Properly unwrap sleepHours to avoid optional-related errors
+                    if let hours = self?.sleepHours {
+                        self?.sleepMinutes = Int((totalHours - hours) * 60) // Remaining minutes
+                    } else {
+                        self?.sleepMinutes = 0
+                    }
+                }
+                if let error = error {
+                    self?.error = error
+                }
+                group.leave()
+            }
+        }
+        
         // Fetch recent workouts - Use a date range from the week before the selected date
         group.enter()
         let calendar = Calendar.current
@@ -199,6 +233,19 @@ class HealthKitViewModel: ObservableObject {
         group.notify(queue: .main) { [weak self] in
             self?.isLoading = false
         }
+    }
+    
+    // MARK: - Helper methods
+    
+    // Format sleep duration as a string (e.g., "7hr 32min")
+    var formattedSleepDuration: String {
+        return "\(Int(sleepHours))hr \(sleepMinutes)min"
+    }
+    
+    // Calculate sleep progress (percentage of recommended sleep achieved)
+    var sleepProgress: Double {
+        let totalSleepHours = sleepHours + (Double(sleepMinutes) / 60)
+        return min(totalSleepHours / recommendedSleepHours, 1.0)
     }
     
     // Backward compatibility method - calls reloadHealthData with the current date
