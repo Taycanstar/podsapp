@@ -1034,7 +1034,7 @@ private extension DashboardView {
             Button(action: {
                 print("Adding new height measurement")
             }) {
-                Image(systemName: "circle.plus.fill")
+                Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
             }
@@ -1059,7 +1059,7 @@ private extension DashboardView {
                         .foregroundColor(.purple)
                 }
                 let weightInLbs = Int(vm.weight * 2.20462)
-                HStack(spacing:3){
+                HStack(spacing:0){
                     Text("\(weightInLbs)")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
@@ -1073,7 +1073,7 @@ private extension DashboardView {
             Button(action: {
                 print("Adding new weight measurement")
             }) {
-                Image(systemName: "circle.plus.fill")
+                Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
             }
