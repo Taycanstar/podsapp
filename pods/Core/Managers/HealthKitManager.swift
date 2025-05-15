@@ -70,17 +70,31 @@ class HealthKitManager {
     private func getHealthDataTypesForRequest() -> Set<HKObjectType> {
         var typesToRead: Set<HKObjectType> = []
         
-        // Activity metrics
+        // COMPREHENSIVE LIST OF ALL HEALTHKIT DATA TYPES
+        
+        // Activity and Fitness metrics
         let activityTypes: [HKQuantityTypeIdentifier] = [
             .stepCount,
             .distanceWalkingRunning,
-            .activeEnergyBurned,
+            .distanceCycling,
+            .distanceSwimming,
+            .distanceDownhillSnowSports,
+            .distanceWheelchair,
+            .pushCount,
+            .flightsClimbed,
             .appleExerciseTime,
             .appleStandTime,
-            .distanceCycling,
-            .flightsClimbed,
-            .pushCount,
-            .distanceSwimming
+            .appleMoveTime,
+            .activeEnergyBurned,
+            .basalEnergyBurned,
+            .walkingSpeed,
+            .walkingStepLength,
+            .walkingAsymmetryPercentage,
+            .walkingDoubleSupportPercentage,
+            .sixMinuteWalkTestDistance,
+            .stairAscentSpeed,
+            .stairDescentSpeed,
+            .vo2Max
         ]
         
         // Body measurements
@@ -90,59 +104,207 @@ class HealthKitManager {
             .bodyFatPercentage,
             .leanBodyMass,
             .bodyMassIndex,
-            .waistCircumference
+            .waistCircumference,
+            .appleWalkingSteadiness,
+            .physicalEffort
         ]
         
         // Vital signs
         let vitalSignTypes: [HKQuantityTypeIdentifier] = [
             .heartRate,
+            .heartRateVariabilitySDNN,
             .restingHeartRate,
             .walkingHeartRateAverage,
-            .heartRateVariabilitySDNN,
-            .oxygenSaturation,
             .respiratoryRate,
+            .oxygenSaturation,
+            .bodyTemperature,
             .bloodPressureSystolic,
             .bloodPressureDiastolic,
-            .bodyTemperature
+            .peripheralPerfusionIndex,
+            .bloodAlcoholContent,
+            .electrodermalActivity,
+            .environmentalAudioExposure,
+            .environmentalSoundReduction,
+            .headphoneAudioExposure,
+            .forcedExpiratoryVolume1,
+            .forcedVitalCapacity,
+            .inhalerUsage,
+            .insulinDelivery,
+            .numberOfTimesFallen,
+            .peakExpiratoryFlowRate,
+            .uvExposure
         ]
         
         // Nutrition
         let nutritionTypes: [HKQuantityTypeIdentifier] = [
-            .dietaryEnergyConsumed,
-            .dietaryFatTotal,
-            .dietaryFatSaturated,
-            .dietaryProtein,
+            .dietaryBiotin,
+            .dietaryCaffeine,
+            .dietaryCalcium,
             .dietaryCarbohydrates,
-            .dietarySugar,
-            .dietaryFiber,
-            .dietarySodium,
+            .dietaryChloride,
             .dietaryCholesterol,
+            .dietaryChromium,
+            .dietaryCopper,
+            .dietaryEnergyConsumed,
+            .dietaryFatMonounsaturated,
+            .dietaryFatPolyunsaturated,
+            .dietaryFatSaturated,
+            .dietaryFatTotal,
+            .dietaryFiber,
+            .dietaryFolate,
+            .dietaryIodine,
+            .dietaryIron,
+            .dietaryMagnesium,
+            .dietaryManganese,
+            .dietaryMolybdenum,
+            .dietaryNiacin,
+            .dietaryPantothenicAcid,
+            .dietaryPhosphorus,
+            .dietaryPotassium,
+            .dietaryProtein,
+            .dietaryRiboflavin,
+            .dietarySelenium,
+            .dietarySodium,
+            .dietarySugar,
+            .dietaryThiamin,
+            .dietaryVitaminA,
+            .dietaryVitaminB12,
+            .dietaryVitaminB6,
+            .dietaryVitaminC,
+            .dietaryVitaminD,
+            .dietaryVitaminE,
+            .dietaryVitaminK,
             .dietaryWater,
-            .dietaryCaffeine
+            .dietaryZinc
         ]
         
-        // Sleep & Mindfulness
-        let sleepTypes: [HKCategoryTypeIdentifier] = [
+        // Lab and Test Results
+        let labResultTypes: [HKQuantityTypeIdentifier] = [
+            .bloodGlucose,
+            .bloodAlcoholContent,
+            .bloodPressureDiastolic,
+            .bloodPressureSystolic,
+            .electrodermalActivity
+        ]
+        
+        // Reproductive Health
+        let reproductiveTypes: [HKQuantityTypeIdentifier] = [
+            .basalBodyTemperature,
+            .oxygenSaturation
+        ]
+        
+        // Mobility
+        let mobilityTypes: [HKQuantityTypeIdentifier] = [
+            .appleWalkingSteadiness,
+            .runningGroundContactTime,
+            .runningPower,
+            .runningSpeed,
+            .runningStrideLength,
+            .runningVerticalOscillation,
+            .sixMinuteWalkTestDistance,
+            .stairAscentSpeed,
+            .stairDescentSpeed,
+            .walkingAsymmetryPercentage,
+            .walkingDoubleSupportPercentage,
+            .walkingSpeed,
+            .walkingStepLength
+        ]
+        
+        // All category types
+        let categoryTypes: [HKCategoryTypeIdentifier] = [
+            .appleStandHour,
+            .highHeartRateEvent,
+            .irregularHeartRhythmEvent,
+            .lowHeartRateEvent,
             .sleepAnalysis,
-            .mindfulSession
+            .toothbrushingEvent,
+            .mindfulSession,
+            .abdominalCramps,
+            .acne,
+            .bladderIncontinence,
+            .bloating,
+            .breastPain,
+            .cervicalMucusQuality,
+            .contraceptive,
+            .coughing,
+            .dizziness,
+            .drySkin,
+            .environmentalAudioExposureEvent,
+            .fatigue,
+            .fever,
+            .generalizedBodyAche,
+            .hairLoss,
+            .handwashingEvent,
+            .headache,
+            .heartburn,
+            .hotFlashes,
+            .lowerBackPain,
+            .moodChanges,
+            .nausea,
+            .pelvicPain,
+            .rapidPoundingOrFlutteringHeartbeat,
+            .runnyNose,
+            .sexualActivity,
+            .shortnessOfBreath,
+            .sinusCongestion,
+            .skippedHeartbeat,
+            .soreThroat,
+            .vomiting,
+            .wheezing,
+            .intermenstrualBleeding,
+            .infrequentMenstrualCycles,
+            .irregularMenstrualCycles,
+            .persistentIntermenstrualBleeding,
+            .prolongedMenstrualPeriods,
+            .lactation,
+            .pregnancy,
+            .ovulationTestResult,
+            .menstrualFlow,
+            .pregnancyTestResult
         ]
         
-        // Add all quantity types
-        for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes {
+        // Add all workout types
+        let workoutType = HKObjectType.workoutType()
+        typesToRead.insert(workoutType)
+        
+        // Add all document types
+        let documentTypes: [HKDocumentTypeIdentifier] = [
+            .CDA
+        ]
+        
+        // Add all sample types to our read set
+        for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes + labResultTypes + reproductiveTypes + mobilityTypes {
             if let type = HKQuantityType.quantityType(forIdentifier: typeId) {
                 typesToRead.insert(type)
             }
         }
         
         // Add all category types
-        for typeId in sleepTypes {
+        for typeId in categoryTypes {
             if let type = HKCategoryType.categoryType(forIdentifier: typeId) {
                 typesToRead.insert(type)
             }
         }
         
-        // Add workout type to track all workouts
-        typesToRead.insert(HKObjectType.workoutType())
+        // Add all document types
+        for typeId in documentTypes {
+            if let type = HKDocumentType.documentType(forIdentifier: typeId) {
+                typesToRead.insert(type)
+            }
+        }
+        
+        // Add characteristics types that don't need to be included in authorization requests
+        // but are still useful for read operations
+        if #available(iOS 14.0, *) {
+            typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .activityMoveMode)!)
+        }
+        
+        // Always add these characteristic types (some may be omitted based on OS versions)
+        typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .biologicalSex)!)
+        typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .bloodType)!)
+        typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!)
+        typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .fitzpatrickSkinType)!)
+        typesToRead.insert(HKObjectType.characteristicType(forIdentifier: .wheelchairUse)!)
         
         return typesToRead
     }

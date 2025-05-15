@@ -63,18 +63,20 @@ struct LogWaterView: View {
                         ForEach(0..<presets.count, id: \.self) { index in
                             Button(action: {
                                 selectPreset(index)
+                                HapticFeedback.generate()
                             }) {
                                 Text(presets[index].label)
                                     .font(.system(size: 14, weight: .medium))
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 55) // Fixed height to ensure circles
+                                    .frame(height: 35) // Reduced height to make them less tall
+                                    .padding(.horizontal, 3) // Added horizontal padding to make them wider
                                     .background(
-                                        Circle()
+                                        RoundedRectangle(cornerRadius: 20) // Use RoundedRectangle with large corner radius
                                             .fill(selectedPreset == index ? Color.accentColor : Color("iosnp"))
                                     )
                                     .foregroundColor(selectedPreset == index ? .white : .primary)
                             }
-                            .aspectRatio(1.0, contentMode: .fit) // Force 1:1 aspect ratio for circles
+                            .padding(.vertical, 2) // Added some vertical spacing between rows
                         }
                     }
                     .padding(.horizontal)
