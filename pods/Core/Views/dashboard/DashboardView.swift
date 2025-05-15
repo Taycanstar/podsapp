@@ -368,25 +368,25 @@ private extension DashboardView {
                 }
                 
                 Text("Time Asleep")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.secondary)
                 
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
                     Text("\(Int(healthViewModel.sleepHours))")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
                     Text("hr")
-                        .font(.system(size: 18))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
                         .padding(.trailing, 4)
                     
                     Text("\(healthViewModel.sleepMinutes)")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
                     Text("min")
-                        .font(.system(size: 18))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
                 }
             }
