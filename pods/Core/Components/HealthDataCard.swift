@@ -4,6 +4,7 @@ import HealthKit
 struct HealthDataCard: View {
     @StateObject private var viewModel = HealthKitViewModel()
     @State private var showHealthDetail = false
+    @State private var showPermissionAlert = false
     
     let dailyStepGoal: Double = 10000 // Default step goal
     let dailyWaterGoal: Double = 2.5 // Default water goal in liters
@@ -28,7 +29,7 @@ struct HealthDataCard: View {
             if let error = viewModel.error {
                 errorView(message: error.localizedDescription)
             } else if !viewModel.isAuthorized {
-                errorView(message: "Please authorize health access in Settings")
+                unauthorizedView()
             } else if !HealthKitManager.shared.isHealthDataAvailable {
                 errorView(message: "Health data not available on this device")
             } else {
@@ -42,10 +43,51 @@ struct HealthDataCard: View {
             viewModel.reloadHealthData()
         }
         .onTapGesture {
-            showHealthDetail = true
+            if !viewModel.isAuthorized && HealthKitManager.shared.isHealthDataAvailable {
+                // Show permission alert if tapped and not authorized
+                showPermissionAlert = true
+            } else {
+                // Otherwise show detail view
+                showHealthDetail = true
+            }
         }
         .sheet(isPresented: $showHealthDetail) {
             HealthDataDetailView()
+        }
+        .alert("Health Permissions Required", isPresented: $showPermissionAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Allow Access") {
+                viewModel.requestHealthKitPermissions()
+            }
+        } message: {
+            Text("To display your health data, Pods needs access to Apple Health. Your data is kept private and never leaves your device.")
+        }
+    }
+    
+    // Customized unauthorized view with a button to request permissions
+    private func unauthorizedView() -> some View {
+        VStack(spacing: 6) {
+            HStack {
+                Image(systemName: "heart.text.square")
+                    .font(.system(size: 18))
+                    .foregroundColor(.accentColor)
+                
+                Text("Connect Apple Health")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.accentColor)
+            }
+            
+            Text("Tap to sync your health and workout data")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 12)
+        .contentShape(Rectangle()) // Make entire area tappable
+        .onTapGesture {
+            showPermissionAlert = true
         }
     }
     

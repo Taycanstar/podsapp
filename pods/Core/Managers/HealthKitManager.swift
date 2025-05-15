@@ -20,6 +20,133 @@ class HealthKitManager {
     
     private init() {}
     
+    // MARK: - Permission Methods
+    
+    // Check and request health permissions on app start if needed
+    func checkAndRequestHealthPermissions(completion: @escaping (Bool) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            // HealthKit not available on this device
+            UserDefaults.standard.set(false, forKey: "healthKitEnabled")
+            completion(false)
+            return
+        }
+        
+        // Get status for a representative set of health data types
+        let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        
+        // Check current authorization status
+        let authStatus = healthStore.authorizationStatus(for: stepType)
+        
+        // Only request if we need to (not determined or denied status)
+        if authStatus != .sharingAuthorized {
+            // Get all health data types to request permission for
+            let typesToRead = getHealthDataTypesForRequest()
+            
+            // Request authorization
+            healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ HealthKit authorization error: \(error.localizedDescription)")
+                    }
+                    
+                    // Save the user preference
+                    UserDefaults.standard.set(success, forKey: "healthKitEnabled")
+                    print("✅ HealthKit authorization result: \(success ? "granted" : "denied")")
+                    
+                    // Notify of permission status
+                    completion(success)
+                    
+                    // Post notification that permission state changed
+                    NotificationCenter.default.post(name: NSNotification.Name("HealthKitPermissionsChanged"), object: nil)
+                }
+            }
+        } else {
+            // Already authorized
+            completion(true)
+        }
+    }
+    
+    // Get all health data types we want to request
+    private func getHealthDataTypesForRequest() -> Set<HKObjectType> {
+        var typesToRead: Set<HKObjectType> = []
+        
+        // Activity metrics
+        let activityTypes: [HKQuantityTypeIdentifier] = [
+            .stepCount,
+            .distanceWalkingRunning,
+            .activeEnergyBurned,
+            .appleExerciseTime,
+            .appleStandTime,
+            .distanceCycling,
+            .flightsClimbed,
+            .pushCount,
+            .distanceSwimming
+        ]
+        
+        // Body measurements
+        let bodyMeasurementTypes: [HKQuantityTypeIdentifier] = [
+            .height,
+            .bodyMass,
+            .bodyFatPercentage,
+            .leanBodyMass,
+            .bodyMassIndex,
+            .waistCircumference
+        ]
+        
+        // Vital signs
+        let vitalSignTypes: [HKQuantityTypeIdentifier] = [
+            .heartRate,
+            .restingHeartRate,
+            .walkingHeartRateAverage,
+            .heartRateVariabilitySDNN,
+            .oxygenSaturation,
+            .respiratoryRate,
+            .bloodPressureSystolic,
+            .bloodPressureDiastolic,
+            .bodyTemperature
+        ]
+        
+        // Nutrition
+        let nutritionTypes: [HKQuantityTypeIdentifier] = [
+            .dietaryEnergyConsumed,
+            .dietaryFatTotal,
+            .dietaryFatSaturated,
+            .dietaryProtein,
+            .dietaryCarbohydrates,
+            .dietarySugar,
+            .dietaryFiber,
+            .dietarySodium,
+            .dietaryCholesterol,
+            .dietaryWater,
+            .dietaryCaffeine
+        ]
+        
+        // Sleep & Mindfulness
+        let sleepTypes: [HKCategoryTypeIdentifier] = [
+            .sleepAnalysis,
+            .mindfulSession
+        ]
+        
+        // Add all quantity types
+        for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes {
+            if let type = HKQuantityType.quantityType(forIdentifier: typeId) {
+                typesToRead.insert(type)
+            }
+        }
+        
+        // Add all category types
+        for typeId in sleepTypes {
+            if let type = HKCategoryType.categoryType(forIdentifier: typeId) {
+                typesToRead.insert(type)
+            }
+        }
+        
+        // Add workout type to track all workouts
+        typesToRead.insert(HKObjectType.workoutType())
+        
+        return typesToRead
+    }
+    
     // MARK: - Data Fetching Methods
     
     // Fetch step count for a specific date

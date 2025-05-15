@@ -784,6 +784,7 @@ struct DashboardView: View {
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
+    @State private var showHealthPermissionAlert = false
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -872,20 +873,34 @@ private var remainingCal: Double { vm.remainingCalories }
                 DatePickerSheet(date: $vm.selectedDate,
                                 isPresented: $showDatePicker)
             }
-            .onAppear               {
-                 configureOnAppear() 
-                 //                     // Initialize food manager with user email
-                    foodMgr.initialize(userEmail: onboarding.email)
-                    
-                    // Load health data
-                    healthViewModel.reloadHealthData()
-                 }
+            .onAppear {
+                configureOnAppear() 
+                // Initialize food manager with user email
+                foodMgr.initialize(userEmail: onboarding.email)
+                
+                // Check health permissions and request if needed
+                checkHealthPermissions()
+                
+                // Load health data regardless (will show connect UI if not authorized)
+                healthViewModel.reloadHealthData()
+            }
+            .alert("Health Permissions Required", isPresented: $showHealthPermissionAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Allow Access") {
+                    healthViewModel.requestHealthKitPermissions()
+                }
+            } message: {
+                Text("To display your health data on the dashboard, Pods needs access to Apple Health. Your data is kept private and never leaves your device.")
+            }
             .onChange(of: vm.selectedDate) { newDate in
-
-  vm.loadLogs(for: newDate)   // fetch fresh ones
-}
+                vm.loadLogs(for: newDate)   // fetch fresh ones
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
                 // Refresh health data when water is logged
+                healthViewModel.reloadHealthData()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
+                // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData()
             }
 
@@ -1227,6 +1242,22 @@ private extension DashboardView {
         }
         if vm.logs.isEmpty {
             vm.loadLogs(for: vm.selectedDate)
+        }
+    }
+    
+    /// Check HealthKit permissions and show prompt if needed
+    func checkHealthPermissions() {
+        let healthStore = HealthKitManager.shared
+        
+        // Only try if HealthKit is available on the device
+        guard healthStore.isHealthDataAvailable else { return }
+        
+        // Check if the user has previously declined permissions
+        if !healthStore.isAuthorized {
+            // Show the permission alert
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.showHealthPermissionAlert = true
+            }
         }
     }
 }
