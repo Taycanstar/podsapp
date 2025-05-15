@@ -523,18 +523,34 @@ class HealthKitManager {
             }
             return
         }
-        
-        // Create a predicate for a specific day
+
+        // Apple’s Sleep “day” is not midnight‑to‑midnight. The Health app groups a night’s
+        // sleep with the calendar day on which it **ends**, using a 24‑hour window that
+        // runs from local noon of the previous day up to (but not including) local noon
+        // of the target day. Querying that window captures the entire overnight session,
+        // even the part that started before midnight.
         let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        var noonComponents = calendar.dateComponents([.year, .month, .day], from: date)
+        noonComponents.hour = 12
+        noonComponents.minute = 0
+        noonComponents.second = 0
+        guard let noonOfTargetDay = calendar.date(from: noonComponents) else {
+            DispatchQueue.main.async {
+                completion(nil, NSError(domain: "com.pods.healthkit",
+                                        code: 2,
+                                        userInfo: [NSLocalizedDescriptionKey: "Could not calculate noon anchor date"]))
+            }
+            return
+        }
         
-        // Apple credits a sleep segment to the calendar day on which it **ends**,
-        // so the simplest filter is:  endDate ∈ [startOfDay, endOfDay).
-        // `.strictEndDate` guarantees exactly that.
+        // 24‑hour window ending at target‑day noon
+        let startOfWindow = calendar.date(byAdding: .day, value: -1, to: noonOfTargetDay)!
+        let endOfWindow   = noonOfTargetDay
+        
+        // Samples whose **endDate** falls in [startOfWindow, endOfWindow)
         let predicate = HKQuery.predicateForSamples(
-            withStart: startOfDay,
-            end: endOfDay,
+            withStart: startOfWindow,
+            end: endOfWindow,
             options: .strictEndDate
         )
         
@@ -562,92 +578,21 @@ class HealthKitManager {
             print("───────────────────────────────────────────────────────────")
             print("🛌 Found \(sleepSamples.count) sleep samples for date: \(date)")
 
-            // ──────────────────────────────────────────────────────────────
-            // 1.  Classify samples into three buckets
-            //     • sleepCandidates =  inBed  OR  any “asleep*” value
-            //     • awakeIntervals =  value == awake
-            // ──────────────────────────────────────────────────────────────
-            var sleepCandidates: [(Date,Date)] = []
-            var awakeIntervals : [(Date,Date)] = []
-
+            // Sum every sample flagged as an “asleep” stage.
+            var totalSleepSeconds: TimeInterval = 0
             for s in sleepSamples {
                 switch s.value {
-                case HKCategoryValueSleepAnalysis.awake.rawValue:
-                    awakeIntervals.append((s.startDate, s.endDate))
-                case HKCategoryValueSleepAnalysis.inBed.rawValue,
-                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                      HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                      HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
                      HKCategoryValueSleepAnalysis.asleepREM.rawValue:
-                    sleepCandidates.append((s.startDate, s.endDate))
+                    totalSleepSeconds += s.endDate.timeIntervalSince(s.startDate)
                 default:
-                    break
+                    break   // ignore .awake and .inBed
                 }
             }
-
-            // Nothing to do?
-            guard !sleepCandidates.isEmpty else {
-                print("🛌 No sleep candidates found")
-                DispatchQueue.main.async { completion(0, nil) }
-                return
-            }
-
-            // ──────────────────────────────────────────────────────────────
-            // 2.  Merge overlapping sleepCandidate intervals
-            // ──────────────────────────────────────────────────────────────
-            let sortedSleep = sleepCandidates.sorted { $0.0 < $1.0 }
-            var mergedSleep: [(Date,Date)] = []
-
-            var curStart = sortedSleep[0].0
-            var curEnd   = sortedSleep[0].1
-
-            for i in 1..<sortedSleep.count {
-                let next = sortedSleep[i]
-                if next.0 <= curEnd {                       // overlap
-                    curEnd = max(curEnd, next.1)
-                } else {
-                    mergedSleep.append((curStart, curEnd))
-                    curStart = next.0
-                    curEnd   = next.1
-                }
-            }
-            mergedSleep.append((curStart, curEnd))
-
-            // Keep only sessions that END inside (startOfDay, endOfDay].
-            mergedSleep = mergedSleep.filter { $0.1 > startOfDay && $0.1 <= endOfDay }
-
-            // ──────────────────────────────────────────────────────────────
-            // 3.  Calculate total “candidate sleep” seconds
-            // ──────────────────────────────────────────────────────────────
-            var totalSleepSeconds: TimeInterval = 0
-            for (s,e) in mergedSleep {
-                let dur = e.timeIntervalSince(s)
-                totalSleepSeconds += dur
-                print("🛌 Candidate sleep interval: \(s) → \(e)  (\(dur/60) min)")
-            }
-
-            // ──────────────────────────────────────────────────────────────
-            // 4.  Subtract any overlap with AWAKE intervals (micro‑awakenings)
-            //    Apple subtracts these from “Time Asleep”.
-            // ──────────────────────────────────────────────────────────────
-            for (awakeStart, awakeEnd) in awakeIntervals {
-                for (sleepIdx, sleepInt) in mergedSleep.enumerated() {
-                    let overlapStart = max(awakeStart, sleepInt.0)
-                    let overlapEnd   = min(awakeEnd,   sleepInt.1)
-                    if overlapStart < overlapEnd {
-                        let overlap = overlapEnd.timeIntervalSince(overlapStart)
-                        totalSleepSeconds -= overlap
-                        print("   ⤷ Subtracting awake overlap \(overlap/60) min at \(overlapStart)")
-                    }
-                }
-            }
-
-            // Make sure we never go negative
-            totalSleepSeconds = max(totalSleepSeconds, 0)
-            print("🛌 Total sleep seconds (after subtracting awake): \(totalSleepSeconds) hr: \(totalSleepSeconds/3600)")
-            DispatchQueue.main.async {
-                completion(totalSleepSeconds, nil)
-            }
+            print("🛌 Total asleep seconds (Apple‑style): \(totalSleepSeconds) hr: \(totalSleepSeconds/3600)")
+            DispatchQueue.main.async { completion(totalSleepSeconds, nil) }
         }
         
         healthStore.execute(query)
