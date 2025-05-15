@@ -23,7 +23,7 @@ import SwiftUI
 import Foundation
 
 /// A very small wrapper around the single NetworkManagerTwo call we
-/// need for “show me everything that happened on <date>”.
+/// need for "show me everything that happened on <date>".
 final class LogRepository {
 
     private let api = NetworkManagerTwo.shared
@@ -32,7 +32,7 @@ final class LogRepository {
     /// - note: the server already returns `[CombinedLog]`
     func fetchLogs(email: String,
                    for date: Date,
-                   completion: @escaping (Result<[CombinedLog], Error>) -> Void) {
+                   completion: @escaping (Result<LogsByDateResponse, Error>) -> Void) {
 
         api.getLogsByDate(
             userEmail:       email,
@@ -42,7 +42,7 @@ final class LogRepository {
         ) { result in
             switch result {
             case .success(let payload):
-                completion(.success(payload.logs))
+                completion(.success(payload))
 
             case .failure(let error):
                 completion(.failure(error))

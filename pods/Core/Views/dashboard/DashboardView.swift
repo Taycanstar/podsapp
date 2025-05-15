@@ -1,6 +1,3 @@
-
-
-
 import SwiftUI
 import HealthKit
 
@@ -10,9 +7,6 @@ struct DashboardView: View {
     @EnvironmentObject private var onboarding: OnboardingViewModel
     @EnvironmentObject private var foodMgr   : FoodManager
     @Environment(\.isTabBarVisible) private var isTabBarVisible
-
-    // ─── Logs state for the currently selected day ─────────────────────────
-    // @StateObject private var vm = DayLogsViewModel()
     @EnvironmentObject var vm: DayLogsViewModel
     
     // ─── Health data state ───────────────────────────────────────────────────
@@ -180,7 +174,10 @@ private extension DashboardView {
                     // Page 3: Health Data
                     VStack(spacing: 10) {
                         sleepCard
-                        macrosCard
+                        HStack(spacing: 10) {
+                            heightCard
+                            weightCard
+                        }
                     }
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
@@ -452,7 +449,7 @@ private extension DashboardView {
                 .font(.system(size: 50))
                 .foregroundColor(.gray)
             Text("No logs for this day").font(.headline)
-            Text("Tap “Log Food” to add your meals.")
+            Text("Tap Log Food to add your meals.")
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -1002,5 +999,83 @@ private extension DashboardView {
                     }
                 }
         }
+    }
+}
+
+
+
+private extension DashboardView {
+    // Height card for page 3
+    var heightCard: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "ruler")
+                        .foregroundColor(.purple)
+                        .font(.system(size: 16))
+                    Text("Height")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.purple)
+                }
+                if vm.height > 0 {
+                    let feet = Int(vm.height / 30.48) // convert cm to feet
+                    let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
+                    let inches = Int(remainingCm / 2.54) // convert remainder to inches
+                    Text("\(feet)' \(inches)\"")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                } else {
+                    Text("No data")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundColor(.gray)
+                }
+            }
+            Spacer()
+            Button(action: {
+                print("Height card plus button tapped")
+            }) {
+                Image(systemName: "circle.plus.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.purple)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    // Weight card for page 3
+    var weightCard: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "scalemass")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 16))
+                    Text("Weight")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.blue)
+                }
+                let weightInLbs = Int(vm.weight * 2.20462)
+                Text("\(weightInLbs) lbs")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+            }
+            Spacer()
+            Button(action: {
+                print("Weight card plus button tapped")
+            }) {
+                Image(systemName: "circle.plus.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.blue)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
     }
 }

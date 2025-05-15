@@ -492,6 +492,28 @@ class HealthKitManager {
         healthStore.execute(query)
     }
     
+    // Fetch height
+    func fetchHeight(completion: @escaping (Double?, Error?) -> Void) {
+        let heightType = HKQuantityType.quantityType(forIdentifier: .height)!
+        
+        let query = HKSampleQuery(
+            sampleType: heightType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        ) { (query, samples, error) in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                completion(nil, error)
+                return
+            }
+            
+            let heightInCm = sample.quantity.doubleValue(for: HKUnit.meterUnit(with: .centi))
+            completion(heightInCm, nil)
+        }
+        
+        healthStore.execute(query)
+    }
+    
     // Fetch walking and running distance for a specific date
     func fetchDistance(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
         let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
@@ -524,9 +546,9 @@ class HealthKitManager {
             return
         }
 
-        // Apple’s Sleep “day” is not midnight‑to‑midnight. The Health app groups a night’s
+        // Apple's Sleep "day" is not midnight‑to‑midnight. The Health app groups a night's
         // sleep with the calendar day on which it **ends**, using a 24‑hour window that
-        // runs from local noon of the previous day up to (but not including) local noon
+        // runs from local noon of the previous day up to (but not including) local noon
         // of the target day. Querying that window captures the entire overnight session,
         // even the part that started before midnight.
         let calendar = Calendar.current
@@ -578,7 +600,7 @@ class HealthKitManager {
             print("───────────────────────────────────────────────────────────")
             print("🛌 Found \(sleepSamples.count) sleep samples for date: \(date)")
 
-            // Sum every sample flagged as an “asleep” stage.
+            // Sum every sample flagged as an "asleep" stage.
             var totalSleepSeconds: TimeInterval = 0
             for s in sleepSamples {
                 switch s.value {

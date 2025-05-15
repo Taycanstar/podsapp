@@ -17,6 +17,10 @@ class HealthKitViewModel: ObservableObject {
     @Published var recentWorkouts: [HKWorkout] = []
     @Published var nutritionData: [HKQuantityTypeIdentifier: Double] = [:]
     
+    // Height and weight properties
+    @Published var height: Double = 0 // Height in cm
+    @Published var weight: Double = 0 // Weight in kg
+    
     // Sleep data properties
     @Published var sleepHours: Double = 0 // Total sleep time in hours
     @Published var sleepMinutes: Int = 0  // Remaining minutes after hours
@@ -152,6 +156,34 @@ class HealthKitViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if let water = water {
                     self?.waterIntake = water
+                }
+                if let error = error {
+                    self?.error = error
+                }
+                group.leave()
+            }
+        }
+        
+        // Fetch height
+        group.enter()
+        healthKitManager.fetchHeight { [weak self] height, error in
+            DispatchQueue.main.async {
+                if let height = height {
+                    self?.height = height
+                }
+                if let error = error {
+                    self?.error = error
+                }
+                group.leave()
+            }
+        }
+        
+        // Fetch weight
+        group.enter()
+        healthKitManager.fetchBodyWeight { [weak self] weight, error in
+            DispatchQueue.main.async {
+                if let weight = weight {
+                    self?.weight = weight
                 }
                 if let error = error {
                     self?.error = error

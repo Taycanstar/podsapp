@@ -27,6 +27,10 @@ final class DayLogsViewModel: ObservableObject {
   @Published var totalProtein : Double = 0
   @Published var totalCarbs   : Double = 0
   @Published var totalFat     : Double = 0
+  
+  // User measurements from onboarding
+  @Published var height: Double = 0 // Height in cm
+  @Published var weight: Double = 0 // Weight in kg
 
   private let repo = LogRepository()
   private(set) var email = ""
@@ -62,7 +66,7 @@ func addPending(_ log: CombinedLog) {
 
   var arr = pendingByDate[key] ?? []
 
-  // don’t double-insert the same ID
+  // don't double-insert the same ID
   guard !arr.contains(where: { $0.id == log.id }) else { return }
 
   arr.insert(log, at: 0)
@@ -88,7 +92,8 @@ func loadLogs(for date: Date) {
     self.isLoading = false
 
     switch result {
-    case .success(let serverLogs):
+    case .success(let serverResponse):
+      let serverLogs = serverResponse.logs
       let key = Calendar.current.startOfDay(for: date)
       let pending = self.pendingByDate[key] ?? []
 
@@ -98,6 +103,12 @@ func loadLogs(for date: Date) {
       }
 
       self.logs = dedupedPending + serverLogs
+      
+      // Update height and weight from onboarding data if available
+      if let userData = serverResponse.userData {
+          self.height = userData.height_cm
+          self.weight = userData.weight_kg
+      }
 
     case .failure(let err):
       self.error = err
