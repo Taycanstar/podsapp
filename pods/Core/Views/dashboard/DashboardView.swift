@@ -1010,7 +1010,7 @@ private extension DashboardView {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: "ruler")
+                    Image(systemName: "figure")
                         .foregroundColor(.purple)
                         .font(.system(size: 16))
                     Text("Height")
@@ -1022,7 +1022,7 @@ private extension DashboardView {
                     let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
                     let inches = Int(remainingCm / 2.54) // convert remainder to inches
                     Text("\(feet)' \(inches)\"")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                 } else {
                     Text("No data")
@@ -1032,7 +1032,7 @@ private extension DashboardView {
             }
             Spacer()
             Button(action: {
-                print("Height card plus button tapped")
+                print("Adding new height measurement")
             }) {
                 Image(systemName: "circle.plus.fill")
                     .font(.system(size: 24))
@@ -1051,25 +1051,31 @@ private extension DashboardView {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: "scalemass")
-                        .foregroundColor(.blue)
+                    Image(systemName: "figure")
+                        .foregroundColor(.purple)
                         .font(.system(size: 16))
                     Text("Weight")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.purple)
                 }
                 let weightInLbs = Int(vm.weight * 2.20462)
-                Text("\(weightInLbs) lbs")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                HStack(spacing:3){
+                    Text("\(weightInLbs)")
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
+                     Text("lb")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                
             }
             Spacer()
             Button(action: {
-                print("Weight card plus button tapped")
+                print("Adding new weight measurement")
             }) {
                 Image(systemName: "circle.plus.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(.blue)
+                    .foregroundColor(.purple)
             }
         }
         .frame(maxWidth: .infinity)

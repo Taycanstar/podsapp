@@ -175,6 +175,8 @@
 		36ED35A92DD529B600D174FB /* HealthDataDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */; };
 		36ED35AB2DD529D600D174FB /* HealthKitViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */; };
 		36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */; };
+		36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AF2DD675B900D174FB /* WeightProgressView.swift */; };
+		36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B12DD675C900D174FB /* HeightProgressView.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -372,6 +374,8 @@
 		36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDataDetailView.swift; sourceTree = "<group>"; };
 		36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitViewModel.swift; sourceTree = "<group>"; };
 		36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWaterView.swift; sourceTree = "<group>"; };
+		36ED35AF2DD675B900D174FB /* WeightProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightProgressView.swift; sourceTree = "<group>"; };
+		36ED35B12DD675C900D174FB /* HeightProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightProgressView.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -750,6 +754,8 @@
 				36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */,
 				363AFA182D47471B00C91A14 /* DashboardView.swift */,
 				36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */,
+				36ED35AF2DD675B900D174FB /* WeightProgressView.swift */,
+				36ED35B12DD675C900D174FB /* HeightProgressView.swift */,
 			);
 			path = dashboard;
 			sourceTree = "<group>";
@@ -1040,6 +1046,7 @@
 				36ED35A72DD5294300D174FB /* HealthDataCard.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
+				36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
@@ -1117,6 +1124,7 @@
 				363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */,
 				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
+				36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
