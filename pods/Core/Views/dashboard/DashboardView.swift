@@ -246,7 +246,7 @@ private extension DashboardView {
     var macrosCard: some View {
         VStack(spacing: 16) {
             macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
-                    right: ("Protein",  vm.totalProtein,   "fish.fill",        .blue))
+                    right: ("Protein",  vm.totalProtein,   "fish",        .blue))
             macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
                     right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
         }
@@ -902,7 +902,7 @@ private extension DashboardView {
                 title: "Water",
                 value: String(format: "%.1f", healthViewModel.waterIntake),
                 unit: "L",
-                systemImage: "drop.fill",
+                systemImage: "drop",
                 color: .blue
             )
             }
@@ -1023,7 +1023,7 @@ private extension DashboardView {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: "figure")
+                    Image(systemName: "ruler")
                         .foregroundColor(.purple)
                         .font(.system(size: 16))
                     Text("Height")
@@ -1064,7 +1064,7 @@ private extension DashboardView {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: "figure")
+                    Image(systemName: "scalemass")
                         .foregroundColor(.purple)
                         .font(.system(size: 16))
                     Text("Weight")
