@@ -174,11 +174,13 @@ private extension DashboardView {
                     // Page 3: Health Data
                     VStack(spacing: 10) {
                         sleepCard
+                            // Match the healthSummaryCard approach (uses content height + padding)
                         HStack(spacing: 10) {
                             heightCard
                             weightCard
                         }
                     }
+                     .frame(height: 85)
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
@@ -363,7 +365,7 @@ private extension DashboardView {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.teal)
                 }
-                
+                Spacer()
                 Text("Time Asleep")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.secondary)
@@ -407,8 +409,8 @@ private extension DashboardView {
             }
             .frame(width: 60, height: 60)
         }
-        .frame(height: 85) // Same height as the remaining calories card
-        .padding(.vertical, 12) // Same padding as the remaining calories card
+       
+        .padding(.vertical, 12) // Match macroCirclesCard padding
         .padding(.horizontal)
         .background(Color("iosnp"))
         .cornerRadius(12)
@@ -1017,6 +1019,7 @@ private extension DashboardView {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.purple)
                 }
+                Spacer()
                 if vm.height > 0 {
                     let feet = Int(vm.height / 30.48) // convert cm to feet
                     let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
@@ -1040,8 +1043,7 @@ private extension DashboardView {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .padding(.horizontal)
+        .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
     }
@@ -1058,6 +1060,7 @@ private extension DashboardView {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.purple)
                 }
+                Spacer()
                 let weightInLbs = Int(vm.weight * 2.20462)
                 HStack(spacing:0){
                     Text("\(weightInLbs)")
@@ -1079,8 +1082,7 @@ private extension DashboardView {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .padding(.horizontal)
+        .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
     }
