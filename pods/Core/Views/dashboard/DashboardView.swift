@@ -179,8 +179,9 @@ private extension DashboardView {
                             heightCard
                             weightCard
                         }
+                          .frame(height: 85)
                     }
-                     .frame(height: 85)
+                   
                     .padding(.trailing, 5) // Add horizontal padding for spacing between pages
                     .frame(width: geometry.size.width)
                     .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
@@ -366,6 +367,7 @@ private extension DashboardView {
                         .foregroundColor(.teal)
                 }
                 Spacer()
+                 .frame(height: 30)
                 Text("Time Asleep")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.secondary)
@@ -409,7 +411,7 @@ private extension DashboardView {
             }
             .frame(width: 60, height: 60)
         }
-       
+        // .frame(height: 100)
         .padding(.vertical, 12) // Match macroCirclesCard padding
         .padding(.horizontal)
         .background(Color("iosnp"))
