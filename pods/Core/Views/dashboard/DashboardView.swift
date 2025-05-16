@@ -45,6 +45,8 @@ private var remainingCal: Double { vm.remainingCalories }
                     VStack(alignment: .leading, spacing: 0) {
 
                         nutritionSummaryCard            // ① macros + remaining kcals
+                            // .padding(.trailing, -10) 
+                                 .padding(.horizontal, -16) 
                      
 
                         if foodMgr.isAnalyzingFood {
@@ -157,8 +159,10 @@ private extension DashboardView {
                     VStack(spacing: 10) {
                         remainingCaloriesCard
                         macrosCard
+
                     }
-                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
+                         .padding(.leading, 16)
                     .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
                     .padding(.top, 8)
                     
@@ -167,7 +171,9 @@ private extension DashboardView {
                         macroCirclesCard
                         healthSummaryCard
                     }
-                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .padding(.leading, 16)
+                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
+                       
                     .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
                     .padding(.top, 8)
                     
@@ -183,7 +189,9 @@ private extension DashboardView {
                         }
                           .frame(height: 100)
                     }
-                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .padding(.leading, 16)
+                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
+                    
                     .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
                     .padding(.top, 8)
                 }
