@@ -177,6 +177,8 @@
 		36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */; };
 		36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35AF2DD675B900D174FB /* WeightProgressView.swift */; };
 		36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B12DD675C900D174FB /* HeightProgressView.swift */; };
+		36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B32DD7F27900D174FB /* EditWeightView.swift */; };
+		36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B52DD7F28900D174FB /* EditHeightView.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -376,6 +378,8 @@
 		36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWaterView.swift; sourceTree = "<group>"; };
 		36ED35AF2DD675B900D174FB /* WeightProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightProgressView.swift; sourceTree = "<group>"; };
 		36ED35B12DD675C900D174FB /* HeightProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightProgressView.swift; sourceTree = "<group>"; };
+		36ED35B32DD7F27900D174FB /* EditWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditWeightView.swift; sourceTree = "<group>"; };
+		36ED35B52DD7F28900D174FB /* EditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditHeightView.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -756,6 +760,8 @@
 				36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */,
 				36ED35AF2DD675B900D174FB /* WeightProgressView.swift */,
 				36ED35B12DD675C900D174FB /* HeightProgressView.swift */,
+				36ED35B32DD7F27900D174FB /* EditWeightView.swift */,
+				36ED35B52DD7F28900D174FB /* EditHeightView.swift */,
 			);
 			path = dashboard;
 			sourceTree = "<group>";
@@ -1156,6 +1162,8 @@
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
+				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,
+				36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */,
 				364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */,
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
 				36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */,

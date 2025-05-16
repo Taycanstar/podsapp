@@ -31,6 +31,10 @@ final class DayLogsViewModel: ObservableObject {
   // User measurements from onboarding
   @Published var height: Double = 0 // Height in cm
   @Published var weight: Double = 0 // Weight in kg
+  
+  // Navigation properties
+  @Published var navigateToEditHeight: Bool = false
+  @Published var navigateToEditWeight: Bool = false
 
   private let repo = LogRepository()
   private(set) var email = ""

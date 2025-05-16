@@ -1047,10 +1047,14 @@ private extension DashboardView {
             Spacer()
             Button(action: {
                 print("Adding new height measurement")
+                vm.navigateToEditHeight = true
             }) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
+            }
+            .sheet(isPresented: $vm.navigateToEditHeight) {
+                EditHeightView()
             }
         }
         .frame(maxWidth: .infinity)
@@ -1086,10 +1090,14 @@ private extension DashboardView {
             Spacer()
             Button(action: {
                 print("Adding new weight measurement")
+                vm.navigateToEditWeight = true
             }) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
+            }
+            .sheet(isPresented: $vm.navigateToEditWeight) {
+                EditWeightView()
             }
         }
         .frame(maxWidth: .infinity)
