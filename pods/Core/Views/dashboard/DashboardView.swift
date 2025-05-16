@@ -158,33 +158,34 @@ private extension DashboardView {
                         remainingCaloriesCard
                         macrosCard
                     }
-                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
-                    .frame(width: geometry.size.width)
-                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
+                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                    .padding(.top, 8)
                     
                     // Page 2: Health data summary
                     VStack(spacing: 10) {
                         macroCirclesCard
                         healthSummaryCard
                     }
-                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
-                    .frame(width: geometry.size.width)
-                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
+                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                    .padding(.top, 8)
                     
                     // Page 3: Health Data
                     VStack(spacing: 10) {
                         sleepCard
+                        .padding(.bottom, 0)
+
                             // Match the healthSummaryCard approach (uses content height + padding)
                         HStack(spacing: 10) {
                             heightCard
                             weightCard
                         }
-                          .frame(height: 85)
+                          .frame(height: 100)
                     }
-                   
-                    .padding(.trailing, 5) // Add horizontal padding for spacing between pages
-                    .frame(width: geometry.size.width)
-                    .position(x: geometry.size.width/2, y: geometry.size.height/2 - 16) // Offset upward
+                    .padding(.trailing, 10) // Add horizontal padding for spacing between pages
+                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                    .padding(.top, 8)
                 }
                 .frame(height: 300) // Enough height so cards fully visible, with 8px above page dots
                 .tabViewStyle(PageTabViewStyle())
