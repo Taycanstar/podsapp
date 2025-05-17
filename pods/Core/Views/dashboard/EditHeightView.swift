@@ -142,7 +142,30 @@ struct EditHeightView: View {
             UserDefaults.standard.set(selectedInches, forKey: "heightInches")
         }
         
-        // TODO: Add API call to save height to server
-        print("Saving height: \(heightInCm) cm")
+        // Update the viewModel
+        vm.height = heightInCm
+        
+        // Call API to log height using NetworkManagerTwo
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            print("Error: No user email found")
+            return
+        }
+        
+        NetworkManagerTwo.shared.logHeight(
+            userEmail: email,
+            heightCm: heightInCm,
+            notes: "Logged from dashboard"
+        ) { result in
+            switch result {
+            case .success(let response):
+                print("Height successfully logged: \(response.heightCm) cm")
+                
+                // Post notification to refresh health data
+                NotificationCenter.default.post(name: Notification.Name("HeightLoggedNotification"), object: nil)
+                
+            case .failure(let error):
+                print("Error logging height: \(error.localizedDescription)")
+            }
+        }
     }
 }

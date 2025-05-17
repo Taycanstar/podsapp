@@ -759,6 +759,182 @@ class NetworkManagerTwo {
         
         task.resume()
     }
+
+    // MARK: - Health Measurements
+    
+    /// Log a height measurement for a user
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - heightCm: Height in centimeters
+    ///   - notes: Optional notes about the measurement
+    ///   - completion: Result callback with the logged height data or error
+    func logHeight(
+        userEmail: String,
+        heightCm: Double,
+        notes: String = "Logged from dashboard",
+        completion: @escaping (Result<HeightLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/log-height/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "height_cm": heightCm,
+            "notes": notes
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("📏 Logging height: \(heightCm) cm for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error logging height: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received when logging height")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                print("❌ Server error logging height: \(errorMessage)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                let response = try decoder.decode(HeightLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully logged height: \(response.heightCm) cm")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Error decoding height log response: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Response data: \(responseString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Log a weight measurement for a user
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - weightKg: Weight in kilograms
+    ///   - notes: Optional notes about the measurement
+    ///   - completion: Result callback with the logged weight data or error
+    func logWeight(
+        userEmail: String,
+        weightKg: Double,
+        notes: String = "Logged from dashboard",
+        completion: @escaping (Result<WeightLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/log-weight/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "weight_kg": weightKg,
+            "notes": notes
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("⚖️ Logging weight: \(weightKg) kg for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error logging weight: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received when logging weight")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                print("❌ Server error logging weight: \(errorMessage)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                let response = try decoder.decode(WeightLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully logged weight: \(response.weightKg) kg")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Error decoding weight log response: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Response data: \(responseString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
 }
 
 

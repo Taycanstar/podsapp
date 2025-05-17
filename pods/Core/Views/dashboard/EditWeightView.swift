@@ -93,8 +93,31 @@ struct EditWeightView: View {
             UserDefaults.standard.set(selectedWeight * 2.20462, forKey: "weightPounds")
         }
         
-        // TODO: Add API call to save weight to server
-        print("Saving weight: \(weightInKg) kg")
+        // Update the viewModel
+        vm.weight = weightInKg
+        
+        // Call API to log weight using NetworkManagerTwo
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            print("Error: No user email found")
+            return
+        }
+        
+        NetworkManagerTwo.shared.logWeight(
+            userEmail: email,
+            weightKg: weightInKg,
+            notes: "Logged from dashboard"
+        ) { result in
+            switch result {
+            case .success(let response):
+                print("Weight successfully logged: \(response.weightKg) kg")
+                
+                // Post notification to refresh health data
+                NotificationCenter.default.post(name: Notification.Name("WeightLoggedNotification"), object: nil)
+                
+            case .failure(let error):
+                print("Error logging weight: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

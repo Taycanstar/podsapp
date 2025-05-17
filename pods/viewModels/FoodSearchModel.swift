@@ -865,30 +865,3 @@ struct NutritionGoals: Codable {
     let nutritionInsights: InsightDetails?
 }
 
-struct UserData: Codable {
-    let height_cm: Double
-    let weight_kg: Double
-    let height_feet: Int?
-    let height_inches: Int?
-    let weight_lbs: Double?
-    
-    enum CodingKeys: String, CodingKey {
-        case height_cm, weight_kg, height_feet, height_inches, weight_lbs
-    }
-}
-
-struct LogsByDateResponse: Codable {
-    var logs: [CombinedLog]
-    var targetDate: String
-    var adjacentDaysIncluded: Bool
-    var goals: NutritionGoals?
-    var userData: UserData?
-    
-    enum CodingKeys: String, CodingKey {
-        case logs
-        case targetDate = "target_date"
-        case adjacentDaysIncluded = "adjacent_days_included"
-        case goals
-        case userData = "user_data"
-    }
-} 

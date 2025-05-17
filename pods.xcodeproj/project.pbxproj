@@ -179,6 +179,7 @@
 		36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B12DD675C900D174FB /* HeightProgressView.swift */; };
 		36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B32DD7F27900D174FB /* EditWeightView.swift */; };
 		36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B52DD7F28900D174FB /* EditHeightView.swift */; };
+		36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B72DD92FF000D174FB /* UserDataModel.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -380,6 +381,7 @@
 		36ED35B12DD675C900D174FB /* HeightProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightProgressView.swift; sourceTree = "<group>"; };
 		36ED35B32DD7F27900D174FB /* EditWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditWeightView.swift; sourceTree = "<group>"; };
 		36ED35B52DD7F28900D174FB /* EditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditHeightView.swift; sourceTree = "<group>"; };
+		36ED35B72DD92FF000D174FB /* UserDataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataModel.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -480,6 +482,7 @@
 				36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */,
 				36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */,
 				36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */,
+				36ED35B72DD92FF000D174FB /* UserDataModel.swift */,
 			);
 			path = viewModels;
 			sourceTree = "<group>";
@@ -1102,6 +1105,7 @@
 				363AFA0D2D34769D00C91A14 /* FullEditActivityView.swift in Sources */,
 				3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
+				36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
 				3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */,
