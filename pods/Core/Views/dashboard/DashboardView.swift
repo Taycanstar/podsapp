@@ -540,6 +540,95 @@ private extension DashboardView {
             }
         }
     }
+
+    // Height card for page 3
+    var heightCard: some View {
+        HStack(spacing: 16) {
+            NavigationLink(destination: HeightDataView()) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "ruler")
+                            .foregroundColor(.purple)
+                            .font(.system(size: 16))
+                        Text("Height")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.purple)
+                    }
+                    Spacer()
+                    if vm.height > 0 {
+                        let feet = Int(vm.height / 30.48)
+                        let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
+                        let inches = Int(remainingCm / 2.54)
+                        Text("\(feet)' \(inches)\"")
+                            .font(.system(size: 26, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                    } else {
+                        Text("No data")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            Spacer()
+            Button(action: {
+                vm.navigateToEditHeight = true
+            }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.purple)
+            }
+            .sheet(isPresented: $vm.navigateToEditHeight) {
+                EditHeightView()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
+
+    // Weight card for page 3
+    var weightCard: some View {
+        HStack(spacing: 16) {
+            NavigationLink(destination: WeightDataView()) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "scalemass")
+                            .foregroundColor(.purple)
+                            .font(.system(size: 16))
+                        Text("Weight")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.purple)
+                    }
+                    Spacer()
+                    let weightInLbs = Int(vm.weight * 2.20462)
+                    HStack(spacing: 0) {
+                        Text("\(weightInLbs)")
+                            .font(.system(size: 26, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text(" lb")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            Spacer()
+            Button(action: {
+                vm.navigateToEditWeight = true
+            }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.purple)
+            }
+            .sheet(isPresented: $vm.navigateToEditWeight) {
+                EditWeightView()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1012,97 +1101,5 @@ private extension DashboardView {
                     }
                 }
         }
-    }
-}
-
-
-
-private extension DashboardView {
-    // Height card for page 3
-    var heightCard: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    Image(systemName: "ruler")
-                        .foregroundColor(.purple)
-                        .font(.system(size: 16))
-                    Text("Height")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.purple)
-                }
-                Spacer()
-                if vm.height > 0 {
-                    let feet = Int(vm.height / 30.48) // convert cm to feet
-                    let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
-                    let inches = Int(remainingCm / 2.54) // convert remainder to inches
-                    Text("\(feet)' \(inches)\"")
-                        .font(.system(size: 26, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                } else {
-                    Text("No data")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundColor(.gray)
-                }
-            }
-            Spacer()
-            Button(action: {
-                print("Adding new height measurement")
-                vm.navigateToEditHeight = true
-            }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.purple)
-            }
-            .sheet(isPresented: $vm.navigateToEditHeight) {
-                EditHeightView()
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
-    }
-
-    // Weight card for page 3
-    var weightCard: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    Image(systemName: "scalemass")
-                        .foregroundColor(.purple)
-                        .font(.system(size: 16))
-                    Text("Weight")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.purple)
-                }
-                Spacer()
-                let weightInLbs = Int(vm.weight * 2.20462)
-                HStack(spacing:0){
-                    Text("\(weightInLbs)")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                     Text("lb")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                
-            }
-            Spacer()
-            Button(action: {
-                print("Adding new weight measurement")
-                vm.navigateToEditWeight = true
-            }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.purple)
-            }
-            .sheet(isPresented: $vm.navigateToEditWeight) {
-                EditWeightView()
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
     }
 }

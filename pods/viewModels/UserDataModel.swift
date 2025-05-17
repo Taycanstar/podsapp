@@ -5,6 +5,9 @@
 //  Created by Dimi Nunez on 5/17/25.
 //
 
+import Foundation
+import Combine
+
 struct UserData: Codable {
     let height_cm: Double
     let weight_kg: Double
@@ -71,4 +74,23 @@ struct WeightLogsResponse: Codable {
         case logs
         case totalCount = "total_count"
     }
-} 
+}
+
+// MARK: - Health Data View Models
+
+enum HealthTimeframe: String, CaseIterable {
+    case week = "W"
+    case month = "M"
+    case sixMonths = "6M"
+    case year = "Y"
+    
+    var days: Int {
+        switch self {
+        case .week: return 7
+        case .month: return 30
+        case .sixMonths: return 182
+        case .year: return 365
+        }
+    }
+}
+

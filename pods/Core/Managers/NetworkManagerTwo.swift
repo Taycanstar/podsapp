@@ -935,6 +935,94 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+
+    // MARK: - Fetch Height & Weight Logs
+
+    /// Fetch a user's height log history
+    func fetchHeightLogs(
+        userEmail: String,
+        limit: Int = 100,
+        offset: Int = 0,
+        completion: @escaping (Result<HeightLogsResponse, Error>) -> Void
+    ) {
+        var components = URLComponents(string: "\(baseUrl)/get-height-logs/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.noData)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(errorMessage))) }
+                return
+            }
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(HeightLogsResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(response)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    /// Fetch a user's weight log history
+    func fetchWeightLogs(
+        userEmail: String,
+        limit: Int = 100,
+        offset: Int = 0,
+        completion: @escaping (Result<WeightLogsResponse, Error>) -> Void
+    ) {
+        var components = URLComponents(string: "\(baseUrl)/get-weight-logs/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.noData)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(errorMessage))) }
+                return
+            }
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(WeightLogsResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(response)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
 }
 
 
