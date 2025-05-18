@@ -98,7 +98,7 @@ struct HeightDataView: View {
     private var averageHeightView: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("AVERAGE")
-                .font(.system(size: 16))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.gray)
             
             if averageHeight > 0 {

@@ -97,7 +97,7 @@ struct WeightDataView: View {
     private var averageWeightView: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("AVERAGE")
-                .font(.system(size: 16))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.gray)
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
