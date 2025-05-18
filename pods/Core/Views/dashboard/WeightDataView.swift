@@ -155,6 +155,7 @@ struct WeightDataView: View {
         .chartXAxis {
             AxisMarks { value in
                 if let date = value.as(Date.self) {
+                    AxisGridLine()
                     AxisValueLabel {
                         switch timeframe {
                         case .day:
@@ -173,7 +174,12 @@ struct WeightDataView: View {
             }
         }
         .chartYAxis {
-            AxisMarks(preset: .aligned, position: .leading)
+            AxisMarks(preset: .aligned, position: .leading) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    Text(value.as(Double.self)?.formatted() ?? "")
+                }
+            }
         }
         .frame(height: 300)
         .padding()

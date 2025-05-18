@@ -976,7 +976,7 @@ class NetworkManagerTwo {
                 
                 // For debugging, print the raw JSON response
                 if let responseString = String(data: data, encoding: .utf8) {
-                    print("Raw height logs JSON: \(responseString)")
+                
                 }
                 
                 let response = try decoder.decode(HeightLogsResponse.self, from: data)
@@ -1026,7 +1026,7 @@ class NetworkManagerTwo {
                 
                 // For debugging, print the raw JSON response
                 if let responseString = String(data: data, encoding: .utf8) {
-                    print("Raw weight logs JSON: \(responseString)")
+             
                 }
                 
                 let response = try decoder.decode(WeightLogsResponse.self, from: data)
