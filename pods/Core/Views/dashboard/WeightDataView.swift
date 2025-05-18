@@ -81,25 +81,17 @@ struct WeightDataView: View {
     // MARK: - View Components
     
     private var timeframePickerView: some View {
-        HStack(spacing: 0) {
+        Picker("Timeframe", selection: $timeframe) {
             ForEach(Timeframe.allCases, id: \.self) { tf in
-                Button(action: {
-                    timeframe = tf
-                    filterLogs()
-                }) {
-                    Text(tf.rawValue)
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(timeframe == tf ? Color.white : Color.clear)
-                        .foregroundColor(timeframe == tf ? .black : .gray)
-                }
-                .buttonStyle(PlainButtonStyle())
+                Text(tf.rawValue)
+                    .tag(tf)
             }
         }
-        .background(Color(UIColor.systemGray5))
-        .cornerRadius(8)
+        .pickerStyle(SegmentedPickerStyle())
         .padding(.horizontal)
+        .onChange(of: timeframe) { _ in
+            filterLogs()
+        }
     }
     
     private var averageWeightView: some View {
