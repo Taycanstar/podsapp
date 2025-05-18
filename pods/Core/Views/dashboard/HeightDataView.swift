@@ -151,11 +151,12 @@ struct HeightDataView: View {
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
-                
+
                 PointMark(
                     x: .value("Date", dataPoint.date),
                     y: .value("Height", dataPoint.heightCm)
                 )
+                .symbol(.circle.strokeBorder(lineWidth: 2))   // hollow (outline) points
                 .symbolSize(CGSize(width: 10, height: 10))
                 .foregroundStyle(Color.purple)
             }
