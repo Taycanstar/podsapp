@@ -36,7 +36,17 @@ struct HeightDataView: View {
     @State private var showingEditSheet = false
     @State private var errorMessage: String? = nil
     
-    private let dateFormatter = ISO8601DateFormatter()
+    private let dateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    // Add initializer with initialAllLogs parameter
+    init(initialAllLogs: [HeightLogResponse] = []) {
+        _allLogs = State(initialValue: initialAllLogs)
+        _logs = State(initialValue: [])
+    }
     
     var body: some View {
         ScrollView {
@@ -293,6 +303,18 @@ struct HeightDataView: View {
     // Load all logs and then filter for the selected timeframe
     private func loadAllLogs() {
         isLoading = true
+        
+        // If we have initialAllLogs, use them directly
+        if !allLogs.isEmpty {
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.filterLogs()
+                
+                // Still refresh in background for most up-to-date data
+                self.refreshDataFromNetwork()
+            }
+            return
+        }
         
         // First check if preloaded data exists in UserDefaults
         if let preloadedData = UserDefaults.standard.data(forKey: "preloadedHeightLogs"),

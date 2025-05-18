@@ -30,28 +30,77 @@ class HeightDataViewModel: ObservableObject {
     }
 
     private let api = NetworkManagerTwo.shared
-    private let dateFormatter = ISO8601DateFormatter()
+    private lazy var dateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 
     func loadLogs() {
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else { return }
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else { 
+            print("⚠️ HeightDataViewModel: No user email found in UserDefaults")
+            return 
+        }
+        
+        print("🔍 HeightDataViewModel: Fetching height logs for \(email)")
+        
         api.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { [weak self] result in
             switch result {
             case .success(let response):
                 DispatchQueue.main.async {
-                    let cutoff = Calendar.current.date(byAdding: .day, value: -self!.timeframe.days, to: Date()) ?? Date()
-                    self?.logs = response.logs.filter { log in
-                        if let date = self?.dateFormatter.date(from: log.dateLogged) {
-                            return date >= cutoff
-                        }
-                        return false
-                    }.sorted {
-                        guard let d1 = self?.dateFormatter.date(from: $0.dateLogged),
-                              let d2 = self?.dateFormatter.date(from: $1.dateLogged) else { return false }
-                        return d1 < d2
+                    guard let self = self else { return }
+                    
+                    print("📊 HeightDataViewModel: Received \(response.logs.count) height logs")
+                    
+                    // Debug information
+                    for log in response.logs {
+                        print("📏 Log: \(log.id), height: \(log.heightCm) cm, date: \(log.dateLogged)")
                     }
+                    
+                    let cutoff = Calendar.current.date(byAdding: .day, value: -self.timeframe.days, to: Date()) ?? Date()
+                    print("📅 HeightDataViewModel: Current date: \(Date()), Cutoff date: \(cutoff) for timeframe: \(self.timeframe.rawValue)")
+                    
+                    // Track which logs are filtered
+                    var includedLogs: [HeightLogResponse] = []
+                    var filteredOutLogs: [HeightLogResponse] = []
+                    
+                    for log in response.logs {
+                        if let date = self.dateFormatter.date(from: log.dateLogged) {
+                            if date >= cutoff {
+                                includedLogs.append(log)
+                                print("✅ Including log ID \(log.id): \(date) >= \(cutoff)")
+                            } else {
+                                filteredOutLogs.append(log)
+                                print("❌ Filtering out log ID \(log.id): \(date) < \(cutoff)")
+                            }
+                        } else {
+                            print("⚠️ Failed to parse date: \(log.dateLogged) for log ID \(log.id)")
+                            // Include logs with parsing errors
+                            includedLogs.append(log)
+                        }
+                    }
+                    
+                    // Sort included logs
+                    includedLogs.sort { log1, log2 in
+                        let date1 = self.dateFormatter.date(from: log1.dateLogged) ?? Date()
+                        let date2 = self.dateFormatter.date(from: log2.dateLogged) ?? Date()
+                        return date1 < date2
+                    }
+                    
+                    print("📊 HeightDataViewModel: Kept \(includedLogs.count) logs, filtered out \(filteredOutLogs.count)")
+                    
+                    // Temporarily force logs to show for debugging
+                    if includedLogs.isEmpty && !response.logs.isEmpty {
+                        print("⚠️ HeightDataViewModel: All logs were filtered out! Using all logs instead.")
+                        self.logs = response.logs
+                    } else {
+                        self.logs = includedLogs
+                    }
+                    
+                    print("🔍 HeightDataViewModel.logs now contains \(self.logs.count) logs")
                 }
             case .failure(let error):
-                print("Error fetching height logs: \(error)")
+                print("❌ HeightDataViewModel: Error fetching height logs: \(error)")
             }
         }
     }

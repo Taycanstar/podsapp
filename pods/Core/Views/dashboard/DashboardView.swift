@@ -544,7 +544,15 @@ private extension DashboardView {
     // Height card for page 3
     var heightCard: some View {
         HStack(spacing: 16) {
-            NavigationLink(destination: HeightDataView()) {
+            NavigationLink(destination: {
+                // Retrieve preloaded height logs if available
+                if let preloadedData = UserDefaults.standard.data(forKey: "preloadedHeightLogs"),
+                   let response = try? JSONDecoder().decode(HeightLogsResponse.self, from: preloadedData) {
+                    HeightDataView(initialAllLogs: response.logs)
+                } else {
+                    HeightDataView(initialAllLogs: [])
+                }
+            }) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         Image(systemName: "ruler")
@@ -590,7 +598,15 @@ private extension DashboardView {
     // Weight card for page 3
     var weightCard: some View {
         HStack(spacing: 16) {
-            NavigationLink(destination: WeightDataView()) {
+            NavigationLink(destination: {
+                // Retrieve preloaded weight logs if available
+                if let preloadedData = UserDefaults.standard.data(forKey: "preloadedWeightLogs"),
+                   let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: preloadedData) {
+                    WeightDataView(initialAllLogs: response.logs)
+                } else {
+                    WeightDataView(initialAllLogs: [])
+                }
+            }) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         Image(systemName: "scalemass")
@@ -644,6 +660,9 @@ private extension DashboardView {
         if vm.email.isEmpty, !onboarding.email.isEmpty {
             vm.setEmail(onboarding.email)
         }
+        
+        // Save the email so our detail views can pick it up
+        UserDefaults.standard.set(onboarding.email, forKey: "userEmail")
         
         if vm.logs.isEmpty {
             vm.loadLogs(for: vm.selectedDate)
