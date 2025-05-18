@@ -145,11 +145,21 @@ struct WeightDataView: View {
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
                 
+                // Mask the line so it doesn’t show through the hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
                     y: .value("Weight", dataPoint.weightLbs)
                 )
-                .symbol(.circle.strokeBorder(lineWidth: 2))   // hollow (outline) points
+                .symbol(.circle)
+                .symbolSize(CGSize(width: 12, height: 12))        // slightly larger
+                .foregroundStyle(Color(UIColor.systemBackground))  // background‑colored fill
+
+                // Outlined hollow point
+                PointMark(
+                    x: .value("Date", dataPoint.date),
+                    y: .value("Weight", dataPoint.weightLbs)
+                )
+                .symbol(.circle.strokeBorder(lineWidth: 2))
                 .symbolSize(CGSize(width: 10, height: 10))
                 .foregroundStyle(Color.purple)
             }
