@@ -142,27 +142,42 @@ struct HeightDataView: View {
     
     private var heightChart: some View {
         Chart {
-            ForEach(logs, id: \.id) { log in
-                if let date = dateFormatter.date(from: log.dateLogged) {
-                    LineMark(
-                        x: .value("Date", date),
-                        y: .value("Height", log.heightCm)
-                    )
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                    .foregroundStyle(Color.purple)
-                    
-                    PointMark(
-                        x: .value("Date", date),
-                        y: .value("Height", log.heightCm)
-                    )
-                    .symbolSize(CGSize(width: 10, height: 10))
-                    .foregroundStyle(Color.purple)
-                }
+            ForEach(groupedLogsForChart(), id: \.date) { dataPoint in
+                LineMark(
+                    x: .value("Date", dataPoint.date),
+                    y: .value("Height", dataPoint.heightCm)
+                )
+                .lineStyle(StrokeStyle(lineWidth: 2))
+                .foregroundStyle(Color.purple)
+                
+                PointMark(
+                    x: .value("Date", dataPoint.date),
+                    y: .value("Height", dataPoint.heightCm)
+                )
+                .symbolSize(CGSize(width: 10, height: 10))
+                .foregroundStyle(Color.purple)
             }
         }
         .chartYScale(domain: heightChartRange())
         .chartXAxis {
-            AxisMarks(preset: .aligned, position: .bottom)
+            AxisMarks { value in
+                if let date = value.as(Date.self) {
+                    AxisValueLabel {
+                        switch timeframe {
+                        case .day:
+                            Text(formatDate(date, format: "HH:mm"))
+                        case .week:
+                            Text(formatDate(date, format: "EEE"))
+                        case .month:
+                            Text(formatDate(date, format: "d"))
+                        case .sixMonths:
+                            Text(formatDate(date, format: "MMM"))
+                        case .year:
+                            Text(formatDate(date, format: "MMM"))
+                        }
+                    }
+                }
+            }
         }
         .chartYAxis {
             AxisMarks(preset: .aligned, position: .leading)
@@ -208,14 +223,109 @@ struct HeightDataView: View {
     
     // MARK: - Helper Methods
     
-    // Determines appropriate date format based on timeframe
-    private func dayFormatter() -> String {
+    // Helper function to format dates
+    private func formatDate(_ date: Date, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        return formatter.string(from: date)
+    }
+    
+    // Group logs based on timeframe
+    private func groupedLogsForChart() -> [ChartDataPoint] {
+        guard !logs.isEmpty else { return [] }
+        
+        var result: [ChartDataPoint] = []
+        
         switch timeframe {
-        case .day: return "HH:mm"
-        case .week: return "EEE"
-        case .month: return "dd"
-        case .sixMonths, .year: return "MMM"
+        case .day, .week:
+            // For day and week, show individual data points
+            for log in logs {
+                if let date = dateFormatter.date(from: log.dateLogged) {
+                    result.append(ChartDataPoint(date: date, heightCm: log.heightCm))
+                }
+            }
+            
+        case .month:
+            // Group by day
+            let calendar = Calendar.current
+            var dayGroups: [Date: [Double]] = [:]
+            
+            for log in logs {
+                if let date = dateFormatter.date(from: log.dateLogged) {
+                    let day = calendar.startOfDay(for: date)
+                    if dayGroups[day] == nil {
+                        dayGroups[day] = []
+                    }
+                    dayGroups[day]?.append(log.heightCm)
+                }
+            }
+            
+            for (day, heights) in dayGroups {
+                let avgHeight = heights.reduce(0, +) / Double(heights.count)
+                result.append(ChartDataPoint(date: day, heightCm: avgHeight))
+            }
+            
+        case .sixMonths:
+            // Group by week
+            let calendar = Calendar.current
+            var weekGroups: [Date: [Double]] = [:]
+            
+            for log in logs {
+                if let date = dateFormatter.date(from: log.dateLogged) {
+                    let weekOfYear = calendar.component(.weekOfYear, from: date)
+                    let year = calendar.component(.year, from: date)
+                    
+                    // Find start of week
+                    guard let startOfWeek = calendar.date(from: DateComponents(weekOfYear: weekOfYear, yearForWeekOfYear: year)) else {
+                        continue
+                    }
+                    
+                    if weekGroups[startOfWeek] == nil {
+                        weekGroups[startOfWeek] = []
+                    }
+                    weekGroups[startOfWeek]?.append(log.heightCm)
+                }
+            }
+            
+            for (week, heights) in weekGroups {
+                let avgHeight = heights.reduce(0, +) / Double(heights.count)
+                result.append(ChartDataPoint(date: week, heightCm: avgHeight))
+            }
+            
+        case .year:
+            // Group by month
+            let calendar = Calendar.current
+            var monthGroups: [Date: [Double]] = [:]
+            
+            for log in logs {
+                if let date = dateFormatter.date(from: log.dateLogged) {
+                    let components = calendar.dateComponents([.year, .month], from: date)
+                    guard let firstDayOfMonth = calendar.date(from: components) else {
+                        continue
+                    }
+                    
+                    if monthGroups[firstDayOfMonth] == nil {
+                        monthGroups[firstDayOfMonth] = []
+                    }
+                    monthGroups[firstDayOfMonth]?.append(log.heightCm)
+                }
+            }
+            
+            for (month, heights) in monthGroups {
+                let avgHeight = heights.reduce(0, +) / Double(heights.count)
+                result.append(ChartDataPoint(date: month, heightCm: avgHeight))
+            }
         }
+        
+        // Sort by date
+        return result.sorted { $0.date < $1.date }
+    }
+    
+    // Chart data point structure
+    struct ChartDataPoint: Identifiable {
+        var id: Date { date }
+        let date: Date
+        let heightCm: Double
     }
     
     // Calculate Y-axis range for the chart
@@ -265,6 +375,7 @@ struct HeightDataView: View {
     
     // Update average height display and date range text
     private func updateAverageAndDateRange() {
+        // For the average calculation, we'll use the filtered data
         let heights = logs.map { $0.heightCm } // Heights in cm
         
         if !heights.isEmpty {
@@ -273,22 +384,45 @@ struct HeightDataView: View {
             averageHeight = 0
         }
         
-        // Update date range text
-        if !logs.isEmpty, let firstDate = logs.first?.dateLogged, let lastDate = logs.last?.dateLogged,
-           let firstDateObj = dateFormatter.date(from: firstDate),
-           let lastDateObj = dateFormatter.date(from: lastDate) {
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MMM d"
-            
-            if Calendar.current.isDate(firstDateObj, inSameDayAs: lastDateObj) {
-                dateRangeText = dateFormatter.string(from: firstDateObj) + ", 2025"
+        // Update date range text based on timeframe
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        
+        switch timeframe {
+        case .day:
+            if let date = logs.first?.dateLogged, let parsedDate = self.dateFormatter.date(from: date) {
+                dateFormatter.dateFormat = "MMMM d, yyyy"
+                dateRangeText = dateFormatter.string(from: parsedDate)
             } else {
-                dateRangeText = dateFormatter.string(from: firstDateObj) + "–" + 
-                                dateFormatter.string(from: lastDateObj) + ", 2025"
+                dateRangeText = ""
             }
-        } else {
-            dateRangeText = ""
+            
+        case .week:
+            let today = Date()
+            let weekStart = calendar.date(byAdding: .day, value: -6, to: today) ?? today
+            
+            dateFormatter.dateFormat = "MMM d"
+            let startText = dateFormatter.string(from: weekStart)
+            let endText = dateFormatter.string(from: today)
+            dateRangeText = "\(startText)-\(endText), \(calendar.component(.year, from: today))"
+            
+        case .month:
+            dateFormatter.dateFormat = "MMMM yyyy"
+            dateRangeText = dateFormatter.string(from: Date())
+            
+        case .sixMonths:
+            let now = Date()
+            let sixMonthsAgo = calendar.date(byAdding: .month, value: -6, to: now) ?? now
+            
+            dateFormatter.dateFormat = "MMM yyyy"
+            let startText = dateFormatter.string(from: sixMonthsAgo)
+            let endText = dateFormatter.string(from: now)
+            dateRangeText = "\(startText) - \(endText)"
+            
+        case .year:
+            let now = Date()
+            dateFormatter.dateFormat = "yyyy"
+            dateRangeText = dateFormatter.string(from: now)
         }
     }
     
