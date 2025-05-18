@@ -643,11 +643,46 @@ private extension DashboardView {
 
         if vm.email.isEmpty, !onboarding.email.isEmpty {
             vm.setEmail(onboarding.email)
-
-
         }
+        
         if vm.logs.isEmpty {
             vm.loadLogs(for: vm.selectedDate)
+        }
+        
+        // Preload weight and height logs for the current week
+        preloadHealthData()
+    }
+    
+    /// Preload health data logs so they're available when navigating to detail views
+    private func preloadHealthData() {
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            return
+        }
+        
+        // Preload weight logs
+        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+            switch result {
+            case .success(let response):
+                // Store logs in UserDefaults for access in WeightDataView
+                if let encodedData = try? JSONEncoder().encode(response) {
+                    UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+                }
+            case .failure(let error):
+                print("Error preloading weight logs: \(error)")
+            }
+        }
+        
+        // Preload height logs
+        NetworkManagerTwo.shared.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+            switch result {
+            case .success(let response):
+                // Store logs in UserDefaults for access in HeightDataView
+                if let encodedData = try? JSONEncoder().encode(response) {
+                    UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
+                }
+            case .failure(let error):
+                print("Error preloading height logs: \(error)")
+            }
         }
     }
     

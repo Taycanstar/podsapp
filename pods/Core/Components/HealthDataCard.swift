@@ -47,7 +47,7 @@ struct HealthDataCard: View {
             if let date = date {
                 viewModel.reloadHealthData(for: date)
             } else {
-                viewModel.reloadHealthData()
+            viewModel.reloadHealthData()
             }
         }
         .onChange(of: date) { newDate in
@@ -62,7 +62,7 @@ struct HealthDataCard: View {
                 showPermissionAlert = true
             } else {
                 // Otherwise show detail view
-                showHealthDetail = true
+            showHealthDetail = true
             }
         }
         .sheet(isPresented: $showHealthDetail) {

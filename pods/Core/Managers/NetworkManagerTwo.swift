@@ -972,10 +972,17 @@ class NetworkManagerTwo {
             }
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Not using .convertFromSnakeCase because we have explicit CodingKeys
+                
+                // For debugging, print the raw JSON response
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Raw height logs JSON: \(responseString)")
+                }
+                
                 let response = try decoder.decode(HeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
             } catch {
+                print("Error decoding HeightLogsResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -1015,10 +1022,17 @@ class NetworkManagerTwo {
             }
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Not using .convertFromSnakeCase because we have explicit CodingKeys
+                
+                // For debugging, print the raw JSON response
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Raw weight logs JSON: \(responseString)")
+                }
+                
                 let response = try decoder.decode(WeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
             } catch {
+                print("Error decoding WeightLogsResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()

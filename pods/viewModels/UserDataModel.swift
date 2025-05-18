@@ -43,7 +43,14 @@ struct HeightLogResponse: Codable {
     let id: Int
     let heightCm: Double
     let dateLogged: String
-    let notes: String
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case heightCm = "height_cm"
+        case dateLogged = "date_logged"
+        case notes
+    }
 }
 
 /// Response from logging a weight measurement
@@ -51,13 +58,20 @@ struct WeightLogResponse: Codable {
     let id: Int
     let weightKg: Double
     let dateLogged: String
-    let notes: String
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case weightKg = "weight_kg"
+        case dateLogged = "date_logged"
+        case notes
+    }
 }
 
 /// Response containing a user's height log history
 struct HeightLogsResponse: Codable {
-    let logs: [HeightLogResponse]
-    let totalCount: Int
+    var logs: [HeightLogResponse] = []
+    var totalCount: Int = 0
     
     enum CodingKeys: String, CodingKey {
         case logs
@@ -67,8 +81,8 @@ struct HeightLogsResponse: Codable {
 
 /// Response containing a user's weight log history
 struct WeightLogsResponse: Codable {
-    let logs: [WeightLogResponse]
-    let totalCount: Int
+    var logs: [WeightLogResponse] = []
+    var totalCount: Int = 0
     
     enum CodingKeys: String, CodingKey {
         case logs

@@ -285,3 +285,4 @@ class HealthKitViewModel: ObservableObject {
         reloadHealthData(for: currentDate)
     }
 } 
+ 

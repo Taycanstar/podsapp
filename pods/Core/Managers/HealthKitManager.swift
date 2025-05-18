@@ -631,3 +631,4 @@ class HealthKitManager {
         return HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
     }
 }
+ 
