@@ -35,6 +35,8 @@ struct WeightDataView: View {
     @State private var dateRangeText: String = ""
     @State private var showingEditSheet = false
     @State private var errorMessage: String? = nil
+    @State private var selectedDataPoint: ChartDataPoint? = nil
+    @State private var isChartTapped = false
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -150,6 +152,36 @@ struct WeightDataView: View {
                 .symbolSize(CGSize(width: 10, height: 10))
                 .foregroundStyle(Color.purple)
             }
+            
+            // Add a vertical rule mark at the selected point
+            if let selectedPoint = selectedDataPoint, isChartTapped {
+                RuleMark(x: .value("Selected Date", selectedPoint.date))
+                    .foregroundStyle(Color.gray.opacity(0.7))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    
+                PointMark(
+                    x: .value("Selected Date", selectedPoint.date),
+                    y: .value("Selected Weight", selectedPoint.weightLbs)
+                )
+                .symbolSize(CGSize(width: 14, height: 14))
+                .foregroundStyle(Color.orange)
+                .annotation(position: .top) {
+                    VStack(alignment: .center, spacing: 4) {
+                        Text("\(String(format: "%.1f", selectedPoint.weightLbs)) lbs")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text(formatDate(selectedPoint.date, format: "MMM d, yyyy"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(UIColor.systemBackground))
+                            .shadow(radius: 2)
+                    )
+                }
+            }
         }
         .chartYScale(domain: weightChartRange())
         .chartXAxis {
@@ -183,6 +215,21 @@ struct WeightDataView: View {
         }
         .frame(height: 300)
         .padding()
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    findClosestDataPoint(at: value.location)
+                    isChartTapped = true
+                }
+                .onEnded { _ in
+                    // Keep the selection visible
+                }
+        )
+        .onTapGesture {
+            // Handle simple taps outside data points
+            isChartTapped = false
+            selectedDataPoint = nil
+        }
     }
     
     private func errorView(message: String) -> some View {
@@ -506,6 +553,44 @@ struct WeightDataView: View {
                 }
             }
         }
+    }
+    
+    // Helper method to find the closest data point to a tap location
+    private func findClosestDataPoint(at location: CGPoint) {
+        // Convert back from tap coordinates to chart coordinates
+        let chartWidth: CGFloat = 300 // Estimate of the chart width
+        let chartHeight: CGFloat = 300
+        
+        let dataPoints = groupedLogsForChart()
+        guard !dataPoints.isEmpty else { return }
+        
+        // Map tap X position to a date based on relative position
+        let dateRange = getDateRange()
+        guard let startDate = dateRange.0, let endDate = dateRange.1 else { return }
+        
+        let totalTimeInterval = endDate.timeIntervalSince(startDate)
+        let xRatio = min(max(location.x / chartWidth, 0), 1)
+        let estimatedDate = startDate.addingTimeInterval(totalTimeInterval * Double(xRatio))
+        
+        // Find closest data point
+        var closestPoint = dataPoints[0]
+        var minDistance: TimeInterval = abs(estimatedDate.timeIntervalSince(closestPoint.date))
+        
+        for point in dataPoints {
+            let distance = abs(estimatedDate.timeIntervalSince(point.date))
+            if distance < minDistance {
+                minDistance = distance
+                closestPoint = point
+            }
+        }
+        
+        selectedDataPoint = closestPoint
+    }
+    
+    // Helper to get the date range of the current dataset
+    private func getDateRange() -> (Date?, Date?) {
+        let sortedPoints = groupedLogsForChart().sorted { $0.date < $1.date }
+        return (sortedPoints.first?.date, sortedPoints.last?.date)
     }
 }
 
