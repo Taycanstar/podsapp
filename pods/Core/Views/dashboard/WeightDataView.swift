@@ -149,6 +149,7 @@ struct WeightDataView: View {
                     x: .value("Date", dataPoint.date),
                     y: .value("Weight", dataPoint.weightLbs)
                 )
+                .symbol(.circle.strokeBorder(lineWidth: 2))   // hollow (outline) points
                 .symbolSize(CGSize(width: 10, height: 10))
                 .foregroundStyle(Color.purple)
             }
@@ -164,7 +165,7 @@ struct WeightDataView: View {
                     y: .value("Selected Weight", selectedPoint.weightLbs)
                 )
                 .symbolSize(CGSize(width: 14, height: 14))
-                .foregroundStyle(Color.orange)
+                .foregroundStyle(Color.purple)
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
                         Text("\(String(format: "%.1f", selectedPoint.weightLbs)) lbs")
@@ -236,7 +237,7 @@ struct WeightDataView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundColor(.purple)
             
             Text("Error Loading Data")
                 .font(.headline)

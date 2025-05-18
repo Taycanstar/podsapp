@@ -172,7 +172,7 @@ struct HeightDataView: View {
                     y: .value("Selected Height", selectedPoint.heightCm)
                 )
                 .symbolSize(CGSize(width: 14, height: 14))
-                .foregroundStyle(Color.orange)
+                .foregroundStyle(Color.purple)
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
                         // Calculate feet and inches
@@ -249,7 +249,7 @@ struct HeightDataView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundColor(.purple)
             
             Text("Error Loading Data")
                 .font(.headline)
