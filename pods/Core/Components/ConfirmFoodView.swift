@@ -60,6 +60,47 @@ struct ConfirmFoodView: View {
         self._path = path
         self._title = State(initialValue: food.description)
         
+        // Debug print full barcode food response
+        print("====== BARCODE FOOD API RESPONSE ======")
+        print("Food ID: \(food.fdcId)")
+        print("Description: \(food.description)")
+        print("Brand: \(food.brandName ?? "N/A")")
+        print("Serving Size: \(food.servingSize ?? 0)")
+        print("Serving Size Unit: \(food.servingSizeUnit ?? "N/A")")
+        print("Household Serving Text: \(food.householdServingFullText ?? "N/A")")
+        print("Number of Servings: \(food.numberOfServings ?? 1)")
+        
+        // Print food measures for more details about serving options
+        print("\nFood Measures:")
+        if !food.foodMeasures.isEmpty {
+            for (index, measure) in food.foodMeasures.enumerated() {
+                print("  Measure \(index + 1):")
+                print("    - Text: \(measure.disseminationText ?? "N/A")")
+                print("    - Modifier: \(measure.modifier ?? "N/A")")
+                print("    - Unit: \(measure.measureUnitName ?? "N/A")")
+                print("    - Gram Weight: \(measure.gramWeight ?? 0)")
+            }
+        } else {
+            print("  No measures available")
+        }
+        
+        // Print all nutrients for debugging
+        print("\nAll Nutrients:")
+        for nutrient in food.foodNutrients {
+            print("  \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
+        }
+        
+        print("\nRaw Food Object:")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        if let jsonData = try? encoder.encode(food), 
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print(jsonString)
+        } else {
+            print("Could not encode food object to JSON")
+        }
+        print("====== END BARCODE FOOD RESPONSE ======")
+        
         // Set serving size information
         if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
             self._servingSize = State(initialValue: "\(servingSize) \(unit)")
@@ -254,7 +295,7 @@ struct ConfirmFoodView: View {
                                 }
                             }) {
                                 Image(systemName: "minus")
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 18, height: 18)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
@@ -268,7 +309,7 @@ struct ConfirmFoodView: View {
                                 numberOfServings += 0.5
                             }) {
                                 Image(systemName: "plus")
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 18, height: 18)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
