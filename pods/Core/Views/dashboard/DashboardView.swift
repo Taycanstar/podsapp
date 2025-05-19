@@ -822,51 +822,61 @@ struct LogRow: View {
             // Top row: Name and time
             HStack {
                 Text(displayName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
+                    // .lineLimit(1)
                 Spacer()
                 if let timeLabel = getTimeLabel() {
                     Text(timeLabel)
                         .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color(.systemGray3))
+                        .foregroundColor(Color(.systemGray2))
                 }
             }
-            // Middle row: Calories
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.orange)
-                Text("\(Int(log.displayCalories))cal")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(Color(.label))
-            }
-            // Bottom row: Macros
-            HStack(spacing: 24) {
+            Spacer(minLength: 0)
+            // Bottom row: Calories (left) and Macros (right)
+            HStack(alignment: .bottom) {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color("brightOrange"))
+
+                        HStack(spacing: 1, alignment: .bottom) {
+                                       Text("\(Int(log.displayCalories))")
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("cal")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        }
+
+             
+                }
                 Spacer()
-                VStack(spacing: 0) {
-                    Text("Protein")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.blue)
-                    Text("\(Int(protein))g")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.primary)
-                }
-                VStack(spacing: 0) {
-                    Text("Carbs")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
-                    Text("\(Int(carbs))g")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.primary)
-                }
-                VStack(spacing: 0) {
-                    Text("Fat")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.purple)
-                    Text("\(Int(fat))g")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.primary)
+                HStack(spacing: 24) {
+                    VStack(spacing: 0) {
+                        Text("Protein")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(.blue)
+                        Text("\(Int(protein))g")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary)
+                    }
+                    VStack(spacing: 0) {
+                        Text("Carbs")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
+                        Text("\(Int(carbs))g")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary)
+                    }
+                    VStack(spacing: 0) {
+                        Text("Fat")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(.pink)
+                        Text("\(Int(fat))g")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
         }
