@@ -297,6 +297,22 @@ struct ConfirmFoodView: View {
         self._calcium = State(initialValue: String(format: "%.1f", tmpCalcium))
         self._iron = State(initialValue: String(format: "%.1f", tmpIron))
         
+        // Log additional nutrients for debugging
+        print("DEBUG: Extracted Additional Nutrients:")
+        print("- Saturated Fat: \(tmpSaturatedFat)g")
+        print("- Polyunsaturated Fat: \(tmpPolyunsaturatedFat)g")
+        print("- Monounsaturated Fat: \(tmpMonounsaturatedFat)g")
+        print("- Trans Fat: \(tmpTransFat)g")
+        print("- Cholesterol: \(tmpCholesterol)mg")
+        print("- Sodium: \(tmpSodium)mg")
+        print("- Potassium: \(tmpPotassium)mg")
+        print("- Sugar: \(tmpSugar)g")
+        print("- Fiber: \(tmpFiber)g")
+        print("- Vitamin A: \(tmpVitaminA)%")
+        print("- Vitamin C: \(tmpVitaminC)%")
+        print("- Calcium: \(tmpCalcium)%")
+        print("- Iron: \(tmpIron)%")
+        
         // Set barcode food properties
         self._isBarcodeFood = State(initialValue: true)
         self._originalFood = State(initialValue: food)
