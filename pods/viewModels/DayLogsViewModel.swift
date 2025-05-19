@@ -15,6 +15,9 @@ final class DayLogsViewModel: ObservableObject {
     didSet { recalculateTotals() }
   }
   @Published var calorieGoal      : Double = 2_000
+  @Published var proteinGoal      : Double = 150
+  @Published var carbsGoal        : Double = 200
+  @Published var fatGoal          : Double = 70
 @Published var remainingCalories: Double = 2_000   // always ≥ 0
 
   private var pendingByDate: [Date: [CombinedLog]] = [:]
@@ -45,7 +48,7 @@ final class DayLogsViewModel: ObservableObject {
 
   func setEmail(_ newEmail: String) {
     email = newEmail
-    fetchCalorieGoal()
+    fetchNutritionGoals()
   }
 
 
@@ -60,6 +63,24 @@ final class DayLogsViewModel: ObservableObject {
         calorieGoal = Double(UserGoalsManager.shared.dailyGoals.calories)
     }
     remainingCalories = max(0, calorieGoal - totalCalories)
+}
+
+ func fetchNutritionGoals() {
+    // First try to fetch the calorie goal (keeps existing logic)
+    fetchCalorieGoal()
+    
+    // Then fetch protein, carbs, and fat goals
+    if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+       let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
+        proteinGoal = goals.protein
+        carbsGoal = goals.carbs
+        fatGoal = goals.fat
+    } else {
+        // Use UserGoalsManager for defaults
+        proteinGoal = Double(UserGoalsManager.shared.dailyGoals.protein)
+        carbsGoal = Double(UserGoalsManager.shared.dailyGoals.carbs)
+        fatGoal = Double(UserGoalsManager.shared.dailyGoals.fat)
+    }
 }
 
 

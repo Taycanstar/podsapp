@@ -1037,6 +1037,180 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+
+    // MARK: - Nutrition Goals
+
+    /// Update a user's nutrition goals
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - caloriesGoal: Daily calorie goal
+    ///   - proteinGoal: Daily protein goal in grams
+    ///   - carbsGoal: Daily carbs goal in grams
+    ///   - fatGoal: Daily fat goal in grams
+    ///   - completion: Result callback with updated goals or error
+    func updateNutritionGoals(
+        userEmail: String,
+        caloriesGoal: Double,
+        proteinGoal: Double,
+        carbsGoal: Double,
+        fatGoal: Double,
+        completion: @escaping (Result<NutritionGoalsResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/update-nutrition-goals/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Create request body
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "calories_goal": caloriesGoal,
+            "protein_goal": proteinGoal,
+            "carbs_goal": carbsGoal,
+            "fat_goal": fatGoal
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("�� Updating nutrition goals for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                let response = try decoder.decode(NutritionGoalsResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated nutrition goals")
+                    completion(.success(response))
+                }
+                
+            } catch {
+                print("❌ Decoding error in update nutrition goals: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Generate optimized nutrition goals based on user's profile data
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - completion: Result callback with generated goals or error
+    func generateNutritionGoals(
+        userEmail: String,
+        completion: @escaping (Result<NutritionGoalsResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/generate-goals/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Create request body (only requires email)
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🧠 Generating optimized nutrition goals for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                let response = try decoder.decode(NutritionGoalsResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully generated nutrition goals")
+                    completion(.success(response))
+                }
+                
+            } catch {
+                print("❌ Decoding error in generate nutrition goals: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
 }
 
 

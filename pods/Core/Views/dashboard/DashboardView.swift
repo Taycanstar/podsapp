@@ -221,53 +221,59 @@ private extension DashboardView {
     
     // Remaining calories card
     var remainingCaloriesCard: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Remaining")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
+        NavigationLink(destination: GoalProgress()) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Remaining")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
 
-                Text("\(Int(remainingCal))cal")
-                    .font(.system(size: 32, weight: .bold))
+                    Text("\(Int(remainingCal))cal")
+                        .font(.system(size: 32, weight: .bold))
+                }
+
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(lineWidth: 10)
+                        .opacity(0.2)
+                        .foregroundColor(.green)
+
+                    Circle()
+                        .trim(from: 0,
+                              to: CGFloat(1 - (remainingCal / calorieGoal)))
+                        .stroke(style: StrokeStyle(lineWidth: 10,
+                                                   lineCap: .round))
+                        .foregroundColor(.green)
+                        .rotationEffect(.degrees(270))
+                        .animation(.linear, value: remainingCal)
+                }
+                .frame(width: 60, height: 60)
             }
-
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .stroke(lineWidth: 10)
-                    .opacity(0.2)
-                    .foregroundColor(.green)
-
-                Circle()
-                    .trim(from: 0,
-                          to: CGFloat(1 - (remainingCal / calorieGoal)))
-                    .stroke(style: StrokeStyle(lineWidth: 10,
-                                               lineCap: .round))
-                    .foregroundColor(.green)
-                    .rotationEffect(.degrees(270))
-                    .animation(.linear, value: remainingCal)
-            }
-            .frame(width: 60, height: 60)
+            .frame(height: 85) // Reduced height
+            .padding(.vertical, 12) // Slightly reduced vertical padding
+            .padding(.horizontal)
+            .background(Color("iosnp"))
+            .cornerRadius(12)
         }
-        .frame(height: 85) // Reduced height
-        .padding(.vertical, 12) // Slightly reduced vertical padding
-        .padding(.horizontal)
-        .background(Color("iosnp"))
-        .cornerRadius(12)
+        .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
     
     // Macros card as a separate component
     var macrosCard: some View {
-        VStack(spacing: 16) {
-            macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
-                    right: ("Protein",  vm.totalProtein,   "fish",        .blue))
-            macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
-                    right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
+        NavigationLink(destination: GoalProgress()) {
+            VStack(spacing: 16) {
+                macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
+                        right: ("Protein",  vm.totalProtein,   "fish",        .blue))
+                macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
+                        right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
+            }
+            .padding()
+            .background(Color("iosnp"))
+            .cornerRadius(12)
         }
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
+        .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
 
     // Macro Circles Card for page 2

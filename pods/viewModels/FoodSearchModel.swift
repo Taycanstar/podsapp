@@ -862,13 +862,59 @@ extension InsightDetails {
 }
 
 struct NutritionGoals: Codable {
-    let bmr: Double
-    let tdee: Double
+    let bmr: Double?
+    let tdee: Double?
     let calories: Double
     let protein: Double
     let carbs: Double
     let fat: Double
     let metabolismInsights: InsightDetails?
     let nutritionInsights: InsightDetails?
+    
+    // Add initializer with default values for optional fields
+    init(bmr: Double? = nil, 
+         tdee: Double? = nil, 
+         calories: Double, 
+         protein: Double, 
+         carbs: Double, 
+         fat: Double, 
+         metabolismInsights: InsightDetails? = nil, 
+         nutritionInsights: InsightDetails? = nil) {
+        self.bmr = bmr
+        self.tdee = tdee
+        self.calories = calories
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.metabolismInsights = metabolismInsights
+        self.nutritionInsights = nutritionInsights
+    }
+    
+    // Implement custom decoding to handle missing fields
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Required fields
+        calories = try container.decode(Double.self, forKey: .calories)
+        protein = try container.decode(Double.self, forKey: .protein)
+        carbs = try container.decode(Double.self, forKey: .carbs)
+        fat = try container.decode(Double.self, forKey: .fat)
+        
+        // Optional fields - decode if present, use nil if missing
+        bmr = try container.decodeIfPresent(Double.self, forKey: .bmr)
+        tdee = try container.decodeIfPresent(Double.self, forKey: .tdee)
+        metabolismInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .metabolismInsights)
+        nutritionInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .nutritionInsights)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case bmr, tdee, calories, protein, carbs, fat
+        case metabolismInsights = "metabolism_insights"
+        case nutritionInsights = "nutrition_insights"
+    }
 }
 
+struct NutritionGoalsResponse: Codable {
+    let success: Bool
+    let goals: NutritionGoals
+}

@@ -183,6 +183,7 @@
 		36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B92DD938B900D174FB /* WeightDataView.swift */; };
 		36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BB2DD938C800D174FB /* HeightDataView.swift */; };
 		36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */; };
+		36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -388,6 +389,7 @@
 		36ED35B92DD938B900D174FB /* WeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightDataView.swift; sourceTree = "<group>"; };
 		36ED35BB2DD938C800D174FB /* HeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightDataView.swift; sourceTree = "<group>"; };
 		36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLogDetails.swift; sourceTree = "<group>"; };
+		36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalProgress.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -774,6 +776,7 @@
 				36ED35B52DD7F28900D174FB /* EditHeightView.swift */,
 				36ED35B92DD938B900D174FB /* WeightDataView.swift */,
 				36ED35BB2DD938C800D174FB /* HeightDataView.swift */,
+				36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */,
 			);
 			path = dashboard;
 			sourceTree = "<group>";
@@ -1077,6 +1080,7 @@
 				36B8516B2D4FEEB700A876C3 /* HomePodView.swift in Sources */,
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
+				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
