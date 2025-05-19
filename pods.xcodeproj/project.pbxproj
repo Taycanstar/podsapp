@@ -182,6 +182,7 @@
 		36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B72DD92FF000D174FB /* UserDataModel.swift */; };
 		36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B92DD938B900D174FB /* WeightDataView.swift */; };
 		36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BB2DD938C800D174FB /* HeightDataView.swift */; };
+		36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -386,6 +387,7 @@
 		36ED35B72DD92FF000D174FB /* UserDataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataModel.swift; sourceTree = "<group>"; };
 		36ED35B92DD938B900D174FB /* WeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightDataView.swift; sourceTree = "<group>"; };
 		36ED35BB2DD938C800D174FB /* HeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightDataView.swift; sourceTree = "<group>"; };
+		36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLogDetails.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -755,6 +757,7 @@
 				364A83C72DA7738B009D2620 /* CreateFoodView.swift */,
 				364A83C92DAB0F82009D2620 /* FoodScannerView.swift */,
 				364A83CD2DAEC017009D2620 /* VoiceLogView.swift */,
+				36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1194,6 +1197,7 @@
 				36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */,
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
+				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,

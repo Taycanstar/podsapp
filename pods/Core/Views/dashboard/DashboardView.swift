@@ -17,6 +17,7 @@ struct DashboardView: View {
     @State private var showWaterLogSheet = false
     @State private var showHealthPermissionAlert = false
     @State private var showNewSheet = false
+    @State private var selectedFoodLog: Food? = nil
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -505,8 +506,27 @@ private extension DashboardView {
                 .fontWeight(.bold)
             LazyVStack(spacing: 12) {
                 ForEach(vm.logs) { log in
-                    LogRow(log: log)
-                        .id(log.id)
+                    ZStack {
+                        LogRow(log: log)
+                            .id(log.id)
+                            .onTapGesture {
+                                if log.type == .food, let loggedFood = log.food {
+                                    selectedFoodLog = loggedFood.asFood
+                                }
+                            }
+                        // NavigationLink for food logs
+                        if log.type == .food, let loggedFood = log.food {
+                            NavigationLink(
+                                destination: FoodLogDetails(food: loggedFood.asFood),
+                                tag: loggedFood.asFood,
+                                selection: $selectedFoodLog
+                            ) {
+                                EmptyView()
+                            }
+                            .opacity(0)
+                            .frame(width: 0, height: 0)
+                        }
+                    }
                 }
             }
         }
