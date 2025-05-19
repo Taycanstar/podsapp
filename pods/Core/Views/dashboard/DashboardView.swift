@@ -560,7 +560,7 @@ private extension DashboardView {
                 } label: {
                     Image(systemName: "calendar")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.primary)
                 }
             }
         }
