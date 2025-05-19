@@ -818,78 +818,78 @@ struct LogRow: View {
     @State private var isHighlighted = false
     
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            // Icon based on meal type
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 45, height: 45)
-                
-                Image(systemName: mealTypeIcon)
-                    .font(.system(size: 18))
-                    .foregroundColor(.accentColor)
-            }
-            
-            // Food/Meal info
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
+            // Top row: Name and time
+            HStack {
                 Text(displayName)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
                     .lineLimit(1)
-                
-                HStack(spacing: 8) {
-                    if let mealType = getMealTypeLabel() {
-                        Text(mealType)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let mealType = getMealTypeLabel(), let timeLabel = getTimeLabel() {
-                        Text("•")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let timeLabel = getTimeLabel() {
-                        Text(timeLabel)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
+                Spacer()
+                if let timeLabel = getTimeLabel() {
+                    Text(timeLabel)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color(.systemGray3))
                 }
             }
-            
-            Spacer()
-            
-            // Calories
-            HStack(spacing: 4) {
+            // Middle row: Calories
+            HStack(spacing: 6) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 12))
+                    .font(.system(size: 20))
                     .foregroundColor(.orange)
-                Text("\(Int(log.displayCalories))")
-                    .font(.system(size: 15, weight: .medium))
+                Text("\(Int(log.displayCalories))cal")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(Color(.label))
+            }
+            // Bottom row: Macros
+            HStack(spacing: 24) {
+                Spacer()
+                VStack(spacing: 0) {
+                    Text("Protein")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.blue)
+                    Text("\(Int(protein))g")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary)
+                }
+                VStack(spacing: 0) {
+                    Text("Carbs")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
+                    Text("\(Int(carbs))g")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary)
+                }
+                VStack(spacing: 0) {
+                    Text("Fat")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.purple)
+                    Text("\(Int(fat))g")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary)
+                }
             }
         }
-        .padding(12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color("iosnp"))
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white)
+                .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 14)
                         .stroke(Color.accentColor.opacity(isHighlighted ? 0.5 : 0), lineWidth: 2)
                 )
         )
-        .cornerRadius(12)
+        .cornerRadius(14)
         .onAppear {
             // Apply highlight animation for new (optimistic) logs
             if log.isOptimistic {
                 withAnimation(.easeInOut(duration: 0.5).repeatCount(3, autoreverses: true)) {
                     isHighlighted = true
                 }
-                
-                // Remove highlight after animation finishes
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation {
-                        isHighlighted = false
-                    }
+                    withAnimation { isHighlighted = false }
                 }
             }
         }
@@ -906,34 +906,21 @@ struct LogRow: View {
             return log.recipe?.title ?? "Recipe"
         }
     }
-    
-    private var mealTypeIcon: String {
-        let mealType = log.mealType?.lowercased() ?? ""
-        
-        switch mealType {
-        case "breakfast":
-            return "sunrise.fill"
-        case "lunch":
-            return "sun.max.fill"
-        case "dinner":
-            return "moon.stars.fill"
-        case "snack":
-            return "carrot.fill"
-        default:
-            return "fork.knife"
-        }
-    }
-    
-    private func getMealTypeLabel() -> String? {
-        return log.mealType
-    }
-    
     private func getTimeLabel() -> String? {
         guard let date = log.scheduledAt else { return nil }
-        
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    // Macro helpers
+    private var protein: Double {
+        log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein ?? 0
+    }
+    private var carbs: Double {
+        log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs ?? 0
+    }
+    private var fat: Double {
+        log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat ?? 0
     }
 }
 
