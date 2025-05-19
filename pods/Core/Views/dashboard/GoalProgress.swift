@@ -114,7 +114,7 @@ struct GoalProgress: View {
                             .foregroundColor(.white)
                             .cornerRadius(12)
                     } else {
-                        Text("Generate Goals with AI")
+                        Text("Generate Personalized Goals")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
@@ -128,6 +128,7 @@ struct GoalProgress: View {
             }
             .padding(.top, 16)
         }
+        .background(Color("iosbg").ignoresSafeArea())
         .alert(isPresented: $showError) {
             Alert(
                 title: Text("Error"),
@@ -135,7 +136,7 @@ struct GoalProgress: View {
                 dismissButton: .default(Text("OK"))
             )
         }
-        .navigationTitle("Goals")
+        .navigationTitle("Update Goals")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -194,6 +195,9 @@ struct GoalProgress: View {
                 vm.proteinGoal = response.goals.protein
                 vm.carbsGoal = response.goals.carbs
                 vm.fatGoal = response.goals.fat
+                
+                // Manually update the remaining calories to refresh the UI
+                vm.remainingCalories = max(0, response.goals.calories - vm.totalCalories)
                 
                 // Save to UserDefaults for persistence
                 let nutritionGoals = NutritionGoals(
@@ -255,6 +259,9 @@ struct GoalProgress: View {
                 vm.proteinGoal = response.goals.protein
                 vm.carbsGoal = response.goals.carbs
                 vm.fatGoal = response.goals.fat
+                
+                // Manually update the remaining calories to refresh the UI
+                vm.remainingCalories = max(0, response.goals.calories - vm.totalCalories)
                 
                 // Save to UserDefaults for persistence
                 let nutritionGoals = NutritionGoals(
