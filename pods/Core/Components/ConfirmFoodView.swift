@@ -47,6 +47,25 @@ struct ConfirmFoodView: View {
     @State private var barcodeFoodLogId: Int? = nil
     @State private var servingUnit: String = "serving"
 
+    // NEW: Base nutrition values (per single serving)
+    @State private var baseCalories: Double = 0
+    @State private var baseProtein: Double = 0
+    @State private var baseCarbs: Double = 0
+    @State private var baseFat: Double = 0
+    @State private var baseSaturatedFat: Double = 0
+    @State private var basePolyunsaturatedFat: Double = 0
+    @State private var baseMonounsaturatedFat: Double = 0
+    @State private var baseTransFat: Double = 0
+    @State private var baseCholesterol: Double = 0
+    @State private var baseSodium: Double = 0
+    @State private var basePotassium: Double = 0
+    @State private var baseSugar: Double = 0
+    @State private var baseFiber: Double = 0
+    @State private var baseVitaminA: Double = 0
+    @State private var baseVitaminC: Double = 0
+    @State private var baseCalcium: Double = 0
+    @State private var baseIron: Double = 0
+
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
     // Default initializer for manual food creation
@@ -112,50 +131,183 @@ struct ConfirmFoodView: View {
         // Set number of servings (default to 1 if nil)
         self._numberOfServings = State(initialValue: food.numberOfServings ?? 1)
         
-        // Set nutrition information
-        self._calories = State(initialValue: "\(food.calories ?? 0)")
-        self._protein = State(initialValue: "\(food.protein ?? 0)")
-        self._carbs = State(initialValue: "\(food.carbs ?? 0)")
-        self._fat = State(initialValue: "\(food.fat ?? 0)")
+        // Calculate nutrition value variables without modifying state directly
+        var tmpCalories: Double = 0
+        var tmpProtein: Double = 0
+        var tmpCarbs: Double = 0
+        var tmpFat: Double = 0
         
-        // Get additional nutrients if available
+        // Extract nutrient values directly from food.foodNutrients
+        for nutrient in food.foodNutrients {
+            if nutrient.nutrientName == "Energy" {
+                tmpCalories = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Protein" {
+                tmpProtein = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Carbohydrate, by difference" {
+                tmpCarbs = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Total lipid (fat)" {
+                tmpFat = nutrient.value ?? 0
+            }
+        }
+        
+        // Now set the base values and string display values
+        self._baseCalories = State(initialValue: tmpCalories)
+        self._baseProtein = State(initialValue: tmpProtein)
+        self._baseCarbs = State(initialValue: tmpCarbs)
+        self._baseFat = State(initialValue: tmpFat)
+        
+        // Set the string values for display
+        self._calories = State(initialValue: String(format: "%.1f", tmpCalories))
+        self._protein = State(initialValue: String(format: "%.1f", tmpProtein))
+        self._carbs = State(initialValue: String(format: "%.1f", tmpCarbs))
+        self._fat = State(initialValue: String(format: "%.1f", tmpFat))
+        
+        // Debug: Print the extracted values
+        print("DEBUG: Extracted Nutrition Values:")
+        print("- Calories: \(tmpCalories)")
+        print("- Protein: \(tmpProtein)")
+        print("- Carbs: \(tmpCarbs)")
+        print("- Fat: \(tmpFat)")
+        
+        // Debug: Print the raw food nutrients again to verify
+        print("DEBUG: Direct check of food.foodNutrients:")
+        for nutrient in food.foodNutrients {
+            print("- \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
+            
+            // Special checking for carbs
+            if nutrient.nutrientName == "Carbohydrate, by difference" {
+                print("  Found carbohydrate with value: \(nutrient.value ?? 0)")
+            }
+        }
+        
+        // Debug: Print the food object's computed properties
+        if let food = originalFood {
+            print("DEBUG: Food Object Computed Properties:")
+            print("- food.calories: \(food.calories ?? 0)")
+            print("- food.protein: \(food.protein ?? 0)")
+            print("- food.carbs: \(food.carbs ?? 0)")
+            print("- food.fat: \(food.fat ?? 0)")
+            
+            // Debug: Print how the carbs are calculated
+            print("DEBUG: Carbohydrate Calculation:")
+            if let carbNutrient = food.foodNutrients.first(where: { $0.nutrientName == "Carbohydrate, by difference" }) {
+                print("- Found exact 'Carbohydrate, by difference': \(carbNutrient.value ?? 0)")
+            } else {
+                print("- No exact 'Carbohydrate, by difference' nutrient found")
+                
+                let carbMatches = food.foodNutrients.filter { 
+                    $0.nutrientName.lowercased().contains("carbohydrate") ||
+                    $0.nutrientName.lowercased().contains("carbs")
+                }
+                print("- Carbohydrate pattern matches: \(carbMatches.count)")
+                for (index, nutrient) in carbMatches.enumerated() {
+                    print("  \(index+1). \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
+                }
+            }
+        }
+        
+        // Debug: Print the raw nutrients from food
+        print("DEBUG: Raw Nutrients from Food:")
+        for nutrient in food.foodNutrients {
+            print("- \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
+        }
+        
+        // No longer needed - we're setting these directly from extracted values above
+        // (already set through the State initialValue assignments earlier)
+        
+        // Extract additional nutrients
+        var tmpSaturatedFat: Double = 0
+        var tmpPolyunsaturatedFat: Double = 0
+        var tmpMonounsaturatedFat: Double = 0
+        var tmpTransFat: Double = 0
+        var tmpCholesterol: Double = 0
+        var tmpSodium: Double = 0
+        var tmpPotassium: Double = 0
+        var tmpSugar: Double = 0
+        var tmpFiber: Double = 0
+        var tmpVitaminA: Double = 0
+        var tmpVitaminC: Double = 0
+        var tmpCalcium: Double = 0
+        var tmpIron: Double = 0
+        
+        // Get additional nutrients in one pass
         for nutrient in food.foodNutrients {
             switch nutrient.nutrientName {
             case "Saturated Fatty Acids":
-                self._saturatedFat = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpSaturatedFat = nutrient.value ?? 0
             case "Polyunsaturated Fatty Acids":
-                self._polyunsaturatedFat = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpPolyunsaturatedFat = nutrient.value ?? 0
             case "Monounsaturated Fatty Acids":
-                self._monounsaturatedFat = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpMonounsaturatedFat = nutrient.value ?? 0
             case "Trans Fatty Acids":
-                self._transFat = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpTransFat = nutrient.value ?? 0
             case "Cholesterol":
-                self._cholesterol = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpCholesterol = nutrient.value ?? 0
             case "Sodium":
-                self._sodium = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpSodium = nutrient.value ?? 0
             case "Potassium":
-                self._potassium = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpPotassium = nutrient.value ?? 0
             case "Sugar":
-                self._sugar = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpSugar = nutrient.value ?? 0
             case "Fiber":
-                self._fiber = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpFiber = nutrient.value ?? 0
             case "Vitamin A":
-                self._vitaminA = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpVitaminA = nutrient.value ?? 0
             case "Vitamin C":
-                self._vitaminC = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpVitaminC = nutrient.value ?? 0
             case "Calcium":
-                self._calcium = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpCalcium = nutrient.value ?? 0
             case "Iron":
-                self._iron = State(initialValue: "\(nutrient.value ?? 0)")
+                tmpIron = nutrient.value ?? 0
             default:
                 break
             }
         }
         
+        // Set state for additional nutrient base values
+        self._baseSaturatedFat = State(initialValue: tmpSaturatedFat)
+        self._basePolyunsaturatedFat = State(initialValue: tmpPolyunsaturatedFat)
+        self._baseMonounsaturatedFat = State(initialValue: tmpMonounsaturatedFat)
+        self._baseTransFat = State(initialValue: tmpTransFat)
+        self._baseCholesterol = State(initialValue: tmpCholesterol)
+        self._baseSodium = State(initialValue: tmpSodium)
+        self._basePotassium = State(initialValue: tmpPotassium)
+        self._baseSugar = State(initialValue: tmpSugar)
+        self._baseFiber = State(initialValue: tmpFiber)
+        self._baseVitaminA = State(initialValue: tmpVitaminA)
+        self._baseVitaminC = State(initialValue: tmpVitaminC)
+        self._baseCalcium = State(initialValue: tmpCalcium)
+        self._baseIron = State(initialValue: tmpIron)
+        
+        // Set the displayed string values
+        self._saturatedFat = State(initialValue: String(format: "%.1f", tmpSaturatedFat))
+        self._polyunsaturatedFat = State(initialValue: String(format: "%.1f", tmpPolyunsaturatedFat))
+        self._monounsaturatedFat = State(initialValue: String(format: "%.1f", tmpMonounsaturatedFat))
+        self._transFat = State(initialValue: String(format: "%.1f", tmpTransFat))
+        self._cholesterol = State(initialValue: String(format: "%.1f", tmpCholesterol))
+        self._sodium = State(initialValue: String(format: "%.1f", tmpSodium))
+        self._potassium = State(initialValue: String(format: "%.1f", tmpPotassium))
+        self._sugar = State(initialValue: String(format: "%.1f", tmpSugar))
+        self._fiber = State(initialValue: String(format: "%.1f", tmpFiber))
+        self._vitaminA = State(initialValue: String(format: "%.1f", tmpVitaminA))
+        self._vitaminC = State(initialValue: String(format: "%.1f", tmpVitaminC))
+        self._calcium = State(initialValue: String(format: "%.1f", tmpCalcium))
+        self._iron = State(initialValue: String(format: "%.1f", tmpIron))
+        
         // Set barcode food properties
         self._isBarcodeFood = State(initialValue: true)
         self._originalFood = State(initialValue: food)
         self._barcodeFoodLogId = State(initialValue: foodLogId)
+        
+        // Final check of string values that will be displayed
+        print("DEBUG: Final String Values to Display:")
+        print("- Calories string: \(self.calories)")
+        print("- Protein string: \(self.protein)")
+        print("- Carbs string: \(self.carbs)")
+        print("- Fat string: \(self.fat)")
     }
     
     var body: some View {
@@ -292,10 +444,11 @@ struct ConfirmFoodView: View {
                             Button(action: {
                                 if numberOfServings > 0.5 {
                                     numberOfServings -= 0.5
+                                    updateNutritionValues()
                                 }
                             }) {
                                 Image(systemName: "minus")
-                                    .frame(width: 18, height: 18)
+                                    .frame(width: 12, height: 12)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
@@ -307,9 +460,10 @@ struct ConfirmFoodView: View {
                             
                             Button(action: {
                                 numberOfServings += 0.5
+                                updateNutritionValues()
                             }) {
                                 Image(systemName: "plus")
-                                    .frame(width: 18, height: 18)
+                                    .frame(width: 12, height: 12)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
@@ -319,7 +473,10 @@ struct ConfirmFoodView: View {
                         // Original integer stepper for manual foods
                         Stepper("\(Int(numberOfServings))", value: Binding(
                             get: { Int(self.numberOfServings) },
-                            set: { self.numberOfServings = Double($0) }
+                            set: { 
+                                self.numberOfServings = Double($0)
+                                updateNutritionValues()
+                            }
                         ), in: 1...20)
                     }
                 }
@@ -907,6 +1064,43 @@ struct ConfirmFoodView: View {
         if let doubleValue = Double(value), doubleValue > 0 {
             nutrients.append(Nutrient(nutrientName: name, value: doubleValue, unitName: unit))
         }
+    }
+    
+    // Helper method to calculate adjusted values based on number of servings
+    private func calculateAdjustedValue(_ baseValue: Double, servings: Double) -> Double {
+        return (baseValue * servings).rounded(toPlaces: 1)
+    }
+    
+    // Update all nutrition values when number of servings changes
+    private func updateNutritionValues() {
+        // Update with formatted strings
+        calories = String(format: "%.1f", baseCalories * numberOfServings)
+        protein = String(format: "%.1f", baseProtein * numberOfServings)
+        carbs = String(format: "%.1f", baseCarbs * numberOfServings)
+        fat = String(format: "%.1f", baseFat * numberOfServings)
+        
+        // Update additional nutrients too with formatted strings
+        saturatedFat = String(format: "%.1f", baseSaturatedFat * numberOfServings)
+        polyunsaturatedFat = String(format: "%.1f", basePolyunsaturatedFat * numberOfServings)
+        monounsaturatedFat = String(format: "%.1f", baseMonounsaturatedFat * numberOfServings)
+        transFat = String(format: "%.1f", baseTransFat * numberOfServings)
+        cholesterol = String(format: "%.1f", baseCholesterol * numberOfServings)
+        sodium = String(format: "%.1f", baseSodium * numberOfServings)
+        potassium = String(format: "%.1f", basePotassium * numberOfServings)
+        sugar = String(format: "%.1f", baseSugar * numberOfServings)
+        fiber = String(format: "%.1f", baseFiber * numberOfServings)
+        vitaminA = String(format: "%.1f", baseVitaminA * numberOfServings)
+        vitaminC = String(format: "%.1f", baseVitaminC * numberOfServings)
+        calcium = String(format: "%.1f", baseCalcium * numberOfServings)
+        iron = String(format: "%.1f", baseIron * numberOfServings)
+    }
+}
+
+// Extension to round doubles to a specific number of decimal places
+extension Double {
+    func rounded(toPlaces places: Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
     }
 }
 

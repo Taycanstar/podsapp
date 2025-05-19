@@ -54,8 +54,15 @@ struct Food: Codable, Identifiable, Hashable{
     }
 
     var carbs: Double? {
-        foodNutrients.first { 
-            $0.nutrientName.lowercased().contains("carbohydrate") 
+        // First try exact match for "Carbohydrate, by difference"
+        if let carbNutrient = foodNutrients.first(where: { $0.nutrientName == "Carbohydrate, by difference" }) {
+            return carbNutrient.value
+        }
+        
+        // Then try more general pattern matching
+        return foodNutrients.first { 
+            $0.nutrientName.lowercased().contains("carbohydrate") ||
+            $0.nutrientName.lowercased().contains("carbs")
         }?.value ?? 0
     }
 
