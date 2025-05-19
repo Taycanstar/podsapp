@@ -218,12 +218,21 @@ struct ConfirmFoodView: View {
                 Divider()
                     .padding(.leading, 16)
                 
-                // Serving Size Row - single text field
-                TextField("Serving Size (e.g., 1 cup, 2 tbsp)", text: $servingSize)
-                    .keyboardType(.asciiCapable)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                // Serving Size Row - with label on left and input on right
+                HStack {
+                    Text("Serving Size")
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
+                        .keyboardType(.asciiCapable)
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 200)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 16)
                 
                 // Divider
                 Divider()
@@ -245,6 +254,7 @@ struct ConfirmFoodView: View {
                                 }
                             }) {
                                 Image(systemName: "minus")
+                                    .frame(width: 24, height: 24)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
@@ -258,6 +268,7 @@ struct ConfirmFoodView: View {
                                 numberOfServings += 0.5
                             }) {
                                 Image(systemName: "plus")
+                                    .frame(width: 24, height: 24)
                                     .padding(8)
                                     .background(Color.secondary.opacity(0.2))
                                     .clipShape(Circle())
@@ -293,44 +304,80 @@ struct ConfirmFoodView: View {
                 // Content
                 VStack(spacing: 0) {
                     // Calories (required)
-                    TextField("Calories*", text: $calories)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Calories")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $calories)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
                         .padding(.leading, 16)
                     
                     // Protein
-                    TextField("Protein (g)", text: $protein)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Protein (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $protein)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
                         .padding(.leading, 16)
                     
                     // Carbs
-                    TextField("Carbs (g)", text: $carbs)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Carbs (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $carbs)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
                         .padding(.leading, 16)
                     
                     // Fat
-                    TextField("Total Fat (g)", text: $fat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Total Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $fat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)
@@ -367,131 +414,248 @@ struct ConfirmFoodView: View {
                 // Content
                 VStack(spacing: 0) {
                     // Saturated Fat
-                    TextField("Saturated Fat (g)", text: $saturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Saturated Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $saturatedFat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Polyunsaturated Fat
-                    TextField("Polyunsaturated Fat (g)", text: $polyunsaturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Polyunsaturated Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $polyunsaturatedFat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Monounsaturated Fat
-                    TextField("Monounsaturated Fat (g)", text: $monounsaturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Monounsaturated Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $monounsaturatedFat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Trans Fat
-                    TextField("Trans Fat (g)", text: $transFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Trans Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $transFat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Cholesterol
-                    TextField("Cholesterol (mg)", text: $cholesterol)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Cholesterol (mg)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $cholesterol)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Sodium
-                    TextField("Sodium (mg)", text: $sodium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Sodium (mg)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $sodium)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Potassium
-                    TextField("Potassium (mg)", text: $potassium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Potassium (mg)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $potassium)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Sugar
-                    TextField("Sugar (g)", text: $sugar)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Sugar (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $sugar)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Fiber
-                    TextField("Fiber (g)", text: $fiber)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Fiber (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $fiber)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Vitamin A
-                    TextField("Vitamin A (%)", text: $vitaminA)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Vitamin A (%)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $vitaminA)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Vitamin C
-                    TextField("Vitamin C (%)", text: $vitaminC)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Vitamin C (%)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $vitaminC)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Calcium
-                    TextField("Calcium (%)", text: $calcium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Calcium (%)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $calcium)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
                     
                     // Iron
-                    TextField("Iron (%)", text: $iron)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+                    HStack {
+                        Text("Iron (%)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $iron)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)
