@@ -745,6 +745,11 @@ private extension DashboardView {
             }
         }
     }
+
+    // Convert water intake from liters to ounces
+    var waterIntakeOz: Double {
+        healthViewModel.waterIntake * 33.814
+    }
 }
 
 private extension Date {
@@ -1062,15 +1067,14 @@ private extension DashboardView {
                     systemImage: "flame.fill",
                     color: Color("brightOrange")
                 )
-                
-                            // Water with add button
-            waterMetricCell(
-                title: "Water",
-                value: String(format: "%.1f", healthViewModel.waterIntake),
-                unit: "L",
-                systemImage: "drop",
-                color: .blue
-            )
+                // Water with add button
+                waterMetricCell(
+                    title: "Water",
+                    value: String(format: "%.0f", waterIntakeOz),
+                    unit: "oz",
+                    systemImage: "drop",
+                    color: .blue
+                )
             }
             
             // Second row: Step Count and Step Distance
