@@ -547,13 +547,13 @@ private extension DashboardView {
 
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack(spacing: 16) {
-                Button {
-                    vm.loadLogs(for: vm.selectedDate)
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.accentColor)
-                }
+                // Button {
+                //     vm.loadLogs(for: vm.selectedDate)
+                // } label: {
+                //     Image(systemName: "arrow.clockwise")
+                //         .font(.system(size: 16, weight: .medium))
+                //         .foregroundColor(.accentColor)
+                // }
 
                 Button {
                     showDatePicker = true
