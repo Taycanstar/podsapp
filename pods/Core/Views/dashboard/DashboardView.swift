@@ -840,7 +840,7 @@ struct LogRow: View {
                         .font(.system(size: 20))
                         .foregroundColor(Color("brightOrange"))
 
-                        HStack(spacing: 1, alignment: .bottom) {
+                    HStack(alignment: .bottom, spacing: 1) {
                                        Text("\(Int(log.displayCalories))")
                         .font(.system(size: 22, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
@@ -880,6 +880,7 @@ struct LogRow: View {
                 }
             }
         }
+        .frame(minHeight: 80)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
