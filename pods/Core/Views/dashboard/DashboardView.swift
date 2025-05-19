@@ -16,6 +16,7 @@ struct DashboardView: View {
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
     @State private var showHealthPermissionAlert = false
+    @State private var showNewSheet = false
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -138,6 +139,17 @@ private var remainingCal: Double { vm.remainingCalories }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
+            }
+            .sheet(isPresented: $showNewSheet) {
+                NewSheetView(isPresented: $showNewSheet,
+                             showingVideoCreationScreen: .constant(false),
+                             showQuickPodView: .constant(false), 
+                             selectedTab: .constant(0),
+                             showFoodScanner: .constant(false),
+                             showVoiceLog: .constant(false))
+                    .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                    .presentationCornerRadius(25)
+                    .presentationBackground(Color(.systemBackground))
             }
 
         }
@@ -465,12 +477,11 @@ private extension DashboardView {
 
              
                 Button(action: {
-                    // open sheet
+                    showNewSheet = true
+                    HapticFeedback.generate()
                 }) {
                     Text("Start Logging")
                         .font(.system(size: 16, weight: .regular))
-                        // .frame(maxWidth: .infinity)
-                        // .frame(height: 56)
                         .padding(.vertical)
                         .padding(.horizontal, 24)
                         .background(Color("background"))
@@ -479,12 +490,9 @@ private extension DashboardView {
                 }
                 .background(Color("background"))
                  .cornerRadius(100)
-                // .padding(.horizontal)
-                // .padding(.vertical, 16)
            
         }
         
-        // .padding()
         .frame(maxWidth: .infinity)
     }
 
