@@ -65,7 +65,7 @@ private var remainingCal: Double { vm.remainingCalories }
                         Group {
                             if vm.isLoading        { loadingState }
                             else if let err = vm.error   { errorState(err) }
-                            else if vm.logs.isEmpty      { emptyState }
+                            else if vm.logs.isEmpty      { emptyState.padding(.horizontal) }
                             else                        { logsList }
                         }
                         .animation(.default, value: vm.logs)
@@ -457,17 +457,34 @@ private extension DashboardView {
     }
 
     var emptyState: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "fork.knife")
-                .font(.system(size: 50))
-                .foregroundColor(.gray)
-            Text("No logs for this day").font(.headline)
-            Text("Tap Log Food to add your meals.")
-                .font(.caption)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading,spacing: 20) {
+            Text("Recent Logs").font(.title).fontWeight(.bold)
+            Text("Food logged will appear here. Tap the (+) button to add a new log.")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+
+             
+                Button(action: {
+                    // open sheet
+                }) {
+                    Text("Start Logging")
+                        .font(.system(size: 16, weight: .regular))
+                        // .frame(maxWidth: .infinity)
+                        // .frame(height: 56)
+                        .padding(.vertical)
+                        .padding(.horizontal, 24)
+                        .background(Color("background"))
+                        .foregroundColor(Color("bg"))
+                        .cornerRadius(100)
+                }
+                .background(Color("background"))
+                 .cornerRadius(100)
+                // .padding(.horizontal)
+                // .padding(.vertical, 16)
+           
         }
-        .padding(.top, 50)
+        
+        // .padding()
         .frame(maxWidth: .infinity)
     }
 
