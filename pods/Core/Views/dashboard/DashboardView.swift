@@ -54,12 +54,14 @@ private var remainingCal: Double { vm.remainingCalories }
                             FoodAnalysisCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
+                                .padding(.bottom, 16)
                         }
 
                         if foodMgr.isScanningFood {
                             FoodGenerationCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
+                                .padding(.bottom, 16)
                         }
 
                         // ② list / loading / error / empty states

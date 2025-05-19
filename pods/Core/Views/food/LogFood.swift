@@ -613,7 +613,7 @@ private struct FoodListView: View {
                     
                     // Main content List with native swipe-to-delete
                     if !validLogs.isEmpty {
-                        let cardHeight = min(CGFloat(validLogs.count) * 55 + 16, UIScreen.main.bounds.height * 0.6)
+                        let cardHeight = min(CGFloat(validLogs.count) * 60 + 16, UIScreen.main.bounds.height * 0.6)
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
