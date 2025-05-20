@@ -34,6 +34,8 @@ final class DayLogsViewModel: ObservableObject {
   // User measurements from onboarding
   @Published var height: Double = 0 // Height in cm
   @Published var weight: Double = 0 // Weight in kg
+  @Published var desiredWeightKg: Double = 0 // Desired weight in kg
+  @Published var desiredWeightLbs: Double = 0 // Desired weight in lbs
   
   // Navigation properties
   @Published var navigateToEditHeight: Bool = false
@@ -75,6 +77,17 @@ final class DayLogsViewModel: ObservableObject {
         proteinGoal = goals.protein
         carbsGoal = goals.carbs
         fatGoal = goals.fat
+        
+        // Store desired weight if available
+        if let desiredKg = goals.desiredWeightKg {
+            desiredWeightKg = desiredKg
+            // Convert kg to lbs if desiredWeightLbs is not available
+            desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+        } else if let desiredLbs = goals.desiredWeightLbs {
+            desiredWeightLbs = desiredLbs
+            // Convert lbs to kg if desiredWeightKg is not available
+            desiredWeightKg = desiredLbs / 2.20462
+        }
     } else {
         // Use UserGoalsManager for defaults
         proteinGoal = Double(UserGoalsManager.shared.dailyGoals.protein)
@@ -133,6 +146,28 @@ func loadLogs(for date: Date) {
       if let userData = serverResponse.userData {
           self.height = userData.height_cm
           self.weight = userData.weight_kg
+      }
+      
+      // Update goals if available
+      if let goals = serverResponse.goals {
+          self.calorieGoal = goals.calories ?? self.calorieGoal
+          self.proteinGoal = goals.protein ?? self.proteinGoal
+          self.carbsGoal = goals.carbs ?? self.carbsGoal
+          self.fatGoal = goals.fat ?? self.fatGoal
+          
+          // Store desired weight if available
+          if let desiredKg = goals.desiredWeightKg {
+              self.desiredWeightKg = desiredKg
+              // Convert kg to lbs if desiredWeightLbs is not available
+              self.desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+          } else if let desiredLbs = goals.desiredWeightLbs {
+              self.desiredWeightLbs = desiredLbs
+              // Convert lbs to kg if desiredWeightKg is not available
+              self.desiredWeightKg = desiredLbs / 2.20462
+          }
+          
+          // Recalculate remaining calories
+          self.remainingCalories = max(0, self.calorieGoal - self.totalCalories)
       }
 
     case .failure(let err):

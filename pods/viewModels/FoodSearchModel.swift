@@ -870,6 +870,8 @@ struct NutritionGoals: Codable {
     let fat: Double
     let metabolismInsights: InsightDetails?
     let nutritionInsights: InsightDetails?
+    let desiredWeightKg: Double?
+    let desiredWeightLbs: Double?
     
     // Add initializer with default values for optional fields
     init(bmr: Double? = nil, 
@@ -879,7 +881,9 @@ struct NutritionGoals: Codable {
          carbs: Double, 
          fat: Double, 
          metabolismInsights: InsightDetails? = nil, 
-         nutritionInsights: InsightDetails? = nil) {
+         nutritionInsights: InsightDetails? = nil,
+         desiredWeightKg: Double? = nil,
+         desiredWeightLbs: Double? = nil) {
         self.bmr = bmr
         self.tdee = tdee
         self.calories = calories
@@ -888,6 +892,8 @@ struct NutritionGoals: Codable {
         self.fat = fat
         self.metabolismInsights = metabolismInsights
         self.nutritionInsights = nutritionInsights
+        self.desiredWeightKg = desiredWeightKg
+        self.desiredWeightLbs = desiredWeightLbs
     }
     
     // Implement custom decoding to handle missing fields
@@ -905,12 +911,16 @@ struct NutritionGoals: Codable {
         tdee = try container.decodeIfPresent(Double.self, forKey: .tdee)
         metabolismInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .metabolismInsights)
         nutritionInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .nutritionInsights)
+        desiredWeightKg = try container.decodeIfPresent(Double.self, forKey: .desiredWeightKg)
+        desiredWeightLbs = try container.decodeIfPresent(Double.self, forKey: .desiredWeightLbs)
     }
     
     enum CodingKeys: String, CodingKey {
         case bmr, tdee, calories, protein, carbs, fat
         case metabolismInsights = "metabolism_insights"
         case nutritionInsights = "nutrition_insights"
+        case desiredWeightKg = "desired_weight_kg"
+        case desiredWeightLbs = "desired_weight_lbs"
     }
 }
 
