@@ -166,7 +166,7 @@ struct QuickLogFood: View {
                 // Divider that extends fully across
                 Divider()
                 .padding(.leading, 16)
-                TextField("Fats(g)", text: $foodFats)
+                TextField("Fat(g)", text: $foodFats)
                     .keyboardType(.decimalPad)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
