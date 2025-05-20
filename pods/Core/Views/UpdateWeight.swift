@@ -50,7 +50,7 @@ struct UpdateWeight: View {
                 .padding(.bottom, 24)
             
             // Weight ruler picker
-            WeightRulerView(
+            WeightRulerView2(
                 selectedWeight: $selectedWeight,
                 range: isImperial ? 50.0...400.0 : 20.0...180.0,
                 step: 0.1
@@ -117,6 +117,89 @@ struct UpdateWeight: View {
                 
             case .failure(let error):
                 print("Error logging weight: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// Custom horizontal ruler with snapping and decimals
+struct WeightRulerView2: View {
+    @Binding var selectedWeight: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    private let tickSpacing: CGFloat = 8
+    @Environment(\.colorScheme) var colorScheme
+
+    @State private var baseOffset: CGFloat = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var lastHapticIndex: Int = -1
+
+    var body: some View {
+        GeometryReader { geometry in
+            let totalSteps = Int((range.upperBound - range.lowerBound) / step)
+            let centerX = geometry.size.width / 2
+            ZStack {
+                // Ruler ticks
+                HStack(spacing: tickSpacing) {
+                    ForEach(0...totalSteps, id: \.self) { i in
+                        let weight = range.lowerBound + Double(i) * step
+                        VStack(spacing: 4) {
+                            Rectangle()
+                                .fill(i % Int(1/step) == 0 ? Color.primary : Color.secondary)
+                                .frame(width: i % Int(1/step) == 0 ? 2 : 1,
+                                       height: i % Int(1/step) == 0 ? 40 : 20)
+                            if i % Int(1/step) == 0 {
+                                Text(String(format: "%.0f", weight))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                .offset(x: baseOffset + dragOffset)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .overlay(
+                Rectangle()
+                    .fill(Color.primary)
+                    .frame(width: 4, height: geometry.size.height - 10)
+                    .zIndex(1),
+                alignment: .center
+            )
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onChanged { g in
+                        dragOffset = g.translation.width
+                        let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
+                        let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
+                        let roundedIndex = round(clamped)
+                        selectedWeight = range.lowerBound + Double(roundedIndex) * step
+
+                        let currentIndex = Int(roundedIndex)
+                        if currentIndex != lastHapticIndex {
+                            // Subtle feedback on every tick
+                            UISelectionFeedbackGenerator().selectionChanged()
+                            // Stronger feedback on major ticks
+                            if currentIndex % Int(1.0/step) == 0 {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            }
+                            lastHapticIndex = currentIndex
+                        }
+                    }
+                    .onEnded { _ in
+                        let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                        let newBase = -idx * tickSpacing + centerX
+                        withAnimation(.spring()) {
+                            baseOffset = newBase
+                            dragOffset = 0
+                        }
+                        lastHapticIndex = -1
+                    }
+            )
+            .onAppear {
+                let idx = CGFloat((selectedWeight - range.lowerBound) / step)
+                baseOffset = -idx * tickSpacing + centerX
             }
         }
     }

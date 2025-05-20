@@ -50,7 +50,7 @@ struct UpdateDesiredWeight: View {
                 .padding(.bottom, 24)
             
             // Weight ruler picker
-            WeightRulerView(
+            WeightRulerView2(
                 selectedWeight: $selectedWeight,
                 range: isImperial ? 50.0...400.0 : 20.0...180.0,
                 step: 0.1
