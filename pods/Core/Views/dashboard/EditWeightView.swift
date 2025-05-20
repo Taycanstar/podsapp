@@ -51,7 +51,7 @@ struct EditWeightView: View {
                     .padding(.bottom, 24)
                 
                 // Weight ruler picker
-                WeightRulerView(
+                WeightRulerView2(
                     selectedWeight: $selectedWeight,
                     range: isImperial ? 50.0...500.0 : 20.0...220.0,
                     step: 0.1

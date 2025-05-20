@@ -76,7 +76,7 @@ struct DesiredWeightView: View {
                 .padding(.bottom, 24)
             
             // Weight ruler picker (range: 50.0...500.0)
-            WeightRulerView(
+            WeightRulerView2(
                 selectedWeight: $selectedWeight,
                 range: 50.0...500.0,
                 step: 0.1

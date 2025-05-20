@@ -137,18 +137,31 @@ struct WeightRulerView2: View {
     var body: some View {
         GeometryReader { geometry in
             let totalSteps = Int((range.upperBound - range.lowerBound) / step)
+            let majorStepCount = Int((1.0 / step).rounded())
+            let halfStepCount = Int((0.5 / step).rounded())
             let centerX = geometry.size.width / 2
+            let epsilon = step / 2
             ZStack {
                 // Ruler ticks
                 HStack(spacing: tickSpacing) {
                     ForEach(0...totalSteps, id: \.self) { i in
                         let weight = range.lowerBound + Double(i) * step
+                        let weightTenth = Int(round(weight * 10))        // Represent weight to 0.1 precision as an Int
+                        let mod = weightTenth % 10                       // 0...9
+                        let isMajor = mod == 0                           // .0 positions
+                        let isHalf  = mod == 5                           // .5 positions
+                        // Heights: major = 40, half = 30, minor = 20
+                        let lineHeight: CGFloat = isMajor ? 40 : (isHalf ? 30 : 20)
+                        // Colors: major primary, others secondary
+                        let lineColor: Color = isMajor ? .primary : .secondary
+                        // Width: always 1 for minor/half, 2 for major
+                        let lineWidth: CGFloat = isMajor ? 2 : 1
+
                         VStack(spacing: 4) {
                             Rectangle()
-                                .fill(i % Int(1/step) == 0 ? Color.primary : Color.secondary)
-                                .frame(width: i % Int(1/step) == 0 ? 2 : 1,
-                                       height: i % Int(1/step) == 0 ? 40 : 20)
-                            if i % Int(1/step) == 0 {
+                                .fill(lineColor)
+                                .frame(width: lineWidth, height: lineHeight)
+                            if isMajor {
                                 Text(String(format: "%.0f", weight))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
@@ -157,6 +170,7 @@ struct WeightRulerView2: View {
                     }
                 }
                 .offset(x: baseOffset + dragOffset)
+                .animation(.interactiveSpring(response: 0.30, dampingFraction: 0.80), value: baseOffset)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .overlay(
@@ -180,8 +194,9 @@ struct WeightRulerView2: View {
                         if currentIndex != lastHapticIndex {
                             // Subtle feedback on every tick
                             UISelectionFeedbackGenerator().selectionChanged()
-                            // Stronger feedback on major ticks
-                            if currentIndex % Int(1.0/step) == 0 {
+                            // Stronger feedback on major ticks (integer weights)
+                            let currentWeightTenth = Int(round(selectedWeight * 10))
+                            if currentWeightTenth % 10 == 0 {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             }
                             lastHapticIndex = currentIndex
@@ -190,10 +205,8 @@ struct WeightRulerView2: View {
                     .onEnded { _ in
                         let idx = CGFloat((selectedWeight - range.lowerBound) / step)
                         let newBase = -idx * tickSpacing + centerX
-                        withAnimation(.spring()) {
-                            baseOffset = newBase
-                            dragOffset = 0
-                        }
+                        baseOffset = newBase
+                        dragOffset = 0
                         lastHapticIndex = -1
                     }
             )
