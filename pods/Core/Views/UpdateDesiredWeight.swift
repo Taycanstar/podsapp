@@ -49,16 +49,13 @@ struct UpdateDesiredWeight: View {
                 .foregroundColor(.primary)
                 .padding(.bottom, 24)
             
-            // Weight picker
-            Picker("Weight", selection: $selectedWeight) {
-                ForEach(Array(stride(from: isImperial ? 50.0 : 20.0, 
-                                    through: isImperial ? 400.0 : 180.0, 
-                                    by: 0.5)), id: \.self) { weight in
-                    Text("\(weight, specifier: "%.1f") \(isImperial ? "lbs" : "kg")")
-                }
-            }
-            .pickerStyle(WheelPickerStyle())
-            .frame(height: 150)
+            // Weight ruler picker
+            WeightRulerView(
+                selectedWeight: $selectedWeight,
+                range: isImperial ? 50.0...400.0 : 20.0...180.0,
+                step: 0.1
+            )
+            .frame(height: 80)
             
             // Description text
             Text("Set your target weight goal. This will help track your progress and set appropriate nutrition targets.")
@@ -69,24 +66,14 @@ struct UpdateDesiredWeight: View {
                 .padding(.top, 20)
             
             Spacer()
-            
-            // Save button
-            Button(action: {
-                saveWeightGoal()
-                dismiss()
-            }) {
-                Text("Save Goal")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .cornerRadius(10)
-            }
-            .padding()
         }
         .padding()
         .navigationBarTitle("Weight Goal", displayMode: .inline)
+        .navigationBarItems(trailing: Button("Done") {
+            saveWeightGoal()
+            dismiss()
+        }
+        .foregroundColor(.accentColor))
         .onAppear {
             // First try to get from view model
             if vm.desiredWeightLbs > 0 {
