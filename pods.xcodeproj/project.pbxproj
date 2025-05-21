@@ -187,6 +187,23 @@
 		36ED35D22DDBD4EC00D174FB /* ManageGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35D12DDBD4EC00D174FB /* ManageGoalsView.swift */; };
 		36ED35D42DDBD5DC00D174FB /* UpdateWeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35D32DDBD5DC00D174FB /* UpdateWeight.swift */; };
 		36ED35D62DDBD5ED00D174FB /* UpdateDesiredWeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35D52DDBD5ED00D174FB /* UpdateDesiredWeight.swift */; };
+		36ED35D92DDE527600D174FB /* TapPlusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35D82DDE527600D174FB /* TapPlusView.swift */; };
+		36ED35DB2DDE528700D174FB /* NewMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35DA2DDE528700D174FB /* NewMenuView.swift */; };
+		36ED35DD2DDE52A200D174FB /* DescribeLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35DC2DDE52A200D174FB /* DescribeLogView.swift */; };
+		36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35DE2DDE52B400D174FB /* GenerateLogView.swift */; };
+		36ED35E12DDE52CB00D174FB /* TapQuickLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35E02DDE52CB00D174FB /* TapQuickLogView.swift */; };
+		36ED35E32DDE52F300D174FB /* AddQuickLogDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35E22DDE52F300D174FB /* AddQuickLogDetailsView.swift */; };
+		36ED35E52DDE52FF00D174FB /* LogExistingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35E42DDE52FF00D174FB /* LogExistingView.swift */; };
+		36ED35E72DDE531A00D174FB /* DescribeMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35E62DDE531A00D174FB /* DescribeMealView.swift */; };
+		36ED35E92DDE532400D174FB /* GenerateMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35E82DDE532400D174FB /* GenerateMealView.swift */; };
+		36ED35EB2DDE533300D174FB /* TapCreateMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35EA2DDE533300D174FB /* TapCreateMealView.swift */; };
+		36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35EC2DDE533F00D174FB /* NameMealView.swift */; };
+		36ED35EF2DDE534A00D174FB /* FindFoodsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35EE2DDE534A00D174FB /* FindFoodsView.swift */; };
+		36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F02DDE536800D174FB /* DescribeFoodView.swift */; };
+		36ED35F32DDE537400D174FB /* GenerateFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F22DDE537400D174FB /* GenerateFoodView.swift */; };
+		36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F42DDE538300D174FB /* TapCreateFoodView.swift */; };
+		36ED35F72DDE538E00D174FB /* NameFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F62DDE538E00D174FB /* NameFoodView.swift */; };
+		36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F82DDE57C400D174FB /* HelperViewsFlow.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -396,6 +413,23 @@
 		36ED35D12DDBD4EC00D174FB /* ManageGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageGoalsView.swift; sourceTree = "<group>"; };
 		36ED35D32DDBD5DC00D174FB /* UpdateWeight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateWeight.swift; sourceTree = "<group>"; };
 		36ED35D52DDBD5ED00D174FB /* UpdateDesiredWeight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateDesiredWeight.swift; sourceTree = "<group>"; };
+		36ED35D82DDE527600D174FB /* TapPlusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapPlusView.swift; sourceTree = "<group>"; };
+		36ED35DA2DDE528700D174FB /* NewMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewMenuView.swift; sourceTree = "<group>"; };
+		36ED35DC2DDE52A200D174FB /* DescribeLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescribeLogView.swift; sourceTree = "<group>"; };
+		36ED35DE2DDE52B400D174FB /* GenerateLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateLogView.swift; sourceTree = "<group>"; };
+		36ED35E02DDE52CB00D174FB /* TapQuickLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapQuickLogView.swift; sourceTree = "<group>"; };
+		36ED35E22DDE52F300D174FB /* AddQuickLogDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddQuickLogDetailsView.swift; sourceTree = "<group>"; };
+		36ED35E42DDE52FF00D174FB /* LogExistingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogExistingView.swift; sourceTree = "<group>"; };
+		36ED35E62DDE531A00D174FB /* DescribeMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescribeMealView.swift; sourceTree = "<group>"; };
+		36ED35E82DDE532400D174FB /* GenerateMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateMealView.swift; sourceTree = "<group>"; };
+		36ED35EA2DDE533300D174FB /* TapCreateMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapCreateMealView.swift; sourceTree = "<group>"; };
+		36ED35EC2DDE533F00D174FB /* NameMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameMealView.swift; sourceTree = "<group>"; };
+		36ED35EE2DDE534A00D174FB /* FindFoodsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindFoodsView.swift; sourceTree = "<group>"; };
+		36ED35F02DDE536800D174FB /* DescribeFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescribeFoodView.swift; sourceTree = "<group>"; };
+		36ED35F22DDE537400D174FB /* GenerateFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateFoodView.swift; sourceTree = "<group>"; };
+		36ED35F42DDE538300D174FB /* TapCreateFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapCreateFoodView.swift; sourceTree = "<group>"; };
+		36ED35F62DDE538E00D174FB /* NameFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameFoodView.swift; sourceTree = "<group>"; };
+		36ED35F82DDE57C400D174FB /* HelperViewsFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperViewsFlow.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -558,6 +592,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				36ED35D72DDE502000D174FB /* helperViews */,
 				36ED35AC2DD53B5C00D174FB /* dashboard */,
 				36CB032A2D5AAD4A006A74E9 /* food */,
 				36B8516C2D507BD000A876C3 /* friends */,
@@ -788,6 +823,30 @@
 				36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */,
 			);
 			path = dashboard;
+			sourceTree = "<group>";
+		};
+		36ED35D72DDE502000D174FB /* helperViews */ = {
+			isa = PBXGroup;
+			children = (
+				36ED35D82DDE527600D174FB /* TapPlusView.swift */,
+				36ED35DA2DDE528700D174FB /* NewMenuView.swift */,
+				36ED35DC2DDE52A200D174FB /* DescribeLogView.swift */,
+				36ED35DE2DDE52B400D174FB /* GenerateLogView.swift */,
+				36ED35E02DDE52CB00D174FB /* TapQuickLogView.swift */,
+				36ED35E22DDE52F300D174FB /* AddQuickLogDetailsView.swift */,
+				36ED35E42DDE52FF00D174FB /* LogExistingView.swift */,
+				36ED35E62DDE531A00D174FB /* DescribeMealView.swift */,
+				36ED35E82DDE532400D174FB /* GenerateMealView.swift */,
+				36ED35EA2DDE533300D174FB /* TapCreateMealView.swift */,
+				36ED35EC2DDE533F00D174FB /* NameMealView.swift */,
+				36ED35EE2DDE534A00D174FB /* FindFoodsView.swift */,
+				36ED35F02DDE536800D174FB /* DescribeFoodView.swift */,
+				36ED35F22DDE537400D174FB /* GenerateFoodView.swift */,
+				36ED35F42DDE538300D174FB /* TapCreateFoodView.swift */,
+				36ED35F62DDE538E00D174FB /* NameFoodView.swift */,
+				36ED35F82DDE57C400D174FB /* HelperViewsFlow.swift */,
+			);
+			path = helperViews;
 			sourceTree = "<group>";
 		};
 		A8CF5237E841CC0CB47CFC88 /* Frameworks */ = {
@@ -1062,6 +1121,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36ED35E32DDE52F300D174FB /* AddQuickLogDetailsView.swift in Sources */,
 				36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */,
 				36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */,
 				363AFA0B2D345D2400C91A14 /* FullActivitySummaryView.swift in Sources */,
@@ -1074,10 +1134,12 @@
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
 				36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */,
 				36ED35A72DD5294300D174FB /* HealthDataCard.swift in Sources */,
+				36ED35E72DDE531A00D174FB /* DescribeMealView.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
 				36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
+				36ED35F72DDE538E00D174FB /* NameFoodView.swift in Sources */,
 				36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
@@ -1090,19 +1152,23 @@
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
+				36ED35D92DDE527600D174FB /* TapPlusView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */,
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
+				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
+				36ED35DD2DDE52A200D174FB /* DescribeLogView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
 				36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */,
 				36CB032C2D5AAD5C006A74E9 /* LogFood.swift in Sources */,
 				364A83AC2D81F3F7009D2620 /* EditMealView.swift in Sources */,
+				36ED35EB2DDE533300D174FB /* TapCreateMealView.swift in Sources */,
 				3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */,
 				367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */,
 				364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */,
@@ -1127,6 +1193,7 @@
 				362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */,
 				363AFA0D2D34769D00C91A14 /* FullEditActivityView.swift in Sources */,
 				3694745A2CB9D53F00CD197F /* PerformanceVariabilityView.swift in Sources */,
+				36ED35EF2DDE534A00D174FB /* FindFoodsView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
@@ -1134,6 +1201,7 @@
 				3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */,
 				36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */,
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
+				36ED35E92DDE532400D174FB /* GenerateMealView.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
@@ -1159,10 +1227,12 @@
 				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */,
+				36ED35E52DDE52FF00D174FB /* LogExistingView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
+				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */,
 				36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */,
@@ -1191,20 +1261,25 @@
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
+				36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */,
 				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,
 				36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */,
 				364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */,
+				36ED35F32DDE537400D174FB /* GenerateFoodView.swift in Sources */,
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
 				36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */,
 				363AFA112D3C258200C91A14 /* EditActivityItemView.swift in Sources */,
 				369474632CD0031000CD197F /* DropdownButton.swift in Sources */,
 				36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */,
+				36ED35E12DDE52CB00D174FB /* TapQuickLogView.swift in Sources */,
+				36ED35DB2DDE528700D174FB /* NewMenuView.swift in Sources */,
 				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 				363AF9FD2D2095D600C91A14 /* GroupedColumnActivityView.swift in Sources */,
 				36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				364A83BA2D8F6C6A009D2620 /* RecipeDetailView.swift in Sources */,
+				36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */,
 				364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				36ED35D22DDBD4EC00D174FB /* ManageGoalsView.swift in Sources */,
@@ -1214,6 +1289,7 @@
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
+				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,

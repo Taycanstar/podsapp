@@ -18,6 +18,7 @@ struct DashboardView: View {
     @State private var showHealthPermissionAlert = false
     @State private var showNewSheet = false
     @State private var selectedFoodLog: Food? = nil
+    @State private var showLogFlowSheet = true
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -142,6 +143,9 @@ private var remainingCal: Double { vm.remainingCalories }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
+            }
+            .sheet(isPresented: $showLogFlowSheet) {
+                LogFlowContainerView()
             }
             .sheet(isPresented: $showNewSheet) {
                 NewSheetView(isPresented: $showNewSheet,
