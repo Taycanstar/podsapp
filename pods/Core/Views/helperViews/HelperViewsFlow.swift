@@ -253,7 +253,7 @@ struct LogFlowContainerView: View {
                 .padding(.horizontal) // Apply horizontal padding to the HStack itself
                 .frame(height: 44) // Standard iOS navigation bar height
                 .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20) // Adjust top padding based on safe area
-                .background(Color("iosbg").edgesIgnoringSafeArea(.top)) // Match view background
+                .background(Color("bg").edgesIgnoringSafeArea(.top)) // Match view background
                 
                 // Content View from the current step of the LogFlow
                 logFlow.currentStep.view
@@ -261,7 +261,7 @@ struct LogFlowContainerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure it fills the space
             }
             .navigationBarHidden(true) // Hide the default navigation bar, we're using a custom one
-            .background(Color("iosbg").edgesIgnoringSafeArea(.all))
+            .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle()) // Recommended for flows like this
     }
