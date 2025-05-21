@@ -20,8 +20,8 @@ struct TapPlusView: View {
             Image("logfood") // Ensure "logfood" is in your Assets.xcassets
                 .resizable()
                 .scaledToFit()
-                .frame(width: 180, height: 180) // Adjusted size for better presence
-                .padding(.bottom, 40)
+                .frame(width: 375, height: 200) // Adjusted size for better presence
+                .padding(.bottom)
 
             Text("Tap on the plus button to start logging")
                 .font(.system(size: 22, weight: .medium))
@@ -42,8 +42,8 @@ struct TapPlusView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color.primary) 
-                        .foregroundColor(Color(UIColor.systemBackground))
+                        .background(Color("background")) 
+                        .foregroundColor(Color("bg"))
                         .cornerRadius(12)
                 }
                 .padding(.horizontal)
@@ -53,7 +53,7 @@ struct TapPlusView: View {
             .background(Material.ultraThin) 
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure VStack fills available space
-        .background(Color("iosbg").edgesIgnoringSafeArea(.all)) // Use your app's background color
+        .background(Color("bg").edgesIgnoringSafeArea(.all)) // Use your app's background color
         // NavigationBar elements (back, progress) will be handled by LogFlowContainerView
     }
 }

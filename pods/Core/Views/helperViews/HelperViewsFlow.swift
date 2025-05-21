@@ -220,38 +220,38 @@ struct LogFlowContainerView: View {
         NavigationView {
             VStack(spacing: 0) {
                 // Custom Navigation Bar Area
-                VStack(spacing: 10) {
-                    HStack {
-                        if logFlow.currentStep != LogStep.allCases.first {
-                            Button(action: {
-                                // HapticFeedback.generate() // Uncomment if you have HapticFeedback
-                                logFlow.previous()
-                            }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color.primary)
-                            }
-                        } else {
-                            // Option to dismiss the entire flow if it's modal and on the first step
-                            Button(action: {
-                                // HapticFeedback.generate()
-                                dismiss()
-                            }) {
-                                Image(systemName: "chevron.left") // Or use "xmark" for modal close
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color.primary)
-                            }
+                HStack(spacing: 16) { // Changed from VStack to HStack, added spacing
+                    if logFlow.currentStep != LogStep.allCases.first {
+                        Button(action: {
+                            // HapticFeedback.generate() // Uncomment if you have HapticFeedback
+                            logFlow.previous()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
                         }
-                        Spacer()
-                        // You can add a title here if needed, e.g., Text(logFlow.currentStep.title).font(.headline)
+                    } else {
+                        // Option to dismiss the entire flow if it's modal and on the first step
+                        Button(action: {
+                            // HapticFeedback.generate()
+                            dismiss()
+                        }) {
+                            Image(systemName: "chevron.left") // Or use "xmark" for modal close
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
                     }
-                    .padding(.horizontal)
-                    .frame(height: 44) // Standard iOS navigation bar height
+                    // Spacer() // Removed spacer that was here before, to put progress bar next to button
 
                     ProgressView(value: logFlow.progress)
                         .progressViewStyle(LinearProgressViewStyle(tint: Color.primary)) // Tint for progress bar
-                        .padding(.horizontal)
+                        // .padding(.horizontal) // Removed horizontal padding, parent HStack handles it
+                    
+                    // If you want a title or other items on the trailing side, add them here with a Spacer before the ProgressView
+                    // For now, the ProgressView will expand.
                 }
+                .padding(.horizontal) // Apply horizontal padding to the HStack itself
+                .frame(height: 44) // Standard iOS navigation bar height
                 .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20) // Adjust top padding based on safe area
                 .background(Color("iosbg").edgesIgnoringSafeArea(.top)) // Match view background
                 
