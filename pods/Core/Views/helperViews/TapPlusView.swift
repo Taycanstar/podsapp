@@ -35,7 +35,7 @@ struct TapPlusView: View {
             // Bottom Bar with Continue Button (mimicking GenderView style)
             VStack {
                 Button(action: {
-                    // HapticFeedback.generate() // Uncomment if you have HapticFeedback implemented
+                    HapticFeedback.generate() // Uncomment if you have HapticFeedback implemented
                     logFlow.next() 
                 }) {
                     Text("Continue")
