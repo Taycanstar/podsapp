@@ -13,7 +13,7 @@ struct NewMenuView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-                Text("Easily track calories and macros")
+                Text("Log Meals Your Way")
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -24,7 +24,7 @@ struct NewMenuView: View {
             Image("logfood0") // Ensure "logfood0" is in your Assets.xcassets
                 .resizable()
                 .scaledToFit()
-                .frame(width: 375, height: 300) // Matched TapPlusView image frame
+                .frame(width: 375, height: 285) // Matched TapPlusView image frame
                 .padding(.horizontal) // Matched TapPlusView image padding
                 .padding(.bottom, 30) // Kept original bottom padding
 
@@ -80,6 +80,7 @@ struct DescriptionRowView: View {
                 .frame(width: 35, alignment: .leading) // Ensure icons align well
             Text(text)
                 .font(.body)
+                .fixedSize(horizontal: false, vertical: true) // Allow text to wrap
         }
     }
 }
