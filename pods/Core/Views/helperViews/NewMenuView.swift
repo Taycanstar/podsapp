@@ -12,21 +12,28 @@ struct NewMenuView: View {
     // @Environment(\.dismiss) var dismissFlow
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer() // Pushes content towards the center vertically
+        VStack(alignment: .center, spacing: 0) {
+                Text("Easily track calories and macros")
+                .font(.title)
+                .fontWeight(.bold)
+                .padding(.horizontal, 25)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+                .multilineTextAlignment(.center) 
 
             Image("logfood0") // Ensure "logfood0" is in your Assets.xcassets
                 .resizable()
                 .scaledToFit()
-                .frame(width: 180, height: 180) // Adjusted size
-                .padding(.bottom, 30)
+                .frame(width: 375, height: 300) // Matched TapPlusView image frame
+                .padding(.horizontal) // Matched TapPlusView image padding
+                .padding(.bottom, 30) // Kept original bottom padding
 
             VStack(alignment: .leading, spacing: 25) { // Increased spacing for clarity
-                DescriptionRowView(iconName: "pencil.and.ruler.fill", text: "Describe your food or select from favorites to log your meals")
-                DescriptionRowView(iconName: "mic.fill", text: "Log your meal with your voice")
+                DescriptionRowView(iconName: "pencil.and.ruler", text: "Describe your food or select from favorites to log your meals")
+                DescriptionRowView(iconName: "mic", text: "Log your meal with your voice")
                 DescriptionRowView(iconName: "camera.viewfinder", text: "Snap a photo or scan a barcode to log your meal instantly") // Changed to camera.viewfinder for photo/scan
             }
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 40)
             .padding(.bottom, 20)
             
             Spacer()

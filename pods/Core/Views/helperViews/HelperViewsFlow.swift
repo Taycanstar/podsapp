@@ -16,15 +16,27 @@ enum LogStep: Int, CaseIterable {
     }
 }
 
+enum NavigationDirection { // Added enum for navigation direction
+    case forward, backward
+}
+
 class LogFlow: ObservableObject {
     @Published var currentStep: LogStep = .tapPlus
     @Published var progress: Double = 0.0
+    @Published var navigationDirection: NavigationDirection = .forward // Added property
 
     init() {
         updateProgress()
     }
 
     func navigate(to step: LogStep) {
+        if step.rawValue > currentStep.rawValue {
+            navigationDirection = .forward
+        } else if step.rawValue < currentStep.rawValue {
+            navigationDirection = .backward
+        }
+        // If step.rawValue == currentStep.rawValue, direction doesn't change or matter as much
+
         withAnimation {
             currentStep = step
         }
@@ -33,6 +45,7 @@ class LogFlow: ObservableObject {
 
     func next() {
         if let nextStep = LogStep(rawValue: currentStep.rawValue + 1) {
+            navigationDirection = .forward // Set direction
             withAnimation {
                 currentStep = nextStep
             }
@@ -42,6 +55,7 @@ class LogFlow: ObservableObject {
 
     func previous() {
         if let prevStep = LogStep(rawValue: currentStep.rawValue - 1) {
+            navigationDirection = .backward // Set direction
             withAnimation {
                 currentStep = prevStep
             }
@@ -266,9 +280,9 @@ struct LogFlowContainerView: View {
                     .environmentObject(logFlow) // Pass the LogFlow to the child view
                     .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure it fills the space
                     .id(logFlow.currentStep) // Add ID for better transition handling
-                    .transition(.asymmetric( // Add slide transition
-                        insertion: .move(edge: .trailing),
-                        removal: .move(edge: .leading)
+                    .transition(.asymmetric( // Use dynamic transition
+                        insertion: logFlow.navigationDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading),
+                        removal: logFlow.navigationDirection == .forward ? .move(edge: .leading) : .move(edge: .trailing)
                     ))
                     .animation(.default, value: logFlow.currentStep) // Animate based on currentStep
             }
