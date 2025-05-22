@@ -25,20 +25,26 @@ class LogFlow: ObservableObject {
     }
 
     func navigate(to step: LogStep) {
-        currentStep = step
+        withAnimation {
+            currentStep = step
+        }
         updateProgress()
     }
 
     func next() {
         if let nextStep = LogStep(rawValue: currentStep.rawValue + 1) {
-            currentStep = nextStep
+            withAnimation {
+                currentStep = nextStep
+            }
         }
         updateProgress()
     }
 
     func previous() {
         if let prevStep = LogStep(rawValue: currentStep.rawValue - 1) {
-            currentStep = prevStep
+            withAnimation {
+                currentStep = prevStep
+            }
         }
         updateProgress()
     }
@@ -259,6 +265,12 @@ struct LogFlowContainerView: View {
                 logFlow.currentStep.view
                     .environmentObject(logFlow) // Pass the LogFlow to the child view
                     .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure it fills the space
+                    .id(logFlow.currentStep) // Add ID for better transition handling
+                    .transition(.asymmetric( // Add slide transition
+                        insertion: .move(edge: .trailing),
+                        removal: .move(edge: .leading)
+                    ))
+                    .animation(.default, value: logFlow.currentStep) // Animate based on currentStep
             }
             .navigationBarHidden(true) // Hide the default navigation bar, we're using a custom one
             .background(Color("bg").edgesIgnoringSafeArea(.all))

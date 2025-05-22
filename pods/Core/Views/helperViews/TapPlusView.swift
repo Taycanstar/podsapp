@@ -14,23 +14,31 @@ struct TapPlusView: View {
 
     var body: some View {
         // The NavigationView is part of the container. This view provides its content.
-        VStack(spacing: 0) {
-            Spacer() // Pushes content towards the center vertically
+        VStack(alignment: .center, spacing: 0) {
+            Text("Easily track calories and macros")
+                .font(.title)
+                .fontWeight(.bold)
+                .padding(.horizontal, 25)
+                .padding(.top, 60)
+                .multilineTextAlignment(.center) 
+
+            
 
             Image("logfood") // Ensure "logfood" is in your Assets.xcassets
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 200) // Adjusted size for better presence
-                .padding(.bottom)
+                .padding(.horizontal)
 
             Text("Tap on the plus button to start logging")
-                .font(.system(size: 22, weight: .medium))
+                .font(.system(size: 18, weight: .regular))
+                          .padding(.horizontal, 30)
                 .multilineTextAlignment(.center) // Centered for better balance under a centered image
-                .padding(.horizontal, 40)
-                .padding(.bottom, 20)
+        
+          
             
             Spacer()
-            Spacer() // Another spacer to further push content up slightly
+            // Spacer() // Another spacer to further push content up slightly
 
             // Bottom Bar with Continue Button (mimicking GenderView style)
             VStack {

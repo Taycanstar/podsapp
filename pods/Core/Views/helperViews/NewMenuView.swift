@@ -44,8 +44,8 @@ struct NewMenuView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color.primary)
-                        .foregroundColor(Color(UIColor.systemBackground))
+                        .background(Color("background"))
+                        .foregroundColor(Color("bg"))
                         .cornerRadius(12)
                 }
                 .padding(.horizontal)
@@ -55,7 +55,7 @@ struct NewMenuView: View {
             .background(Material.ultraThin)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("iosbg").edgesIgnoringSafeArea(.all))
+        .background(Color("bg").edgesIgnoringSafeArea(.all))
         // NavigationBar elements are handled by LogFlowContainerView
     }
 }
@@ -69,8 +69,8 @@ struct DescriptionRowView: View {
         HStack(spacing: 20) { // Increased spacing
             Image(systemName: iconName)
                 .font(.title2)
-                .foregroundColor(.accentColor) // Use accent color for icons
-                .frame(width: 35, alignment: .center) // Ensure icons align well
+                .foregroundColor(.primary) // Use accent color for icons
+                .frame(width: 35, alignment: .leading) // Ensure icons align well
             Text(text)
                 .font(.body)
         }
