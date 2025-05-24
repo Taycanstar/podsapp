@@ -715,6 +715,8 @@ private struct FoodListView: View {
                             }
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
+                            .scrollIndicators(.hidden)
+                       
                         }
                         .frame(maxHeight: cardHeight, alignment: .top)
                         .cornerRadius(12)
