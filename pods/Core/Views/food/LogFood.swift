@@ -650,7 +650,7 @@ private struct FoodListView: View {
                     
                     // Main content List with native swipe-to-delete
                     if !validLogs.isEmpty {
-                        let cardHeight = min(CGFloat(validLogs.count) * 70, UIScreen.main.bounds.height * 0.7) // Adjusted calculation
+                         let cardHeight = min(CGFloat(validLogs.count) * 63, UIScreen.main.bounds.height * 0.7) // Reduced multiplier to 60
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
@@ -715,7 +715,6 @@ private struct FoodListView: View {
                             }
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
-                            // .scrollIndicators(.hidden) // Removed to show scroll indicators
                         }
                         .frame(maxHeight: cardHeight, alignment: .top)
                         .cornerRadius(12)
@@ -749,7 +748,7 @@ private struct FoodListView: View {
                 VStack(spacing: 0) {
                     // Main content List with native swipe-to-delete
                     if !searchResults.isEmpty {
-                        let searchCardHeight = min(CGFloat(searchResults.count) * 70, UIScreen.main.bounds.height * 0.7) // Adjusted calculation
+                         let searchCardHeight = min(CGFloat(searchResults.count) * 60, UIScreen.main.bounds.height * 0.7) // Reduced multiplier to 60
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
@@ -778,7 +777,6 @@ private struct FoodListView: View {
                             }
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
-                            // .scrollIndicators(.hidden) // Removed to show scroll indicators
                         }
                         .frame(maxHeight: searchCardHeight, alignment: .top)
                         .cornerRadius(12)
