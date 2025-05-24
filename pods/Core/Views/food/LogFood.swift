@@ -126,8 +126,20 @@ struct LogFood: View {
                 } else {
                     foodManager.prefetchMealImages()
                 }
-                
-             
+
+                // Set initial sheet state based on the default selectedFoodTab
+                if selectedFoodTab == .all {
+                    showAllFlowSheet = true
+                    showMealFlowSheet = false
+                } else if selectedFoodTab == .meals {
+                    // This case might not be strictly necessary if default is always .all,
+                    // but good for robustness if the default tab changes in the future.
+                    showMealFlowSheet = true
+                    showAllFlowSheet = false
+                } else {
+                    showAllFlowSheet = false
+                    showMealFlowSheet = false
+                }
                 
                 // // Set focus to the search field after a slight delay
                 // DispatchQueue.main.asyncAfter(deadline: .now()) {
