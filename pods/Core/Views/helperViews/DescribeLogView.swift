@@ -15,7 +15,7 @@ struct DescribeLogView: View {
             Text("Log Any Meal in Seconds") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
-                .padding(.horizontal, 25
+                .padding(.horizontal, 25)
                 .padding(.top, 60)
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
