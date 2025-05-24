@@ -161,26 +161,40 @@ enum MealStep: Int, CaseIterable {
 class MealFlow: ObservableObject {
     @Published var currentStep: MealStep = .describeMeal
     @Published var progress: Double = 0.0
+    @Published var navigationDirection: NavigationDirection = .forward // Added property
 
     init() {
         updateProgress()
     }
     
     func navigate(to step: MealStep) {
-        currentStep = step
+        if step.rawValue > currentStep.rawValue {
+            navigationDirection = .forward
+        } else if step.rawValue < currentStep.rawValue {
+            navigationDirection = .backward
+        }
+        withAnimation {
+            currentStep = step
+        }
         updateProgress()
     }
 
     func next() {
         if let nextStep = MealStep(rawValue: currentStep.rawValue + 1) {
-            currentStep = nextStep
+            navigationDirection = .forward // Set direction
+            withAnimation {
+                currentStep = nextStep
+            }
         }
         updateProgress()
     }
 
     func previous() {
         if let prevStep = MealStep(rawValue: currentStep.rawValue - 1) {
-            currentStep = prevStep
+            navigationDirection = .backward // Set direction
+            withAnimation {
+                currentStep = prevStep
+            }
         }
         updateProgress()
     }
@@ -412,6 +426,68 @@ struct AllFlowContainerView: View {
 struct AllFlowContainerView_Previews: PreviewProvider {
     static var previews: some View {
         AllFlowContainerView()
+    }
+}
+#endif 
+
+// MARK: - Meal Flow Container
+
+struct MealFlowContainerView: View {
+    @StateObject var mealFlow = MealFlow()
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Custom Navigation Bar Area
+                HStack(spacing: 16) {
+                    if mealFlow.currentStep != MealStep.allCases.first {
+                        Button(action: {
+                            mealFlow.previous()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    } else {
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Image(systemName: "chevron.left") 
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    }
+
+                    ProgressView(value: mealFlow.progress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color.primary))
+                }
+                .padding(.horizontal)
+                .frame(height: 44) 
+                .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20)
+                .background(Color("bg").edgesIgnoringSafeArea(.top))
+                
+                mealFlow.currentStep.view
+                    .environmentObject(mealFlow) 
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) 
+                    .id(mealFlow.currentStep) 
+                    .transition(.asymmetric( 
+                        insertion: mealFlow.navigationDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading),
+                        removal: mealFlow.navigationDirection == .forward ? .move(edge: .leading) : .move(edge: .trailing)
+                    ))
+                    .animation(.default, value: mealFlow.currentStep) 
+            }
+            .navigationBarHidden(true) 
+            .background(Color("bg").edgesIgnoringSafeArea(.all))
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+#if DEBUG
+struct MealFlowContainerView_Previews: PreviewProvider {
+    static var previews: some View {
+        MealFlowContainerView()
     }
 }
 #endif 

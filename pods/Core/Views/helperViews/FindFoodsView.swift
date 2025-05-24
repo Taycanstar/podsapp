@@ -8,11 +8,63 @@
 import SwiftUI
 
 struct FindFoodsView: View {
+    @EnvironmentObject var mealFlow: MealFlow
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(alignment: .center, spacing: 0) {
+            Text("Add Foods to Your Meal") // Title for this view
+                .font(.title)
+                .fontWeight(.bold)
+                .padding(.horizontal, 25)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+                .multilineTextAlignment(.center)
+
+            Image("meals4 1") // Image for this view
+                .resizable()
+                .scaledToFit()
+                .frame(width: 375, height: 285)
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+            
+            Text("Find foods and tap + to add foods to your meal") // Placeholder text
+                .font(.system(size: 18, weight: .regular))
+                .padding(.horizontal, 35)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+
+            VStack {
+                Button(action: {
+                    // This is the last step
+                    print("MealFlow finished")
+                    HapticFeedback.generate()   
+                    // mealFlow.next() // Or dismiss logic
+                }) {
+                    Text("Finish") // Button text for the last step
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color("background"))
+                        .foregroundColor(Color("bg"))
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 16)
+            }
+            .padding(.bottom, 24)
+            .background(Material.ultraThin)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color("bg").edgesIgnoringSafeArea(.all))
     }
 }
 
-#Preview {
-    FindFoodsView()
+#if DEBUG
+struct FindFoodsView_Previews: PreviewProvider {
+    static var previews: some View {
+        FindFoodsView()
+            .environmentObject(MealFlow()) // Provide a dummy MealFlow for preview
+    }
 }
+#endif

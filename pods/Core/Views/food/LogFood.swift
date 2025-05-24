@@ -29,7 +29,8 @@ struct LogFood: View {
     // Add callback that will be called when an item is added
     var onItemAdded: ((Food) -> Void)?
     @State private var showQuickLogSheet = false
-    @State private var showAllFlowSheet = true // Added for AllFlow
+    @State private var showAllFlowSheet = false
+    @State private var showMealFlowSheet = false
     
     enum FoodTab: Hashable {
         case all, meals, foods
@@ -91,6 +92,18 @@ struct LogFood: View {
                 // Main content
                 mainContentView
                 Spacer()
+            }
+            .onChange(of: selectedFoodTab) { _, newTab in
+                if newTab == .all {
+                    showAllFlowSheet = true
+                    showMealFlowSheet = false // Ensure other flows are hidden
+                } else if newTab == .meals {
+                    showMealFlowSheet = true
+                    showAllFlowSheet = false // Ensure other flows are hidden
+                } else {
+                    showAllFlowSheet = false
+                    showMealFlowSheet = false
+                }
             }
             // .padding(.top, isSearchFieldFocused ? 52 : 0)
             .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
@@ -159,6 +172,9 @@ struct LogFood: View {
             .sheet(isPresented: $showAllFlowSheet) { // Added for AllFlow
                 AllFlowContainerView()
             }
+            .sheet(isPresented: $showMealFlowSheet) { // Added for MealFlow
+                MealFlowContainerView()
+            }
 
             toastMessages
         }
@@ -191,7 +207,8 @@ struct LogFood: View {
                     mode: mode,
                     selectedFoods: $selectedFoods,
                     path: $path,
-                    showQuickLogSheet: $showQuickLogSheet
+                    showQuickLogSheet: $showQuickLogSheet,
+                    showAllFlowSheet: $showAllFlowSheet // Pass binding
                 )
             } else {
                 switch selectedFoodTab {
@@ -202,7 +219,9 @@ struct LogFood: View {
                         selectedFoods: $selectedFoods,
                         path: $path,
                         searchText: searchText,
+                        showMealFlowSheet: $showMealFlowSheet,
                         onItemAdded: onItemAdded
+                       // Pass binding
                     )
                 default:
                     EmptyView()
@@ -367,6 +386,7 @@ private struct FoodListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     @Binding var showQuickLogSheet: Bool
+    @Binding var showAllFlowSheet: Bool // Added binding
     
     // Add states for AI generation
     @State private var isGeneratingMacros = false
@@ -425,7 +445,8 @@ private struct FoodListView: View {
                 Button(action: {
                     print("Tapped quick Log")
                     HapticFeedback.generateLigth()
-                    showQuickLogSheet = true
+                    // showQuickLogSheet = true // Original QuickLog sheet
+                    showAllFlowSheet = true // Show AllFlow instead
                 }) {
                     HStack(spacing: 6) {
                         Spacer()
@@ -1021,6 +1042,7 @@ private struct MealListView: View {
     @State private var isGeneratingMeal = false
     @State private var showAIErrorAlert = false
     @State private var aiErrorMessage = ""
+    @Binding var showMealFlowSheet: Bool // Added binding
     
     var onItemAdded: ((Food) -> Void)?
     
@@ -1088,8 +1110,32 @@ private struct MealListView: View {
             // Show Create Meal button when no search text
             else {
                 // Create Meal Button
-                CreateMealButton(path: $path)
-                    .padding(.top, 0)
+                // CreateMealButton(path: $path) // Original button
+                Button(action: {
+                    print("Tapped Create Meal from MealListView")
+                    HapticFeedback.generateLigth()
+                    showMealFlowSheet = true // Show MealFlow sheet
+                }) {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accentColor)
+                        Text("Create Meal")
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 0)
+                .padding(.bottom, 4)
             }
             
             // Show meal generation card if analysis is in progress
