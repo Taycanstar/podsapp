@@ -650,7 +650,7 @@ private struct FoodListView: View {
                     
                     // Main content List with native swipe-to-delete
                     if !validLogs.isEmpty {
-                         let cardHeight = min(CGFloat(validLogs.count) * 63, UIScreen.main.bounds.height * 0.7) // Reduced multiplier to 60
+                          let cardHeight = min(CGFloat(validLogs.count) * 63, UIScreen.main.bounds.height * 0.7) // Adjusted multiplier to 63
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("bg"))
@@ -1172,7 +1172,6 @@ private struct MealListView: View {
                                 onItemAdded: onItemAdded
                             )
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            // .listRowBackground(Color.clear)
                              .listRowBackground(Color("iosfit"))
                             .listRowSeparator(.hidden)
                             .padding(.horizontal, 16)
@@ -1184,11 +1183,9 @@ private struct MealListView: View {
                     }
                     .listStyle(PlainListStyle())
                     .scrollContentBackground(.hidden)
-                    .scrollIndicators(.hidden)
+                    // Ensure scroll indicators are visible by not adding .scrollIndicators(.hidden)
                 }
-                                // .frame(minHeight: min(CGFloat(foodManager.meals.count * 70), 400))
-
-                .frame(height: CGFloat(foodManager.meals.count * 55 + 16)) // 80 points per row + 16 for padding
+                .frame(height: min(CGFloat(foodManager.meals.count * 63), UIScreen.main.bounds.height * 0.7)) // Adjusted calculation
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
             } else if foodManager.isLoadingMeals {
