@@ -93,26 +93,40 @@ enum AllStep: Int, CaseIterable {
 class AllFlow: ObservableObject {
     @Published var currentStep: AllStep = .describeLog
     @Published var progress: Double = 0.0
+    @Published var navigationDirection: NavigationDirection = .forward // Added property
 
     init() {
         updateProgress()
     }
 
     func navigate(to step: AllStep) {
-        currentStep = step
+        if step.rawValue > currentStep.rawValue {
+            navigationDirection = .forward
+        } else if step.rawValue < currentStep.rawValue {
+            navigationDirection = .backward
+        }
+        withAnimation {
+            currentStep = step
+        }
         updateProgress()
     }
     
     func next() {
         if let nextStep = AllStep(rawValue: currentStep.rawValue + 1) {
-            currentStep = nextStep
+            navigationDirection = .forward // Set direction
+            withAnimation {
+                currentStep = nextStep
+            }
         }
         updateProgress()
     }
 
     func previous() {
         if let prevStep = AllStep(rawValue: currentStep.rawValue - 1) {
-            currentStep = prevStep
+            navigationDirection = .backward // Set direction
+            withAnimation {
+                currentStep = prevStep
+            }
         }
         updateProgress()
     }
@@ -339,3 +353,65 @@ struct LogFlowContainerView: View {
     }
 }
 */ 
+
+// MARK: - All Flow Container
+
+struct AllFlowContainerView: View {
+    @StateObject var allFlow = AllFlow()
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Custom Navigation Bar Area
+                HStack(spacing: 16) {
+                    if allFlow.currentStep != AllStep.allCases.first {
+                        Button(action: {
+                            allFlow.previous()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    } else {
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Image(systemName: "chevron.left") 
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    }
+
+                    ProgressView(value: allFlow.progress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color.primary))
+                }
+                .padding(.horizontal)
+                .frame(height: 44) 
+                .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20)
+                .background(Color("bg").edgesIgnoringSafeArea(.top))
+                
+                allFlow.currentStep.view
+                    .environmentObject(allFlow) 
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) 
+                    .id(allFlow.currentStep) 
+                    .transition(.asymmetric( 
+                        insertion: allFlow.navigationDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading),
+                        removal: allFlow.navigationDirection == .forward ? .move(edge: .leading) : .move(edge: .trailing)
+                    ))
+                    .animation(.default, value: allFlow.currentStep) 
+            }
+            .navigationBarHidden(true) 
+            .background(Color("bg").edgesIgnoringSafeArea(.all))
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+#if DEBUG
+struct AllFlowContainerView_Previews: PreviewProvider {
+    static var previews: some View {
+        AllFlowContainerView()
+    }
+}
+#endif 

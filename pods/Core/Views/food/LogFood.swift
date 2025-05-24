@@ -29,6 +29,7 @@ struct LogFood: View {
     // Add callback that will be called when an item is added
     var onItemAdded: ((Food) -> Void)?
     @State private var showQuickLogSheet = false
+    @State private var showAllFlowSheet = true // Added for AllFlow
     
     enum FoodTab: Hashable {
         case all, meals, foods
@@ -154,6 +155,9 @@ struct LogFood: View {
             )
             .sheet(isPresented: $showQuickLogSheet) {
                 QuickLogFood(isPresented: $showQuickLogSheet)
+            }
+            .sheet(isPresented: $showAllFlowSheet) { // Added for AllFlow
+                AllFlowContainerView()
             }
 
             toastMessages
