@@ -39,6 +39,7 @@ struct DescribeLogView: View {
                 Button(action: {
                     // HapticFeedback.generate() 
                     allFlow.next()
+                    HapticFeedback.generate()
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))

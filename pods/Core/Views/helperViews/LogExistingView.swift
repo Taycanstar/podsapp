@@ -46,6 +46,7 @@ struct LogExistingView: View {
                     // allFlow.next() 
                     print("AllFlow finished")
                     // Potentially dismiss the sheet: allFlow.dismiss() or similar via Environment.dismiss
+                    HapticFeedback.generate()
                 }) {
                     Text("Finish") // Button text for the last step
                         .font(.system(size: 18, weight: .semibold))

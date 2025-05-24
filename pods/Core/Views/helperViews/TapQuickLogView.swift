@@ -12,7 +12,7 @@ struct TapQuickLogView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Manual Logging. Simplified.") // Title for this view
+            Text("Manual Logging, Simplified") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -40,6 +40,7 @@ struct TapQuickLogView: View {
                 Button(action: {
                     // HapticFeedback.generate() 
                     allFlow.next()
+                    HapticFeedback.generate()
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))

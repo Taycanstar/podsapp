@@ -28,7 +28,7 @@ struct AddQuickLogDetailsView: View {
                 .padding(.bottom, 30)
             
             // Placeholder for specific content of AddQuickLogDetailsView
-            Text("Add a name and nutrition details.")
+            Text("Add a name and nutrition details")
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)
@@ -40,6 +40,7 @@ struct AddQuickLogDetailsView: View {
                 Button(action: {
                     // HapticFeedback.generate() 
                     allFlow.next()
+                    HapticFeedback.generate()
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))

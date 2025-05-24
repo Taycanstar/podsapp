@@ -20,7 +20,7 @@ struct GenerateLogView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("logfood") // Image for this view
+            Image("logfood2") // Image for this view
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 285)
@@ -40,6 +40,7 @@ struct GenerateLogView: View {
                 Button(action: {
                     // HapticFeedback.generate() 
                     allFlow.next()
+                    HapticFeedback.generate()
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
