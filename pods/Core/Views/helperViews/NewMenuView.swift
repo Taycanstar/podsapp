@@ -29,9 +29,9 @@ struct NewMenuView: View {
                 .padding(.bottom, 30) // Kept original bottom padding
 
             VStack(alignment: .leading, spacing: 25) { // Increased spacing for clarity
-                DescriptionRowView(iconName: "pencil.and.ruler", text: "Describe your food or select from favorites to log your meals")
+                DescriptionRowView(iconName: "magnifyingglass", text: "Describe your food or select from favorites to log your meals")
                 DescriptionRowView(iconName: "mic", text: "Log your meal with your voice")
-                DescriptionRowView(iconName: "camera.viewfinder", text: "Snap a photo or scan a barcode to log your meal instantly") // Changed to camera.viewfinder for photo/scan
+                DescriptionRowView(iconName: "barcode.viewfinder", text: "Snap a photo or scan a barcode to log your meal instantly") // Changed to camera.viewfinder for photo/scan
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 20)
