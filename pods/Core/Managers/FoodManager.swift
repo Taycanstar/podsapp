@@ -2357,7 +2357,6 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         
         // Set loading states for UI feedback (similar to voice processing)
-        isScanningFood = true
         isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
         analysisStage = 0
         showAIGenerationSuccess = false

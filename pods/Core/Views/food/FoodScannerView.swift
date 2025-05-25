@@ -325,7 +325,6 @@ private func analyzeImage(_ image: UIImage) {
         
         // ENHANCED: Close scanner immediately and show loading in DashboardView
         // Set the loading state in FoodManager to show the loading card
-        foodManager.isScanningFood = true
         foodManager.isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
         foodManager.loadingMessage = "Looking up barcode..."
         foodManager.uploadProgress = 0.1
