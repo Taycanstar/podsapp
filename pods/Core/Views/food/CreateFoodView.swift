@@ -16,6 +16,7 @@ struct CreateFoodView: View {
     
     // Basic food info
     @State private var title: String = ""
+    @State private var brand: String = ""
     @State private var servingSize: String = ""
     @State private var numberOfServings: Int = 1
     @State private var calories: String = ""
@@ -131,6 +132,16 @@ struct CreateFoodView: View {
             VStack(spacing: 0) {
                 // Title
                 TextField("Title", text: $title)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Brand
+                TextField("Brand (optional)", text: $brand)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                     .padding(.vertical, 16)
@@ -454,11 +465,12 @@ struct CreateFoodView: View {
         )
         
         // Create the food object
+        let brandText = brand.isEmpty ? nil : brand
         let food = Food(
             fdcId: Int.random(in: 1000000..<9999999), // Generate a random ID
             description: title,
-            brandOwner: nil,
-            brandName: nil,
+            brandOwner: brandText,
+            brandName: brandText,
             servingSize: 1.0,
             numberOfServings: Double(numberOfServings),
             servingSizeUnit: servingUnit,

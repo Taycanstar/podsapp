@@ -17,6 +17,7 @@ import SwiftUI
 struct QuickLogFood: View {
     @Binding var isPresented: Bool
     @State private var foodTitle: String = ""
+    @State private var foodBrand: String = ""
     @State private var foodCalories: String = ""
     @State private var foodProtein: String = ""
     @State private var foodCarbs: String = ""
@@ -134,7 +135,16 @@ struct QuickLogFood: View {
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                     .padding(.top, 16)
-                    
+                
+                // Divider that extends fully across
+                Divider()
+                .padding(.leading, 16)
+                
+                // Brand
+                TextField("Brand (optional)", text: $foodBrand)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 
                 // Divider that extends fully across
                 Divider()
@@ -261,11 +271,12 @@ struct QuickLogFood: View {
         let fat = Double(foodFats) ?? 0
         
         // Create a food item with the entered nutritional info
+        let brandText = foodBrand.isEmpty ? nil : foodBrand
         let quickLoggedFood = Food(
             fdcId: Int.random(in: 1000000...9999999), // Generate a random ID for the custom food
             description: title,
-            brandOwner: nil,
-            brandName: nil,
+            brandOwner: brandText,
+            brandName: brandText,
             servingSize: 1.0,
             numberOfServings: nil,
             servingSizeUnit: nil,
