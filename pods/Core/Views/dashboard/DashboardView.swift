@@ -144,6 +144,11 @@ private var remainingCal: Double { vm.remainingCalories }
                 .listStyle(PlainListStyle())
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.hidden)
+                .safeAreaInset(edge: .bottom) {
+                    // Add buffer space for tab bar
+                    Spacer()
+                        .frame(height: 100)
+                }
                 .animation(.default, value: vm.logs)
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
