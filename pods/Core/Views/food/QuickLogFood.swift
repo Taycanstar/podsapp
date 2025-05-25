@@ -144,7 +144,7 @@ struct QuickLogFood: View {
                 TextField("Brand (optional)", text: $foodBrand)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
-                    .padding(.vertical, 16)
+                 
                 
                 // Divider that extends fully across
                 Divider()
