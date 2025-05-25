@@ -321,57 +321,33 @@ private func analyzeImage(_ image: UIImage) {
             return
         }
         
-        // Keep the scanner open until the confirmation view is ready to show
-        isAnalyzing = true
-        
         print("🧩 Processing barcode directly (without photo): \(barcode)")
         
-        // Check if we're using the callback pattern (preferred) or the navigation path
-        if let onFoodScanned = onFoodScanned {
-            // Use the callback approach with separate food lookup
-            foodManager.lookupFoodByBarcode(
-                barcode: barcode,
-                image: nil,
-                userEmail: userEmail
-            ) { success, message in
-               
-                
-                self.isAnalyzing = false
-                self.isProcessingBarcode = false
-                
-                if success, let food = self.foodManager.aiGeneratedFood {
-                    print("✅ Barcode lookup success for: \(barcode) - using callback for confirmation")
-                    
-                    // Get the food log ID (if available)
-                    let foodLogId = self.foodManager.lastLoggedFoodId
-                    let foodasFood = food.asFood
-                    // Call the callback with the food and log ID
-                    onFoodScanned(foodasFood, foodLogId)
-                    
-                    // Close the scanner
-                    self.isPresented = false
-                } else {
-                    print("❌ Barcode direct lookup failed: \(message ?? "Unknown error")")
-                }
-            }
-        } else {
-            // Fall back to the old navigation path approach
-            foodManager.lookupFoodByBarcode(
-                barcode: barcode,
-                image: nil,
-                userEmail: userEmail,
-                navigationPath: $navigationPath
-            ) { success, message in
-                self.isAnalyzing = false
-                self.isProcessingBarcode = false
-                
-                if success {
-                    print("✅ Barcode lookup success for: \(barcode) - confirmation view should appear")
-                    // Now that the confirmation view is in the navigation stack, close the scanner
-                    self.isPresented = false
-                } else {
-                    print("❌ Barcode direct lookup failed: \(message ?? "Unknown error")")
-                }
+        // ENHANCED: Close scanner immediately and show loading in DashboardView
+        // Set the loading state in FoodManager to show the loading card
+        foodManager.isScanningFood = true
+        foodManager.isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
+        foodManager.loadingMessage = "Looking up barcode..."
+        foodManager.uploadProgress = 0.1
+        
+        // Close the scanner immediately for better UX
+        isPresented = false
+        
+        // Reset local state
+        isAnalyzing = false
+        isProcessingBarcode = false
+        
+        // Start the enhanced barcode lookup process
+        foodManager.lookupFoodByBarcodeEnhanced(
+            barcode: barcode,
+            userEmail: userEmail
+        ) { success, message in
+            // The FoodManager will handle all UI state updates
+            // including showing the confirmation view when ready
+            if success {
+                print("✅ Enhanced barcode lookup success for: \(barcode)")
+            } else {
+                print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
             }
         }
     }

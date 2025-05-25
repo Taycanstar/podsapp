@@ -237,6 +237,23 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
              fetchSubscriptionInfo()
          }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowFoodConfirmation"))) { notification in
+            // Handle barcode scan completion - show confirmation view
+            if let userInfo = notification.userInfo,
+               let food = userInfo["food"] as? Food,
+               let barcode = userInfo["barcode"] as? String {
+                print("📱 Received ShowFoodConfirmation notification for: \(food.displayName)")
+                
+                // Set the scanned food data
+                scannedFood = food
+                scannedFoodLogId = nil  // No log ID yet since not confirmed
+                
+                // Show the confirmation view
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showConfirmFoodView = true
+                }
+            }
+        }
 
     .onChange(of: isAuthenticated) { _, newValue in
         UserDefaults.standard.set(newValue, forKey: "isAuthenticated")

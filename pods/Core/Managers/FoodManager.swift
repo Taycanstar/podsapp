@@ -2352,6 +2352,133 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             }
         }
     }
+    // MARK: - Enhanced Barcode Lookup
+    func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+        print("🔍 Starting enhanced barcode lookup for: \(barcode)")
+        
+        // Set loading states for UI feedback (similar to voice processing)
+        isScanningFood = true
+        isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
+        analysisStage = 0
+        showAIGenerationSuccess = false
+        loadingMessage = "Looking up barcode..."
+        uploadProgress = 0.2
+        
+        // Create a timer to cycle through analysis stages for UI feedback
+        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+            guard let self = self else { 
+                timer.invalidate()
+                return 
+            }
+            
+            // Cycle through stages 0-3
+            self.analysisStage = (self.analysisStage + 1) % 4
+            
+            // Update loading message based on current stage
+            self.loadingMessage = [
+                "Looking up barcode...",
+                "Searching nutrition databases...",
+                "Enhancing with web search...",
+                "Finalizing food data..."
+            ][self.analysisStage]
+            
+            // Gradually increase progress
+            self.uploadProgress = min(0.2 + (Double(self.analysisStage) * 0.2), 0.9)
+        }
+        
+        // Call the enhanced barcode lookup endpoint
+        NetworkManagerTwo.shared.lookupFoodByBarcode(
+            barcode: barcode,
+            userEmail: userEmail,
+            imageData: nil,  // No image for barcode-only lookup
+            mealType: "Lunch",
+            shouldLog: false  // Don't log automatically, let user confirm first
+        ) { [weak self] result in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            // Stop the timer and update progress
+            timer.invalidate()
+            self.uploadProgress = 1.0
+            
+            switch result {
+            case .success(let payload):
+                let food = payload.food
+                
+                print("✅ Enhanced barcode lookup successful: \(food.displayName)")
+                
+                // Store the food for confirmation
+                self.aiGeneratedFood = food.asLoggedFoodItem
+                self.lastLoggedFoodId = food.fdcId
+                
+                // Reset loading states
+                self.isScanningFood = false
+                self.isAnalyzingFood = false
+                
+                // Create a CombinedLog for optimistic UI update (but don't add to logs yet)
+                let combinedLog = CombinedLog(
+                    type: .food,
+                    status: "success",
+                    calories: food.calories ?? 0,
+                    message: "Barcode scan: \(barcode) - \(food.displayName)",
+                    foodLogId: nil,  // No log ID yet since not confirmed
+                    food: food.asLoggedFoodItem,
+                    mealType: "Lunch",
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: nil,
+                    scheduledAt: Date(),
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil
+                )
+                
+                // Show success message briefly
+                self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
+                self.showLogSuccess = true
+                
+                // Auto-hide success message after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.showLogSuccess = false
+                }
+                
+                // Trigger navigation to confirmation view
+                // This will be handled by the DashboardView or ContentView
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "barcode": barcode
+                    ]
+                )
+                
+                completion(true, nil)
+                
+            case .failure(let error):
+                print("❌ Enhanced barcode lookup failed: \(error)")
+                
+                // Reset loading states
+                self.isScanningFood = false
+                self.isAnalyzingFood = false
+                
+                // Set error message
+                let errorMsg: String
+                if let networkError = error as? NetworkManagerTwo.NetworkError,
+                   case .serverError(let message) = networkError {
+                    errorMsg = message
+                } else {
+                    errorMsg = "Could not find food for barcode"
+                }
+                
+                self.scanningFoodError = errorMsg
+                completion(false, errorMsg)
+            }
+        }
+    }
+
     // MARK: - Voice Input Processing
     func processVoiceInput(audioData: Data) {
         // Set analyzing flag - same as when generating macros with AI
