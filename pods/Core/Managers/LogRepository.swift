@@ -49,4 +49,15 @@ final class LogRepository {
             }
         }
     }
+
+    func deleteLogItem(email: String, logId: Int, logType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        api.deleteLogItem(userEmail: email, logId: logId, logType: logType) { result in
+            switch result {
+            case .success:
+                completion(.success(()))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
 }

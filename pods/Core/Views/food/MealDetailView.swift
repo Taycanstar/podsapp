@@ -241,7 +241,7 @@ struct MealDetailView: View {
     }
     
     private func deleteMeal() {
-        // Call FoodManager's deleteMeal method
+        // Call FoodManager's deleteMeal method for deleting meal templates
         foodManager.deleteMeal(id: meal.id) { result in
             switch result {
             case .success:

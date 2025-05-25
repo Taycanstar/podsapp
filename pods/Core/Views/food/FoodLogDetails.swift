@@ -40,8 +40,13 @@ struct FoodLogDetails: View {
                         .fill(Color("iosnp"))
                     VStack(spacing: 0) {
                         // Title
-                        Text(food.displayName)
-                             .foregroundColor(.primary)
+                        HStack {
+                            Text(food.displayName)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                         Divider().padding(.leading, 16)
                         // Serving Size
                         HStack {

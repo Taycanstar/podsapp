@@ -44,42 +44,106 @@ private var remainingCal: Double { vm.remainingCalories }
             ZStack {
                 Color("iosbg2").ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 0) {
-
-                        nutritionSummaryCard            // ① macros + remaining kcals
-                            // .padding(.trailing, -10) 
-                                 .padding(.horizontal, -16) 
-                     
-
+                // Single List containing everything for smooth scrolling
+                List {
+                    // Header content as list sections
+                    Section {
+                        nutritionSummaryCard
+                            .padding(.horizontal, -16)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        
                         if foodMgr.isAnalyzingFood {
                             FoodAnalysisCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
-                                .padding(.bottom, 16)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
 
                         if foodMgr.isScanningFood {
                             FoodGenerationCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
-                                .padding(.bottom, 16)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
-
-                        // ② list / loading / error / empty states
-                        Group {
-                            if vm.isLoading        { loadingState }
-                            else if let err = vm.error   { errorState(err) }
-                            else if vm.logs.isEmpty      { emptyState.padding(.horizontal) }
-                            else                        { logsList }
-                        }
-                        .animation(.default, value: vm.logs)
-
-                        Spacer(minLength: 80)            // room for the tab bar
                     }
-                    .padding(.top, 8) // 8px space between navbar and first card
-                    .padding(.bottom)
+                    
+                    // Logs section
+                    if vm.isLoading {
+                        Section {
+                            loadingState
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+                    } else if let err = vm.error {
+                        Section {
+                            errorState(err)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+                    } else if vm.logs.isEmpty {
+                        Section {
+                            emptyState
+                                .padding(.horizontal)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+                    } else {
+                        Section {
+                            HStack {
+                                Text("Recent Logs")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                        
+                        ForEach(vm.logs) { log in
+                            ZStack {
+                                LogRow(log: log)
+                                    .id(log.id)
+                                    .onTapGesture {
+                                        if log.type == .food, let loggedFood = log.food {
+                                            selectedFoodLog = loggedFood.asFood
+                                        }
+                                    }
+                                // NavigationLink for food logs
+                                if log.type == .food, let loggedFood = log.food {
+                                    NavigationLink(
+                                        destination: FoodLogDetails(food: loggedFood.asFood),
+                                        tag: loggedFood.asFood,
+                                        selection: $selectedFoodLog
+                                    ) {
+                                        EmptyView()
+                                    }
+                                    .opacity(0)
+                                    .frame(width: 0, height: 0)
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                        .onDelete { indexSet in
+                            deleteLogItems(at: indexSet)
+                        }
+                    }
                 }
+                .listStyle(PlainListStyle())
+                .scrollContentBackground(.hidden)
+                .animation(.default, value: vm.logs)
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
         VStack {
@@ -161,6 +225,85 @@ private var remainingCal: Double { vm.remainingCalories }
 
         }
         .navigationViewStyle(.stack)
+    }
+
+    // Delete function for swipe-to-delete functionality
+    private func deleteLogItems(at indexSet: IndexSet) {
+        print("Deleting log items at indices: \(indexSet)")
+        
+        // Get the logs that should be deleted
+        let logsToDelete = indexSet.map { vm.logs[$0] }
+        
+        // Log detailed information about the logs to be deleted
+        for log in logsToDelete {
+            print("🔍 Dashboard Log to delete - ID: \(log.id), Type: \(log.type)")
+            
+            // More detailed info based on type
+            switch log.type {
+            case .food:
+                print("  • Food log details:")
+                print("    - Food log ID: \(log.foodLogId ?? -1)")
+                if let food = log.food {
+                    print("    - Food ID: \(food.fdcId)")
+                    print("    - Food name: \(food.displayName)")
+                }
+            case .meal:
+                print("  • Meal log details:")
+                print("    - Meal log ID: \(log.mealLogId ?? -1)")
+                if let meal = log.meal {
+                    print("    - Meal ID: \(meal.id)")
+                    print("    - Meal title: \(meal.title)")
+                }
+            case .recipe:
+                print("  • Recipe log details:")
+                print("    - Recipe log ID: \(log.recipeLogId ?? -1)")
+                if let recipe = log.recipe {
+                    print("    - Recipe ID: \(recipe.id)")
+                    print("    - Recipe title: \(recipe.title)")
+                }
+            }
+        }
+        
+        // Actually delete the items
+        for log in logsToDelete {
+            switch log.type {
+            case .food:
+                if let foodLogId = log.foodLogId {
+                    foodMgr.deleteFoodLog(id: foodLogId) { result in
+                        switch result {
+                        case .success:
+                            print("✅ Successfully deleted food log ID: \(foodLogId)")
+                            // Remove from local logs after successful deletion
+                            DispatchQueue.main.async {
+                                vm.removeLog(log)
+                            }
+                        case .failure(let error):
+                            print("❌ Failed to delete food log: \(error)")
+                        }
+                    }
+                }
+            case .meal:
+                if let mealLogId = log.mealLogId {
+                    foodMgr.deleteMealLog(id: mealLogId) { result in
+                        switch result {
+                        case .success:
+                            print("✅ Successfully deleted meal log ID: \(mealLogId)")
+                            // Remove from local logs after successful deletion
+                            DispatchQueue.main.async {
+                                vm.removeLog(log)
+                            }
+                        case .failure(let error):
+                            print("❌ Failed to delete meal log: \(error)")
+                        }
+                    }
+                }
+            case .recipe:
+                if let recipeLogId = log.recipeLogId {
+                    // Note: Implement recipe log deletion if needed in FoodManager
+                    print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
+                }
+            }
+        }
     }
 }
 
@@ -509,39 +652,7 @@ private extension DashboardView {
         .frame(maxWidth: .infinity)
     }
 
-    var logsList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Logs")
-                .font(.title)
-                .fontWeight(.bold)
-            LazyVStack(spacing: 12) {
-                ForEach(vm.logs) { log in
-                    ZStack {
-                        LogRow(log: log)
-                            .id(log.id)
-                            .onTapGesture {
-                                if log.type == .food, let loggedFood = log.food {
-                                    selectedFoodLog = loggedFood.asFood
-                                }
-                            }
-                        // NavigationLink for food logs
-                        if log.type == .food, let loggedFood = log.food {
-                            NavigationLink(
-                                destination: FoodLogDetails(food: loggedFood.asFood),
-                                tag: loggedFood.asFood,
-                                selection: $selectedFoodLog
-                            ) {
-                                EmptyView()
-                            }
-                            .opacity(0)
-                            .frame(width: 0, height: 0)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal)
-    }
+
 
     // ③ Toolbar --------------------------------------------------------------
 @ToolbarContentBuilder

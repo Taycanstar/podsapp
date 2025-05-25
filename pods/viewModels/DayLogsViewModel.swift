@@ -205,7 +205,23 @@ func loadLogs(for date: Date) {
       remainingCalories = max(0, calorieGoal - totalCalories)
     }
 
+    func removeLog(_ logToRemove: CombinedLog) {
+        // Remove from the main logs array
+        logs.removeAll { $0.id == logToRemove.id }
 
-
-
+        // Remove from pendingByDate cache
+        if let scheduledDate = logToRemove.scheduledAt {
+            let key = Calendar.current.startOfDay(for: scheduledDate)
+            if var pendingLogsForDate = pendingByDate[key] {
+                pendingLogsForDate.removeAll { $0.id == logToRemove.id }
+                if pendingLogsForDate.isEmpty {
+                    pendingByDate.removeValue(forKey: key)
+                } else {
+                    pendingByDate[key] = pendingLogsForDate
+                }
+            }
+        }
+        // Recalculate totals after removal
+        recalculateTotals()
+    }
 }

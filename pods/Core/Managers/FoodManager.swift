@@ -1941,123 +1941,27 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
 }
 // Add these functions to the FoodManager class to handle deletion
     // Delete a food log
-    func deleteFoodLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
+    func deleteFoodLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let email = userEmail else {
-            print("⚠️ Cannot delete food log: User email not set")
-            completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
             return
         }
-        
-        // Log all food logs in combinedLogs for debugging
-        print("📋 All food logs in combinedLogs:")
-        for (index, log) in combinedLogs.enumerated() {
-            if log.type == .food {
-                print("  \(index): ID=\(log.id), foodLogId=\(log.foodLogId ?? -1), food.fdcId=\(log.food?.fdcId ?? -1)")
-            }
-        }
-        
-        // Find the log in combinedLogs
-        if let index = combinedLogs.firstIndex(where: { $0.foodLogId == id }) {
-            // Remove from local array first for immediate UI update
-            let removedLog = combinedLogs.remove(at: index)
-            print("✅ Found food log with ID \(id) in combinedLogs at index \(index)")
-            
-            // Call network manager to delete from server
-            networkManager.deleteFoodLog(logId: id, userEmail: email) { [weak self] result in
-                guard let self = self else { return }
-                
+        let repo = LogRepository()
+        repo.deleteLogItem(email: email, logId: id, logType: "food") { result in
+            DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully deleted food log with ID: \(id)")
-                    
-                    // Nothing more to do as we've already removed it locally
+                    self.combinedLogs.removeAll { $0.foodLogId == id }
+                    self.loggedFoods.removeAll { $0.foodLogId == id } // If still used
                     completion(.success(()))
-                    
                 case .failure(let error):
-                    print("❌ Failed to delete food log: \(error)")
-                    
-                    // Add the log back to the array since deletion failed
-                    self.combinedLogs.insert(removedLog, at: index)
                     completion(.failure(error))
                 }
             }
-        } else {
-            print("⚠️ Food log with ID \(id) not found in combinedLogs")
-            
-            // Check if this is potentially a log being mislabeled
-            if let index = combinedLogs.firstIndex(where: { $0.id == "food_\(id)" && $0.type == .food }) {
-                print("🔍 Found potential food log with ID \(id) by general ID match")
-                let log = combinedLogs[index]
-                print("  - Log details: type=\(log.type), foodLogId=\(log.foodLogId ?? -1), food.fdcId=\(log.food?.fdcId ?? -1)")
-                
-                // Try to delete using the correct ID
-                if let actualFoodLogId = log.foodLogId {
-                    print("🔄 Retrying deletion with actual foodLogId: \(actualFoodLogId)")
-                    deleteFoodLog(id: actualFoodLogId, completion: completion)
-                    return
-                }
-            }
-            
-            completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Food log not found"])))
         }
     }
-    
-    // Delete a meal
-    func deleteMeal(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
-        guard let email = userEmail else {
-            print("⚠️ Cannot delete meal: User email not set")
-            completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
-            return
-        }
-        
-        // Find the meal in the meals array
-        if let index = meals.firstIndex(where: { $0.id == id }) {
-            // Remove from local array first for immediate UI update
-            let removedMeal = meals.remove(at: index)
-            
-            // Also remove any associated logs in combinedLogs
-            let mealLogIndices = combinedLogs.indices.filter { combinedLogs[$0].meal?.id == id }
-            let removedLogs = mealLogIndices.map { combinedLogs[$0] }
-            
-            for index in mealLogIndices.sorted(by: >) {
-                combinedLogs.remove(at: index)
-            }
-            
-            // Call network manager to delete from server
-            networkManager.deleteMeal(mealId: id, userEmail: email) { [weak self] result in
-                guard let self = self else { return }
-                
-                switch result {
-                case .success:
-                    print("✅ Successfully deleted meal with ID: \(id)")
-                    
-                    // Nothing more to do as we've already removed it locally
-                    completion(.success(()))
-                    
-                case .failure(let error):
-                    print("❌ Failed to delete meal: \(error)")
-                    
-                    // Add the meal back to the array since deletion failed
-                    self.meals.insert(removedMeal, at: index)
-                    
-                    // Add the logs back to combinedLogs
-                    for log in removedLogs {
-                        if let originalIndex = mealLogIndices.first {
-                            self.combinedLogs.insert(log, at: min(originalIndex, self.combinedLogs.count))
-                        } else {
-                            self.combinedLogs.append(log)
-                        }
-                    }
-                    
-                    completion(.failure(error))
-                }
-            }
-        } else {
-            print("⚠️ Meal with ID \(id) not found in meals")
-            completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Meal not found"])))
-        }
-    }
-    
+
+
     // Delete a food
     func deleteFood(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
         guard let email = userEmail else {
@@ -2096,64 +2000,99 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
         }
     }
     // Delete a meal log
-    func deleteMealLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
+    func deleteMealLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let email = userEmail else {
-            print("⚠️ Cannot delete meal log: User email not set")
-            completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
             return
         }
-        
-        // Log all meal logs in combinedLogs for debugging
-        print("📋 All meal logs in combinedLogs:")
-        for (index, log) in combinedLogs.enumerated() {
-            if log.type == .meal {
-                print("  \(index): ID=\(log.id), mealLogId=\(log.mealLogId ?? -1), meal.id=\(log.meal?.id ?? -1)")
-            }
-        }
-        
-        // Find the log in combinedLogs
-        if let index = combinedLogs.firstIndex(where: { $0.mealLogId == id }) {
-            // Remove from local array first for immediate UI update
-            let removedLog = combinedLogs.remove(at: index)
-            print("✅ Found meal log with ID \(id) in combinedLogs at index \(index)")
-            
-            // Call network manager to delete from server
-            networkManager.deleteMealLog(logId: id, userEmail: email) { [weak self] result in
-                guard let self = self else { return }
-                
+        let repo = LogRepository() // Create an instance of LogRepository
+        repo.deleteLogItem(email: email, logId: id, logType: "meal") { result in
+            DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully deleted meal log with ID: \(id)")
-                    
-                    // Nothing more to do as we've already removed it locally
+                    // Remove from local combinedLogs as well
+                    self.combinedLogs.removeAll { $0.mealLogId == id }
                     completion(.success(()))
-                    
                 case .failure(let error):
-                    print("❌ Failed to delete meal log: \(error)")
-                    
-                    // Add the log back to the array since deletion failed
-                    self.combinedLogs.insert(removedLog, at: index)
                     completion(.failure(error))
                 }
             }
-        } else {
-            print("⚠️ Meal log with ID \(id) not found in combinedLogs")
-            
-            // Check if this is potentially a food log being mislabeled as a meal log
-            if let index = combinedLogs.firstIndex(where: { $0.id == "meal_\(id)" && $0.type == .meal }) {
-                print("🔍 Found potential meal log with ID \(id) by general ID match")
-                let log = combinedLogs[index]
-                print("  - Log details: type=\(log.type), mealLogId=\(log.mealLogId ?? -1), meal.id=\(log.meal?.id ?? -1)")
-                
-                // Try to delete using the correct ID
-                if let actualMealLogId = log.mealLogId {
-                    print("🔄 Retrying deletion with actual mealLogId: \(actualMealLogId)")
-                    deleteMealLog(id: actualMealLogId, completion: completion)
-                    return
+        }
+    }
+
+    // Delete a meal template
+    func deleteMeal(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            return
+        }
+        let repo = LogRepository()
+        // Assuming logType "meal" is used for deleting meal templates in the backend.
+        // If not, the backend `delete_log_item` might need adjustment or a new endpoint.
+        repo.deleteLogItem(email: email, logId: id, logType: "meal") { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Remove from local meals array
+                    self.meals.removeAll { $0.id == id }
+                    // Also remove any combined logs that might be showing this meal if it was logged
+                    // (though this function is for deleting the template, not specific logs of it)
+                    self.combinedLogs.removeAll { $0.meal?.id == id }
+                    completion(.success(()))
+                case .failure(let error):
+                    completion(.failure(error))
                 }
             }
-            
-            completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Meal log not found"])))
+        }
+    }
+
+    func deleteRecipeLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            return
+        }
+        let repo = LogRepository() // Create an instance of LogRepository
+        repo.deleteLogItem(email: email, logId: id, logType: "recipe") { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Remove from local combinedLogs as well
+                    self.combinedLogs.removeAll { $0.recipeLogId == id }
+                    completion(.success(()))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    // Function to delete a user-created food
+    func deleteUserFood(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let email = userEmail else {
+            print("⚠️ Cannot delete user food: User email not set")
+            completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            return
+        }
+
+        if let index = userFoods.firstIndex(where: { $0.fdcId == id }) {
+            let removedFood = userFoods.remove(at: index)
+            networkManager.deleteFood(foodId: id, userEmail: email) { [weak self] result in // Uses networkManager.deleteFood
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        print("✅ Successfully deleted user food with ID: \(id)")
+                        completion(.success(()))
+                    case .failure(let error):
+                        print("❌ Failed to delete user food: \(error)")
+                        self.userFoods.insert(removedFood, at: index) // Add back on failure
+                        completion(.failure(error))
+                    }
+                }
+            }
+        } else {
+            print("⚠️ User food with ID \(id) not found in userFoods")
+            completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "User food not found"])))
         }
     }
  

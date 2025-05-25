@@ -19,20 +19,27 @@ class NetworkManagerTwo {
     // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
-    enum NetworkError: Error, LocalizedError {
+    enum NetworkError: LocalizedError {
         case invalidURL
-        case noData
+        case requestFailed(statusCode: Int)
+        case invalidResponse
         case decodingError
-        case serverError(String)
-        
+        case serverError(message: String)
+        // Add any other specific error cases you might need
+
         var errorDescription: String? {
             switch self {
             case .invalidURL: return "Invalid URL"
-            case .noData: return "No data received"
+            case .requestFailed(let statusCode): return "Request failed with status code: \(statusCode)"
+            case .invalidResponse: return "Invalid response from server"
             case .decodingError: return "Failed to decode response"
-            case .serverError(let message): return "Server error: \(message)"
+            case .serverError(let message): return message // Use the message directly
             }
         }
+    }
+    
+    struct ErrorResponse: Codable {
+        let error: String
     }
     
     // MARK: - Barcode Lookup
@@ -97,7 +104,7 @@ class NetworkManagerTwo {
             
             guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -106,7 +113,7 @@ class NetworkManagerTwo {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -190,7 +197,7 @@ class NetworkManagerTwo {
             guard let data = data else {
                 print("🔴 No data received.")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -297,7 +304,7 @@ class NetworkManagerTwo {
             
             guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -306,7 +313,7 @@ class NetworkManagerTwo {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -386,7 +393,7 @@ class NetworkManagerTwo {
                 
                 guard let data = data else {
                     print("❌ No data received from server")
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                     return
                 }
                 
@@ -505,7 +512,7 @@ class NetworkManagerTwo {
                 
                 guard let data = data else {
                     print("❌ No data received from server")
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                     return
                 }
                 
@@ -520,7 +527,7 @@ class NetworkManagerTwo {
                     if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         if let errorMessage = json["error"] as? String {
                             print("❌ Server error processing onboarding data: \(errorMessage)")
-                            completion(.failure(NetworkError.serverError(errorMessage)))
+                            completion(.failure(NetworkError.serverError(message: errorMessage)))
                             return
                         }
                         
@@ -665,7 +672,7 @@ class NetworkManagerTwo {
             guard let data = data else {
                 print("❌ No data received")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -675,7 +682,7 @@ class NetworkManagerTwo {
                let errorMessage = json["error"] as? String {
                 print("❌ Server error: \(errorMessage)")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -812,7 +819,7 @@ class NetworkManagerTwo {
             guard let data = data else {
                 print("❌ No data received when logging height")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -822,7 +829,7 @@ class NetworkManagerTwo {
                let errorMessage = json["error"] as? String {
                 print("❌ Server error logging height: \(errorMessage)")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -899,7 +906,7 @@ class NetworkManagerTwo {
             guard let data = data else {
                 print("❌ No data received when logging weight")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -909,7 +916,7 @@ class NetworkManagerTwo {
                let errorMessage = json["error"] as? String {
                 print("❌ Server error logging weight: \(errorMessage)")
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -962,12 +969,12 @@ class NetworkManagerTwo {
                 return
             }
             guard let data = data else {
-                DispatchQueue.main.async { completion(.failure(NetworkError.noData)) }
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
                 return
             }
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(errorMessage))) }
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
                 return
             }
             do {
@@ -1012,12 +1019,12 @@ class NetworkManagerTwo {
                 return
             }
             guard let data = data else {
-                DispatchQueue.main.async { completion(.failure(NetworkError.noData)) }
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
                 return
             }
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(errorMessage))) }
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
                 return
             }
             do {
@@ -1083,7 +1090,7 @@ class NetworkManagerTwo {
             return
         }
         
-        print("�� Updating nutrition goals for user: \(userEmail)")
+        print("🧠 Updating nutrition goals for user: \(userEmail)")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -1095,7 +1102,7 @@ class NetworkManagerTwo {
             
             guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -1104,7 +1111,7 @@ class NetworkManagerTwo {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -1175,7 +1182,7 @@ class NetworkManagerTwo {
             
             guard let data = data else {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.noData))
+                    completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
@@ -1184,7 +1191,7 @@ class NetworkManagerTwo {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(errorMessage)))
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
@@ -1207,6 +1214,50 @@ class NetworkManagerTwo {
                 }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    func deleteLogItem(userEmail: String, logId: Int, logType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard var urlComponents = URLComponents(string: "\(baseUrl)/delete_log_item/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "log_id", value: String(logId)),
+            URLQueryItem(name: "log_type", value: logType)
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            if (200...299).contains(httpResponse.statusCode) {
+                completion(.success(()))
+            } else {
+                if let data = data, let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    completion(.failure(NetworkError.serverError(message: errorResponse.error)))
+                } else {
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
             }
         }.resume()

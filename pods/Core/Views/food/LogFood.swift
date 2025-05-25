@@ -983,12 +983,12 @@ private struct FoodListView: View {
                 // Delete the actual meal if in Meals tab
                 else if selectedFoodTab == .meals, let meal = log.meal {
                     // meal.id is already an Int
-                    foodManager.deleteMeal(id: meal.id) { result in
+                    foodManager.deleteMeal(id: meal.id) { result in // Reverted to deleteMeal
                         switch result {
                         case .success:
-                            print("Successfully deleted meal: \(meal.title)")
+                            print("Successfully deleted meal: \(meal.title)") // Log for meal template
                         case .failure(let error):
-                            print("Failed to delete meal: \(error)")
+                            print("Failed to delete meal: \(error)") // Log for meal template
                         }
                     }
                 }
