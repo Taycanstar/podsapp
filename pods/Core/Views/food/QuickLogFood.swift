@@ -25,6 +25,7 @@ struct QuickLogFood: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @State private var errorMessage: String?
     @State private var isLogging = false
     @State private var selectedMeal: String = "Breakfast"
@@ -305,9 +306,36 @@ struct QuickLogFood: View {
                 isLogging = false
                 
                 switch result {
-                case .success(_):
-                    // Success is handled by FoodManager (shows toast in Dashboard)
-                    break
+                case .success(let loggedFood):
+                    // Create CombinedLog and add to DayLogsVM
+                    let combinedLog = CombinedLog(
+                        type: .food,
+                        status: loggedFood.status,
+                        calories: Double(loggedFood.food.calories),
+                        message: "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                        foodLogId: loggedFood.foodLogId,
+                        food: loggedFood.food,
+                        mealType: loggedFood.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: Date(),
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+                    
+                    // Add to DayLogsViewModel to update dashboard
+                    dayLogsVM.addPending(combinedLog)
+                    print("After addPending from QuickLogFood, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+                    
+                    // Update foodManager.combinedLogs
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                    }
+                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }

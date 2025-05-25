@@ -1923,13 +1923,19 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
                 // Store the created food
                 self.lastGeneratedFood = food
                 
+                // Add the food to userFoods so it appears in MyFoods tab immediately
+                if !self.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                    self.userFoods.insert(food, at: 0) // Add to beginning of list
+                }
+                
+                // Clear the userFoods cache to force refresh from server next time
+                self.clearUserFoodsCache()
+                
                 // Show success toast
                 self.showFoodGenerationSuccess = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.showFoodGenerationSuccess = false
                 }
-                
-          
                 
                 // Call the completion handler
                 completion(.success(food))
