@@ -1220,7 +1220,7 @@ class NetworkManagerTwo {
     }
 
     func deleteLogItem(userEmail: String, logId: Int, logType: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        guard var urlComponents = URLComponents(string: "\(baseUrl)/delete_log_item/") else {
+        guard var urlComponents = URLComponents(string: "\(baseUrl)/delete-log-item/") else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
