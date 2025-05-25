@@ -186,6 +186,9 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Initialize food manager with user email
                 foodMgr.initialize(userEmail: onboarding.email)
                 
+                // Set up the connection between FoodManager and DayLogsViewModel for voice logging
+                foodMgr.dayLogsViewModel = vm
+                
                 // Check health permissions and request if needed
                 checkHealthPermissions()
                 

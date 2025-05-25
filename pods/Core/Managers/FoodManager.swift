@@ -103,6 +103,8 @@ class FoodManager: ObservableObject {
     // Add errorMessage property after other published properties, around line 85
     @Published var errorMessage: String? = nil
 
+    // Reference to DayLogsViewModel for updating UI after voice logging
+    weak var dayLogsViewModel: DayLogsViewModel?
 
     
     init() {
@@ -2517,7 +2519,16 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                             servingsConsumed: nil
                         )
                         
-                      
+                        // Add to DayLogsViewModel to update the UI (must be on main thread)
+                        DispatchQueue.main.async {
+                            self.dayLogsViewModel?.addPending(combinedLog)
+                        }
+                        
+                        // Also add to the global timeline, de-duplicating first
+                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            self.combinedLogs.remove(at: idx)
+                        }
+                        self.combinedLogs.insert(combinedLog, at: 0)
                         
                         // Track the food in recently added
                         self.lastLoggedFoodId = loggedFood.food.fdcId
