@@ -33,6 +33,8 @@ struct FoodScannerView: View {
     @State private var isProcessingBarcode = false
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
+    @State private var showScanFlow = false
+    @State private var hasShownScanFlow = false
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     // Callback for when food is scanned via barcode
@@ -250,6 +252,12 @@ struct FoodScannerView: View {
         }
                     }
             }
+            .sheet(isPresented: $showScanFlow) {
+                ScanFlowContainerView()
+                    .onDisappear {
+                        hasShownScanFlow = true
+                    }
+            }
             .background(Color.black)
             // Add navigation destination for ConfirmFoodView using BarcodeFood struct
             .navigationDestination(for: BarcodeFood.self) { barcodeFood in
@@ -260,6 +268,13 @@ struct FoodScannerView: View {
             // Check camera permissions when the view appears
             checkCameraPermissions()
             print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
+            
+            // Show scan flow on first appearance
+            if !hasShownScanFlow {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showScanFlow = true
+                }
+            }
         }
     }
     

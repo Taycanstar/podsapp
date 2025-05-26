@@ -204,8 +204,6 @@ class MealFlow: ObservableObject {
     }
 }
 
-
-
 // MARK: - Foods Flow
 
 enum FoodStep: Int, CaseIterable {
@@ -568,6 +566,132 @@ struct MealFlowContainerView: View {
 struct MealFlowContainerView_Previews: PreviewProvider {
     static var previews: some View {
         MealFlowContainerView()
+    }
+}
+#endif 
+
+// MARK: - Scan Flow
+
+enum ScanStep: Int, CaseIterable {
+    case scanFood, barcode, gallery
+
+    @ViewBuilder
+    var view: some View {
+        switch self {
+        case .scanFood:
+            ScanFoodHelper() // Uses scan3
+        case .barcode:
+            BarcodeHelper() // Uses scan2
+        case .gallery:
+            GalleryHelper() // Uses scan1
+        }
+    }
+}
+
+class ScanFlow: ObservableObject {
+    @Published var currentStep: ScanStep = .scanFood
+    @Published var progress: Double = 0.0
+    @Published var navigationDirection: NavigationDirection = .forward
+
+    init() {
+        updateProgress()
+    }
+
+    func navigate(to step: ScanStep) {
+        if step.rawValue > currentStep.rawValue {
+            navigationDirection = .forward
+        } else if step.rawValue < currentStep.rawValue {
+            navigationDirection = .backward
+        }
+        withAnimation {
+            currentStep = step
+        }
+        updateProgress()
+    }
+
+    func next() {
+        if let nextStep = ScanStep(rawValue: currentStep.rawValue + 1) {
+            navigationDirection = .forward
+            withAnimation {
+                currentStep = nextStep
+            }
+        }
+        updateProgress()
+    }
+
+    func previous() {
+        if let prevStep = ScanStep(rawValue: currentStep.rawValue - 1) {
+            navigationDirection = .backward
+            withAnimation {
+                currentStep = prevStep
+            }
+        }
+        updateProgress()
+    }
+
+    private func updateProgress() {
+        progress = (Double(currentStep.rawValue) + 1.0) / Double(ScanStep.allCases.count)
+    }
+}
+
+// MARK: - Scan Flow Container
+
+struct ScanFlowContainerView: View {
+    @StateObject var scanFlow = ScanFlow()
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Custom Navigation Bar Area
+                HStack(spacing: 16) {
+                    if scanFlow.currentStep != ScanStep.allCases.first {
+                        Button(action: {
+                            scanFlow.previous()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    } else {
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Image(systemName: "chevron.left") 
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    }
+
+                    ProgressView(value: scanFlow.progress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color.primary))
+                }
+                .padding(.horizontal)
+                .frame(height: 44) 
+                .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20)
+                .background(Color("bg").edgesIgnoringSafeArea(.top))
+                
+                scanFlow.currentStep.view
+                    .environmentObject(scanFlow) 
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) 
+                    .id(scanFlow.currentStep) 
+                    .transition(.asymmetric( 
+                        insertion: scanFlow.navigationDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading),
+                        removal: scanFlow.navigationDirection == .forward ? .move(edge: .leading) : .move(edge: .trailing)
+                    ))
+                    .animation(.default, value: scanFlow.currentStep) 
+            }
+            .navigationBarHidden(true) 
+            .background(Color("bg").edgesIgnoringSafeArea(.all))
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+#if DEBUG
+struct ScanFlowContainerView_Previews: PreviewProvider {
+    static var previews: some View {
+        ScanFlowContainerView()
     }
 }
 #endif 
