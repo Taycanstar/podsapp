@@ -16,9 +16,9 @@ struct DashboardView: View {
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
     @State private var showHealthPermissionAlert = false
-    @State private var showNewSheet = false
+
     @State private var selectedFoodLog: Food? = nil
-    @State private var showLogFlowSheet = true
+    @State private var showLogFlowSheet = false
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -219,17 +219,6 @@ private var remainingCal: Double { vm.remainingCalories }
             }
             .sheet(isPresented: $showLogFlowSheet) {
                 LogFlowContainerView()
-            }
-            .sheet(isPresented: $showNewSheet) {
-                NewSheetView(isPresented: $showNewSheet,
-                             showingVideoCreationScreen: .constant(false),
-                             showQuickPodView: .constant(false), 
-                             selectedTab: .constant(0),
-                             showFoodScanner: .constant(false),
-                             showVoiceLog: .constant(false))
-                    .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
-                    .presentationCornerRadius(25)
-                    .presentationBackground(Color(.systemBackground))
             }
 
         }
@@ -642,7 +631,8 @@ private extension DashboardView {
 
              
                 Button(action: {
-                    showNewSheet = true
+                    // Post notification to ContentView to show NewSheetView
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
                     HapticFeedback.generate()
                 }) {
                     Text("Start Logging")

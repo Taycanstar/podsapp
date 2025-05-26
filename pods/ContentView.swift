@@ -254,6 +254,11 @@ struct ContentView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewSheetFromDashboard"))) { _ in
+            // Handle request from DashboardView to show NewSheetView
+            print("📱 Received ShowNewSheetFromDashboard notification")
+            showNewSheet = true
+        }
 
     .onChange(of: isAuthenticated) { _, newValue in
         UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
