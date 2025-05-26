@@ -5,13 +5,6 @@
 //  Created by Dimi Nunez on 4/3/25.
 //
 
-//
-//  QuickPodView.swift
-//  Podstack
-//
-//  Created by Dimi Nunez on 7/30/24.
-//
-
 import SwiftUI
 
 struct QuickLogFood: View {

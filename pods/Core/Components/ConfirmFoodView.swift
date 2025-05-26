@@ -435,13 +435,13 @@ struct ConfirmFoodView: View {
                     Spacer()
                     
                     TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
-                        .keyboardType(.asciiCapable)
-                        .textFieldStyle(.plain)
+                    .keyboardType(.asciiCapable)
+                    .textFieldStyle(.plain)
                         .multilineTextAlignment(.trailing)
                         .frame(maxWidth: 200)
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 
                 // Divider
                 Divider()
@@ -525,13 +525,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $calories)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -545,13 +545,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $protein)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -565,13 +565,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $carbs)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     // Divider
                     Divider()
@@ -585,13 +585,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $fat)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)
@@ -635,13 +635,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $saturatedFat)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -654,13 +654,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $polyunsaturatedFat)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -673,13 +673,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $monounsaturatedFat)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -692,13 +692,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $transFat)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -711,13 +711,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $cholesterol)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -730,13 +730,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $sodium)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -749,13 +749,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $potassium)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -768,13 +768,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $sugar)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -787,13 +787,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $fiber)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -806,13 +806,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $vitaminA)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -825,13 +825,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $vitaminC)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -844,13 +844,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $calcium)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                     
                     Divider()
                         .padding(.leading, 16)
@@ -863,13 +863,13 @@ struct ConfirmFoodView: View {
                         Spacer()
                         
                         TextField("0", text: $iron)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal)

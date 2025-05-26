@@ -49,11 +49,11 @@ private var remainingCal: Double { vm.remainingCalories }
                     // Header content as list sections
                     Section {
                         nutritionSummaryCard
-                            .padding(.horizontal, -16)
+                                 .padding(.horizontal, -16) 
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                        
+
                         if foodMgr.isAnalyzingFood {
                             FoodAnalysisCard()
                                 .padding(.horizontal)
@@ -140,7 +140,7 @@ private var remainingCal: Double { vm.remainingCalories }
                             deleteLogItems(at: indexSet)
                         }
                     }
-                }
+                    }
                 .listStyle(PlainListStyle())
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.hidden)
@@ -378,40 +378,40 @@ private extension DashboardView {
     // Remaining calories card
     var remainingCaloriesCard: some View {
         NavigationLink(destination: GoalProgress()) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Remaining")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Remaining")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
 
-                    Text("\(Int(remainingCal))cal")
-                        .font(.system(size: 32, weight: .bold))
-                }
-
-                Spacer()
-
-                ZStack {
-                    Circle()
-                        .stroke(lineWidth: 10)
-                        .opacity(0.2)
-                        .foregroundColor(.green)
-
-                    Circle()
-                        .trim(from: 0,
-                              to: CGFloat(1 - (remainingCal / calorieGoal)))
-                        .stroke(style: StrokeStyle(lineWidth: 10,
-                                                   lineCap: .round))
-                        .foregroundColor(.green)
-                        .rotationEffect(.degrees(270))
-                        .animation(.linear, value: remainingCal)
-                }
-                .frame(width: 60, height: 60)
+                Text("\(Int(remainingCal))cal")
+                    .font(.system(size: 32, weight: .bold))
             }
-            .frame(height: 85) // Reduced height
-            .padding(.vertical, 12) // Slightly reduced vertical padding
-            .padding(.horizontal)
-            .background(Color("iosnp"))
-            .cornerRadius(12)
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(lineWidth: 10)
+                    .opacity(0.2)
+                    .foregroundColor(.green)
+
+                Circle()
+                    .trim(from: 0,
+                          to: CGFloat(1 - (remainingCal / calorieGoal)))
+                    .stroke(style: StrokeStyle(lineWidth: 10,
+                                               lineCap: .round))
+                    .foregroundColor(.green)
+                    .rotationEffect(.degrees(270))
+                    .animation(.linear, value: remainingCal)
+            }
+            .frame(width: 60, height: 60)
+        }
+        .frame(height: 85) // Reduced height
+        .padding(.vertical, 12) // Slightly reduced vertical padding
+        .padding(.horizontal)
+        .background(Color("iosnp"))
+        .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
@@ -419,15 +419,15 @@ private extension DashboardView {
     // Macros card as a separate component
     var macrosCard: some View {
         NavigationLink(destination: GoalProgress()) {
-            VStack(spacing: 16) {
-                macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
-                        right: ("Protein",  vm.totalProtein,   "fish",        .blue))
-                macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
-                        right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
-            }
-            .padding()
-            .background(Color("iosnp"))
-            .cornerRadius(12)
+        VStack(spacing: 16) {
+            macroRow(left:  ("Calories", vm.totalCalories,  "flame.fill",    Color("brightOrange")),
+                    right: ("Protein",  vm.totalProtein,   "fish",        .blue))
+            macroRow(left:  ("Carbs",     vm.totalCarbs,   "laurel.leading", Color("darkYellow")),
+                    right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
@@ -987,7 +987,7 @@ struct LogRow: View {
                     Text(timeLabel)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(Color(.systemGray2))
-                }
+                    }
             }
             Spacer(minLength: 0)
             // Bottom row: Calories (left) and Macros (right)
@@ -1003,9 +1003,9 @@ struct LogRow: View {
                         .foregroundColor(.primary)
                     Text("cal")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        }
-
+                            .foregroundColor(.secondary)
+                    }
+                    
              
                 }
                 Spacer()
@@ -1033,8 +1033,8 @@ struct LogRow: View {
                         Text("\(Int(fat))g")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.primary)
-                    }
-                }
+            }
+        }
             }
         }
         .frame(minHeight: 80)
@@ -1211,22 +1211,22 @@ private extension DashboardView {
         VStack(spacing: 16) {
             // First row: Calories Burned and Water
             HStack(spacing: 0) {
-                // Calories Burned
+                // Total Calories Burned (Active + Basal)
                 healthMetricCell(
-                    title: "Calories Burned",
-                    value: Int(healthViewModel.activeEnergy),
+                    title: "Total Burn",
+                    value: Int(healthViewModel.totalEnergyBurned),
                     unit: "",
                     systemImage: "flame.fill",
                     color: Color("brightOrange")
                 )
-                // Water with add button
-                waterMetricCell(
-                    title: "Water",
+                            // Water with add button
+            waterMetricCell(
+                title: "Water",
                     value: String(format: "%.0f", waterIntakeOz),
                     unit: "oz",
-                    systemImage: "drop",
-                    color: .blue
-                )
+                systemImage: "drop",
+                color: .blue
+            )
             }
             
             // Second row: Step Count and Step Distance

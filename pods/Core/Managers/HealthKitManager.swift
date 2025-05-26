@@ -367,6 +367,28 @@ class HealthKitManager {
         healthStore.execute(query)
     }
     
+    // Fetch basal energy burned (BMR) for a specific date
+    func fetchBasalEnergy(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let energyType = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
+        
+        let predicate = createDayPredicate(for: date)
+        let query = HKStatisticsQuery(
+            quantityType: energyType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { _, result, error in
+            guard let result = result, let sum = result.sumQuantity() else {
+                completion(nil, error)
+                return
+            }
+            
+            let calories = sum.doubleValue(for: HKUnit.kilocalorie())
+            completion(calories, nil)
+        }
+        
+        healthStore.execute(query)
+    }
+    
     // Fetch dietary nutrients for a specific day
     func fetchNutrientData(for date: Date, completion: @escaping ([HKQuantityTypeIdentifier: Double], Error?) -> Void) {
         let nutritionTypes: [HKQuantityTypeIdentifier] = [

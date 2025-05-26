@@ -338,14 +338,14 @@ private func analyzeImage(_ image: UIImage) {
         
         // Start the enhanced barcode lookup process
         foodManager.lookupFoodByBarcodeEnhanced(
-            barcode: barcode,
+                barcode: barcode,
             userEmail: userEmail
-        ) { success, message in
+            ) { success, message in
             // The FoodManager will handle all UI state updates
             // including showing the confirmation view when ready
-            if success {
+                if success {
                 print("✅ Enhanced barcode lookup success for: \(barcode)")
-            } else {
+                } else {
                 print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
             }
         }

@@ -30,8 +30,9 @@ struct LogFood: View {
     // Add callback that will be called when an item is added
     var onItemAdded: ((Food) -> Void)?
     @State private var showQuickLogSheet = false
-    @State private var showAllFlowSheet = false
-    @State private var showMealFlowSheet = false
+    @State private var showFoodFlowSheet = false 
+    @State private var showMealFlowSheet = false 
+    @State private var showAllFlowSheet = false // Corrected initialization from true to false
 
     
     enum FoodTab: Hashable {
@@ -95,18 +96,6 @@ struct LogFood: View {
                 mainContentView
                 Spacer()
             }
-            .onChange(of: selectedFoodTab) { _, newTab in
-                if newTab == .all {
-                    showAllFlowSheet = true
-                    showMealFlowSheet = false // Ensure other flows are hidden
-                } else if newTab == .meals {
-                    showMealFlowSheet = true
-                    showAllFlowSheet = false // Ensure other flows are hidden
-                } else {
-                    showAllFlowSheet = false
-                    showMealFlowSheet = false
-                }
-            }
             // .padding(.top, isSearchFieldFocused ? 52 : 0)
             .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
             .searchable(
@@ -129,25 +118,20 @@ struct LogFood: View {
                     foodManager.prefetchMealImages()
                 }
 
-                // Set initial sheet state based on the default selectedFoodTab
+                // Set initial flow sheet based on default selected tab
                 if selectedFoodTab == .all {
                     showAllFlowSheet = true
                     showMealFlowSheet = false
+                    showFoodFlowSheet = false
                 } else if selectedFoodTab == .meals {
-                    // This case might not be strictly necessary if default is always .all,
-                    // but good for robustness if the default tab changes in the future.
-                    showMealFlowSheet = true
                     showAllFlowSheet = false
-                } else {
+                    showMealFlowSheet = true
+                    showFoodFlowSheet = false
+                } else if selectedFoodTab == .foods {
                     showAllFlowSheet = false
                     showMealFlowSheet = false
+                    showFoodFlowSheet = true
                 }
-                
-                // // Set focus to the search field after a slight delay
-                // DispatchQueue.main.asyncAfter(deadline: .now()) {
-                //     isSearchFieldFocused = true
-                //     activateSearch = true
-                // }
                 
                 // Set up keyboard observers
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -183,6 +167,34 @@ struct LogFood: View {
             .sheet(isPresented: $showQuickLogSheet) {
                 QuickLogFood(isPresented: $showQuickLogSheet)
             }
+            .sheet(isPresented: $showFoodFlowSheet) { 
+                FoodFlowContainerView()
+            }
+            .sheet(isPresented: $showMealFlowSheet) { 
+                MealFlowContainerView()
+            }
+            .sheet(isPresented: $showAllFlowSheet) { // Added for AllFlow
+                AllFlowContainerView()
+            }
+            .onChange(of: selectedFoodTab) { _, newTabValue in
+                print("selectedFoodTab changed to: \(newTabValue)")
+                if newTabValue == .all {
+                    showAllFlowSheet = true
+                    showMealFlowSheet = false
+                    showFoodFlowSheet = false
+                    print("Set to show All flow")
+                } else if newTabValue == .foods {
+                    showAllFlowSheet = false
+                    showMealFlowSheet = false
+                    showFoodFlowSheet = true
+                    print("Set to show Food flow")
+                } else if newTabValue == .meals {
+                    showAllFlowSheet = false
+                    showMealFlowSheet = true
+                    showFoodFlowSheet = false
+                    print("Set to show Meal flow")
+                }
+            }
 
 
             toastMessages
@@ -197,6 +209,8 @@ struct LogFood: View {
             HStack(spacing: 10) {
                 ForEach(foodTabs, id: \.self) { tab in
                     TabButton(tab: tab, selectedTab: $selectedFoodTab)
+                    // Removed .onTapGesture - TabButton's internal Button action handles the tap
+                    // The .onChange modifier in the main body will handle showing the correct flow
                 }
             }
             .padding(.horizontal)

@@ -8,11 +8,64 @@
 import SwiftUI
 
 struct NameFoodView: View {
+    @EnvironmentObject var foodFlow: FoodFlow
+    @Environment(\.dismiss) var dismiss // To dismiss the sheet when done
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(alignment: .center, spacing: 0) {
+            Text("Name Your Food") // Title
+                .font(.title)
+                .fontWeight(.bold)
+                .padding(.horizontal, 25)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+                .multilineTextAlignment(.center)
+
+            Image("food2") // Image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 375, height: 200)
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+            
+            Text("Give your new food item a name to easily find it later.") // Placeholder text
+                .font(.system(size: 18, weight: .regular))
+                .padding(.horizontal, 30)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+
+            VStack {
+                Button(action: {
+                    // In a real app, you might save the food item here
+                    // For now, just dismiss the flow
+                    dismiss()
+                    HapticFeedback.generate() // Assuming HapticFeedback is available
+                }) {
+                    Text("Finish")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color("background"))
+                        .foregroundColor(Color("bg"))
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 16)
+            }
+            .padding(.bottom, 24)
+            .background(Material.ultraThin)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color("bg").edgesIgnoringSafeArea(.all))
     }
 }
 
-#Preview {
-    NameFoodView()
+#if DEBUG
+struct NameFoodView_Previews: PreviewProvider {
+    static var previews: some View {
+        NameFoodView()
+            .environmentObject(FoodFlow()) // Provide a dummy FoodFlow for preview
+    }
 }
+#endif

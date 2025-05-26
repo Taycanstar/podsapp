@@ -12,6 +12,7 @@ class HealthKitViewModel: ObservableObject {
     
     @Published var stepCount: Double = 0
     @Published var activeEnergy: Double = 0
+    @Published var basalEnergy: Double = 0
     @Published var waterIntake: Double = 0
     @Published var distance: Double = 0
     @Published var recentWorkouts: [HKWorkout] = []
@@ -150,6 +151,20 @@ class HealthKitViewModel: ObservableObject {
             }
         }
         
+        // Fetch basal energy for the specified date
+        group.enter()
+        healthKitManager.fetchBasalEnergy(for: date) { [weak self] calories, error in
+            DispatchQueue.main.async {
+                if let calories = calories {
+                    self?.basalEnergy = calories
+                }
+                if let error = error {
+                    self?.error = error
+                }
+                group.leave()
+            }
+        }
+        
         // Fetch water intake for the specified date
         group.enter()
         healthKitManager.fetchWaterIntake(for: date) { [weak self] water, error in
@@ -278,6 +293,11 @@ class HealthKitViewModel: ObservableObject {
     var sleepProgress: Double {
         let totalSleepHours = sleepHours + (Double(sleepMinutes) / 60)
         return min(totalSleepHours / recommendedSleepHours, 1.0)
+    }
+    
+    // Calculate total energy expenditure (active + basal)
+    var totalEnergyBurned: Double {
+        return activeEnergy + basalEnergy
     }
     
     // Backward compatibility method - calls reloadHealthData with the current date

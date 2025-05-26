@@ -204,6 +204,8 @@ class MealFlow: ObservableObject {
     }
 }
 
+
+
 // MARK: - Foods Flow
 
 enum FoodStep: Int, CaseIterable {
@@ -213,11 +215,12 @@ enum FoodStep: Int, CaseIterable {
     var view: some View {
         switch self {
         case .describeFood:
-            DescribeFoodView()
+            DescribeFoodView() // Uses food0
         case .tapCreateFood:
-            TapCreateFoodView()
+            TapCreateFoodView() // Uses food1
         case .nameFood:
-            NameFoodView()
+            NameFoodView() // Uses food2
+        // Add a fourth step if needed, e.g., for food3, or adjust existing ones
         }
     }
 }
@@ -225,26 +228,40 @@ enum FoodStep: Int, CaseIterable {
 class FoodFlow: ObservableObject {
     @Published var currentStep: FoodStep = .describeFood
     @Published var progress: Double = 0.0
+    @Published var navigationDirection: NavigationDirection = .forward
 
     init() {
         updateProgress()
     }
-    
+
     func navigate(to step: FoodStep) {
-        currentStep = step
+        if step.rawValue > currentStep.rawValue {
+            navigationDirection = .forward
+        } else if step.rawValue < currentStep.rawValue {
+            navigationDirection = .backward
+        }
+        withAnimation {
+            currentStep = step
+        }
         updateProgress()
     }
 
     func next() {
         if let nextStep = FoodStep(rawValue: currentStep.rawValue + 1) {
-            currentStep = nextStep
+            navigationDirection = .forward
+            withAnimation {
+                currentStep = nextStep
+            }
         }
         updateProgress()
     }
 
     func previous() {
         if let prevStep = FoodStep(rawValue: currentStep.rawValue - 1) {
-            currentStep = prevStep
+            navigationDirection = .backward
+            withAnimation {
+                currentStep = prevStep
+            }
         }
         updateProgress()
     }
@@ -253,6 +270,68 @@ class FoodFlow: ObservableObject {
         progress = (Double(currentStep.rawValue) + 1.0) / Double(FoodStep.allCases.count)
     }
 }
+
+// MARK: - Food Flow Container
+
+struct FoodFlowContainerView: View {
+    @StateObject var foodFlow = FoodFlow()
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Custom Navigation Bar Area
+                HStack(spacing: 16) {
+                    if foodFlow.currentStep != FoodStep.allCases.first {
+                        Button(action: {
+                            foodFlow.previous()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    } else {
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Image(systemName: "chevron.left") 
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.primary)
+                        }
+                    }
+
+                    ProgressView(value: foodFlow.progress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color.primary))
+                }
+                .padding(.horizontal)
+                .frame(height: 44) 
+                .padding(.top, (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0) > 20 ? 10 : 20)
+                .background(Color("bg").edgesIgnoringSafeArea(.top))
+                
+                foodFlow.currentStep.view
+                    .environmentObject(foodFlow) 
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) 
+                    .id(foodFlow.currentStep) 
+                    .transition(.asymmetric( 
+                        insertion: foodFlow.navigationDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading),
+                        removal: foodFlow.navigationDirection == .forward ? .move(edge: .leading) : .move(edge: .trailing)
+                    ))
+                    .animation(.default, value: foodFlow.currentStep) 
+            }
+            .navigationBarHidden(true) 
+            .background(Color("bg").edgesIgnoringSafeArea(.all))
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+#if DEBUG
+struct FoodFlowContainerView_Previews: PreviewProvider {
+    static var previews: some View {
+        FoodFlowContainerView()
+    }
+}
+#endif 
 
 // MARK: - Log Flow Container
 
