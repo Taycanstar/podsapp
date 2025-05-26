@@ -54,8 +54,8 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if foodMgr.isAnalyzingFood {
-                            FoodAnalysisCard()
+                        if foodMgr.isGeneratingMacros {
+                            MacroGenerationCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
                                 .listRowInsets(EdgeInsets())
@@ -63,8 +63,17 @@ private var remainingCal: Double { vm.remainingCalories }
                                 .listRowSeparator(.hidden)
                         }
 
-                        if foodMgr.isScanningFood {
-                            FoodGenerationCard()
+                        if foodMgr.isAnalyzingImage {
+                            ImageAnalysisCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+
+                        if foodMgr.isScanningBarcode {
+                            BarcodeAnalysisCard()
                                 .padding(.horizontal)
                                 .transition(.opacity)
                                 .listRowInsets(EdgeInsets())
@@ -1083,31 +1092,33 @@ struct LogRow: View {
 }
 
 
-struct FoodAnalysisCard: View {
+// MARK: - Specialized Loading Cards
+
+struct MacroGenerationCard: View {
     @EnvironmentObject var foodManager: FoodManager
     @State private var animateProgress = false
     
-    var analysisTitle: String {
-        if !foodManager.loadingMessage.isEmpty {
-            return foodManager.loadingMessage
-        }
-        
-        switch foodManager.analysisStage {
-        case 0: return "Analyzing Food..."
-        case 1: return "Separating Ingredients..."
-        case 2: return "Breaking down macros..."
-        case 3: return "Finishing Analysis..."
-        default: return "Analyzing Food..."
-        }
-    }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(analysisTitle)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .transition(.opacity)
-                .animation(.easeInOut, value: foodManager.analysisStage)
+            HStack {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 24))
+                    .foregroundColor(.blue)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Generating Macros with AI")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    Text(foodManager.macroLoadingMessage.isEmpty ? "Processing..." : foodManager.macroLoadingMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: foodManager.macroLoadingMessage)
+                }
+                
+                Spacer()
+            }
             
             // Progress bars
             VStack(spacing: 12) {
@@ -1115,12 +1126,7 @@ struct FoodAnalysisCard: View {
                 ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
                 ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
             }
-            
-            Text("We'll notify you when done!")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 10)
+  
         }
         .padding()
         .background(Color("iosnp"))
@@ -1128,8 +1134,7 @@ struct FoodAnalysisCard: View {
         .onAppear {
             startAnimation()
         }
-        .onChange(of: foodManager.analysisStage) { _ in
-            // Restart animation for each stage
+        .onChange(of: foodManager.macroGenerationStage) { _ in
             startAnimation()
         }
     }
@@ -1140,7 +1145,132 @@ struct FoodAnalysisCard: View {
             animateProgress = true
         }
         
-        // Cycle the animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                animateProgress = false
+            }
+        }
+    }
+}
+
+struct ImageAnalysisCard: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @State private var animateProgress = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Image(systemName: "camera.viewfinder")
+                    .font(.system(size: 24))
+                    .foregroundColor(.green)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Analyzing Image")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    Text(foodManager.imageAnalysisMessage.isEmpty ? "Processing image..." : foodManager.imageAnalysisMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: foodManager.imageAnalysisMessage)
+                }
+                
+                Spacer()
+                
+                // Show image thumbnail if available
+                if let scannedImage = foodManager.scannedImage {
+                    Image(uiImage: scannedImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 50, height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                }
+            }
+            
+            // Progress bars
+            VStack(spacing: 12) {
+                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
+                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
+                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+            }
+            
+        
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+        .onAppear {
+            startAnimation()
+        }
+    }
+    
+    private func startAnimation() {
+        animateProgress = false
+        withAnimation(.easeIn(duration: 0.3)) {
+            animateProgress = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                animateProgress = false
+            }
+        }
+    }
+}
+
+struct BarcodeAnalysisCard: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @State private var animateProgress = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Image(systemName: "barcode.viewfinder")
+                    .font(.system(size: 24))
+                    .foregroundColor(.orange)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Scanning Barcode")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    Text(foodManager.barcodeLoadingMessage.isEmpty ? "Looking up barcode..." : foodManager.barcodeLoadingMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: foodManager.barcodeLoadingMessage)
+                }
+                
+                Spacer()
+            }
+            
+            // Progress bars
+            VStack(spacing: 12) {
+                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
+                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
+                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+            }
+
+        }
+        .padding()
+        .background(Color("iosnp"))
+        .cornerRadius(12)
+        .onAppear {
+            startAnimation()
+        }
+    }
+    
+    private func startAnimation() {
+        animateProgress = false
+        withAnimation(.easeIn(duration: 0.3)) {
+            animateProgress = true
+        }
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             withAnimation(.easeOut(duration: 0.3)) {
                 animateProgress = false

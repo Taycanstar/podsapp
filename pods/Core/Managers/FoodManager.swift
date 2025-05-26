@@ -96,6 +96,17 @@ class FoodManager: ObservableObject {
     @Published var scannedImage: UIImage? = nil
     @Published var uploadProgress: Double = 0.0
 
+    // New specific loading states for different functionalities
+    @Published var isGeneratingMacros = false
+    @Published var macroGenerationStage = 0
+    @Published var macroLoadingMessage: String = ""
+    
+    @Published var isScanningBarcode = false
+    @Published var barcodeLoadingMessage: String = ""
+    
+    @Published var isAnalyzingImage = false
+    @Published var imageAnalysisMessage: String = ""
+
     
     // Add the new property
     @Published var isLoggingFood = false
@@ -1681,10 +1692,11 @@ func updateRecipe(
 }
 // Update the generateMacrosWithAI method
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
-    // Set analyzing flag AND isLoading flag to show card in DashboardView
-    isAnalyzingFood = true
+    // Set macro generation flags to show MacroGenerationCard in DashboardView
+    isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
-    analysisStage = 0
+    macroGenerationStage = 0
+    macroLoadingMessage = "Analyzing food description..."
     showAIGenerationSuccess = false
     
     // Create a timer to cycle through analysis stages for UI feedback
@@ -1694,8 +1706,16 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             return 
         }
         
-        // Cycle through stages 0-3
-        self.analysisStage = (self.analysisStage + 1) % 4
+        // Cycle through macro generation stages 0-3
+        self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+        
+        // Update loading message based on current stage
+        self.macroLoadingMessage = [
+            "Analyzing food description...",
+            "Generating nutritional data...",
+            "Calculating macros...",
+            "Finalizing food creation..."
+        ][self.macroGenerationStage]
     }
     
     // Call the network manager to generate macros
@@ -1738,11 +1758,12 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             
       
   
-            // Reset analysis state and show success toast in dashboard
+            // Reset macro generation state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isAnalyzingFood = false
+                self.isGeneratingMacros = false
                 self.isLoading = false  // Clear the loading flag
-                self.analysisStage = 0
+                self.macroGenerationStage = 0
+                self.macroLoadingMessage = ""
                 
                 // Show success toast
                 self.showAIGenerationSuccess = true
@@ -1765,10 +1786,11 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             completion(.success(loggedFood))
             
         case .failure(let error):
-            // Reset analysis state
-            self.isAnalyzingFood = false
+            // Reset macro generation state
+            self.isGeneratingMacros = false
             self.isLoading = false  // Clear the loading flag
-            self.analysisStage = 0
+            self.macroGenerationStage = 0
+            self.macroLoadingMessage = ""
             
             // Handle error and pass it along
             completion(.failure(error))
@@ -2113,11 +2135,10 @@ func analyzeFoodImage(
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
   // ─── 1) UI state ─────────────────────────────
-  isScanningFood = true
-  isLoading      = true
-  analysisStage  = 0
-  loadingMessage = "Analyzing image…"
-  uploadProgress = 0
+  isAnalyzingImage = true
+  isLoading        = true
+  imageAnalysisMessage = "Analyzing image…"
+  uploadProgress   = 0
 
   // ─── 2) Fake progress ticker ─────────────────
 
@@ -2140,8 +2161,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
       self.uploadProgress = 1.0
     }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        self.isScanningFood = false
-        self.isLoading      = false
+        self.isAnalyzingImage = false
+        self.isLoading        = false
+        self.imageAnalysisMessage = ""
 
         // reset for next time
         self.uploadProgress = 0
@@ -2224,9 +2246,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
 
     // Add this function to handle the barcode scanning logic
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, navigationPath: Binding<NavigationPath>, completion: @escaping (Bool, String?) -> Void) {
-        // Set scanning state for UI feedback
-        isScanningFood = true
-        loadingMessage = "Looking up barcode..."
+        // Set barcode scanning state for UI feedback
+        isScanningBarcode = true
+        isLoading = true
+        barcodeLoadingMessage = "Looking up barcode..."
         uploadProgress = 0.3
         
         // Convert image to base64 if available
@@ -2252,8 +2275,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             
             switch result {
             case .success(let response):
-                // Reset scanning state since we'll show the confirmation screen
-                self.isScanningFood = false
+                // Reset barcode scanning state since we'll show the confirmation screen
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 self.scannedImage = nil
                 
                 // Show the ConfirmFoodView with the barcode data
@@ -2264,8 +2289,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 }
                 
             case .failure(let error):
-                // Update scanner state on failure
-                self.isScanningFood = false
+                // Update barcode scanner state on failure
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 self.scannedImage = nil
                 
                 // Set error message for display
@@ -2292,9 +2319,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         // This is just a placeholder for backward compatibility
         print("Warning: Using deprecated barcode lookup method without navigation path")
         
-        // Set scanning state for UI feedback
-        isScanningFood = true
-        loadingMessage = "Looking up barcode..."
+        // Set barcode scanning state for UI feedback
+        isScanningBarcode = true
+        isLoading = true
+        barcodeLoadingMessage = "Looking up barcode..."
         uploadProgress = 0.3
         
         // Convert image to base64 if available
@@ -2329,16 +2357,20 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 // Track ID for later use when confirmed
                 self.lastLoggedFoodId = food.fdcId
                 
-                // Update scanner state
-                self.isScanningFood = false
+                // Update barcode scanner state
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 self.scannedImage = nil
                 
                 // Return success so the scanner can close
                 completion(true, nil)
                 
             case .failure(let error):
-                // Update scanner state on failure
-                self.isScanningFood = false
+                // Update barcode scanner state on failure
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 self.scannedImage = nil
                 
                 // Set error message for display
@@ -2362,11 +2394,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
     func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         
-        // Set loading states for UI feedback (similar to voice processing)
-        isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
-        analysisStage = 0
-        showAIGenerationSuccess = false
-        loadingMessage = "Looking up barcode..."
+        // Set barcode scanning states for UI feedback
+        isScanningBarcode = true  // This triggers BarcodeAnalysisCard in DashboardView
+        isLoading = true
+        barcodeLoadingMessage = "Looking up barcode..."
         uploadProgress = 0.2
         
         // Create a timer to cycle through analysis stages for UI feedback
@@ -2376,19 +2407,16 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 return 
             }
             
-            // Cycle through stages 0-3
-            self.analysisStage = (self.analysisStage + 1) % 4
-            
-            // Update loading message based on current stage
-            self.loadingMessage = [
+            // Update barcode loading message
+            self.barcodeLoadingMessage = [
                 "Looking up barcode...",
                 "Searching nutrition databases...",
                 "Enhancing with web search...",
                 "Finalizing food data..."
-            ][self.analysisStage]
+            ].randomElement() ?? "Processing barcode..."
             
             // Gradually increase progress
-            self.uploadProgress = min(0.2 + (Double(self.analysisStage) * 0.2), 0.9)
+            self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
         }
         
         // Call the enhanced barcode lookup endpoint
@@ -2418,9 +2446,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedFoodId = food.fdcId
                 
-                // Reset loading states
-                self.isScanningFood = false
-                self.isAnalyzingFood = false
+                // Reset barcode scanning states
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 
                 // Create a CombinedLog for optimistic UI update (but don't add to logs yet)
                 let combinedLog = CombinedLog(
@@ -2465,9 +2494,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             case .failure(let error):
                 print("❌ Enhanced barcode lookup failed: \(error)")
                 
-                // Reset loading states
-                self.isScanningFood = false
-                self.isAnalyzingFood = false
+                // Reset barcode scanning states
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 
                 // Set error message
                 let errorMsg: String
@@ -2486,9 +2516,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
 
     // MARK: - Voice Input Processing
     func processVoiceInput(audioData: Data) {
-        // Set analyzing flag - same as when generating macros with AI
-        isAnalyzingFood = true
-        analysisStage = 0
+        // Set macro generation flag - same as when generating macros with AI
+        isGeneratingMacros = true
+        macroGenerationStage = 0
         showAIGenerationSuccess = false
         
         // Create a timer to cycle through analysis stages for UI feedback
@@ -2498,14 +2528,14 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 return 
             }
             
-            // Cycle through stages 0-3
-            self.analysisStage = (self.analysisStage + 1) % 4
-            self.loadingMessage = [
+            // Cycle through macro generation stages 0-3
+            self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+            self.macroLoadingMessage = [
                 "Transcribing your voice...",
                 "Analyzing food description...",
                 "Generating nutritional data...",
                 "Finalizing your food log..."
-            ][self.analysisStage]
+            ][self.macroGenerationStage]
         }
         
         // First step: Transcribe the audio using the backend
@@ -2524,8 +2554,8 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     // Stop the analysis animation timer
                     timer.invalidate()
                     
-                    // Reset analysis flags
-                    self.isAnalyzingFood = false
+                    // Reset macro generation flags
+                    self.isGeneratingMacros = false
                     
                     switch macroResult {
                     case .success(let loggedFood):
@@ -2550,7 +2580,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             case .failure(let error):
                 // Stop the timer and reset flags if transcription fails
                 timer.invalidate()
-                self.isAnalyzingFood = false
+                self.isGeneratingMacros = false
                 self.error = error
                 print("Voice transcription failed: \(error.localizedDescription)")
             }
@@ -2566,12 +2596,12 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
     func processVoiceRecording(audioData: Data) {
-        // Set EXACTLY the same flags as generateMacrosWithAI for proper UI display
-        isAnalyzingFood = true  // This is the critical flag used by FoodAnalysisCard
+        // Set macro generation flags for proper UI display
+        isGeneratingMacros = true  // This triggers MacroGenerationCard
         isLoading = true  // This is what makes the loading card visible in DashboardView
-        analysisStage = 0
+        macroGenerationStage = 0
         showAIGenerationSuccess = false
-        loadingMessage = "Transcribing your voice…"  // Initial stage message
+        macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -2580,16 +2610,16 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 return 
             }
             
-            // Cycle through stages 0-3
-            self.analysisStage = (self.analysisStage + 1) % 4
+            // Cycle through macro generation stages
+            self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
             
             // Update loading message based on current stage
-            self.loadingMessage = [
+            self.macroLoadingMessage = [
                 "Transcribing your voice…",
                 "Analyzing food description…",
                 "Generating nutritional data…",
                 "Finalizing your food log…"
-            ][self.analysisStage]
+            ][self.macroGenerationStage]
         }
         
         // First step: Transcribe the audio
@@ -2610,11 +2640,11 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                         // Stop the analysis animation timer
                         timer.invalidate()
                         
-                        // Reset state flags
-                        self.isAnalyzingFood = false
+                        // Reset macro generation flags
+                        self.isGeneratingMacros = false
                         self.isLoading = false
-                        self.analysisStage = 0
-                        self.loadingMessage = ""
+                        self.macroGenerationStage = 0
+                        self.macroLoadingMessage = ""
                     }
                     
                     switch result {
@@ -2700,12 +2730,12 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 }
                 
             case .failure(let error):
-                // Stop the timer and reset loading state
+                // Stop the timer and reset macro generation state
                 timer.invalidate()
-                self.isAnalyzingFood = false
+                self.isGeneratingMacros = false
                 self.isLoading = false
-                self.analysisStage = 0
-                self.loadingMessage = ""
+                self.macroGenerationStage = 0
+                self.macroLoadingMessage = ""
                 
                 // Set error message for user notification in DashboardView
                 if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
