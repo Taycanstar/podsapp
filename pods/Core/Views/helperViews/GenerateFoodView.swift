@@ -23,7 +23,7 @@ struct GenerateFoodView: View {
             Image("food1") // Image for this view
                 .resizable()
                 .scaledToFit()
-                .frame(width: 375, height: 200)
+                .frame(width: 375, height: 350)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             

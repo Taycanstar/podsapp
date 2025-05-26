@@ -24,7 +24,7 @@ struct NameFoodView: View {
             Image("food3") // Image
                 .resizable()
                 .scaledToFit()
-                .frame(width: 375, height: 200)
+                .frame(width: 375, height: 400)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
