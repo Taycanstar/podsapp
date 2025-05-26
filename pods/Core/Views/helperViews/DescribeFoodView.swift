@@ -27,7 +27,7 @@ struct DescribeFoodView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Tell us about the food item you want to log or create.") // Placeholder text
+            Text("Tell us about the food item you want to create in your personal database") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)

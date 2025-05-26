@@ -183,7 +183,7 @@ struct VoiceLogView: View {
                         // Checkmark button (right) - only enabled when food data is available
                         Button(action: {
                             // Guard against double-taps during processing
-                            guard !foodManager.isAnalyzingFood && !foodManager.isLoading else {
+                            guard !foodManager.isGeneratingMacros && !foodManager.isLoading else {
                                 return
                             }
                             
@@ -205,9 +205,9 @@ struct VoiceLogView: View {
                                 .frame(width: 60, height: 60)
                                 .background(Color.green)
                                 .clipShape(Circle())
-                                .opacity(foodManager.isAnalyzingFood || foodManager.isLoading ? 0.5 : 1.0) // Visual feedback for disabled state
+                                .opacity(foodManager.isGeneratingMacros || foodManager.isLoading ? 0.5 : 1.0) // Visual feedback for disabled state
                         }
-                        .disabled(foodManager.isAnalyzingFood || foodManager.isLoading)
+                        .disabled(foodManager.isGeneratingMacros || foodManager.isLoading)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 40)
