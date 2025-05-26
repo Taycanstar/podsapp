@@ -13,7 +13,7 @@ struct NameFoodView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Name Your Food") // Title
+            Text("Personalize Your Food") // Title
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -21,14 +21,14 @@ struct NameFoodView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("food2") // Image
+            Image("food3") // Image
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 200)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Give your new food item a name to easily find it later.") // Placeholder text
+            Text("Name your food and add nutritional details") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)

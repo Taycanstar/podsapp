@@ -209,18 +209,19 @@ class MealFlow: ObservableObject {
 // MARK: - Foods Flow
 
 enum FoodStep: Int, CaseIterable {
-    case describeFood, tapCreateFood, nameFood
+    case describeFood, generateFood, tapCreateFood, nameFood
 
     @ViewBuilder
     var view: some View {
         switch self {
         case .describeFood:
             DescribeFoodView() // Uses food0
+        case .generateFood:
+            GenerateFoodView() // Uses food1
         case .tapCreateFood:
-            TapCreateFoodView() // Uses food1
+            TapCreateFoodView() // Uses food2
         case .nameFood:
-            NameFoodView() // Uses food2
-        // Add a fourth step if needed, e.g., for food3, or adjust existing ones
+            NameFoodView() // Uses food3
         }
     }
 }
