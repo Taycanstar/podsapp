@@ -1,5 +1,51 @@
 import SwiftUI
 
+// MARK: - UserDefaults Keys for Onboarding Flows
+extension UserDefaults {
+    private enum OnboardingKeys {
+        static let hasSeenLogFlow = "hasSeenLogFlow"
+        static let hasSeenAllFlow = "hasSeenAllFlow"
+        static let hasSeenMealFlow = "hasSeenMealFlow"
+        static let hasSeenFoodFlow = "hasSeenFoodFlow"
+        static let hasSeenScanFlow = "hasSeenScanFlow"
+    }
+    
+    // Helper methods for checking onboarding flow status
+    var hasSeenLogFlow: Bool {
+        get { bool(forKey: OnboardingKeys.hasSeenLogFlow) }
+        set { set(newValue, forKey: OnboardingKeys.hasSeenLogFlow) }
+    }
+    
+    var hasSeenAllFlow: Bool {
+        get { bool(forKey: OnboardingKeys.hasSeenAllFlow) }
+        set { set(newValue, forKey: OnboardingKeys.hasSeenAllFlow) }
+    }
+    
+    var hasSeenMealFlow: Bool {
+        get { bool(forKey: OnboardingKeys.hasSeenMealFlow) }
+        set { set(newValue, forKey: OnboardingKeys.hasSeenMealFlow) }
+    }
+    
+    var hasSeenFoodFlow: Bool {
+        get { bool(forKey: OnboardingKeys.hasSeenFoodFlow) }
+        set { set(newValue, forKey: OnboardingKeys.hasSeenFoodFlow) }
+    }
+    
+    var hasSeenScanFlow: Bool {
+        get { bool(forKey: OnboardingKeys.hasSeenScanFlow) }
+        set { set(newValue, forKey: OnboardingKeys.hasSeenScanFlow) }
+    }
+    
+    // Method to reset all onboarding flows (useful for testing)
+    func resetAllOnboardingFlows() {
+        hasSeenLogFlow = false
+        hasSeenAllFlow = false
+        hasSeenMealFlow = false
+        hasSeenFoodFlow = false
+        hasSeenScanFlow = false
+    }
+}
+
 // MARK: - Log Flow
 
 enum LogStep: Int, CaseIterable {
@@ -321,6 +367,10 @@ struct FoodFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onDisappear {
+            // Mark food flow as seen
+            UserDefaults.standard.hasSeenFoodFlow = true
+        }
     }
 }
 
@@ -396,6 +446,10 @@ struct LogFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle()) // Recommended for flows like this
+        .onDisappear {
+            // Mark log flow as seen
+            UserDefaults.standard.hasSeenLogFlow = true
+        }
     }
 }
 
@@ -497,6 +551,10 @@ struct AllFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onDisappear {
+            // Mark all flow as seen
+            UserDefaults.standard.hasSeenAllFlow = true
+        }
     }
 }
 
@@ -559,6 +617,10 @@ struct MealFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onDisappear {
+            // Mark meal flow as seen
+            UserDefaults.standard.hasSeenMealFlow = true
+        }
     }
 }
 
@@ -685,6 +747,10 @@ struct ScanFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onDisappear {
+            // Mark scan flow as seen
+            UserDefaults.standard.hasSeenScanFlow = true
+        }
     }
 }
 

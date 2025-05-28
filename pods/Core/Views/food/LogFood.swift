@@ -179,20 +179,29 @@ struct LogFood: View {
             .onChange(of: selectedFoodTab) { _, newTabValue in
                 print("selectedFoodTab changed to: \(newTabValue)")
                 if newTabValue == .all {
-                    showAllFlowSheet = true
+                    // Only show All flow if user hasn't seen it yet
+                    if !UserDefaults.standard.hasSeenAllFlow {
+                        showAllFlowSheet = true
+                        print("Set to show All flow")
+                    }
                     showMealFlowSheet = false
                     showFoodFlowSheet = false
-                    print("Set to show All flow")
                 } else if newTabValue == .foods {
+                    // Only show Food flow if user hasn't seen it yet
+                    if !UserDefaults.standard.hasSeenFoodFlow {
+                        showFoodFlowSheet = true
+                        print("Set to show Food flow")
+                    }
                     showAllFlowSheet = false
                     showMealFlowSheet = false
-                    showFoodFlowSheet = true
-                    print("Set to show Food flow")
                 } else if newTabValue == .meals {
+                    // Only show Meal flow if user hasn't seen it yet
+                    if !UserDefaults.standard.hasSeenMealFlow {
+                        showMealFlowSheet = true
+                        print("Set to show Meal flow")
+                    }
                     showAllFlowSheet = false
-                    showMealFlowSheet = true
                     showFoodFlowSheet = false
-                    print("Set to show Meal flow")
                 }
             }
 
