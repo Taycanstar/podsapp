@@ -191,7 +191,9 @@ private var remainingCal: Double { vm.remainingCalories }
                                 isPresented: $showDatePicker)
             }
             .onAppear {
-                configureOnAppear() 
+                print("📱 DashboardView appeared - configuring app state")
+                configureOnAppear()
+                
                 // Initialize food manager with user email
                 foodMgr.initialize(userEmail: onboarding.email)
                 
@@ -204,7 +206,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Load health data for the selected date
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
                 
-                // ALWAYS show log flow if user hasn't completed it yet
+                // Show log flow if user hasn't completed it yet
                 if !UserDefaults.standard.hasSeenLogFlow {
                     print("🔍 DashboardView onAppear - showing log flow (user hasn't completed it)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -856,59 +858,6 @@ private extension DashboardView {
 // ────────────────────────────────────────────────────────────────────────────
 
 private extension DashboardView {
-    /// Initialise e-mail + first load
-   
-    func configureOnAppear() {
-        isTabBarVisible.wrappedValue = true
-
-        if vm.email.isEmpty, !onboarding.email.isEmpty {
-            vm.setEmail(onboarding.email)
-        }
-        
-        // Save the email so our detail views can pick it up
-        UserDefaults.standard.set(onboarding.email, forKey: "userEmail")
-        
-        if vm.logs.isEmpty {
-            vm.loadLogs(for: vm.selectedDate)
-        }
-        
-        // Preload weight and height logs for the current week
-        preloadHealthData()
-    }
-    
-    /// Preload health data logs so they're available when navigating to detail views
-    private func preloadHealthData() {
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            return
-        }
-        
-        // Preload weight logs
-        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                // Store logs in UserDefaults for access in WeightDataView
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
-                }
-            case .failure(let error):
-                print("Error preloading weight logs: \(error)")
-            }
-        }
-        
-        // Preload height logs
-        NetworkManagerTwo.shared.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                // Store logs in UserDefaults for access in HeightDataView
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
-                }
-            case .failure(let error):
-                print("Error preloading height logs: \(error)")
-            }
-        }
-    }
-    
     /// Check HealthKit permissions and show prompt if needed
     func checkHealthPermissions() {
         let healthStore = HealthKitManager.shared
@@ -928,6 +877,72 @@ private extension DashboardView {
     // Convert water intake from liters to ounces
     var waterIntakeOz: Double {
         healthViewModel.waterIntake * 33.814
+    }
+
+    /// Initialize email and app state on appear
+    func configureOnAppear() {
+        isTabBarVisible.wrappedValue = true
+
+        if vm.email.isEmpty, !onboarding.email.isEmpty {
+            vm.setEmail(onboarding.email)
+        }
+        
+        // Save the email so our detail views can pick it up
+        UserDefaults.standard.set(onboarding.email, forKey: "userEmail")
+        
+        // Only load logs if they haven't been preloaded by SplashScreenView
+        if vm.logs.isEmpty {
+            print("📝 DashboardView - Loading logs (not preloaded)")
+            vm.loadLogs(for: vm.selectedDate)
+        } else {
+            print("✅ DashboardView - Using preloaded logs from SplashScreenView (\(vm.logs.count) logs)")
+        }
+        
+        // Preload health data logs for detail views (only if not already done)
+        preloadHealthData()
+    }
+
+    /// Preload health data logs so they're available when navigating to detail views
+    private func preloadHealthData() {
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            return
+        }
+        
+        // Check if weight logs are already preloaded
+        if UserDefaults.standard.data(forKey: "preloadedWeightLogs") == nil {
+            print("📊 DashboardView - Preloading weight logs")
+            NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+                switch result {
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+                    }
+                    print("✅ Weight logs preloaded successfully")
+                case .failure(let error):
+                    print("❌ Error preloading weight logs: \(error)")
+                }
+            }
+        } else {
+            print("✅ Weight logs already preloaded by SplashScreenView")
+        }
+        
+        // Check if height logs are already preloaded
+        if UserDefaults.standard.data(forKey: "preloadedHeightLogs") == nil {
+            print("📊 DashboardView - Preloading height logs")
+            NetworkManagerTwo.shared.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+                switch result {
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
+                    }
+                    print("✅ Height logs preloaded successfully")
+                case .failure(let error):
+                    print("❌ Error preloading height logs: \(error)")
+                }
+            }
+        } else {
+            print("✅ Height logs already preloaded by SplashScreenView")
+        }
     }
 }
 

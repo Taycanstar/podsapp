@@ -16,29 +16,17 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="small" translatesAutoresizingMaskIntoConstraints="NO" id="b6S-lp-rNl">
-                                <rect key="frame" x="90" y="353" width="213" height="108"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="logo-bk" translatesAutoresizingMaskIntoConstraints="NO" id="b6S-lp-rNl">
+                                <rect key="frame" x="71" y="402" width="251" height="48"/>
                                 <color key="tintColor" name="AccentColor"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="108" id="UGc-1F-8ti"/>
-                                </constraints>
-                            </imageView>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="dropimg" translatesAutoresizingMaskIntoConstraints="NO" id="YXB-qy-a37">
-                                <rect key="frame" x="132" y="696" width="107" height="64"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="64" id="ea1-7N-Su6"/>
-                                </constraints>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vDu-zF-Fre"/>
-                        <color key="backgroundColor" name="AccentColor"/>
+                        <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="vDu-zF-Fre" firstAttribute="bottom" secondItem="YXB-qy-a37" secondAttribute="bottom" constant="58" id="Kmx-Qw-S4J"/>
-                            <constraint firstItem="b6S-lp-rNl" firstAttribute="top" secondItem="vDu-zF-Fre" secondAttribute="top" constant="294" id="LAL-Cb-CSN"/>
-                            <constraint firstItem="YXB-qy-a37" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="132" id="N0J-03-DsS"/>
-                            <constraint firstItem="b6S-lp-rNl" firstAttribute="leading" secondItem="vDu-zF-Fre" secondAttribute="leading" constant="90" id="Rta-lb-CK4"/>
-                            <constraint firstItem="vDu-zF-Fre" firstAttribute="trailing" secondItem="YXB-qy-a37" secondAttribute="trailing" constant="154" id="ZRc-a4-RdS"/>
-                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="n44-rG-3wp"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerY" secondItem="5EZ-qb-Rvc" secondAttribute="centerY" id="ELY-Du-T3n"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="KhX-IQ-sE1"/>
+                            <constraint firstItem="b6S-lp-rNl" firstAttribute="top" secondItem="vDu-zF-Fre" secondAttribute="top" constant="343" id="sC9-in-Y7A"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -48,10 +36,9 @@
         </scene>
     </scenes>
     <resources>
-        <image name="dropimg" width="159" height="110"/>
-        <image name="small" width="220" height="320"/>
+        <image name="logo-bk" width="251" height="418"/>
         <namedColor name="AccentColor">
-            <color red="0.13699999451637268" green="0.42399999499320984" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.15294117647058825" green="0.45882352941176469" blue="0.98431372549019602" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

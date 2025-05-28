@@ -30,8 +30,8 @@ struct podsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-            // GenderView()
+            // ContentView()
+             SplashScreenView()
                 .environmentObject(onboardingViewModel)
                 .environmentObject(sharedViewModel)
                 .environmentObject(uploadViewModel)
