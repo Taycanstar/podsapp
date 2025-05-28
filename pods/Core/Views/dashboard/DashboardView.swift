@@ -720,19 +720,19 @@ private extension DashboardView {
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack(spacing: 16) {
                 // Debug button to reset all flows (remove in production)
-                Button {
-                    UserDefaults.standard.resetAllOnboardingFlows()
-                    print("🔄 All flows reset!")
-                    print("🔄 hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
-                    print("🔄 hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow)")
-                    print("🔄 hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
-                    print("🔄 hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow)")
-                    print("🔄 hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.red)
-                }
+                // Button {
+                //     UserDefaults.standard.resetAllOnboardingFlows()
+                //     print("🔄 All flows reset!")
+                //     print("🔄 hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
+                //     print("🔄 hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow)")
+                //     print("🔄 hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
+                //     print("🔄 hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow)")
+                //     print("🔄 hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
+                // } label: {
+                //     Image(systemName: "arrow.clockwise")
+                //         .font(.system(size: 16, weight: .medium))
+                //         .foregroundColor(.red)
+                // }
 
                 Button {
                     showDatePicker = true

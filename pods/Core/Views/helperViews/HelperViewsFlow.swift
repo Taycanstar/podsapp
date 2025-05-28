@@ -153,6 +153,9 @@ class AllFlow: ObservableObject {
     @Published var currentStep: AllStep = .describeLog
     @Published var progress: Double = 0.0
     @Published var navigationDirection: NavigationDirection = .forward // Added property
+    
+    // Completion callback to notify when flow is finished
+    var onFlowCompleted: (() -> Void)?
 
     init() {
         updateProgress()
@@ -189,6 +192,12 @@ class AllFlow: ObservableObject {
         }
         updateProgress()
     }
+    
+    func completeFlow() {
+        print("🔍 AllFlow - completeFlow() called")
+        UserDefaults.standard.hasSeenAllFlow = true
+        onFlowCompleted?()
+    }
 
     private func updateProgress() {
         progress = (Double(currentStep.rawValue) + 1.0) / Double(AllStep.allCases.count)
@@ -221,6 +230,9 @@ class MealFlow: ObservableObject {
     @Published var currentStep: MealStep = .describeMeal
     @Published var progress: Double = 0.0
     @Published var navigationDirection: NavigationDirection = .forward // Added property
+    
+    // Completion callback to notify when flow is finished
+    var onFlowCompleted: (() -> Void)?
 
     init() {
         updateProgress()
@@ -257,6 +269,12 @@ class MealFlow: ObservableObject {
         }
         updateProgress()
     }
+    
+    func completeFlow() {
+        print("🔍 MealFlow - completeFlow() called")
+        UserDefaults.standard.hasSeenMealFlow = true
+        onFlowCompleted?()
+    }
 
     private func updateProgress() {
         progress = (Double(currentStep.rawValue) + 1.0) / Double(MealStep.allCases.count)
@@ -287,6 +305,9 @@ class FoodFlow: ObservableObject {
     @Published var currentStep: FoodStep = .describeFood
     @Published var progress: Double = 0.0
     @Published var navigationDirection: NavigationDirection = .forward
+    
+    // Completion callback to notify when flow is finished
+    var onFlowCompleted: (() -> Void)?
 
     init() {
         updateProgress()
@@ -322,6 +343,12 @@ class FoodFlow: ObservableObject {
             }
         }
         updateProgress()
+    }
+    
+    func completeFlow() {
+        print("🔍 FoodFlow - completeFlow() called")
+        UserDefaults.standard.hasSeenFoodFlow = true
+        onFlowCompleted?()
     }
 
     private func updateProgress() {
@@ -380,8 +407,15 @@ struct FoodFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            // Set up the completion callback
+            foodFlow.onFlowCompleted = {
+                print("🔍 FoodFlowContainerView - Flow completed, dismissing sheet")
+                dismiss()
+            }
+        }
         .onDisappear {
-            // Mark food flow as seen
+            // Mark food flow as seen (backup in case completeFlow() wasn't called)
             print("🔍 FoodFlowContainerView onDisappear - marking hasSeenFoodFlow = true")
             UserDefaults.standard.hasSeenFoodFlow = true
         }
@@ -573,8 +607,15 @@ struct AllFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            // Set up the completion callback
+            allFlow.onFlowCompleted = {
+                print("🔍 AllFlowContainerView - Flow completed, dismissing sheet")
+                dismiss()
+            }
+        }
         .onDisappear {
-            // Mark all flow as seen
+            // Mark all flow as seen (backup in case completeFlow() wasn't called)
             print("🔍 AllFlowContainerView onDisappear - marking hasSeenAllFlow = true")
             UserDefaults.standard.hasSeenAllFlow = true
         }
@@ -640,8 +681,15 @@ struct MealFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            // Set up the completion callback
+            mealFlow.onFlowCompleted = {
+                print("🔍 MealFlowContainerView - Flow completed, dismissing sheet")
+                dismiss()
+            }
+        }
         .onDisappear {
-            // Mark meal flow as seen
+            // Mark meal flow as seen (backup in case completeFlow() wasn't called)
             print("🔍 MealFlowContainerView onDisappear - marking hasSeenMealFlow = true")
             UserDefaults.standard.hasSeenMealFlow = true
         }
@@ -678,6 +726,9 @@ class ScanFlow: ObservableObject {
     @Published var currentStep: ScanStep = .scanFood
     @Published var progress: Double = 0.0
     @Published var navigationDirection: NavigationDirection = .forward
+    
+    // Completion callback to notify when flow is finished
+    var onFlowCompleted: (() -> Void)?
 
     init() {
         updateProgress()
@@ -713,6 +764,12 @@ class ScanFlow: ObservableObject {
             }
         }
         updateProgress()
+    }
+    
+    func completeFlow() {
+        print("🔍 ScanFlow - completeFlow() called")
+        UserDefaults.standard.hasSeenScanFlow = true
+        onFlowCompleted?()
     }
 
     private func updateProgress() {
@@ -771,8 +828,15 @@ struct ScanFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            // Set up the completion callback
+            scanFlow.onFlowCompleted = {
+                print("🔍 ScanFlowContainerView - Flow completed, dismissing sheet")
+                dismiss()
+            }
+        }
         .onDisappear {
-            // Mark scan flow as seen
+            // Mark scan flow as seen (backup in case completeFlow() wasn't called)
             print("🔍 ScanFlowContainerView onDisappear - marking hasSeenScanFlow = true")
             UserDefaults.standard.hasSeenScanFlow = true
         }

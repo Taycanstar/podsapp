@@ -41,10 +41,8 @@ struct LogExistingView: View {
                 Button(action: {
                     print("🔍 LogExistingView - Finish button tapped")
                     HapticFeedback.generate()
-                    // This is the last step - mark as seen and dismiss
-                    UserDefaults.standard.hasSeenAllFlow = true
-                    print("🔍 LogExistingView - Marked hasSeenAllFlow = true, calling dismiss()")
-                    dismiss()
+                    // Complete the flow - this will trigger the container to dismiss
+                    allFlow.completeFlow()
                 }) {
                     Text("Finish") // Button text for the last step
                         .font(.system(size: 18, weight: .semibold))

@@ -37,10 +37,10 @@ struct FindFoodsView: View {
 
             VStack {
                 Button(action: {
+                    print("🔍 FindFoodsView - Finish button tapped")
                     HapticFeedback.generate()   
-                    // This is the last step - mark as seen and dismiss
-                    UserDefaults.standard.hasSeenMealFlow = true
-                    dismiss()
+                    // Complete the flow - this will trigger the container to dismiss
+                    mealFlow.completeFlow()
                 }) {
                     Text("Finish") // Button text for the last step
                         .font(.system(size: 18, weight: .semibold))

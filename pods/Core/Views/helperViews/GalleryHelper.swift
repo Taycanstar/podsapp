@@ -37,16 +37,12 @@ struct GalleryHelper: View {
 
             VStack {
                 Button(action: {
+                    print("🔍 GalleryHelper - Finish button tapped")
                     HapticFeedback.generate() // Assuming HapticFeedback is available
-                    if scanFlow.currentStep.rawValue == ScanStep.allCases.count - 1 {
-                        // This is the last step - mark as seen and dismiss
-                        UserDefaults.standard.hasSeenScanFlow = true
-                        dismiss()
-                    } else {
-                        scanFlow.next()
-                    }
+                    // Complete the flow - this will trigger the container to dismiss
+                    scanFlow.completeFlow()
                 }) {
-                    Text(scanFlow.currentStep.rawValue == ScanStep.allCases.count - 1 ? "Finish" : "Continue")
+                    Text("Finish")
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
