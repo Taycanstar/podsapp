@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LogExistingView: View {
     @EnvironmentObject var allFlow: AllFlow
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
@@ -38,15 +39,12 @@ struct LogExistingView: View {
             // Bottom Bar with Continue Button
             VStack {
                 Button(action: {
-                    // HapticFeedback.generate() 
-                    // This is the last step, so a real app might dismiss the flow here
-                    // or navigate to a different part of the app.
-                    // For now, we can call next() which won't do anything if it's the last step,
-                    // or you could add specific logic to dismiss or complete.
-                    // allFlow.next() 
-                    print("AllFlow finished")
-                    // Potentially dismiss the sheet: allFlow.dismiss() or similar via Environment.dismiss
+                    print("🔍 LogExistingView - Finish button tapped")
                     HapticFeedback.generate()
+                    // This is the last step - mark as seen and dismiss
+                    UserDefaults.standard.hasSeenAllFlow = true
+                    print("🔍 LogExistingView - Marked hasSeenAllFlow = true, calling dismiss()")
+                    dismiss()
                 }) {
                     Text("Finish") // Button text for the last step
                         .font(.system(size: 18, weight: .semibold))

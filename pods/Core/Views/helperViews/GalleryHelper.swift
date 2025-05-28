@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GalleryHelper: View {
     @EnvironmentObject var scanFlow: ScanFlow
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
@@ -36,10 +37,16 @@ struct GalleryHelper: View {
 
             VStack {
                 Button(action: {
-                    scanFlow.next()
                     HapticFeedback.generate() // Assuming HapticFeedback is available
+                    if scanFlow.currentStep.rawValue == ScanStep.allCases.count - 1 {
+                        // This is the last step - mark as seen and dismiss
+                        UserDefaults.standard.hasSeenScanFlow = true
+                        dismiss()
+                    } else {
+                        scanFlow.next()
+                    }
                 }) {
-                    Text("Continue")
+                    Text(scanFlow.currentStep.rawValue == ScanStep.allCases.count - 1 ? "Finish" : "Continue")
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)

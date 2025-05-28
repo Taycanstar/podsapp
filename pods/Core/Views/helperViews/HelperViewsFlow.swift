@@ -43,6 +43,10 @@ extension UserDefaults {
         hasSeenMealFlow = false
         hasSeenFoodFlow = false
         hasSeenScanFlow = false
+        
+        // Force synchronize to ensure changes are saved immediately
+        UserDefaults.standard.synchronize()
+        print("🔄 All onboarding flows reset to false")
     }
 }
 
@@ -70,6 +74,9 @@ class LogFlow: ObservableObject {
     @Published var currentStep: LogStep = .tapPlus
     @Published var progress: Double = 0.0
     @Published var navigationDirection: NavigationDirection = .forward // Added property
+    
+    // Completion callback to notify when flow is finished
+    var onFlowCompleted: (() -> Void)?
 
     init() {
         updateProgress()
@@ -107,6 +114,12 @@ class LogFlow: ObservableObject {
             }
         }
         updateProgress()
+    }
+    
+    func completeFlow() {
+        print("🔍 LogFlow - completeFlow() called")
+        UserDefaults.standard.hasSeenLogFlow = true
+        onFlowCompleted?()
     }
 
     private func updateProgress() {
@@ -369,6 +382,7 @@ struct FoodFlowContainerView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .onDisappear {
             // Mark food flow as seen
+            print("🔍 FoodFlowContainerView onDisappear - marking hasSeenFoodFlow = true")
             UserDefaults.standard.hasSeenFoodFlow = true
         }
     }
@@ -446,8 +460,16 @@ struct LogFlowContainerView: View {
             .background(Color("bg").edgesIgnoringSafeArea(.all))
         }
         .navigationViewStyle(StackNavigationViewStyle()) // Recommended for flows like this
+        .onAppear {
+            // Set up the completion callback
+            logFlow.onFlowCompleted = {
+                print("🔍 LogFlowContainerView - Flow completed, dismissing sheet")
+                dismiss()
+            }
+        }
         .onDisappear {
-            // Mark log flow as seen
+            // Mark log flow as seen (backup in case completeFlow() wasn't called)
+            print("🔍 LogFlowContainerView onDisappear - marking hasSeenLogFlow = true")
             UserDefaults.standard.hasSeenLogFlow = true
         }
     }
@@ -553,6 +575,7 @@ struct AllFlowContainerView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .onDisappear {
             // Mark all flow as seen
+            print("🔍 AllFlowContainerView onDisappear - marking hasSeenAllFlow = true")
             UserDefaults.standard.hasSeenAllFlow = true
         }
     }
@@ -619,6 +642,7 @@ struct MealFlowContainerView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .onDisappear {
             // Mark meal flow as seen
+            print("🔍 MealFlowContainerView onDisappear - marking hasSeenMealFlow = true")
             UserDefaults.standard.hasSeenMealFlow = true
         }
     }
@@ -749,6 +773,7 @@ struct ScanFlowContainerView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .onDisappear {
             // Mark scan flow as seen
+            print("🔍 ScanFlowContainerView onDisappear - marking hasSeenScanFlow = true")
             UserDefaults.standard.hasSeenScanFlow = true
         }
     }

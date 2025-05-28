@@ -203,6 +203,16 @@ private var remainingCal: Double { vm.remainingCalories }
                 
                 // Load health data for the selected date
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
+                
+                // ALWAYS show log flow if user hasn't completed it yet
+                if !UserDefaults.standard.hasSeenLogFlow {
+                    print("🔍 DashboardView onAppear - showing log flow (user hasn't completed it)")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showLogFlowSheet = true
+                    }
+                } else {
+                    print("🔍 DashboardView onAppear - user has completed log flow, not showing")
+                }
             }
             .alert("Health Permissions Required", isPresented: $showHealthPermissionAlert) {
                 Button("Cancel", role: .cancel) {}
@@ -640,8 +650,19 @@ private extension DashboardView {
 
              
                 Button(action: {
-                    // Post notification to ContentView to show NewSheetView
-                    NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
+                    // Debug prints
+                    print("🔍 Start Logging tapped - hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
+                    print("🔍 showLogFlowSheet current value: \(showLogFlowSheet)")
+                    
+                    // Show log flow if user hasn't seen it yet, otherwise show NewSheetView
+                    if !UserDefaults.standard.hasSeenLogFlow {
+                        print("🔍 Showing log flow sheet")
+                        showLogFlowSheet = true
+                    } else {
+                        print("🔍 Posting notification for NewSheetView")
+                        // Post notification to ContentView to show NewSheetView
+                        NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
+                    }
                     HapticFeedback.generate()
                 }) {
                     Text("Start Logging")
@@ -698,13 +719,20 @@ private extension DashboardView {
 
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack(spacing: 16) {
-                // Button {
-                //     vm.loadLogs(for: vm.selectedDate)
-                // } label: {
-                //     Image(systemName: "arrow.clockwise")
-                //         .font(.system(size: 16, weight: .medium))
-                //         .foregroundColor(.accentColor)
-                // }
+                // Debug button to reset all flows (remove in production)
+                Button {
+                    UserDefaults.standard.resetAllOnboardingFlows()
+                    print("🔄 All flows reset!")
+                    print("🔄 hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
+                    print("🔄 hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow)")
+                    print("🔄 hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
+                    print("🔄 hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow)")
+                    print("🔄 hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.red)
+                }
 
                 Button {
                     showDatePicker = true

@@ -37,10 +37,10 @@ struct NameFoodView: View {
 
             VStack {
                 Button(action: {
-                    // In a real app, you might save the food item here
-                    // For now, just dismiss the flow
-                    dismiss()
                     HapticFeedback.generate() // Assuming HapticFeedback is available
+                    // This is the last step - mark as seen and dismiss
+                    UserDefaults.standard.hasSeenFoodFlow = true
+                    dismiss()
                 }) {
                     Text("Finish")
                         .font(.system(size: 18, weight: .semibold))

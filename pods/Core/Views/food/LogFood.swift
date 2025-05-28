@@ -118,19 +118,24 @@ struct LogFood: View {
                     foodManager.prefetchMealImages()
                 }
 
-                // Set initial flow sheet based on default selected tab
-                if selectedFoodTab == .all {
-                    showAllFlowSheet = true
-                    showMealFlowSheet = false
-                    showFoodFlowSheet = false
-                } else if selectedFoodTab == .meals {
-                    showAllFlowSheet = false
-                    showMealFlowSheet = true
-                    showFoodFlowSheet = false
-                } else if selectedFoodTab == .foods {
-                    showAllFlowSheet = false
-                    showMealFlowSheet = false
-                    showFoodFlowSheet = true
+                // Show flow based on current tab if user hasn't seen it yet
+                if selectedFoodTab == .all && !UserDefaults.standard.hasSeenAllFlow {
+                    print("🔍 LogFood onAppear - showing All flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showAllFlowSheet = true
+                    }
+                } else if selectedFoodTab == .meals && !UserDefaults.standard.hasSeenMealFlow {
+                    print("🔍 LogFood onAppear - showing Meal flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showMealFlowSheet = true
+                    }
+                } else if selectedFoodTab == .foods && !UserDefaults.standard.hasSeenFoodFlow {
+                    print("🔍 LogFood onAppear - showing Food flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFoodFlowSheet = true
+                    }
+                } else {
+                    print("🔍 LogFood onAppear - user has seen current tab flow or no flow needed")
                 }
                 
                 // Set up keyboard observers
@@ -177,12 +182,16 @@ struct LogFood: View {
                 AllFlowContainerView()
             }
             .onChange(of: selectedFoodTab) { _, newTabValue in
-                print("selectedFoodTab changed to: \(newTabValue)")
+                print("🔍 selectedFoodTab changed to: \(newTabValue)")
+                print("🔍 UserDefaults - hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow), hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow), hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
+                
                 if newTabValue == .all {
                     // Only show All flow if user hasn't seen it yet
                     if !UserDefaults.standard.hasSeenAllFlow {
                         showAllFlowSheet = true
-                        print("Set to show All flow")
+                        print("🔍 Set to show All flow - showAllFlowSheet: \(showAllFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen All flow, not showing")
                     }
                     showMealFlowSheet = false
                     showFoodFlowSheet = false
@@ -190,7 +199,9 @@ struct LogFood: View {
                     // Only show Food flow if user hasn't seen it yet
                     if !UserDefaults.standard.hasSeenFoodFlow {
                         showFoodFlowSheet = true
-                        print("Set to show Food flow")
+                        print("🔍 Set to show Food flow - showFoodFlowSheet: \(showFoodFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen Food flow, not showing")
                     }
                     showAllFlowSheet = false
                     showMealFlowSheet = false
@@ -198,7 +209,9 @@ struct LogFood: View {
                     // Only show Meal flow if user hasn't seen it yet
                     if !UserDefaults.standard.hasSeenMealFlow {
                         showMealFlowSheet = true
-                        print("Set to show Meal flow")
+                        print("🔍 Set to show Meal flow - showMealFlowSheet: \(showMealFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen Meal flow, not showing")
                     }
                     showAllFlowSheet = false
                     showFoodFlowSheet = false

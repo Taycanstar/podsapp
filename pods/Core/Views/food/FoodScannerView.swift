@@ -268,12 +268,17 @@ struct FoodScannerView: View {
             // Check camera permissions when the view appears
             checkCameraPermissions()
             print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
+            print("🔍 hasShownScanFlow: \(hasShownScanFlow), hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
             
             // Show scan flow on first appearance if user hasn't seen it yet
             if !hasShownScanFlow && !UserDefaults.standard.hasSeenScanFlow {
+                print("🔍 Scheduling scan flow to show in 0.5 seconds")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    print("🔍 Showing scan flow now - showScanFlow: \(showScanFlow)")
                     showScanFlow = true
                 }
+            } else {
+                print("🔍 Not showing scan flow - already shown or user has seen it")
             }
         }
     }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FindFoodsView: View {
     @EnvironmentObject var mealFlow: MealFlow
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
@@ -36,10 +37,10 @@ struct FindFoodsView: View {
 
             VStack {
                 Button(action: {
-                    // This is the last step
-                    print("MealFlow finished")
                     HapticFeedback.generate()   
-                    // mealFlow.next() // Or dismiss logic
+                    // This is the last step - mark as seen and dismiss
+                    UserDefaults.standard.hasSeenMealFlow = true
+                    dismiss()
                 }) {
                     Text("Finish") // Button text for the last step
                         .font(.system(size: 18, weight: .semibold))

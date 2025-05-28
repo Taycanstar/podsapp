@@ -9,7 +9,7 @@ import SwiftUI
 
 struct NewMenuView: View {
     @EnvironmentObject var logFlow: LogFlow
-    // @Environment(\.dismiss) var dismissFlow
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
@@ -42,12 +42,12 @@ struct NewMenuView: View {
             // Bottom Bar with Continue Button
             VStack {
                 Button(action: {
-                    // HapticFeedback.generate() // Uncomment if HapticFeedback is implemented
-                    logFlow.next() // Navigates to the next step or handles flow completion
+                    print("🔍 NewMenuView - Finish button tapped")
+                    HapticFeedback.generate()
+                    // Complete the flow - this will trigger the container to dismiss
+                    logFlow.completeFlow()
                 }) {
-                    // Text should be "Get Started" or "Finish" based on whether it's the last step.
-                    // The LogFlowContainerView can manage this text if needed, or it can be fixed here.
-                    Text(logFlow.currentStep.rawValue == LogStep.allCases.count - 1 ? "Finish" : "Get Started")
+                    Text("Finish")
                         .font(.system(size: 18, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
