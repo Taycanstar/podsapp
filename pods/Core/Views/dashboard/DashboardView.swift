@@ -192,11 +192,16 @@ private var remainingCal: Double { vm.remainingCalories }
             }
             .onAppear {
                 configureOnAppear() 
-                // Initialize food manager with user email
-                foodMgr.initialize(userEmail: onboarding.email)
                 
-                // Set up the connection between FoodManager and DayLogsViewModel for voice logging
-                foodMgr.dayLogsViewModel = vm
+                // Initialize food manager with user email only if we have a valid email
+                if !onboarding.email.isEmpty {
+                    foodMgr.initialize(userEmail: onboarding.email)
+                    
+                    // Set up the connection between FoodManager and DayLogsViewModel for voice logging
+                    foodMgr.dayLogsViewModel = vm
+                } else {
+                    print("⚠️ DashboardView onAppear - No email available for FoodManager initialization")
+                }
                 
                 // Check health permissions and request if needed
                 checkHealthPermissions()
@@ -212,6 +217,33 @@ private var remainingCal: Double { vm.remainingCalories }
                     }
                 } else {
                     print("🔍 DashboardView onAppear - user has completed log flow, not showing")
+                }
+            }
+            .onChange(of: onboarding.email) { newEmail in
+                print("🔄 DashboardView - User email changed to: \(newEmail)")
+                
+                // If email changed, reinitialize everything for the new user
+                if !newEmail.isEmpty && vm.email != newEmail {
+                    print("🔄 DashboardView - Reinitializing for new user")
+                    
+                    // Update DayLogsViewModel
+                    vm.setEmail(newEmail)
+                    vm.logs = [] // Clear existing logs
+                    vm.loadLogs(for: vm.selectedDate) // Load logs for new user
+                    
+                    // Update UserDefaults
+                    UserDefaults.standard.set(newEmail, forKey: "userEmail")
+                    
+                    // Clear cached data from previous user
+                    UserDefaults.standard.removeObject(forKey: "preloadedWeightLogs")
+                    UserDefaults.standard.removeObject(forKey: "preloadedHeightLogs")
+                    
+                    // Reinitialize FoodManager for new user
+                    foodMgr.initialize(userEmail: newEmail)
+                    foodMgr.dayLogsViewModel = vm
+                    
+                    // Preload data for new user
+                    preloadHealthData()
                 }
             }
             .alert("Health Permissions Required", isPresented: $showHealthPermissionAlert) {
@@ -861,18 +893,43 @@ private extension DashboardView {
     func configureOnAppear() {
         isTabBarVisible.wrappedValue = true
 
-        if vm.email.isEmpty, !onboarding.email.isEmpty {
-            vm.setEmail(onboarding.email)
+        // ALWAYS ensure we're using the correct email from onboarding
+        // This is critical for user switching scenarios
+        if !onboarding.email.isEmpty {
+            let currentEmail = onboarding.email
+            
+            // Force update the email in DayLogsViewModel if it's different
+            if vm.email != currentEmail {
+                print("🔄 DashboardView - Email changed from '\(vm.email)' to '\(currentEmail)' - updating DayLogsViewModel")
+                vm.setEmail(currentEmail)
+                
+                // Clear existing logs since they belong to a different user
+                vm.logs = []
+                
+                // Force reload logs for the new user
+                vm.loadLogs(for: vm.selectedDate)
+            } else if vm.email.isEmpty {
+                print("🔄 DashboardView - Setting initial email '\(currentEmail)' in DayLogsViewModel")
+                vm.setEmail(currentEmail)
+            }
+            
+            // Always update UserDefaults with the current user's email
+            UserDefaults.standard.set(currentEmail, forKey: "userEmail")
+            
+            // Clear any cached preloaded data since it might belong to a different user
+            UserDefaults.standard.removeObject(forKey: "preloadedWeightLogs")
+            UserDefaults.standard.removeObject(forKey: "preloadedHeightLogs")
+        } else {
+            print("⚠️ DashboardView - No email available from onboarding")
+            return
         }
         
-        // Save the email so our detail views can pick it up
-        UserDefaults.standard.set(onboarding.email, forKey: "userEmail")
-        
+        // Only load logs if the list is empty (to avoid duplicate loading)
         if vm.logs.isEmpty {
             vm.loadLogs(for: vm.selectedDate)
         }
         
-        // Preload weight and height logs for the current week
+        // Preload weight and height logs for the current user
         preloadHealthData()
     }
     
