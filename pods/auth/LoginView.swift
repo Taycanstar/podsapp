@@ -108,11 +108,12 @@ struct LoginView: View {
                 } else {
                     Text("Continue")
                         .foregroundColor(.white)
+                        .fontWeight(.semibold)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 35/255, green: 108/255, blue: 255/255))
+            .background(.black)
             .cornerRadius(10)
         }
         .padding(.horizontal)

@@ -14,23 +14,6 @@ struct SportSelectionView: View {
     @State private var navigateToNextStep = false
     @State private var showAlert = false
     
-    // Common sports for autocomplete suggestions
-    let commonSports = [
-        "Soccer", "Basketball", "Baseball", "Football", "Tennis", 
-        "Golf", "Hockey", "Volleyball", "Swimming", "Running",
-        "Cycling", "Boxing", "Wrestling", "MMA", "CrossFit",
-        "Triathlon", "Skiing", "Snowboarding", "Surfing", "Rock Climbing",
-        "Rugby", "Cricket", "Gymnastics", "Track and Field", "Weightlifting"
-    ]
-    
-    // Filtered suggestions based on current input
-    var filteredSuggestions: [String] {
-        if sportName.isEmpty {
-            return []
-        }
-        return commonSports.filter { $0.lowercased().contains(sportName.lowercased()) }
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             // Navigation and progress bar
@@ -75,44 +58,18 @@ struct SportSelectionView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
-            .padding(.bottom, 16)
+            .padding(.bottom, 32)
             
             // Sport name input
             VStack(alignment: .leading, spacing: 0) {
-             
-                
                 TextField("Enter sport name", text: $sportName)
                     .padding()
                     .frame(height: 56)
                     .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6))
                     .cornerRadius(12)
+                    .font(.system(size: 16))
             }
             .padding(.horizontal)
-            
-            // Show suggestions if any match the input
-            if !filteredSuggestions.isEmpty {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(filteredSuggestions, id: \.self) { suggestion in
-                            Button(action: {
-                                sportName = suggestion
-                            }) {
-                                HStack {
-                                    Text(suggestion)
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 16)
-                            }
-                            .background(colorScheme == .dark ? Color(UIColor.systemGray5) : Color(UIColor.systemGray5))
-                            .cornerRadius(6)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .frame(maxHeight: 200)
-            }
             
             Spacer()
             

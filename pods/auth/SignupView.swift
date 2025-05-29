@@ -50,7 +50,7 @@ struct SignupView: View {
     private var logo: some View {
         HStack {
             Spacer()
-            Image("black-logo")
+            Image("logo-wt")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 50, height: 50)
@@ -103,11 +103,12 @@ struct SignupView: View {
                 } else {
                     Text("Continue")
                         .foregroundColor(.white)
+                        .fontWeight(.semibold)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 35/255, green: 108/255, blue: 255/255))
+            .background(.black)
             .cornerRadius(10)
         }
         .padding(.horizontal)

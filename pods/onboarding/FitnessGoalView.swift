@@ -21,7 +21,7 @@ struct FitnessGoalView: View {
         case tone
         case endurance
         case powerlifting
-        case sportsPerformance = "sportsPerformance"
+        case sportsPerformance = "sport"
         
         var id: Self { self }
         

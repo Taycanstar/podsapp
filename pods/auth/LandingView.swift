@@ -5,8 +5,8 @@ import CryptoKit
 import Mixpanel
 
 struct LandingView: View {
-    // Background color as specified
-    let backgroundColor = Color(red: 35/255, green: 108/255, blue: 255/255)
+    // Background color changed to black
+    let backgroundColor = Color.black
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
     @EnvironmentObject var viewModel: OnboardingViewModel
@@ -22,7 +22,7 @@ struct LandingView: View {
                 VStack {
                     Spacer()
                     // Image centered on the screen
-                    Image("small")
+                    Image("logo-bk")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100) // Adjust size as needed
@@ -65,7 +65,7 @@ struct LandingView: View {
                                 Image(systemName: "envelope.fill") // Apple's envelope icon
                                     .font(.system(size: 18)) // Adjust the size as needed
                                 
-                                Text("Sign up with Email")
+                                Text("Continue with Email")
                                     .foregroundColor(.black) // Set text color
                             }
                         }
