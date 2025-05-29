@@ -1125,6 +1125,7 @@ struct LogRow: View {
 struct MacroGenerationCard: View {
     @EnvironmentObject var foodManager: FoodManager
     @State private var animateProgress = false
+    @State private var animationTimer: Timer?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -1150,34 +1151,15 @@ struct MacroGenerationCard: View {
             
             // Progress bars
             VStack(spacing: 12) {
-                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
-                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
-                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+                ContinuousProgressBar(isActive: foodManager.isGeneratingMacros, width: 0.9, delay: 0)
+                ContinuousProgressBar(isActive: foodManager.isGeneratingMacros, width: 0.7, delay: 0.2)
+                ContinuousProgressBar(isActive: foodManager.isGeneratingMacros, width: 0.8, delay: 0.4)
             }
   
         }
         .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
-        .onAppear {
-            startAnimation()
-        }
-        .onChange(of: foodManager.macroGenerationStage) { _ in
-            startAnimation()
-        }
-    }
-    
-    private func startAnimation() {
-        animateProgress = false
-        withAnimation(.easeIn(duration: 0.3)) {
-            animateProgress = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                animateProgress = false
-            }
-        }
     }
 }
 
@@ -1222,9 +1204,9 @@ struct ImageAnalysisCard: View {
             
             // Progress bars
             VStack(spacing: 12) {
-                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
-                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
-                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+                ContinuousProgressBar(isActive: foodManager.isAnalyzingImage, width: 0.9, delay: 0)
+                ContinuousProgressBar(isActive: foodManager.isAnalyzingImage, width: 0.7, delay: 0.2)
+                ContinuousProgressBar(isActive: foodManager.isAnalyzingImage, width: 0.8, delay: 0.4)
             }
             
         
@@ -1232,22 +1214,6 @@ struct ImageAnalysisCard: View {
         .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
-        .onAppear {
-            startAnimation()
-        }
-    }
-    
-    private func startAnimation() {
-        animateProgress = false
-        withAnimation(.easeIn(duration: 0.3)) {
-            animateProgress = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                animateProgress = false
-            }
-        }
     }
 }
 
@@ -1279,31 +1245,15 @@ struct BarcodeAnalysisCard: View {
             
             // Progress bars
             VStack(spacing: 12) {
-                ProgressBar(width: animateProgress ? 0.9 : 0.3, delay: 0)
-                ProgressBar(width: animateProgress ? 0.7 : 0.5, delay: 0.2)
-                ProgressBar(width: animateProgress ? 0.8 : 0.4, delay: 0.4)
+                ContinuousProgressBar(isActive: foodManager.isScanningBarcode, width: 0.9, delay: 0)
+                ContinuousProgressBar(isActive: foodManager.isScanningBarcode, width: 0.7, delay: 0.2)
+                ContinuousProgressBar(isActive: foodManager.isScanningBarcode, width: 0.8, delay: 0.4)
             }
 
         }
         .padding()
         .background(Color("iosnp"))
         .cornerRadius(12)
-        .onAppear {
-            startAnimation()
-        }
-    }
-    
-    private func startAnimation() {
-        animateProgress = false
-        withAnimation(.easeIn(duration: 0.3)) {
-            animateProgress = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                animateProgress = false
-            }
-        }
     }
 }
 
@@ -1481,6 +1431,65 @@ private extension DashboardView {
                         healthViewModel.reloadHealthData(for: vm.selectedDate)
                     }
                 }
+        }
+    }
+}
+
+// New continuous progress bar component
+struct ContinuousProgressBar: View {
+    let isActive: Bool
+    let width: CGFloat
+    let delay: Double
+    
+    @State private var animationOffset: CGFloat = 0
+    @State private var progressWidth: CGFloat = 0.3
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: 8)
+                
+                // Progress bar
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.accentColor)
+                    .frame(width: geometry.size.width * progressWidth, height: 8)
+                    .offset(x: animationOffset)
+            }
+        }
+        .frame(height: 8)
+        .onAppear {
+            if isActive {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    startContinuousAnimation()
+                }
+            }
+        }
+        .onChange(of: isActive) { active in
+            if active {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    startContinuousAnimation()
+                }
+            } else {
+                stopAnimation()
+            }
+        }
+    }
+    
+    private func startContinuousAnimation() {
+        guard isActive else { return }
+        
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            progressWidth = width
+        }
+    }
+    
+    private func stopAnimation() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            progressWidth = 0.3
+            animationOffset = 0
         }
     }
 }
