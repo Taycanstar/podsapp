@@ -57,15 +57,12 @@ struct OnboardingPlanOverview: View {
     // BMI Index Card  
     private var bmiIndexCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("BMI INDEX")
+         
+
+                  HStack(alignment: .firstTextBaseline, spacing: 4) {
+                     Text("BMI INDEX")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.secondary)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: "%.2f", currentBMI))
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.primary)
                     
                     Spacer()
                     
@@ -76,6 +73,16 @@ struct OnboardingPlanOverview: View {
                         .padding(.vertical, 4)
                         .background(bmiStatusColor.opacity(0.1))
                         .cornerRadius(8)
+                }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(String(format: "%.2f", currentBMI))
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                
                 }
                 
                 // BMI Scale
@@ -140,10 +147,10 @@ struct OnboardingPlanOverview: View {
     
     private var bmiStatusText: String {
         switch currentBMI {
-        case ..<18.5: return "UNDERWEIGHT"
-        case 18.5..<25: return "YOU'RE HEALTHY"
-        case 25..<30: return "OVERWEIGHT"
-        default: return "OBESE"
+        case ..<18.5: return "Underweight"
+        case 18.5..<25: return "You're Healthy"
+        case 25..<30: return "Overweight"
+        default: return "Obese"
         }
     }
     
@@ -159,13 +166,14 @@ struct OnboardingPlanOverview: View {
     var body: some View {
         VStack(spacing: 0) {
             // Title
-            Text("Plan Overview")
-                .font(.system(size: 32, weight: .bold))
-                .padding(.top, 40)
-                .padding(.bottom, 20)
+          
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                      Text("Plan Overview")
+                .font(.system(size: 32, weight: .bold))
+                .padding(.top, 40)
+                // .padding(.bottom, 20)
                     
                     // Weight Progress Summary
                     weightProgressCard
