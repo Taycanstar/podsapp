@@ -279,11 +279,6 @@ class HealthKitManager {
         let workoutType = HKObjectType.workoutType()
         typesToRead.insert(workoutType)
         
-        // Add all document types
-        let documentTypes: [HKDocumentTypeIdentifier] = [
-            .CDA
-        ]
-        
         // Add all sample types to our read set
         for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes + labResultTypes + reproductiveTypes + mobilityTypes {
             if let type = HKQuantityType.quantityType(forIdentifier: typeId) {
@@ -294,13 +289,6 @@ class HealthKitManager {
         // Add all category types
         for typeId in categoryTypes {
             if let type = HKCategoryType.categoryType(forIdentifier: typeId) {
-                typesToRead.insert(type)
-            }
-        }
-        
-        // Add all document types
-        for typeId in documentTypes {
-            if let type = HKDocumentType.documentType(forIdentifier: typeId) {
                 typesToRead.insert(type)
             }
         }

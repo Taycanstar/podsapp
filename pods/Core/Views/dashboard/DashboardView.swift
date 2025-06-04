@@ -15,7 +15,6 @@ struct DashboardView: View {
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
-    @State private var showHealthPermissionAlert = false
 
     @State private var selectedFoodLog: Food? = nil
     @State private var showLogFlowSheet = false
@@ -203,9 +202,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     print("⚠️ DashboardView onAppear - No email available for FoodManager initialization")
                 }
                 
-                // Check health permissions and request if needed
-                checkHealthPermissions()
-                
                 // Load health data for the selected date
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
                 
@@ -245,14 +241,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     // Preload data for new user
                     preloadHealthData()
                 }
-            }
-            .alert("Health Permissions Required", isPresented: $showHealthPermissionAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Allow Access") {
-                    healthViewModel.requestHealthKitPermissions()
-                }
-            } message: {
-                Text("To display your health data on the dashboard, Pods needs access to Apple Health. Your data is kept private and never leaves your device.")
             }
             .onChange(of: vm.selectedDate) { newDate in
                 vm.loadLogs(for: newDate)   // fetch fresh ones
@@ -965,27 +953,6 @@ private extension DashboardView {
             }
         }
     }
-    
-    /// Check HealthKit permissions and show prompt if needed
-    func checkHealthPermissions() {
-        let healthStore = HealthKitManager.shared
-        
-        // Only try if HealthKit is available on the device
-        guard healthStore.isHealthDataAvailable else { return }
-        
-        // Check if the user has previously declined permissions
-        if !healthStore.isAuthorized {
-            // Show the permission alert
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.showHealthPermissionAlert = true
-            }
-        }
-    }
-
-    // Convert water intake from liters to ounces
-    var waterIntakeOz: Double {
-        healthViewModel.waterIntake * 33.814
-    }
 }
 
 private extension Date {
@@ -1548,5 +1515,12 @@ struct ContinuousProgressBar: View {
             progressWidth = 0.3
             animationOffset = 0
         }
+    }
+}
+
+// Convert water intake from liters to ounces
+private extension DashboardView {
+    var waterIntakeOz: Double {
+        healthViewModel.waterIntake * 33.814
     }
 }

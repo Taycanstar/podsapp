@@ -1505,12 +1505,12 @@
 				INFOPLIST_FILE = pods/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Humuli;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to cutom workouts.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We use your health data to track your nutrition, activity, and progress towards your goals.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We store your water intake and other nutrition information in Apple Health to keep all your health data in one place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1522,7 +1522,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.6;
+				MARKETING_VERSION = 1.2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1574,12 +1574,12 @@
 				INFOPLIST_FILE = pods/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Humuli;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to your pods.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to cutom workouts.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We use your health data to track your nutrition, activity, and progress towards your goals.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We store your water intake and other nutrition information in Apple Health to keep all your health data in one place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Pods requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1591,7 +1591,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.6;
+				MARKETING_VERSION = 1.2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
