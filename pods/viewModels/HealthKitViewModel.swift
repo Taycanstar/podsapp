@@ -54,8 +54,8 @@ class HealthKitViewModel: ObservableObject {
             }
             .store(in: &cancellables)
             
-        // Check permissions on startup
-        checkAndRequestPermissionsIfNeeded()
+        // Only check current authorization status - never automatically request permissions
+        checkAuthorization()
     }
     
     // MARK: - Authorization methods
@@ -106,11 +106,48 @@ class HealthKitViewModel: ObservableObject {
         }
     }
     
+    // Manual method to enable health data tracking (called from settings or connect buttons)
+    func enableHealthDataTracking() {
+        print("User requested to enable health data tracking")
+        
+        guard healthKitManager.isHealthDataAvailable else {
+            print("HealthKit not available on this device")
+            return
+        }
+        
+        // Request permissions
+        healthKitManager.checkAndRequestHealthPermissions { [weak self] granted in
+            DispatchQueue.main.async {
+                self?.isAuthorized = granted
+                UserDefaults.standard.set(granted, forKey: "healthKitEnabled")
+                
+                if granted {
+                    print("Health permissions granted - loading data")
+                    // Refresh data immediately when permissions are granted
+                    self?.reloadHealthData(for: self?.currentDate ?? Date())
+                    
+                    // Post notification that health data is now available
+                    NotificationCenter.default.post(name: NSNotification.Name("HealthDataAvailableNotification"), object: nil)
+                } else {
+                    print("Health permissions denied")
+                }
+            }
+        }
+    }
+    
     // MARK: - Data loading methods
     
     // Reload health data for the specified date
     func reloadHealthData(for date: Date) {
-        guard healthKitManager.isHealthDataAvailable && isAuthorized else {
+        // Only proceed if HealthKit is available AND we already have authorization
+        // Never trigger new permission requests from this method
+        guard healthKitManager.isHealthDataAvailable else {
+            print("HealthKit not available on this device")
+            return
+        }
+        
+        guard isAuthorized else {
+            print("HealthKit not authorized - skipping data reload. Use enableHealthDataTracking() to request permissions.")
             return
         }
         

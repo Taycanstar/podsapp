@@ -56,6 +56,14 @@ struct ProfileView: View {
                         }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         
+                        Section(header: Text("Data Sharing")) {
+                            NavigationLink(destination: AppleHealthSettingsView()) {
+                                Label("Apple Health", systemImage: "heart.text.square")
+                                    .foregroundColor(iconColor)
+                            }
+                        }
+                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                        
                         Section(header: Text("Content & Display")) {
                             
                             NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
@@ -308,6 +316,78 @@ struct MailView: UIViewControllerRepresentable {
     }
 }
 
+struct AppleHealthSettingsView: View {
+    @StateObject private var healthViewModel = HealthKitViewModel()
+    @Environment(\.colorScheme) var colorScheme
+    @State private var isHealthKitEnabled: Bool = false
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Health Data Integration"), footer: Text("Sync your health data including steps, sleep, and workouts")) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Connect to Health")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                    
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $isHealthKitEnabled)
+                        .labelsHidden()
+                        .onChange(of: isHealthKitEnabled) { newValue in
+                            if newValue {
+                                // User wants to enable - request permissions
+                                healthViewModel.enableHealthDataTracking()
+                            } else {
+                                // User wants to disable - update local preference only
+                                // Note: Can't revoke HealthKit permissions programmatically
+                                UserDefaults.standard.set(false, forKey: "healthKitEnabled")
+                                healthViewModel.isAuthorized = false
+                            }
+                        }
+                }
+                .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+              
+            }
+            
+               Section(footer: Text("To fully disable health data access, toggle off this setting and manage detailed permissions in iOS Settings > Privacy & Security > Health.")) {
+                Button(action: {
+                    openHealthApp()
+                }) {
+                    HStack {
+                        Label("Open Health", systemImage: "heart.text.square.fill")
+                            .foregroundColor(.pink)
+                            .fontWeight(.semibold)
+                        Spacer()
+                       
+                    }
+                }
+                .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+            }
+            
+           
+        }
+        .navigationTitle("Apple Health")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Check current authorization status
+            isHealthKitEnabled = healthViewModel.isAuthorized
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthKitPermissionsChanged"))) { _ in
+            // Update toggle when permissions change
+            isHealthKitEnabled = healthViewModel.isAuthorized
+        }
+    }
+    
+    private func openHealthApp() {
+        if let healthURL = URL(string: "x-apple-health://") {
+            UIApplication.shared.open(healthURL)
+        }
+    }
+}
 
 struct MyTeamsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
