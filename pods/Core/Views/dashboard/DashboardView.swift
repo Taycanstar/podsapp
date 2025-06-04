@@ -205,12 +205,15 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Load health data for the selected date
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
                 
-                // ALWAYS show log flow if user hasn't completed it yet
-                if !UserDefaults.standard.hasSeenLogFlow {
-                    print("🔍 DashboardView onAppear - showing log flow (user hasn't completed it)")
+                // CRITICAL FIX: Only show log flow if onboarding is completed
+                // This prevents modal conflicts when both onboarding and log flow try to present
+                if !UserDefaults.standard.hasSeenLogFlow && onboarding.onboardingCompleted && !onboarding.isShowingOnboarding {
+                    print("🔍 DashboardView onAppear - showing log flow (user hasn't completed it and onboarding is done)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         showLogFlowSheet = true
                     }
+                } else if !UserDefaults.standard.hasSeenLogFlow {
+                    print("🔍 DashboardView onAppear - log flow needed but onboarding in progress, deferring log flow")
                 } else {
                     print("🔍 DashboardView onAppear - user has completed log flow, not showing")
                 }
@@ -255,6 +258,15 @@ private var remainingCal: Double { vm.remainingCalories }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
+            }
+            .onChange(of: onboarding.onboardingCompleted) { _, isCompleted in
+                // CRITICAL: Show log flow after onboarding is completed (if user hasn't seen it yet)
+                if isCompleted && !UserDefaults.standard.hasSeenLogFlow && !showLogFlowSheet {
+                    print("🔍 DashboardView - Onboarding completed, now showing log flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Longer delay to ensure onboarding UI is dismissed
+                        showLogFlowSheet = true
+                    }
+                }
             }
             .sheet(isPresented: $showLogFlowSheet) {
                 LogFlowContainerView()
@@ -673,11 +685,17 @@ private extension DashboardView {
                     // Debug prints
                     print("🔍 Start Logging tapped - hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
                     print("🔍 showLogFlowSheet current value: \(showLogFlowSheet)")
+                    print("🔍 onboarding.onboardingCompleted: \(onboarding.onboardingCompleted)")
+                    print("🔍 onboarding.isShowingOnboarding: \(onboarding.isShowingOnboarding)")
                     
-                    // Show log flow if user hasn't seen it yet, otherwise show NewSheetView
-                    if !UserDefaults.standard.hasSeenLogFlow {
-                        print("🔍 Showing log flow sheet")
+                    // CRITICAL FIX: Only show log flow if onboarding is completed
+                    // This prevents modal conflicts during onboarding
+                    if !UserDefaults.standard.hasSeenLogFlow && onboarding.onboardingCompleted && !onboarding.isShowingOnboarding {
+                        print("🔍 Showing log flow sheet (onboarding completed)")
                         showLogFlowSheet = true
+                    } else if !UserDefaults.standard.hasSeenLogFlow {
+                        print("🔍 Log flow needed but onboarding in progress - not showing")
+                        // Do nothing - wait for onboarding to complete
                     } else {
                         print("🔍 Posting notification for NewSheetView")
                         // Post notification to ContentView to show NewSheetView

@@ -36,7 +36,7 @@
         </scene>
     </scenes>
     <resources>
-        <image name="logo-bk" width="251" height="418"/>
+        <image name="logo-bkv2" width="251" height="418"/>
         <namedColor name="AccentColor">
             <color red="0.15294117647058825" green="0.45882352941176469" blue="0.98431372549019602" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

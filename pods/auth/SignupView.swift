@@ -50,7 +50,7 @@ struct SignupView: View {
     private var logo: some View {
         HStack {
             Spacer()
-            Image("logo-wt")
+            Image("logo-wtv2")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 50, height: 50)

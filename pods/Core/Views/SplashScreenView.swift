@@ -28,7 +28,7 @@ struct SplashScreenView: View {
                     .ignoresSafeArea(.all)
                 
                 // Logo with scaling animation
-                Image("logo-bk")
+                Image("logo-bkv2")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 150, height: 150)

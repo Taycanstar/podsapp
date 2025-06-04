@@ -22,7 +22,7 @@ struct LandingView: View {
                 VStack {
                     Spacer()
                     // Image centered on the screen
-                    Image("logo-bk")
+                    Image("logo-bkv2")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100) // Adjust size as needed
