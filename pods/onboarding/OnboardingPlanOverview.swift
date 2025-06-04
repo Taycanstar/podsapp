@@ -46,7 +46,7 @@ struct OnboardingPlanOverview: View {
                     Spacer()
                     
                     Text(bmiStatusText)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(bmiStatusColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
@@ -148,13 +148,22 @@ struct OnboardingPlanOverview: View {
           
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                      Text("Plan Overview")
-                .font(.system(size: 32, weight: .bold))
-                .padding(.top, 40)
+                VStack(alignment: .leading, spacing: 10) {
+                //       Text("Plan Overview")
+                // .font(.system(size: 32, weight: .bold))
+                // .padding(.top, 40)
                 // .padding(.bottom, 20)
                     
                     // Weight Progress Summary
+                      // Weight goal with date
+                        let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
+                        if fitnessGoal != "maintain" && !formattedCompletionDate.isEmpty {
+                            Text("\(weightDifferenceFormatted) \(weightUnit) by \(formattedCompletionDate)")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .padding(.top, 20)
+                        }
+                        
                     weightProgressCard
                     
                     // BMI Index
@@ -165,14 +174,7 @@ struct OnboardingPlanOverview: View {
                         Text("Goals")
                             .font(.system(size: 20, weight: .bold))
                         
-                        // Weight goal with date
-                        let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
-                        if fitnessGoal != "maintain" && !formattedCompletionDate.isEmpty {
-                            Text("\(weightDifferenceFormatted) \(weightUnit) by \(formattedCompletionDate)")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        
+                      
                         // Nutrition cards
                         VStack(spacing: 12) {
                             // Calories card
@@ -399,7 +401,10 @@ struct OnboardingPlanOverview: View {
         }
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
-        .navigationBarHidden(true)
+        // .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitle("Plan Overview")
         .onAppear {
             // Save current step to UserDefaults when this view appears
             UserDefaults.standard.set("OnboardingPlanOverview", forKey: "currentOnboardingStep")
