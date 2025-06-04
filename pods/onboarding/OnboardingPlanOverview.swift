@@ -22,8 +22,7 @@ struct OnboardingPlanOverview: View {
     // Weight Progress Card
     private var weightProgressCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Summary")
-                .font(.system(size: 20, weight: .bold))
+  
             
             VStack(spacing: 16) {
                 GeometryReader { geometry in
@@ -34,22 +33,104 @@ struct OnboardingPlanOverview: View {
                         let centerY = geometry.size.height / 2
                         let curveHeight: CGFloat = 25
                         
-                        // Background
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
-                            .frame(height: 120)
-                        
-                        // Weight progress curve
-                        WeightProgressCurve(
-                            currentWeight: currentWeightForDisplay,
-                            goalWeight: goalWeightForDisplay,
-                            isGainGoal: isWeightGainGoal,
-                            width: geometry.size.width - 32
+                        // Background filled area
+                        Path { path in
+                            path.move(to: CGPoint(x: startX, y: geometry.size.height - 10))
+                            
+                            // Line up to start point
+                            path.addLine(to: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)))
+                             
+                             // Logarithmic curve to end point
+                             addLogarithmicCurve(
+                                 to: &path,
+                                 from: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)),
+                                 to: CGPoint(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight)),
+                                 width: endX - startX
+                             )
+                            
+                            // Line down to bottom
+                            path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
+                            
+                            // Close the path
+                            path.closeSubpath()
+                        }
+                        .fill(
+                            LinearGradient(
+                                                             colors: [
+                                 (isWeightGainGoal ? Color.orange : Color.blue).opacity(0.3),
+                                 Color.green.opacity(0.3)
+                             ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                        .padding(.horizontal, 16)
+                        
+                        // Progress curve line
+                        Path { path in
+                            // Start point (current weight)
+                            path.move(to: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)))
+                             
+                             // Logarithmic curve to end point
+                             addLogarithmicCurve(
+                                 to: &path,
+                                 from: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)),
+                                 to: CGPoint(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight)),
+                                 width: endX - startX
+                             )
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [isWeightGainGoal ? Color.orange : Color.blue, Color.green],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        
+                        // Weight labels
+                        VStack {
+                            HStack {
+                                // Current weight label
+                                                                 Text("\(Int(currentWeightForDisplay)) \(weightUnit)")
+                                     .font(.system(size: 14, weight: .semibold))
+                                     .foregroundColor(.white)
+                                     .padding(.horizontal, 12)
+                                     .padding(.vertical, 6)
+                                     .background(isWeightGainGoal ? Color.orange : Color.blue)
+                                    .cornerRadius(12)
+                                
+                                Spacer()
+                                
+                                // Goal weight label  
+                                                                 Text("\(Int(goalWeightForDisplay)) \(weightUnit)")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            
+                            Spacer()
+                        }
+                        
+                        // Start point circle (current weight)
+                        Circle()
+                            .fill(isWeightGainGoal ? Color.orange : Color.blue)
+                            .frame(width: 16, height: 16)
+                            .position(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight))
+                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        
+                        // End point circle (goal weight)
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 16, height: 16)
+                            .position(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight))
+                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
                     }
                 }
-                .frame(height: 120)
             }
         }
     }
@@ -1166,6 +1247,13 @@ struct OnboardingPlanOverview: View {
         
         return strategies.filter { !$0.isEmpty }
     }
+    
+    // Helper function for creating logarithmic curves
+    private func addLogarithmicCurve(to path: inout Path, from start: CGPoint, to end: CGPoint, width: CGFloat) {
+        let control1 = CGPoint(x: start.x + width * 0.33, y: start.y)
+        let control2 = CGPoint(x: start.x + width * 0.66, y: end.y)
+        path.addCurve(to: end, control1: control1, control2: control2)
+    }
 }
 
 // MARK: - Custom Components
@@ -1302,40 +1390,23 @@ struct BMIScale: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                // Background scale with gradients
-                HStack(spacing: 0) {
-                    // Underweight (blue) - BMI < 18.5
-                    LinearGradient(
-                        colors: [Color.blue, Color.blue.opacity(0.7)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 0.3) // 30% for underweight range
-                    
-                    // Normal (green) - BMI 18.5-24.9
-                    LinearGradient(
-                        colors: [Color.green.opacity(0.7), Color.green, Color.green.opacity(0.7)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 0.32) // 32% for normal range
-                    
-                    // Overweight (orange) - BMI 25-29.9
-                    LinearGradient(
-                        colors: [Color.orange.opacity(0.7), Color.orange, Color.orange.opacity(0.7)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 0.25) // 25% for overweight range
-                    
-                    // Obese (red) - BMI 30+
-                    LinearGradient(
-                        colors: [Color.red.opacity(0.7), Color.red],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 0.13) // 13% for obese range (visible portion)
-                }
+                // Smooth gradient background scale
+                LinearGradient(
+                    colors: [
+                        Color.blue,           // Underweight (BMI < 18.5)
+                        Color.blue.opacity(0.8),
+                        Color.green.opacity(0.8),  // Transition to normal
+                        Color.green,          // Normal (BMI 18.5-24.9)
+                        Color.green.opacity(0.8),
+                        Color.orange.opacity(0.8), // Transition to overweight
+                        Color.orange,         // Overweight (BMI 25-29.9)
+                        Color.orange.opacity(0.8),
+                        Color.red.opacity(0.8),    // Transition to obese
+                        Color.red             // Obese (BMI 30+)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
                 .frame(height: 8)
                 .cornerRadius(4)
                 
@@ -1351,24 +1422,12 @@ struct BMIScale: View {
     }
     
     private func bmiPosition(for bmi: Double, width: CGFloat) -> CGFloat {
-        // Map BMI to position on scale
+        // Map BMI to position on scale with smooth transitions
         let clampedBMI = min(max(bmi, 10), 35) // Clamp between 10 and 35
         
-        var position: CGFloat = 0
-        
-        if bmi < 18.5 {
-            // Underweight range (0-30% of width)
-            position = (bmi - 10) / (18.5 - 10) * (width * 0.3)
-        } else if bmi < 25 {
-            // Normal range (30-62% of width)
-            position = (width * 0.3) + ((bmi - 18.5) / (25 - 18.5)) * (width * 0.32)
-        } else if bmi < 30 {
-            // Overweight range (62-87% of width)
-            position = (width * 0.62) + ((bmi - 25) / (30 - 25)) * (width * 0.25)
-        } else {
-            // Obese range (87-100% of width)
-            position = (width * 0.87) + ((bmi - 30) / (35 - 30)) * (width * 0.13)
-        }
+        // Create a more linear mapping across the full width
+        let normalizedBMI = (clampedBMI - 10) / (35 - 10) // Normalize to 0-1 range
+        let position = normalizedBMI * width
         
         return min(max(position, 8), width - 8) // Keep within bounds with padding
     }
