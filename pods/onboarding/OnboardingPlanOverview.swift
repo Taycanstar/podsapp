@@ -21,118 +21,16 @@ struct OnboardingPlanOverview: View {
     
     // Weight Progress Card
     private var weightProgressCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-  
-            
-            VStack(spacing: 16) {
-                GeometryReader { geometry in
-                    ZStack {
-                        // Calculate reusable values
-                        let startX: CGFloat = 30
-                        let endX = geometry.size.width - 30
-                        let centerY = geometry.size.height / 2
-                        let curveHeight: CGFloat = 25
-                        
-                        // Background filled area
-                        Path { path in
-                            path.move(to: CGPoint(x: startX, y: geometry.size.height - 10))
-                            
-                            // Line up to start point
-                            path.addLine(to: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)))
-                             
-                             // Logarithmic curve to end point
-                             addLogarithmicCurve(
-                                 to: &path,
-                                 from: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)),
-                                 to: CGPoint(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight)),
-                                 width: endX - startX
-                             )
-                            
-                            // Line down to bottom
-                            path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
-                            
-                            // Close the path
-                            path.closeSubpath()
-                        }
-                        .fill(
-                            LinearGradient(
-                                                             colors: [
-                                 (isWeightGainGoal ? Color.orange : Color.blue).opacity(0.3),
-                                 Color.green.opacity(0.3)
-                             ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        
-                        // Progress curve line
-                        Path { path in
-                            // Start point (current weight)
-                            path.move(to: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)))
-                             
-                             // Logarithmic curve to end point
-                             addLogarithmicCurve(
-                                 to: &path,
-                                 from: CGPoint(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight)),
-                                 to: CGPoint(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight)),
-                                 width: endX - startX
-                             )
-                        }
-                        .stroke(
-                            LinearGradient(
-                                colors: [isWeightGainGoal ? Color.orange : Color.blue, Color.green],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
-                        
-                        // Weight labels
-                        VStack {
-                            HStack {
-                                // Current weight label
-                                                                 Text("\(Int(currentWeightForDisplay)) \(weightUnit)")
-                                     .font(.system(size: 14, weight: .semibold))
-                                     .foregroundColor(.white)
-                                     .padding(.horizontal, 12)
-                                     .padding(.vertical, 6)
-                                     .background(isWeightGainGoal ? Color.orange : Color.blue)
-                                    .cornerRadius(12)
-                                
-                                Spacer()
-                                
-                                // Goal weight label  
-                                                                 Text("\(Int(goalWeightForDisplay)) \(weightUnit)")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green)
-                                    .cornerRadius(12)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                            
-                            Spacer()
-                        }
-                        
-                        // Start point circle (current weight)
-                        Circle()
-                            .fill(isWeightGainGoal ? Color.orange : Color.blue)
-                            .frame(width: 16, height: 16)
-                            .position(x: startX, y: centerY + (isWeightGainGoal ? curveHeight : -curveHeight))
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        
-                        // End point circle (goal weight)
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 16, height: 16)
-                            .position(x: endX, y: centerY + (isWeightGainGoal ? -curveHeight : curveHeight))
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    }
-                }
-            }
-        }
+     WeightProgressCurve(
+            currentWeight: currentWeightForDisplay,
+            goalWeight: goalWeightForDisplay,
+            isGainGoal: isWeightGainGoal,
+            width: 300
+        )
+        .frame(height: 120)
+        .padding(20)
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
     }
     
     // BMI Index Card  
@@ -1279,14 +1177,14 @@ struct WeightProgressCurve: View {
                     
                     // Line up to start point
                     path.addLine(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
-                    
-                    // Logarithmic curve to end point
-                    addLogarithmicCurve(
-                        to: &path,
-                        from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
-                        to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
-                        width: endX - startX
-                    )
+                     
+                     // Logarithmic curve to end point
+                     addLogarithmicCurve(
+                         to: &path,
+                         from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
+                         to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
+                         width: endX - startX
+                     )
                     
                     // Line down to bottom
                     path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
@@ -1296,82 +1194,82 @@ struct WeightProgressCurve: View {
                 }
                 .fill(
                     LinearGradient(
-                        colors: [
-                            (isGainGoal ? Color.orange : Color.blue).opacity(0.3),
-                            Color.green.opacity(0.3)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                
-                // Progress curve line
-                Path { path in
-                    // Start point (current weight)
-                    path.move(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
-                    
-                    // Logarithmic curve to end point
-                    addLogarithmicCurve(
-                        to: &path,
-                        from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
-                        to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
-                        width: endX - startX
-                    )
-                }
-                .stroke(
-                    LinearGradient(
-                        colors: [isGainGoal ? Color.orange : Color.blue, Color.green],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                )
-                
-                // Weight labels
-                VStack {
-                    HStack {
-                        // Current weight label
-                        Text("\(Int(currentWeight)) \(weightUnit)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(isGainGoal ? Color.orange : Color.blue)
-                            .cornerRadius(12)
+                                                             colors: [
+                                 (isGainGoal ? Color.orange : Color.blue).opacity(0.3),
+                                 Color.green.opacity(0.3)
+                             ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         
-                        Spacer()
+                        // Progress curve line
+                        Path { path in
+                            // Start point (current weight)
+                            path.move(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
+                             
+                             // Logarithmic curve to end point
+                             addLogarithmicCurve(
+                                 to: &path,
+                                 from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
+                                 to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
+                                 width: endX - startX
+                             )
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [isGainGoal ? Color.orange : Color.blue, Color.green],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
                         
-                        // Goal weight label  
-                        Text("\(Int(goalWeight)) \(weightUnit)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.green)
-                            .cornerRadius(12)
+                        // Weight labels
+                        VStack {
+                            HStack {
+                                // Current weight label
+                                                                 Text("\(Int(currentWeight)) \(weightUnit)")
+                                     .font(.system(size: 14, weight: .semibold))
+                                     .foregroundColor(.white)
+                                     .padding(.horizontal, 12)
+                                     .padding(.vertical, 6)
+                                     .background(isGainGoal ? Color.orange : Color.blue)
+                                    .cornerRadius(12)
+                                
+                                Spacer()
+                                
+                                // Goal weight label  
+                                                                 Text("\(Int(goalWeight)) \(weightUnit)")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            
+                            Spacer()
+                        }
+                        
+                        // Start point circle (current weight)
+                        Circle()
+                            .fill(isGainGoal ? Color.orange : Color.blue)
+                            .frame(width: 16, height: 16)
+                            .position(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight))
+                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        
+                        // End point circle (goal weight)
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 16, height: 16)
+                            .position(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight))
+                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    
-                    Spacer()
                 }
-                
-                // Start point circle (current weight)
-                Circle()
-                    .fill(isGainGoal ? Color.orange : Color.blue)
-                    .frame(width: 16, height: 16)
-                    .position(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight))
-                    .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                
-                // End point circle (goal weight)
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 16, height: 16)
-                    .position(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight))
-                    .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
             }
-        }
-    }
     
     private var weightUnit: String {
         UserDefaults.standard.bool(forKey: "isImperial") ? "lb" : "kg"
