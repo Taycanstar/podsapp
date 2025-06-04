@@ -148,14 +148,12 @@ struct OnboardingPlanOverview: View {
           
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                //       Text("Plan Overview")
-                // .font(.system(size: 32, weight: .bold))
-                // .padding(.top, 40)
-                // .padding(.bottom, 20)
-                    
+                VStack(alignment: .leading, spacing: 22) {
+       
                     // Weight Progress Summary
                       // Weight goal with date
+                VStack(alignment: .leading, spacing: 10) {
+                      VStack(alignment: .leading, spacing: 10) {
                         let fitnessGoal = UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
                         if fitnessGoal != "maintain" && !formattedCompletionDate.isEmpty {
                             Text("\(weightDifferenceFormatted) \(weightUnit) by \(formattedCompletionDate)")
@@ -165,10 +163,11 @@ struct OnboardingPlanOverview: View {
                         }
                         
                     weightProgressCard
+                      }
                     
                     // BMI Index
                     bmiIndexCard
-                    
+                }
                     // Goals
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Goals")
