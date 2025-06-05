@@ -823,7 +823,7 @@ private extension DashboardView {
             Button(action: {
                 vm.navigateToEditHeight = true
             }) {
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: "pencil.line")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
             }
@@ -874,7 +874,7 @@ private extension DashboardView {
             Button(action: {
                 vm.navigateToEditWeight = true
             }) {
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: "pencil.line")
                     .font(.system(size: 24))
                     .foregroundColor(.purple)
             }
