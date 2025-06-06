@@ -38,6 +38,7 @@ struct ContentView: View {
     @State private var showQuickPodView = false
     @State private var showFoodScanner = false
     @State private var showVoiceLog = false
+    @State private var showLogWorkoutView = false
     
     // New states for barcode confirmation
     @State private var showConfirmFoodView = false
@@ -147,8 +148,9 @@ struct ContentView: View {
                                  showQuickPodView: $showQuickPodView, 
                                  selectedTab: $selectedTab,
                                  showFoodScanner: $showFoodScanner,
-                                 showVoiceLog: $showVoiceLog)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                                 showVoiceLog: $showVoiceLog,
+                                 showLogWorkoutView: $showLogWorkoutView)
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
                 }
@@ -174,6 +176,12 @@ struct ContentView: View {
                         .onDisappear {
                             print("VoiceLogView disappeared from ContentView")
                         }
+                }
+
+                .fullScreenCover(isPresented: $showLogWorkoutView) {
+                    NavigationView {
+                        LogWorkoutView(selectedTab: $selectedTab)
+                    }
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in

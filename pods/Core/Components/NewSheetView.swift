@@ -16,13 +16,15 @@ struct NewSheetView: View {
     @Binding var selectedTab: Int 
     @Binding var showFoodScanner: Bool
     @Binding var showVoiceLog: Bool
+    @Binding var showLogWorkoutView: Bool
     @EnvironmentObject var viewModel: OnboardingViewModel
     
 
     let options = [
         ("Log Food", "magnifyingglass"),
         ("Voice Log", "mic"),
-        ("Scan Food", "barcode.viewfinder")
+        ("Scan Food", "barcode.viewfinder"),
+        ("Log Workout", "dumbbell")
     ]
 
     var body: some View {
@@ -74,6 +76,10 @@ struct NewSheetView: View {
                         HapticFeedback.generate()
                         isPresented = false
                         showFoodScanner = true
+                      case "Log Workout":
+                        HapticFeedback.generate()
+                        isPresented = false
+                        showLogWorkoutView = true
                       default:
                           break
                       }
