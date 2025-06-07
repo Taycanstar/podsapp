@@ -807,9 +807,9 @@ private extension DashboardView {
                     }
                     Spacer()
                     if vm.height > 0 {
-                        let feet = Int(vm.height / 30.48)
-                        let remainingCm = vm.height.truncatingRemainder(dividingBy: 30.48)
-                        let inches = Int(remainingCm / 2.54)
+                        let totalInches = vm.height / 2.54
+                        let feet = Int(totalInches / 12)
+                        let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
                         Text("\(feet)' \(inches)\"")
                             .font(.system(size: 26, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)

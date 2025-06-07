@@ -836,7 +836,7 @@ class NetworkManagerTwo {
             
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Don't use convertFromSnakeCase since HeightLogResponse has explicit CodingKeys
                 
                 let response = try decoder.decode(HeightLogResponse.self, from: data)
                 
@@ -923,7 +923,7 @@ class NetworkManagerTwo {
             
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Don't use convertFromSnakeCase since WeightLogResponse has explicit CodingKeys
                 
                 let response = try decoder.decode(WeightLogResponse.self, from: data)
                 
@@ -1068,11 +1068,6 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 // Not using .convertFromSnakeCase because we have explicit CodingKeys
                 
-                // For debugging, print the raw JSON response
-                if let responseString = String(data: data, encoding: .utf8) {
-                
-                }
-                
                 let response = try decoder.decode(HeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
             } catch {
@@ -1116,12 +1111,7 @@ class NetworkManagerTwo {
             }
             do {
                 let decoder = JSONDecoder()
-                // Not using .convertFromSnakeCase because we have explicit CodingKeys
-                
-                // For debugging, print the raw JSON response
-                if let responseString = String(data: data, encoding: .utf8) {
-             
-                }
+                // Not using .convertFromSnakeCase because WeightLogsResponse has explicit CodingKeys
                 
                 let response = try decoder.decode(WeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
