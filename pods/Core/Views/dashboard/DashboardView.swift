@@ -986,15 +986,43 @@ private extension Date {
 struct DatePickerSheet: View {
     @Binding var date       : Date
     @Binding var isPresented: Bool
+    
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
+                // Calendar picker
                 DatePicker("Select a date",
                            selection: $date,
                            in: ...Date(),
                            displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .padding()
+                
+                Spacer()
+                
+                // Bottom tab bar with Today button
+                VStack(spacing: 0) {
+                    Divider()
+                    
+                    HStack {
+                        Spacer()
+                        // Today button on the leading side
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                date = Date()
+                            }
+                        }) {
+                            Text("Today")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundColor(.accentColor)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemBackground))
+                }
             }
             .navigationTitle("Choose Date")
             .toolbar {
