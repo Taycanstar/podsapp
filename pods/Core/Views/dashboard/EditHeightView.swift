@@ -12,7 +12,7 @@ struct EditHeightView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
     
-    @State private var isImperial = true
+    @State private var unitSelection = 0 // 0 = Imperial, 1 = Metric
     
     // Imperial measurements
     @State private var selectedFeet = 5
@@ -26,36 +26,35 @@ struct EditHeightView: View {
     let inchesRange = 0...11
     let centimetersRange = 100...250
     
+    // Computed property for convenience
+    private var isImperial: Bool {
+        return unitSelection == 0
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Imperial/Metric Toggle
-                HStack(spacing: 20) {
-                    Text("Imperial")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(isImperial ? .primary : .secondary)
-                    
-                    Toggle("", isOn: $isImperial)
-                        .labelsHidden()
-                        .onChange(of: isImperial) { _ in
-                            if isImperial {
-                                // Convert from metric to imperial
-                                let totalInches = Double(selectedCentimeters) / 2.54
-                                selectedFeet = Int(totalInches / 12)
-                                selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12))
-                            } else {
-                                // Convert from imperial to metric
-                                let totalInches = (selectedFeet * 12) + selectedInches
-                                selectedCentimeters = Int(Double(totalInches) * 2.54)
-                            }
-                        }
-                    
-                    Text("Metric")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(!isImperial ? .primary : .secondary)
+                // Imperial/Metric Segmented Control
+                Picker("Unit System", selection: $unitSelection) {
+                    Text("Imperial").tag(0)
+                    Text("Metric").tag(1)
                 }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal)
                 .padding(.top, 20)
                 .padding(.bottom, 40)
+                .onChange(of: unitSelection) { _ in
+                    if isImperial {
+                        // Convert from metric to imperial
+                        let totalInches = Double(selectedCentimeters) / 2.54
+                        selectedFeet = Int(totalInches / 12)
+                        selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12))
+                    } else {
+                        // Convert from imperial to metric
+                        let totalInches = (selectedFeet * 12) + selectedInches
+                        selectedCentimeters = Int(Double(totalInches) * 2.54)
+                    }
+                }
                 
                 // Height section
                 VStack(alignment: .center, spacing: 20) {

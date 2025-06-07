@@ -12,36 +12,35 @@ struct UpdateDesiredWeight: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
     
-    @State private var isImperial = true
+    @State private var unitSelection = 0 // 0 = Imperial, 1 = Metric
     @State private var selectedWeight: Double = 160 // Default in pounds
+    
+    // Computed property for convenience
+    private var isImperial: Bool {
+        return unitSelection == 0
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Imperial/Metric Toggle
-            HStack(spacing: 20) {
-                Text("Imperial")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(isImperial ? .primary : .secondary)
-                
-                Toggle("", isOn: $isImperial)
-                    .labelsHidden()
-                    .onChange(of: isImperial) { _ in
-                        // Convert weight when switching between imperial and metric
-                        if isImperial {
-                            // Convert kg to lbs
-                            selectedWeight = selectedWeight * 2.20462
-                        } else {
-                            // Convert lbs to kg
-                            selectedWeight = selectedWeight / 2.20462
-                        }
-                    }
-                
-                Text("Metric")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(!isImperial ? .primary : .secondary)
+            // Imperial/Metric Segmented Control
+            Picker("Unit System", selection: $unitSelection) {
+                Text("Imperial").tag(0)
+                Text("Metric").tag(1)
             }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal)
             .padding(.top, 20)
             .padding(.bottom, 40)
+            .onChange(of: unitSelection) { _ in
+                // Convert weight when switching between imperial and metric
+                if isImperial {
+                    // Convert kg to lbs
+                    selectedWeight = selectedWeight * 2.20462
+                } else {
+                    // Convert lbs to kg
+                    selectedWeight = selectedWeight / 2.20462
+                }
+            }
             
             // Weight display
             Text(String(format: "%.1f %@", selectedWeight, isImperial ? "lbs" : "kg"))
