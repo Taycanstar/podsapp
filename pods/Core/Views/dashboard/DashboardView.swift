@@ -252,8 +252,9 @@ private var remainingCal: Double { vm.remainingCalories }
                 healthViewModel.reloadHealthData(for: newDate)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
-                // Refresh health data when water is logged (for current selected date)
-                healthViewModel.reloadHealthData(for: vm.selectedDate)
+                print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
+                // Refresh logs data when water is logged (for current selected date)
+                vm.loadLogs(for: vm.selectedDate)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
@@ -1362,8 +1363,8 @@ private extension DashboardView {
                             // Water with add button
             waterMetricCell(
                 title: "Water",
-                    value: String(format: "%.0f", waterIntakeOz),
-                    unit: "oz",
+                value: String(format: "%.0f", calculateWaterIntake()),
+                unit: "oz",
                 systemImage: "drop",
                 color: .blue
             )
@@ -1468,9 +1469,9 @@ private extension DashboardView {
         .sheet(isPresented: $showWaterLogSheet) {
             LogWaterView()
                 .onDisappear {
-                    // Refresh health data when sheet is dismissed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        healthViewModel.reloadHealthData(for: vm.selectedDate)
+                    // Refresh logs data when sheet is dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        vm.loadLogs(for: vm.selectedDate)
                     }
                 }
         }
@@ -1536,9 +1537,22 @@ struct ContinuousProgressBar: View {
     }
 }
 
-// Convert water intake from liters to ounces
+// Get total water intake from backend logs for the selected date
 private extension DashboardView {
-    var waterIntakeOz: Double {
-        healthViewModel.waterIntake * 33.814
+    func calculateWaterIntake() -> Double {
+        // Sum up all water logs for the selected date
+        let calendar = Calendar.current
+        let selectedDay = calendar.startOfDay(for: vm.selectedDate)
+        
+        return vm.waterLogs.compactMap { log in
+            // Parse the date string and check if it matches the selected date
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            guard let logDate = formatter.date(from: log.dateLogged) else { return nil }
+            let logDay = calendar.startOfDay(for: logDate)
+            
+            // Only include logs from the selected date
+            return calendar.isDate(logDay, inSameDayAs: selectedDay) ? log.waterOz : nil
+        }.reduce(0, +)
     }
 }

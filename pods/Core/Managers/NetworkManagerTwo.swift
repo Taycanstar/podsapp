@@ -14,8 +14,8 @@ class NetworkManagerTwo {
     
     
 
-   let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
+//    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+  let baseUrl = "http://192.168.1.92:8000"
     // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
@@ -933,6 +933,93 @@ class NetworkManagerTwo {
                 }
             } catch {
                 print("❌ Error decoding weight log response: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Response data: \(responseString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
+    /// Log a water intake measurement for a user
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - waterOz: Water intake in fluid ounces
+    ///   - notes: Optional notes about the water intake
+    ///   - completion: Result callback with the logged water data or error
+    func logWater(
+        userEmail: String,
+        waterOz: Double,
+        notes: String = "",
+        completion: @escaping (Result<WaterLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/log-water/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "water_oz": waterOz,
+            "notes": notes
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("💧 Logging water: \(waterOz) oz for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error logging water: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received when logging water")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                print("❌ Server error logging water: \(errorMessage)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                // Don't use convertFromSnakeCase since WaterLogResponse has explicit CodingKeys
+                
+                let response = try decoder.decode(WaterLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully logged water: \(response.waterOz) oz")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Error decoding water log response: \(error)")
                 if let responseString = String(data: data, encoding: .utf8) {
                     print("Response data: \(responseString)")
                 }

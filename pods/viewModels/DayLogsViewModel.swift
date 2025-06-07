@@ -37,6 +37,9 @@ final class DayLogsViewModel: ObservableObject {
   @Published var desiredWeightKg: Double = 0 // Desired weight in kg
   @Published var desiredWeightLbs: Double = 0 // Desired weight in lbs
   
+  // Water logs for the current day
+  @Published var waterLogs: [WaterLogResponse] = []
+  
   // Navigation properties
   @Published var navigateToEditHeight: Bool = false
   @Published var navigateToEditWeight: Bool = false
@@ -141,6 +144,9 @@ func loadLogs(for date: Date) {
       }
 
       self.logs = dedupedPending + serverLogs
+      
+      // Update water logs from server response
+      self.waterLogs = serverResponse.waterLogs
       
       // Update height and weight from onboarding data if available
       if let userData = serverResponse.userData {
