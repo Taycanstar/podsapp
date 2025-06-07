@@ -10,7 +10,7 @@ import SwiftUI
 struct HeightWeightView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
-    @State private var isImperial = true
+    @State private var unitSelection = 0 // 0 = Imperial, 1 = Metric
     @State private var navigateToDob = false
     
     // Imperial measurements
@@ -28,6 +28,11 @@ struct HeightWeightView: View {
     let poundsRange = 50...500
     let centimetersRange = 100...250
     let kilogramsRange = 30...250
+    
+    // Computed property for convenience
+    private var isImperial: Bool {
+        return unitSelection == 0
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -77,23 +82,17 @@ struct HeightWeightView: View {
 
             Spacer()
             
-            // Imperial/Metric Toggle
-            HStack(spacing: 20) {
-                Text("Imperial")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(isImperial ? .primary : .secondary)
-                
-                Toggle("", isOn: $isImperial)
-                    .labelsHidden()
-                    .onChange(of: isImperial) { _ in
-                        HapticFeedback.generate()
-                    }
-                
-                Text("Metric")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(!isImperial ? .primary : .secondary)
+            // Imperial/Metric Segmented Control
+            Picker("Unit System", selection: $unitSelection) {
+                Text("Imperial").tag(0)
+                Text("Metric").tag(1)
             }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal)
             .padding(.bottom, 40)
+            .onChange(of: unitSelection) { _ in
+                HapticFeedback.generate()
+            }
             
             // Height and Weight section
             HStack(spacing: 30) {
@@ -204,38 +203,36 @@ struct HeightWeightView: View {
     }
     
     private func saveHeightAndWeight() {
-        UserDefaults.standard.set(isImperial, forKey: "isImperial")
+        // Convert measurements to metric for storage
+        var heightInCm: Double
+        var weightInKg: Double
         
         if isImperial {
-            // Save imperial measurements
+            // Convert imperial to metric
+            let totalInches = (selectedFeet * 12) + selectedInches
+            heightInCm = Double(totalInches) * 2.54
+            weightInKg = Double(selectedPounds) / 2.20462
+        } else {
+            // Already in metric
+            heightInCm = Double(selectedCentimeters)
+            weightInKg = Double(selectedKilograms)
+        }
+        
+        // Save to UserDefaults
+        UserDefaults.standard.set(isImperial, forKey: "isImperial")
+        UserDefaults.standard.set(heightInCm, forKey: "heightCentimeters")
+        UserDefaults.standard.set(weightInKg, forKey: "weightKilograms")
+        
+        if isImperial {
             UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
             UserDefaults.standard.set(selectedInches, forKey: "heightInches")
             UserDefaults.standard.set(selectedPounds, forKey: "weightPounds")
-            
-            // Also calculate and save metric for API calls
-            let totalInches = (selectedFeet * 12) + selectedInches
-            // Use Double instead of Int for better precision
-            let centimeters = Double(totalInches) * 2.54
-            let kilograms = Double(selectedPounds) * 0.45359237
-            
-            // Save with precision
-            UserDefaults.standard.set(centimeters, forKey: "heightCentimeters")
-            UserDefaults.standard.set(kilograms, forKey: "weightKilograms")
         } else {
-            // Save metric measurements
             UserDefaults.standard.set(selectedCentimeters, forKey: "heightCentimeters")
             UserDefaults.standard.set(selectedKilograms, forKey: "weightKilograms")
-            
-            // Also calculate and save imperial for UI display
-            let totalInches = Double(selectedCentimeters) / 2.54
-            let feet = Int(totalInches / 12)
-            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12))
-            let pounds = Double(selectedKilograms) / 0.45359237
-            
-            UserDefaults.standard.set(feet, forKey: "heightFeet")
-            UserDefaults.standard.set(inches, forKey: "heightInches")
-            UserDefaults.standard.set(pounds, forKey: "weightPounds")
         }
+        
+        print("Saved height: \(heightInCm) cm, weight: \(weightInKg) kg")
     }
 }
 
