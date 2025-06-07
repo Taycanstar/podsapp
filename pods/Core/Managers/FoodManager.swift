@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Mixpanel
 // Extension to convert Food to LoggedFoodItem
 extension Food {
     var asLoggedFoodItem: LoggedFoodItem {
@@ -541,7 +542,7 @@ func loadMoreFoods(refresh: Bool = false) {
     
     // REMOVED: Check for existing logs - no longer needed as we'll wait for server response
     
-    networkManager.logFood(
+            networkManager.logFood(
         userEmail: email,
         food: food,
         mealType: meal,
@@ -556,6 +557,16 @@ func loadMoreFoods(refresh: Bool = false) {
             switch result {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
+                
+                // Track food logging in Mixpanel
+                Mixpanel.mainInstance().track(event: "Log Food", properties: [
+                    "food_name": loggedFood.food.displayName,
+                    "meal_type": loggedFood.mealType,
+                    "calories": loggedFood.food.calories,
+                    "servings": servings,
+                    "log_method": "manual",
+                    "user_email": email
+                ])
                 
                 // Create a new CombinedLog from the logged food
                 let combinedLog = CombinedLog(
@@ -1731,6 +1742,26 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         switch result {
         case .success(let loggedFood):
             print("✅ AI macros generated successfully: \(loggedFood.food.displayName)")
+            
+            // Track AI macro generation in Mixpanel
+            Mixpanel.mainInstance().track(event: "AI Text Food Log", properties: [
+                "food_name": loggedFood.food.displayName,
+                "meal_type": loggedFood.mealType,
+                "calories": loggedFood.food.calories ?? 0,
+                "food_description": foodDescription,
+                "user_email": self.userEmail ?? "unknown"
+            ])
+            
+            // Track universal food logging
+            Mixpanel.mainInstance().track(event: "Log Food", properties: [
+                "food_name": loggedFood.food.displayName,
+                "meal_type": loggedFood.mealType,
+                "calories": loggedFood.food.calories ?? 0,
+                "servings": 1,
+                "log_method": "ai_text",
+                "user_email": self.userEmail ?? "unknown"
+            ])
+            
             self.aiGeneratedFood = loggedFood.food
             self.lastLoggedItem = (name: loggedFood.food.displayName, calories: loggedFood.food.calories ?? 0)
             
@@ -2217,6 +2248,25 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
      calories: loggedFood.calories
    )
    self.showLogSuccess = true
+   
+   // Track image scanning in Mixpanel
+   Mixpanel.mainInstance().track(event: "Image Scan", properties: [
+       "food_name": loggedFood.food.displayName,
+       "meal_type": loggedFood.mealType,
+       "calories": loggedFood.calories,
+       "user_email": userEmail
+   ])
+   
+   // Track universal food logging
+   Mixpanel.mainInstance().track(event: "Log Food", properties: [
+       "food_name": loggedFood.food.displayName,
+       "meal_type": loggedFood.mealType,
+       "calories": loggedFood.calories,
+       "servings": 1,
+       "log_method": "image_scan",
+       "user_email": userEmail
+   ])
+   
    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
      self.showLogSuccess = false
  
@@ -2442,6 +2492,22 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 
                 print("✅ Enhanced barcode lookup successful: \(food.displayName)")
                 
+                // Track barcode scanning in Mixpanel
+                Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
+                    "food_name": food.displayName,
+                    "barcode": barcode,
+                    "calories": food.calories ?? 0,
+                    "user_email": userEmail
+                ])
+                
+                // Track universal food logging (for barcode identification, not actual logging)
+                Mixpanel.mainInstance().track(event: "Barcode Food Identified", properties: [
+                    "food_name": food.displayName,
+                    "barcode": barcode,
+                    "calories": food.calories ?? 0,
+                    "user_email": userEmail
+                ])
+                
                 // Store the food for confirmation
                 self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedFoodId = food.fdcId
@@ -2650,7 +2716,23 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     switch result {
                     case .success(let loggedFood):
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
+                               // Track voice logging in Mixpanel
+                        Mixpanel.mainInstance().track(event: "Voice Log", properties: [
+                            "food_name": loggedFood.food.displayName,
+                            "meal_type": loggedFood.mealType,
+                            "calories": loggedFood.calories,
+                            "user_email": self.userEmail ?? "unknown"
+                        ])
                         
+                        // Track universal food logging
+                        Mixpanel.mainInstance().track(event: "Log Food", properties: [
+                            "food_name": loggedFood.food.displayName,
+                            "meal_type": loggedFood.mealType,
+                            "calories": loggedFood.calories,
+                            "servings": 1,
+                            "log_method": "voice",
+                            "user_email": self.userEmail ?? "unknown"
+                        ])
                         // Check if this is an "Unknown food" with no nutritional value
                         // This happens when the server couldn't identify a food from the transcription
                         if loggedFood.food.displayName.lowercased().contains("unknown food") || 
@@ -2783,6 +2865,16 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 switch result {
                 case .success(let loggedFood):
                     print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
+                    
+                    // Track food logging in Mixpanel
+                    Mixpanel.mainInstance().track(event: "Log Food", properties: [
+                        "food_name": loggedFood.food.displayName,
+                        "meal_type": loggedFood.mealType,
+                        "calories": loggedFood.food.calories,
+                        "servings": 1,
+                        "log_method": "confirmation",
+                        "user_email": email
+                    ])
                     
                     // Create a new CombinedLog from the logged food
                     let combinedLog = CombinedLog(
