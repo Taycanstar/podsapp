@@ -517,18 +517,16 @@ struct ConfirmFoodView: View {
                 
                 // Content
                 VStack(spacing: 0) {
-                    // Calories (required)
+                    // Calories (read-only)
                     HStack {
                         Text("Calories")
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        TextField("0", text: $calories)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(calories.isEmpty ? "0" : calories)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -537,18 +535,16 @@ struct ConfirmFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Protein
+                    // Protein (read-only)
                     HStack {
                         Text("Protein (g)")
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        TextField("0", text: $protein)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(protein.isEmpty ? "0" : protein)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -557,18 +553,16 @@ struct ConfirmFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Carbs
+                    // Carbs (read-only)
                     HStack {
                         Text("Carbs (g)")
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        TextField("0", text: $carbs)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(carbs.isEmpty ? "0" : carbs)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -577,18 +571,16 @@ struct ConfirmFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Fat
+                    // Fat (read-only)
                     HStack {
                         Text("Total Fat (g)")
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        TextField("0", text: $fat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(fat.isEmpty ? "0" : fat)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -634,11 +626,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $saturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(saturatedFat.isEmpty ? "0" : saturatedFat)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -653,11 +643,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $polyunsaturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(polyunsaturatedFat.isEmpty ? "0" : polyunsaturatedFat)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -672,11 +660,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $monounsaturatedFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(monounsaturatedFat.isEmpty ? "0" : monounsaturatedFat)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -691,11 +677,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $transFat)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(transFat.isEmpty ? "0" : transFat)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -710,11 +694,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $cholesterol)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(cholesterol.isEmpty ? "0" : cholesterol)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -729,11 +711,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $sodium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(sodium.isEmpty ? "0" : sodium)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -748,11 +728,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $potassium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(potassium.isEmpty ? "0" : potassium)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -767,11 +745,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $sugar)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(sugar.isEmpty ? "0" : sugar)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -786,11 +762,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $fiber)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(fiber.isEmpty ? "0" : fiber)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -805,11 +779,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $vitaminA)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(vitaminA.isEmpty ? "0" : vitaminA)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -824,11 +796,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $vitaminC)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(vitaminC.isEmpty ? "0" : vitaminC)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -843,11 +813,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $calcium)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(calcium.isEmpty ? "0" : calcium)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -862,11 +830,9 @@ struct ConfirmFoodView: View {
                         
                         Spacer()
                         
-                        TextField("0", text: $iron)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.plain)
+                        Text(iron.isEmpty ? "0" : iron)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -899,58 +865,11 @@ struct ConfirmFoodView: View {
 
     isCreating = true
 
-    // 2. Create updated food with user-edited nutrition values
-    let userServings = numberOfServings
-    var updatedFood = food
+    // 2. Compute adjusted food with user servings
+    let originalServings = food.numberOfServings ?? 1
+    let userServings     = numberOfServings
+    var updatedFood      = food
     updatedFood.numberOfServings = userServings
-    
-    // Update nutrition values with user-edited values
-    var updatedNutrients: [Nutrient] = []
-    
-    // Add main nutrients with user-edited values
-    if let caloriesValue = Double(calories) {
-        updatedNutrients.append(Nutrient(nutrientName: "Energy", value: caloriesValue, unitName: "kcal"))
-    }
-    if let proteinValue = Double(protein) {
-        updatedNutrients.append(Nutrient(nutrientName: "Protein", value: proteinValue, unitName: "g"))
-    }
-    if let carbsValue = Double(carbs) {
-        updatedNutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbsValue, unitName: "g"))
-    }
-    if let fatValue = Double(fat) {
-        updatedNutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fatValue, unitName: "g"))
-    }
-    
-    // Add additional nutrients with user-edited values
-    addNutrientIfPresent(name: "Saturated Fatty Acids", value: saturatedFat, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Polyunsaturated Fatty Acids", value: polyunsaturatedFat, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Monounsaturated Fatty Acids", value: monounsaturatedFat, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Trans Fatty Acids", value: transFat, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Cholesterol", value: cholesterol, unit: "mg", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Sodium", value: sodium, unit: "mg", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Potassium", value: potassium, unit: "mg", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Sugar", value: sugar, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Fiber", value: fiber, unit: "g", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Vitamin A", value: vitaminA, unit: "%", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Vitamin C", value: vitaminC, unit: "%", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Calcium", value: calcium, unit: "%", to: &updatedNutrients)
-    addNutrientIfPresent(name: "Iron", value: iron, unit: "%", to: &updatedNutrients)
-    
-    // Add any remaining nutrients from original food that weren't edited
-    for originalNutrient in food.foodNutrients {
-        if !updatedNutrients.contains(where: { $0.nutrientName == originalNutrient.nutrientName }) {
-            updatedNutrients.append(originalNutrient)
-        }
-    }
-    
-    // Update the food's nutrients and title with edited values
-    updatedFood.foodNutrients = updatedNutrients
-    updatedFood.description = title
-    
-    // Update serving size if user edited it
-    if !servingSize.isEmpty {
-        updatedFood.householdServingFullText = servingSize
-    }
 
     // 3. Fire the real network call
     foodManager.logFood(
