@@ -454,46 +454,89 @@ struct ConfirmFoodView: View {
                     
                     Spacer()
                     
-                    // For decimal servings (barcode foods)
+                    // Native iOS-style stepper with better design
                     if isBarcodeFood {
-                        HStack {
+                        // Custom stepper with iOS-style design for decimal values
+                        HStack(spacing: 0) {
+                            // Minus button
                             Button(action: {
                                 if numberOfServings > 0.5 {
                                     numberOfServings -= 0.5
                                     updateNutritionValues()
                                 }
+                            
+                            
                             }) {
                                 Image(systemName: "minus")
-                                    .frame(width: 12, height: 12)
-                                    .padding(8)
-                                    .background(Color.secondary.opacity(0.2))
-                                    .clipShape(Circle())
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(numberOfServings > 0.5 ? .primary : .secondary)
+                                    .frame(width: 44, height: 32)
+                                    .background(Color(.systemGray6))
+                                    .contentShape(Rectangle())
                             }
+                            .disabled(numberOfServings <= 0.5)
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 8,
+                                    bottomLeadingRadius: 8,
+                                    bottomTrailingRadius: 0,
+                                    topTrailingRadius: 0
+                                )
+                            )
                             
+                            // Value display
                             Text(String(format: "%.1f", numberOfServings))
-                                .frame(minWidth: 40)
-                                .padding(.horizontal, 8)
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 32)
+                                .background(Color(.systemGray6))
+                                .multilineTextAlignment(.center)
                             
+                            // Plus button
                             Button(action: {
-                                numberOfServings += 0.5
-                                updateNutritionValues()
+                                if numberOfServings < 20 {
+                                    numberOfServings += 0.5
+                                    updateNutritionValues()
+                                }
                             }) {
                                 Image(systemName: "plus")
-                                    .frame(width: 12, height: 12)
-                                    .padding(8)
-                                    .background(Color.secondary.opacity(0.2))
-                                    .clipShape(Circle())
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(numberOfServings < 20 ? .primary : .secondary)
+                                    .frame(width: 44, height: 32)
+                                    .background(Color(.systemGray6))
+                                    .contentShape(Rectangle())
                             }
+                            .disabled(numberOfServings >= 20)
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 0,
+                                    bottomLeadingRadius: 0,
+                                    bottomTrailingRadius: 8,
+                                    topTrailingRadius: 8
+                                )
+                            )
                         }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color(.systemGray4), lineWidth: 0.5)
+                        )
                     } else {
-                        // Original integer stepper for manual foods
-                        Stepper("\(Int(numberOfServings))", value: Binding(
-                            get: { Int(self.numberOfServings) },
-                            set: { 
-                                self.numberOfServings = Double($0)
-                                updateNutritionValues()
-                            }
-                        ), in: 1...20)
+                        // Native Stepper for integer values with custom styling
+                        HStack {
+                            Text("\(Int(numberOfServings))")
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(minWidth: 30)
+                            
+                            Stepper("", value: Binding(
+                                get: { Int(self.numberOfServings) },
+                                set: { 
+                                    self.numberOfServings = Double($0)
+                                    updateNutritionValues()
+                                }
+                            ), in: 1...20)
+                            .labelsHidden()
+                            .scaleEffect(0.8) // Make it slightly smaller for better proportions
+                        }
                     }
                 }
                 .padding(.horizontal)
