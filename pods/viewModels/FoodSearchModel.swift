@@ -34,14 +34,14 @@ struct BarcodeLookupResponse: Codable {
 
 struct Food: Codable, Identifiable, Hashable{
     let fdcId: Int
-    let description: String
+    var description: String
     let brandOwner: String?
     let brandName: String?
-    let servingSize: Double?
+    var servingSize: Double?
     var numberOfServings: Double?
     let servingSizeUnit: String?
-    let householdServingFullText: String?
-    let foodNutrients: [Nutrient]
+    var householdServingFullText: String?
+    var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
     
     var id: Int { fdcId }
