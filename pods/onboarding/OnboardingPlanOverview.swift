@@ -1166,6 +1166,11 @@ struct WeightProgressCurve: View {
     let isGainGoal: Bool
     let width: CGFloat
     
+    // Check if this is a maintenance goal (weights are essentially the same)
+    private var isMaintenanceGoal: Bool {
+        abs(currentWeight - goalWeight) < 1.0 // Within 1 lb/kg is considered maintenance
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -1175,102 +1180,178 @@ struct WeightProgressCurve: View {
                 let centerY = geometry.size.height / 2
                 let curveHeight: CGFloat = 25
                 
-                // Background filled area
-                Path { path in
-                    path.move(to: CGPoint(x: startX, y: geometry.size.height - 10))
+                if isMaintenanceGoal {
+                    // For maintenance goals, show a straight horizontal line
                     
-                    // Line up to start point
-                    path.addLine(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
-                     
-                     // Logarithmic curve to end point
-                     addLogarithmicCurve(
-                         to: &path,
-                         from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
-                         to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
-                         width: endX - startX
-                     )
+                    // Background filled area for maintenance
+                    Path { path in
+                        path.move(to: CGPoint(x: startX, y: geometry.size.height - 10))
+                        
+                        // Line up to horizontal line
+                        path.addLine(to: CGPoint(x: startX, y: centerY))
+                        
+                        // Straight horizontal line
+                        path.addLine(to: CGPoint(x: endX, y: centerY))
+                        
+                        // Line down to bottom
+                        path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
+                        
+                        // Close the path
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.green.opacity(0.3),
+                                Color.green.opacity(0.3)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     
-                    // Line down to bottom
-                    path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
+                    // Straight maintenance line
+                    Path { path in
+                        path.move(to: CGPoint(x: startX, y: centerY))
+                        path.addLine(to: CGPoint(x: endX, y: centerY))
+                    }
+                    .stroke(
+                        Color.green,
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
                     
-                    // Close the path
-                    path.closeSubpath()
-                }
-                .fill(
-                    LinearGradient(
-                                                             colors: [
+                } else {
+                    // For weight change goals, show the curve
+                    
+                    // Background filled area
+                    Path { path in
+                        path.move(to: CGPoint(x: startX, y: geometry.size.height - 10))
+                        
+                        // Line up to start point
+                        path.addLine(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
+                         
+                         // Logarithmic curve to end point
+                         addLogarithmicCurve(
+                             to: &path,
+                             from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
+                             to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
+                             width: endX - startX
+                         )
+                        
+                        // Line down to bottom
+                        path.addLine(to: CGPoint(x: endX, y: geometry.size.height - 10))
+                        
+                        // Close the path
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [
                                  (isGainGoal ? Color.orange : Color.blue).opacity(0.3),
                                  Color.green.opacity(0.3)
                              ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-                        
-                        // Progress curve line
-                        Path { path in
-                            // Start point (current weight)
-                            path.move(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
-                             
-                             // Logarithmic curve to end point
-                             addLogarithmicCurve(
-                                 to: &path,
-                                 from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
-                                 to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
-                                 width: endX - startX
-                             )
-                        }
-                        .stroke(
-                            LinearGradient(
-                                colors: [isGainGoal ? Color.orange : Color.blue, Color.green],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
+                    )
+                            
+                    // Progress curve line
+                    Path { path in
+                        // Start point (current weight)
+                        path.move(to: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)))
+                         
+                         // Logarithmic curve to end point
+                         addLogarithmicCurve(
+                             to: &path,
+                             from: CGPoint(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight)),
+                             to: CGPoint(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight)),
+                             width: endX - startX
+                         )
+                    }
+                    .stroke(
+                        LinearGradient(
+                            colors: [isGainGoal ? Color.orange : Color.blue, Color.green],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+                }
                         
                         // Weight labels
                         VStack {
                             HStack {
-                                // Current weight label
-                                                                 Text("\(Int(currentWeight)) \(weightUnit)")
-                                     .font(.system(size: 14, weight: .semibold))
-                                     .foregroundColor(.white)
-                                     .padding(.horizontal, 12)
-                                     .padding(.vertical, 6)
-                                     .background(isGainGoal ? Color.orange : Color.blue)
-                                    .cornerRadius(12)
-                                
-                                Spacer()
-                                
-                                // Goal weight label  
-                                                                 Text("\(Int(goalWeight)) \(weightUnit)")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green)
-                                    .cornerRadius(12)
+                                if isMaintenanceGoal {
+                                    // For maintenance, show single centered label
+                                    Spacer()
+                                    Text("Maintain \(Int(currentWeight)) \(weightUnit)")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green)
+                                        .cornerRadius(12)
+                                    Spacer()
+                                } else {
+                                    // For weight change goals, show start and end labels
+                                    
+                                    // Current weight label
+                                    Text("\(Int(currentWeight)) \(weightUnit)")
+                                         .font(.system(size: 14, weight: .semibold))
+                                         .foregroundColor(.white)
+                                         .padding(.horizontal, 12)
+                                         .padding(.vertical, 6)
+                                         .background(isGainGoal ? Color.orange : Color.blue)
+                                        .cornerRadius(12)
+                                    
+                                    Spacer()
+                                    
+                                    // Goal weight label  
+                                    Text("\(Int(goalWeight)) \(weightUnit)")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green)
+                                        .cornerRadius(12)
+                                }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, 8)
+                            .padding(.top, 22)
                             
                             Spacer()
                         }
                         
-                        // Start point circle (current weight)
-                        Circle()
-                            .fill(isGainGoal ? Color.orange : Color.blue)
-                            .frame(width: 16, height: 16)
-                            .position(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight))
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        
-                        // End point circle (goal weight)
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 16, height: 16)
-                            .position(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight))
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        if isMaintenanceGoal {
+                            // For maintenance, show circles at both ends of the horizontal line
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 16, height: 16)
+                                .position(x: startX, y: centerY)
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 16, height: 16)
+                                .position(x: endX, y: centerY)
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        } else {
+                            // For weight change goals, show circles at curve points
+                            
+                            // Start point circle (current weight)
+                            Circle()
+                                .fill(isGainGoal ? Color.orange : Color.blue)
+                                .frame(width: 16, height: 16)
+                                .position(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight))
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            
+                            // End point circle (goal weight)
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 16, height: 16)
+                                .position(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight))
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
                     }
                 }
             }

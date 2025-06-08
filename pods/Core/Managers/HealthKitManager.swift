@@ -579,11 +579,11 @@ class HealthKitManager {
         let startOfWindow = calendar.date(byAdding: .day, value: -1, to: noonOfTargetDay)!
         let endOfWindow   = noonOfTargetDay
         
-        // Samples whose **endDate** falls in [startOfWindow, endOfWindow)
+        // Query for samples that intersect with our window (not just end date)
         let predicate = HKQuery.predicateForSamples(
             withStart: startOfWindow,
             end: endOfWindow,
-            options: .strictEndDate
+            options: []
         )
         
         let query = HKSampleQuery(
@@ -600,7 +600,6 @@ class HealthKitManager {
             }
 
             let sleepSamples = samples as? [HKCategorySample] ?? []
-            // ─── DEBUG: print EVERY raw sleep sample ───────────────────────────
             print("──────── Sleep samples for selected date (\(date)) ────────")
             for s in sleepSamples {
                 let stage = HealthKitManager.sleepStageName(for: s.value)
@@ -610,20 +609,51 @@ class HealthKitManager {
             print("───────────────────────────────────────────────────────────")
             print("🛌 Found \(sleepSamples.count) sleep samples for date: \(date)")
 
-            // Sum every sample flagged as an "asleep" stage.
-            var totalSleepSeconds: TimeInterval = 0
-            for s in sleepSamples {
-                switch s.value {
+            // Filter to only asleep stages and avoid overlapping periods
+            let asleepSamples = sleepSamples.filter { sample in
+                switch sample.value {
                 case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                      HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                      HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
                      HKCategoryValueSleepAnalysis.asleepREM.rawValue:
-                    totalSleepSeconds += s.endDate.timeIntervalSince(s.startDate)
+                    return true
                 default:
-                    break   // ignore .awake and .inBed
+                    return false
                 }
             }
-            print("🛌 Total asleep seconds (Apple‑style): \(totalSleepSeconds) hr: \(totalSleepSeconds/3600)")
+            
+            // Sort by start date to process chronologically
+            let sortedAsleepSamples = asleepSamples.sorted { $0.startDate < $1.startDate }
+            
+            // Merge overlapping periods to avoid double counting
+            var mergedPeriods: [(start: Date, end: Date)] = []
+            
+            for sample in sortedAsleepSamples {
+                let sampleStart = sample.startDate
+                let sampleEnd = sample.endDate
+                
+                if let lastPeriod = mergedPeriods.last,
+                   sampleStart <= lastPeriod.end {
+                    // Overlapping or adjacent - extend the last period
+                    mergedPeriods[mergedPeriods.count - 1] = (
+                        start: lastPeriod.start,
+                        end: max(lastPeriod.end, sampleEnd)
+                    )
+                } else {
+                    // Non-overlapping - add new period
+                    mergedPeriods.append((start: sampleStart, end: sampleEnd))
+                }
+            }
+            
+            // Calculate total sleep time from merged periods
+            var totalSleepSeconds: TimeInterval = 0
+            for period in mergedPeriods {
+                totalSleepSeconds += period.end.timeIntervalSince(period.start)
+            }
+            
+            print("🛌 Merged \(sortedAsleepSamples.count) samples into \(mergedPeriods.count) periods")
+            print("🛌 Total sleep time: \(totalSleepSeconds/3600) hours (\(Int(totalSleepSeconds/60)) minutes)")
+            
             DispatchQueue.main.async { completion(totalSleepSeconds, nil) }
         }
         
