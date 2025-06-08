@@ -70,7 +70,7 @@ struct DesiredWeightView: View {
             Spacer()
             
             // Weight display
-            Text(String(format: "%.1f lbs", selectedWeight))
+            Text(String(format: "%.1f %@", selectedWeight, UserDefaults.standard.bool(forKey: "isImperial") ? "lbs" : "kg"))
                 .font(.system(size: 44, weight: .bold))
                 .foregroundColor(.primary)
                 .padding(.bottom, 24)
