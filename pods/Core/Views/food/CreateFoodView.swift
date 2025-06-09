@@ -49,6 +49,8 @@ struct CreateFoodView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
     
+    @State private var showServingSelector = false
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -119,6 +121,9 @@ struct CreateFoodView: View {
                 }
             }
         )
+        .sheet(isPresented: $showServingSelector) {
+            servingsSelectorView
+        }
     }
     
     // MARK: - Card Views
@@ -162,16 +167,7 @@ struct CreateFoodView: View {
                     .padding(.leading, 16)
                 
                 // Number of Servings
-                HStack {
-                    Text("Number of Servings")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    Stepper("\(numberOfServings)", value: $numberOfServings, in: 1...20)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
+                numberOfServingsRow
             }
         }
         .padding(.horizontal)
@@ -516,6 +512,55 @@ struct CreateFoodView: View {
         if let doubleValue = Double(value), doubleValue > 0 {
             nutrients.append(Nutrient(nutrientName: name, value: doubleValue, unitName: unit))
         }
+    }
+    
+    // Modify the Number of Servings row to show the sheet
+    private var numberOfServingsRow: some View {
+        Button(action: {
+            showServingSelector = true
+        }) {
+            HStack {
+                Text("Number of Servings")
+                    .foregroundColor(.primary)
+                Spacer()
+                Text("\(numberOfServings)")
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 16)
+        }
+    }
+}
+
+
+extension CreateFoodView {
+    private var servingsSelectorView: some View {
+        VStack(spacing: 0) {
+            Text("Select Servings")
+                .font(.headline)
+                .padding()
+            
+            ServingsPicker(
+                selectedWhole: Binding(
+                    get: { numberOfServings },
+                    set: { newValue in
+                        numberOfServings = newValue
+                    }
+                ),
+                selectedFraction: Binding(
+                    get: { 0 },
+                    set: { _ in }
+                )
+            )
+            .frame(height: 216)
+            
+            Button("Done") {
+                showServingSelector = false
+            }
+            .padding()
+        }
+        .background(Color("iosbg"))
+        .cornerRadius(12)
     }
 }
 

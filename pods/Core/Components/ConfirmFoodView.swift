@@ -68,6 +68,8 @@ struct ConfirmFoodView: View {
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
+    @State private var showServingSelector = false
+    
     // Default initializer for manual food creation
     init(path: Binding<NavigationPath>) {
         self._path = path
@@ -406,6 +408,9 @@ struct ConfirmFoodView: View {
                 }
             }
         )
+        .sheet(isPresented: $showServingSelector) {
+            servingsSelectorView
+        }
     }
     
     // MARK: - Card Views
@@ -448,102 +453,26 @@ struct ConfirmFoodView: View {
                     .padding(.leading, 16)
                 
                 // Number of Servings
-                HStack {
-                    Text("Number of Servings")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    // Native iOS-style stepper with better design
-                    if isBarcodeFood {
-                        // Custom stepper with iOS-style design for decimal values
-                        HStack(spacing: 0) {
-                            // Minus button
-                            Button(action: {
-                                if numberOfServings > 0.5 {
-                                    numberOfServings -= 0.5
-                                    updateNutritionValues()
-                                }
-                            
-                            
-                            }) {
-                                Image(systemName: "minus")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(numberOfServings > 0.5 ? .primary : .secondary)
-                                    .frame(width: 44, height: 32)
-                                    .background(Color(.systemGray6))
-                                    .contentShape(Rectangle())
-                            }
-                            .disabled(numberOfServings <= 0.5)
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 8,
-                                    bottomLeadingRadius: 8,
-                                    bottomTrailingRadius: 0,
-                                    topTrailingRadius: 0
-                                )
-                            )
-                            
-                            // Value display
-                            Text(String(format: "%.1f", numberOfServings))
-                                .font(.system(size: 16, weight: .regular))
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 32)
-                                .background(Color(.systemGray6))
-                                .multilineTextAlignment(.center)
-                            
-                            // Plus button
-                            Button(action: {
-                                if numberOfServings < 20 {
-                                    numberOfServings += 0.5
-                                    updateNutritionValues()
-                                }
-                            }) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(numberOfServings < 20 ? .primary : .secondary)
-                                    .frame(width: 44, height: 32)
-                                    .background(Color(.systemGray6))
-                                    .contentShape(Rectangle())
-                            }
-                            .disabled(numberOfServings >= 20)
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 0,
-                                    bottomLeadingRadius: 0,
-                                    bottomTrailingRadius: 8,
-                                    topTrailingRadius: 8
-                                )
-                            )
-                        }
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(.systemGray4), lineWidth: 0.5)
-                        )
-                    } else {
-                        // Native Stepper for integer values with custom styling
-                        HStack {
-                            Text("\(Int(numberOfServings))")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(minWidth: 30)
-                            
-                            Stepper("", value: Binding(
-                                get: { Int(self.numberOfServings) },
-                                set: { 
-                                    self.numberOfServings = Double($0)
-                                    updateNutritionValues()
-                                }
-                            ), in: 1...20)
-                            .labelsHidden()
-                            .scaleEffect(0.8) // Make it slightly smaller for better proportions
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
+                numberOfServingsRow
             }
         }
         .padding(.horizontal)
+    }
+    
+    private var numberOfServingsRow: some View {
+        Button(action: {
+            showServingSelector = true
+        }) {
+            HStack {
+                Text("Number of Servings")
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(String(format: "%.1f", numberOfServings))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 16)
+        }
     }
     
     private var nutritionFactsCard: some View {
@@ -1126,6 +1055,103 @@ extension Double {
     func rounded(toPlaces places: Int) -> Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
+    }
+}
+
+struct ServingsPicker: UIViewRepresentable {
+    @Binding var selectedWhole: Int
+    @Binding var selectedFraction: Double
+    
+    private let wholeNumbers = Array(1...20)
+    private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
+    private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
+    
+    func makeUIView(context: Context) -> UIPickerView {
+        let picker = UIPickerView()
+        picker.delegate = context.coordinator
+        picker.dataSource = context.coordinator
+        return picker
+    }
+    
+    func updateUIView(_ uiView: UIPickerView, context: Context) {
+        // Find the index of the current whole number
+        if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
+            uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
+        }
+        
+        // Find the index of the current fraction
+        if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
+            uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIPickerViewDelegate, UIPickerViewDataSource {
+        var parent: ServingsPicker
+        
+        init(_ parent: ServingsPicker) {
+            self.parent = parent
+        }
+        
+        func numberOfComponents(in pickerView: UIPickerView) -> Int {
+            return 2
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+            return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+            if component == 0 {
+                return "\(parent.wholeNumbers[row])"
+            } else {
+                return parent.fractionLabels[row]
+            }
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+            if component == 0 {
+                parent.selectedWhole = parent.wholeNumbers[row]
+            } else {
+                parent.selectedFraction = parent.fractions[row]
+            }
+        }
+    }
+}
+
+extension ConfirmFoodView {
+    private var servingsSelectorView: some View {
+        VStack(spacing: 0) {
+            Text("Select Servings")
+                .font(.headline)
+                .padding()
+            
+            ServingsPicker(
+                selectedWhole: Binding(
+                    get: { Int(numberOfServings) },
+                    set: { newValue in
+                        numberOfServings = Double(newValue) + numberOfServings.truncatingRemainder(dividingBy: 1)
+                    }
+                ),
+                selectedFraction: Binding(
+                    get: { numberOfServings.truncatingRemainder(dividingBy: 1) },
+                    set: { newValue in
+                        numberOfServings = Double(Int(numberOfServings)) + newValue
+                    }
+                )
+            )
+            .frame(height: 216)
+            
+            Button("Done") {
+                showServingSelector = false
+            }
+            .padding()
+        }
+        .background(Color("iosbg"))
+        .cornerRadius(12)
     }
 }
 
