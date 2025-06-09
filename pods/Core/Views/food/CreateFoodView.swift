@@ -536,10 +536,25 @@ struct CreateFoodView: View {
 extension CreateFoodView {
     private var servingsSelectorView: some View {
         VStack(spacing: 0) {
-            Text("Select Servings")
-                .font(.headline)
-                .padding()
+            // Custom Navigation Bar
+            HStack {
+                // Empty leading space to center the title
+                Spacer()
+                
+                Text("Servings")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button("Done") {
+                    showServingSelector = false
+                }
+            }
+            .padding()
             
+            Divider()
+            
+            // Centered Picker
             ServingsPicker(
                 selectedWhole: Binding(
                     get: { numberOfServings },
@@ -548,19 +563,14 @@ extension CreateFoodView {
                     }
                 ),
                 selectedFraction: Binding(
-                    get: { 0 },
+                    get: { 0.0 },
                     set: { _ in }
                 )
             )
             .frame(height: 216)
-            
-            Button("Done") {
-                showServingSelector = false
-            }
-            .padding()
         }
-        .background(Color("iosbg"))
-        .cornerRadius(12)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 

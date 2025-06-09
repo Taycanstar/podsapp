@@ -409,7 +409,7 @@ struct ConfirmFoodView: View {
             }
         )
         .sheet(isPresented: $showServingSelector) {
-            servingsSelectorView
+            servingsSelectorSheet()
         }
     }
     
@@ -453,25 +453,23 @@ struct ConfirmFoodView: View {
                     .padding(.leading, 16)
                 
                 // Number of Servings
-                numberOfServingsRow
+                servingsRowView
             }
         }
         .padding(.horizontal)
     }
     
-    private var numberOfServingsRow: some View {
-        Button(action: {
+    private var servingsRowView: some View {
+        HStack {
+            Text("Number of Servings")
+            Spacer()
+            Text("\(String(format: "%.1f", numberOfServings)) \(servingUnit)")
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .contentShape(Rectangle())
+        .onTapGesture {
             showServingSelector = true
-        }) {
-            HStack {
-                Text("Number of Servings")
-                    .foregroundColor(.primary)
-                Spacer()
-                Text(String(format: "%.1f", numberOfServings))
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 16)
         }
     }
     
@@ -1123,35 +1121,47 @@ struct ServingsPicker: UIViewRepresentable {
 }
 
 extension ConfirmFoodView {
-    private var servingsSelectorView: some View {
+    private func servingsSelectorSheet() -> some View {
         VStack(spacing: 0) {
-            Text("Select Servings")
-                .font(.headline)
-                .padding()
+            // Custom Navigation Bar
+            HStack {
+                // Empty leading space to center the title
+                Spacer()
+                
+                Text("Servings")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button("Done") {
+                    showServingSelector = false
+                }
+            }
+            .padding()
             
+            Divider()
+            
+            // Centered Picker
             ServingsPicker(
                 selectedWhole: Binding(
                     get: { Int(numberOfServings) },
                     set: { newValue in
                         numberOfServings = Double(newValue) + numberOfServings.truncatingRemainder(dividingBy: 1)
+                        updateNutritionValues()
                     }
                 ),
                 selectedFraction: Binding(
                     get: { numberOfServings.truncatingRemainder(dividingBy: 1) },
                     set: { newValue in
                         numberOfServings = Double(Int(numberOfServings)) + newValue
+                        updateNutritionValues()
                     }
                 )
             )
             .frame(height: 216)
-            
-            Button("Done") {
-                showServingSelector = false
-            }
-            .padding()
         }
-        .background(Color("iosbg"))
-        .cornerRadius(12)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
