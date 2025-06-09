@@ -1160,7 +1160,8 @@ extension ConfirmFoodView {
             )
             .frame(height: 216)
         }
-        .presentationDetents([.medium, .large])
+    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+
         .presentationDragIndicator(.visible)
     }
 }
