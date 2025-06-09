@@ -537,18 +537,18 @@ extension CreateFoodView {
     private var servingsSelectorView: some View {
         VStack(spacing: 0) {
             // Custom Navigation Bar
-            HStack {
-                // Empty leading space to center the title
-                Spacer()
+            ZStack {
+                // Done button on trailing edge
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        showServingSelector = false
+                    }
+                }
                 
+                // Centered title
                 Text("Servings")
                     .font(.headline)
-                
-                Spacer()
-                
-                Button("Done") {
-                    showServingSelector = false
-                }
             }
             .padding()
             
@@ -569,7 +569,7 @@ extension CreateFoodView {
             )
             .frame(height: 216)
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
         .presentationDragIndicator(.visible)
     }
 }
