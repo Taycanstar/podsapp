@@ -846,7 +846,7 @@ struct ConfirmFoodView: View {
         email:    viewModel.email,
         food:     updatedFood,
         meal:     "Lunch",                     // or pass in a variable
-        servings: Int(userServings),
+        servings: userServings,
         date:     Date(),
         notes:    nil
     ) { result in

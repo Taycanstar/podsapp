@@ -529,7 +529,7 @@ func loadMoreFoods(refresh: Bool = false) {
     email: String,
     food: Food,
     meal: String,
-    servings: Int,
+    servings: Double,
     date: Date,
     notes: String? = nil,
     completion: @escaping (Result<LoggedFood, Error>) -> Void

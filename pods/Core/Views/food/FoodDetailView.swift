@@ -215,7 +215,7 @@ struct FoodDetailsView: View {
                 email: viewModel.email,
                 food: food,
                 meal: selectedMeal,
-                servings: Int(numberOfServings),
+                servings: numberOfServings,
                 date: selectedDate,
                 notes: nil
             ) { result in

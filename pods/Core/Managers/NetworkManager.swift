@@ -5125,7 +5125,7 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
     }
 
 
-        func logFood(userEmail: String, food: Food, mealType: String, servings: Int, date: Date, notes: String? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+        func logFood(userEmail: String, food: Food, mealType: String, servings: Double, date: Date, notes: String? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     let urlString = "\(baseUrl)/log-food/"
     
     guard let url = URL(string: urlString) else {
