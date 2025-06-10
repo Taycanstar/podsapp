@@ -20,6 +20,7 @@ struct MealDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     // MARK: - Properties
     let meal: Meal
@@ -238,13 +239,53 @@ struct MealDetailView: View {
         foodManager.logMeal(
             meal: meal,
             mealTime: selectedMealTime,
-            calories: scaledCalories,
-            statusCompletion: { success in
-                if success {
+            calories: scaledCalories
+        ) { result in
+            switch result {
+            case .success(let loggedMeal):
+                // Create CombinedLog and add to DayLogsVM
+                let combinedLog = CombinedLog(
+                    type:        .meal,
+                    status:      loggedMeal.status,
+                    calories:    loggedMeal.calories,
+                    message:     "\(loggedMeal.meal.title) – \(loggedMeal.mealTime)",
+                    foodLogId:   nil,
+                    food:        nil,
+                    mealType:    loggedMeal.mealTime,
+                    mealLogId:   loggedMeal.mealLogId,
+                    meal:        loggedMeal.meal,
+                    mealTime:    loggedMeal.mealTime,
+                    scheduledAt: Date(),
+                    recipeLogId: nil,
+                    recipe:      nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
+                
+                // Add to DayLogsViewModel
+                DispatchQueue.main.async {
+                    dayLogsVM.addPending(combinedLog)
+                    print("After addPending from MealDetailView, logs contains meal? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+                    
+                    // Update foodManager.combinedLogs
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.mealLogId == combinedLog.mealLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                    }
+                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    
+                    // Show success alert
                     showLoggingSuccess = true
                 }
+                
+            case .failure(let error):
+                print("❌ Failed to log meal:", error)
+                DispatchQueue.main.async {
+                    alertTitle = "Logging Failed"
+                    alertMessage = "Could not log this meal. Please try again."
+                    showAlert = true
+                }
             }
-        )
+        }
     }
     
     private func deleteMeal() {

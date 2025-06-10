@@ -11,6 +11,7 @@ struct FoodDetailsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     let food: Food
     @Binding var selectedMeal: String 
     
@@ -223,6 +224,39 @@ struct FoodDetailsView: View {
                 switch result {
                 case .success(let loggedFood):
                     print("Food logged successfully: \(loggedFood)")
+                    
+                    // Create CombinedLog for dashboard updates
+                    let combinedLog = CombinedLog(
+                        type:         .food,
+                        status:       loggedFood.status,
+                        calories:     Double(loggedFood.food.calories),
+                        message:      "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                        foodLogId:    loggedFood.foodLogId,
+                        food:         loggedFood.food,
+                        mealType:     loggedFood.mealType,
+                        mealLogId:    nil,
+                        meal:         nil,
+                        mealTime:     nil,
+                        scheduledAt:  selectedDate,
+                        recipeLogId:  nil,
+                        recipe:       nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+
+                    // Ensure all UI updates happen on the main thread
+                    DispatchQueue.main.async {
+                        // Tell the day-logs view model about it
+                        dayLogsVM.addPending(combinedLog)
+                        print("After addPending from FoodDetailView, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+
+                        // Prepend it into the global `combinedLogs` so dashboard's "All" feed updates
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    }
+                    
                 case .failure(let error):
                     print("Error logging food: \(error)")
                     errorMessage = "An error occurred while logging"
