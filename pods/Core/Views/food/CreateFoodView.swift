@@ -18,7 +18,7 @@ struct CreateFoodView: View {
     @State private var title: String = ""
     @State private var brand: String = ""
     @State private var servingSize: String = ""
-    @State private var numberOfServings: Int = 1
+    @State private var numberOfServings: Double = 1
     @State private var calories: String = ""
     
     // Basic nutrition facts
@@ -468,7 +468,7 @@ struct CreateFoodView: View {
             brandOwner: brandText,
             brandName: brandText,
             servingSize: 1.0,
-            numberOfServings: Double(numberOfServings),
+            numberOfServings: numberOfServings,
             servingSizeUnit: servingUnit,
             householdServingFullText: servingText,
             foodNutrients: nutrients,
@@ -516,18 +516,17 @@ struct CreateFoodView: View {
     
     // Modify the Number of Servings row to show the sheet
     private var numberOfServingsRow: some View {
-        Button(action: {
+        HStack {
+            Text("Number of Servings")
+            Spacer()
+            Text(String(format: "%.1f", numberOfServings))
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 16)
+        .contentShape(Rectangle())
+        .onTapGesture {
             showServingSelector = true
-        }) {
-            HStack {
-                Text("Number of Servings")
-                    .foregroundColor(.primary)
-                Spacer()
-                Text("\(numberOfServings)")
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 16)
         }
     }
 }
@@ -557,14 +556,16 @@ extension CreateFoodView {
             // Centered Picker
             ServingsPicker(
                 selectedWhole: Binding(
-                    get: { numberOfServings },
+                    get: { Int(numberOfServings) },
                     set: { newValue in
-                        numberOfServings = newValue
+                        numberOfServings = Double(newValue) + numberOfServings.truncatingRemainder(dividingBy: 1)
                     }
                 ),
                 selectedFraction: Binding(
-                    get: { 0.0 },
-                    set: { _ in }
+                    get: { numberOfServings.truncatingRemainder(dividingBy: 1) },
+                    set: { newValue in
+                        numberOfServings = Double(Int(numberOfServings)) + newValue
+                    }
                 )
             )
             .frame(height: 216)
