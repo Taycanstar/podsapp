@@ -9,7 +9,29 @@ import SwiftUI
 
 struct FoodLogDetails: View {
     @Environment(\.dismiss) private var dismiss
-    let food: Food
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    let log: CombinedLog
+    
+    // Editable state
+    @State private var editedServings: Double
+    @State private var editedDate: Date
+    @State private var editedMealType: String
+    @State private var hasChanges: Bool = false
+    @State private var isUpdating: Bool = false
+    @State private var showServingsPicker: Bool = false
+    @State private var showDatePicker: Bool = false
+    
+    var food: Food {
+        log.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
+    }
+    
+    init(log: CombinedLog) {
+        self.log = log
+        self._editedServings = State(initialValue: log.food?.numberOfServings ?? 1.0)
+        self._editedDate = State(initialValue: log.scheduledAt ?? Date())
+        self._editedMealType = State(initialValue: log.mealType ?? "Lunch")
+    }
     
     // Helper to get nutrient value by name
     private func nutrientValue(_ name: String) -> String {
@@ -59,13 +81,34 @@ struct FoodLogDetails: View {
                         .padding(.horizontal)
                         .padding(.vertical, 16)
                         Divider().padding(.leading, 16)
-                        // Number of Servings
+                        // Number of Servings - EDITABLE
                         HStack {
                             Text("Number of Servings")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text(String(format: "%g", food.numberOfServings ?? 1))
-                                .foregroundColor(.secondary)
+                            Text(editedServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(editedServings))" : String(format: "%.1f", editedServings))
+                                .foregroundColor(.blue)
+                                .onTapGesture {
+                                    showServingsPicker = true
+                                }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                        Divider().padding(.leading, 16)
+                        // Date - NEW EDITABLE FIELD
+                        HStack {
+                            Text("Date")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            HStack(spacing: 8) {
+                                Text(editedDate, style: .date)
+                                    .foregroundColor(.blue)
+                                Text(editedDate, style: .time)
+                                    .foregroundColor(.blue)
+                            }
+                            .onTapGesture {
+                                showDatePicker = true
+                            }
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -178,9 +221,180 @@ struct FoodLogDetails: View {
                     Image(systemName: "chevron.left")
                 }
             }
+            
+            // Show Done button when there are changes
+            if hasChanges {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: updateFoodLog) {
+                        if isUpdating {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Done")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .disabled(isUpdating)
+                }
+            }
         }
         .navigationBarBackButtonHidden(true)
+        .onChange(of: editedServings) { _ in checkForChanges() }
+        .onChange(of: editedDate) { _ in checkForChanges() }
+        .onChange(of: editedMealType) { _ in checkForChanges() }
+        .sheet(isPresented: $showServingsPicker) {
+            servingsSelectorSheet()
+        }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationView {
+                VStack {
+                    DatePicker("Select Date & Time", 
+                             selection: $editedDate, 
+                             displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                    Spacer()
+                }
+                .padding()
+                .navigationTitle("Date & Time")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            showDatePicker = false
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            // Reset to original date
+                            editedDate = log.scheduledAt ?? Date()
+                            showDatePicker = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
     }
+    
+    // Helper functions
+    private func checkForChanges() {
+        let originalServings = log.food?.numberOfServings ?? 1.0
+        let originalDate = log.scheduledAt ?? Date()
+        let originalMealType = log.mealType ?? "Lunch"
+        
+        hasChanges = (editedServings != originalServings) || 
+                    (abs(editedDate.timeIntervalSince(originalDate)) > 60) || // More than 1 minute difference
+                    (editedMealType != originalMealType)
+    }
+    
+    private func updateFoodLog() {
+        guard let foodLogId = log.foodLogId else { return }
+        
+        isUpdating = true
+        
+        let originalServings = log.food?.numberOfServings ?? 1.0
+        let originalDate = log.scheduledAt ?? Date()
+        let originalMealType = log.mealType ?? "Lunch"
+        
+        var servingsToUpdate: Double? = nil
+        var dateToUpdate: Date? = nil
+        var mealTypeToUpdate: String? = nil
+        
+        // Only include changed values
+        if editedServings != originalServings {
+            servingsToUpdate = editedServings
+        }
+        
+        if abs(editedDate.timeIntervalSince(originalDate)) > 60 {
+            dateToUpdate = editedDate
+        }
+        
+        if editedMealType != originalMealType {
+            mealTypeToUpdate = editedMealType
+        }
+        
+        foodManager.updateFoodLog(
+            logId: foodLogId,
+            servings: servingsToUpdate,
+            date: dateToUpdate,
+            mealType: mealTypeToUpdate,
+            notes: nil
+        ) { result in
+            isUpdating = false
+            
+            switch result {
+            case .success(_):
+                print("✅ Successfully updated food log")
+                
+                // Update the DayLogsViewModel as well
+                if let index = dayLogsVM.logs.firstIndex(where: { $0.foodLogId == foodLogId }) {
+                    var updatedLog = dayLogsVM.logs[index]
+                    updatedLog.calories = editedServings * (food.calories ?? 0)
+                    updatedLog.food?.numberOfServings = editedServings
+                    if let newMealType = mealTypeToUpdate {
+                        updatedLog.mealType = newMealType
+                        updatedLog.message = "\(food.displayName) – \(newMealType)"
+                    }
+                    if let newDate = dateToUpdate {
+                        updatedLog.scheduledAt = newDate
+                    }
+                    dayLogsVM.logs[index] = updatedLog
+                }
+                
+                hasChanges = false
+                dismiss()
+                
+            case .failure(let error):
+                print("❌ Failed to update food log: \(error)")
+                // Show error to user - you might want to add an alert state for this
+            }
+        }
+    }
+    
+    private func servingsSelectorSheet() -> some View {
+        VStack(spacing: 0) {
+            // Custom Navigation Bar
+            ZStack {
+                // Done button on trailing edge
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        showServingsPicker = false
+                    }
+                }
+                
+                // Centered title
+                Text("Servings")
+                    .font(.headline)
+            }
+            .padding()
+            
+            Divider()
+            
+            // Centered Picker
+            ServingsPickerWheel(
+                selectedWhole: Binding(
+                    get: { Int(editedServings) },
+                    set: { newValue in
+                        editedServings = Double(newValue) + editedServings.truncatingRemainder(dividingBy: 1)
+                    }
+                ),
+                selectedFraction: Binding(
+                    get: { editedServings.truncatingRemainder(dividingBy: 1) },
+                    set: { newValue in
+                        editedServings = Double(Int(editedServings)) + newValue
+                    }
+                )
+            )
+            .frame(height: 216)
+        }
+        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
+        .presentationDragIndicator(.visible)
+        .ignoresSafeArea(.all, edges: .top)
+    }
+    
     // List of additional nutrients to show
     private var additionalNutrients: [(String, String, String)] {
         [
@@ -233,5 +447,100 @@ struct FoodLogDetails: View {
         ],
         foodMeasures: []
     )
-    return FoodLogDetails(food: food)
+    let mockLog = CombinedLog(
+        type: .food,
+        status: "success",
+        calories: 180, // 120 * 1.5 servings
+        message: "Sample Food – Lunch",
+        foodLogId: 1,
+        food: LoggedFoodItem(
+            fdcId: 1,
+            displayName: "Sample Food",
+            calories: 120,
+            servingSizeText: "1 cup",
+            numberOfServings: 1.5,
+            brandText: "Sample Brand",
+            protein: 5,
+            carbs: 20,
+            fat: 2
+        ),
+        mealType: "Lunch",
+        mealLogId: nil,
+        meal: nil,
+        mealTime: nil,
+        scheduledAt: Date(),
+        recipeLogId: nil,
+        recipe: nil,
+        servingsConsumed: nil
+    )
+    
+    return FoodLogDetails(log: mockLog)
+        .environmentObject(FoodManager())
+        .environmentObject(DayLogsViewModel())
+}
+
+
+
+struct ServingsPickerWheel: UIViewRepresentable {
+    @Binding var selectedWhole: Int
+    @Binding var selectedFraction: Double
+    
+    private let wholeNumbers = Array(1...20)
+    private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
+    private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
+    
+    func makeUIView(context: Context) -> UIPickerView {
+        let picker = UIPickerView()
+        picker.delegate = context.coordinator
+        picker.dataSource = context.coordinator
+        return picker
+    }
+    
+    func updateUIView(_ uiView: UIPickerView, context: Context) {
+        // Find the index of the current whole number
+        if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
+            uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
+        }
+        
+        // Find the index of the current fraction
+        if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
+            uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
+        let parent: ServingsPickerWheel
+        
+        init(_ parent: ServingsPickerWheel) {
+            self.parent = parent
+        }
+        
+        func numberOfComponents(in pickerView: UIPickerView) -> Int {
+            return 2
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+            return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+            if component == 0 {
+                return "\(parent.wholeNumbers[row])"
+            } else {
+                return parent.fractionLabels[row]
+            }
+        }
+        
+        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+            if component == 0 {
+                parent.selectedWhole = parent.wholeNumbers[row]
+            } else {
+                parent.selectedFraction = parent.fractions[row]
+            }
+        }
+    }
 }

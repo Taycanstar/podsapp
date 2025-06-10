@@ -5125,6 +5125,67 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
     }
 
 
+        func updateFoodLog(userEmail: String, logId: Int, servings: Double? = nil, date: Date? = nil, mealType: String? = nil, notes: String? = nil, completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void) {
+            let urlString = "\(baseUrl)/update-food-log/\(logId)/"
+            
+            guard let url = URL(string: urlString) else {
+                completion(.failure(NetworkError.invalidURL))
+                return
+            }
+            
+            var parameters: [String: Any] = [
+                "user_email": userEmail
+            ]
+            
+            // Add optional parameters
+            if let servings = servings {
+                parameters["servings"] = servings
+            }
+            
+            if let date = date {
+                parameters["date"] = ISO8601DateFormatter().string(from: date)
+            }
+            
+            if let mealType = mealType {
+                parameters["meal_type"] = mealType
+            }
+            
+            if let notes = notes {
+                parameters["notes"] = notes
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "PUT"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+            } catch {
+                completion(.failure(error))
+                return
+            }
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.noData))
+                    return
+                }
+                
+                do {
+                    let updateResponse = try JSONDecoder().decode(UpdateFoodLogResponse.self, from: data)
+                    completion(.success(updateResponse.food_log))
+                } catch {
+                    print("Failed to decode update food log response: \(error)")
+                    completion(.failure(error))
+                }
+            }.resume()
+        }
+
         func logFood(userEmail: String, food: Food, mealType: String, servings: Double, date: Date, notes: String? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     let urlString = "\(baseUrl)/log-food/"
     

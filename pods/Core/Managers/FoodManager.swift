@@ -525,6 +525,66 @@ func loadMoreFoods(refresh: Bool = false) {
         // Then fetch from server with animation
         loadUserFoods(refresh: true)
     }
+    func updateFoodLog(
+        logId: Int,
+        servings: Double? = nil,
+        date: Date? = nil,
+        mealType: String? = nil,
+        notes: String? = nil,
+        completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void
+    ) {
+        guard let email = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: 0, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            return
+        }
+        
+        networkManager.updateFoodLog(
+            userEmail: email,
+            logId: logId,
+            servings: servings,
+            date: date,
+            mealType: mealType,
+            notes: notes
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let updatedLog):
+                    print("✅ Successfully updated food log with ID: \(logId)")
+                    
+                    // Update the existing log in combinedLogs
+                    if let index = self.combinedLogs.firstIndex(where: { $0.foodLogId == logId }) {
+                        var updatedCombinedLog = self.combinedLogs[index]
+                        
+                        // Update the properties with new values
+                        updatedCombinedLog.calories = updatedLog.calories
+                        updatedCombinedLog.food?.numberOfServings = updatedLog.servings
+                        
+                        // Update message if meal type changed
+                        if let newMealType = mealType {
+                            updatedCombinedLog.message = "\(updatedLog.food.displayName) – \(newMealType)"
+                            updatedCombinedLog.mealType = newMealType
+                        }
+                        
+                        // Update scheduled date if changed
+                        if let newDate = date {
+                            updatedCombinedLog.scheduledAt = newDate
+                        }
+                        
+                        self.combinedLogs[index] = updatedCombinedLog
+                    }
+                    
+                    completion(.success(updatedLog))
+                    
+                case .failure(let error):
+                    print("❌ Failed to update food log: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
     func logFood(
     email: String,
     food: Food,

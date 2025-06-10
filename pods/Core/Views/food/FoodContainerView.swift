@@ -61,6 +61,7 @@ class FoodNavigationState: ObservableObject {
 enum FoodNavigationDestination: Hashable {
     case logFood
     case foodDetails(Food, Binding<String>) // Food and selected meal
+    case foodLogDetails(CombinedLog) // For viewing/editing logged food details
     case createMeal 
     case addMealItems
     case editMeal(Meal)  // Added case for editing a meal
@@ -80,6 +81,8 @@ enum FoodNavigationDestination: Hashable {
             return true
         case let (.foodDetails(food1, meal1), .foodDetails(food2, meal2)):
             return food1.id == food2.id && meal1.wrappedValue == meal2.wrappedValue
+        case let (.foodLogDetails(log1), .foodLogDetails(log2)):
+            return log1.id == log2.id
         case (.createMeal, .createMeal):
             return true
         case (.addMealItems, .addMealItems):
@@ -115,6 +118,9 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(1)
             hasher.combine(food.id)
             hasher.combine(meal.wrappedValue)
+        case .foodLogDetails(let log):
+            hasher.combine(13)
+            hasher.combine(log.id)
         case .createMeal:
             hasher.combine(2)
         case .addMealItems:
@@ -280,6 +286,8 @@ struct FoodContainerView: View {
                     )
                 case .foodDetails(let food, let selectedMeal):
                     FoodDetailsView(food: food, selectedMeal: selectedMeal)
+                case .foodLogDetails(let log):
+                    FoodLogDetails(log: log)
                 case .createMeal:
                     CreateMealView(
                         path: $path,

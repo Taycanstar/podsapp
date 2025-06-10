@@ -16,8 +16,9 @@ struct DashboardView: View {
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
 
-    @State private var selectedFoodLog: Food? = nil
+
     @State private var showLogFlowSheet = false
+    @State private var selectedFoodLogId: String? = nil
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -123,16 +124,16 @@ private var remainingCal: Double { vm.remainingCalories }
                                 LogRow(log: log)
                                     .id(log.id)
                                     .onTapGesture {
-                                        if log.type == .food, let loggedFood = log.food {
-                                            selectedFoodLog = loggedFood.asFood
+                                        if log.type == .food {
+                                            selectedFoodLogId = log.id
                                         }
                                     }
                                 // NavigationLink for food logs
-                                if log.type == .food, let loggedFood = log.food {
+                                if log.type == .food {
                                     NavigationLink(
-                                        destination: FoodLogDetails(food: loggedFood.asFood),
-                                        tag: loggedFood.asFood,
-                                        selection: $selectedFoodLog
+                                        destination: FoodLogDetails(log: log),
+                                        tag: log.id,
+                                        selection: $selectedFoodLogId
                                     ) {
                                         EmptyView()
                                     }
