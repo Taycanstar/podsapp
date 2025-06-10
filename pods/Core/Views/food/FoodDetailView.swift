@@ -367,7 +367,7 @@ extension FoodDetailsView {
             Text(String(format: "%.1f", numberOfServings))
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal)
+        // .padding(.horizontal)
         .padding(.vertical, 16)
         .contentShape(Rectangle())
         .onTapGesture {
