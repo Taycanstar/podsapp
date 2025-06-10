@@ -251,7 +251,6 @@ struct FoodDetailsView: View {
         }
         .sheet(isPresented: $showServingSelector) {
             servingsSelectorSheet()
-                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(12)
         }
@@ -410,8 +409,9 @@ extension FoodDetailsView {
                     }
                 )
             )
-            .frame(height: UIScreen.main.bounds.height / 3.3)
+            .frame(height: 216)
         }
+        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
         .ignoresSafeArea(.all, edges: .top)
     }
     
