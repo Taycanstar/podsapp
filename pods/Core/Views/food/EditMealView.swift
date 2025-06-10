@@ -22,7 +22,7 @@ struct EditMealView: View {
     @State private var mealName: String
     @State private var shareWith: String
     @State private var instructions: String
-    @State private var servings: Int
+    @State private var servings: Double
     @State private var mealTime: String = "Breakfast"
     @State private var scheduledDate: Date?
     
@@ -257,7 +257,7 @@ struct EditMealView: View {
             description: meal.description,
             directions: instructions,
             privacy: shareWith.lowercased(),
-            servings: Int(servings),
+            servings: Double(servings),
             mealItems: [],  // Original meal items (will be replaced by selectedFoods)
             image: meal.image, // Preserve existing image if any
             totalCalories: totals.calories,

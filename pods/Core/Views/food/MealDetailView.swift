@@ -29,9 +29,10 @@ struct MealDetailView: View {
     @State private var isShowingEditMeal = false
     @State private var isShowingDeleteAlert = false
     @State private var showLoggingSuccess = false
-    @State private var servingsCount: Int
+    @State private var servingsCount: Double
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
+    @State private var showServingSelector = false
     
     // Alert states for error handling
     @State private var showAlert = false
@@ -51,7 +52,7 @@ struct MealDetailView: View {
     init(meal: Meal, path: Binding<NavigationPath>) {
         self.meal = meal
         self._path = path
-        self._servingsCount = State(initialValue: meal.servings)
+        self._servingsCount = State(initialValue: Double(meal.servings))
         self._selectedPrivacy = State(initialValue: meal.privacy.capitalized)
         
         // Convert meal items to Food objects for the selectedFoods array
@@ -155,7 +156,7 @@ struct MealDetailView: View {
             initializeSelectedFoods()
             
             // Reset servingsCount to meal's original servings
-            self.servingsCount = meal.servings
+            self.servingsCount = Double(meal.servings)
         }
         .onChange(of: isShowingEditMeal) { isShowing in
             if isShowing {
@@ -213,6 +214,12 @@ struct MealDetailView: View {
             // Don't update the meal - this should only happen in EditMealView
             // Just update the local UI
         }
+        .sheet(isPresented: $showServingSelector) {
+            servingsSelectorSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(12)
+        }
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -223,7 +230,7 @@ struct MealDetailView: View {
     private func logMeal() {
         // Calculate the scaled calories based on serving count
         let baseCalories = meal.calories
-        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
+        let scaledCalories = baseCalories * servingsCount / Double(meal.servings)
         
         // First, close the food container immediately
         viewModel.isShowingFoodContainer = false
@@ -272,14 +279,7 @@ struct MealDetailView: View {
             Divider()
             
             // Servings row
-            HStack {
-                Text("Servings")
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Stepper("\(servingsCount)", value: $servingsCount, in: 1...20)
-            }
+            servingsRowView
             
             Divider()
             
@@ -417,10 +417,10 @@ struct MealDetailView: View {
         let baseCalories = meal.calories
         
         // Scale values according to servings count
-        let proteinValue = baseProteinValue * Double(servingsCount) / Double(meal.servings)
-        let carbsValue = baseCarbsValue * Double(servingsCount) / Double(meal.servings)
-        let fatValue = baseFatValue * Double(servingsCount) / Double(meal.servings)
-        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
+        let proteinValue = baseProteinValue * servingsCount / Double(meal.servings)
+        let carbsValue = baseCarbsValue * servingsCount / Double(meal.servings)
+        let fatValue = baseFatValue * servingsCount / Double(meal.servings)
+        let scaledCalories = baseCalories * servingsCount / Double(meal.servings)
         
         // Calculate percentages
         let totalMacros = proteinValue + carbsValue + fatValue
@@ -529,6 +529,127 @@ struct MealDetailView: View {
             // Also initialize the backup
             backupFoods = foods
             print("📊 MealDetailView initialized \(selectedFoods.count) foods from meal items")
+        }
+    }
+}
+
+// MARK: - Servings Selector Components
+extension MealDetailView {
+    private var servingsRowView: some View {
+        HStack {
+            Text("Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            Text(String(format: "%.1f", servingsCount))
+                .foregroundColor(.secondary)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showServingSelector = true
+        }
+    }
+    
+    private func servingsSelectorSheet() -> some View {
+        VStack(spacing: 0) {
+            // Custom Navigation Bar
+            ZStack {
+                // Done button on trailing edge
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        showServingSelector = false
+                    }
+                }
+                
+                // Centered title
+                Text("Servings")
+                    .font(.headline)
+            }
+            .padding()
+            
+            Divider()
+            
+            // Centered Picker
+            ServingsPicker(
+                selectedWhole: Binding(
+                    get: { Int(servingsCount) },
+                    set: { newValue in
+                        servingsCount = Double(newValue) + servingsCount.truncatingRemainder(dividingBy: 1)
+                    }
+                ),
+                selectedFraction: Binding(
+                    get: { servingsCount.truncatingRemainder(dividingBy: 1) },
+                    set: { newValue in
+                        servingsCount = Double(Int(servingsCount)) + newValue
+                    }
+                )
+            )
+            .frame(height: UIScreen.main.bounds.height / 3.3)
+        }
+        .ignoresSafeArea(.all, edges: .top)
+    }
+    
+    struct ServingsPicker: UIViewRepresentable {
+        @Binding var selectedWhole: Int
+        @Binding var selectedFraction: Double
+        
+        private let wholeNumbers = Array(1...20)
+        private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
+        private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
+        
+        func makeUIView(context: Context) -> UIPickerView {
+            let picker = UIPickerView()
+            picker.delegate = context.coordinator
+            picker.dataSource = context.coordinator
+            return picker
+        }
+        
+        func updateUIView(_ uiView: UIPickerView, context: Context) {
+            // Find the index of the current whole number
+            if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
+                uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
+            }
+            
+            // Find the index of the current fraction
+            if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
+                uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
+            }
+        }
+        
+        func makeCoordinator() -> Coordinator {
+            Coordinator(self)
+        }
+        
+        class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
+            let parent: ServingsPicker
+            
+            init(_ parent: ServingsPicker) {
+                self.parent = parent
+            }
+            
+            func numberOfComponents(in pickerView: UIPickerView) -> Int {
+                return 2
+            }
+            
+            func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+                return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
+            }
+            
+            func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+                if component == 0 {
+                    return "\(parent.wholeNumbers[row])"
+                } else {
+                    return parent.fractionLabels[row]
+                }
+            }
+            
+            func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+                if component == 0 {
+                    parent.selectedWhole = parent.wholeNumbers[row]
+                } else {
+                    parent.selectedFraction = parent.fractions[row]
+                }
+            }
         }
     }
 }

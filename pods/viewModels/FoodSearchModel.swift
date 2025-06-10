@@ -246,7 +246,7 @@ struct Meal: Codable, Identifiable {
     let description: String?
     let directions: String?
     let privacy: String
-    let servings: Int
+    let servings: Double
     let mealItems: [MealFoodItem]
     let image: String?
     let totalCalories: Double?
@@ -322,7 +322,7 @@ struct MealSummary: Codable {
     let description: String?
     let image: String?
     let calories: Double
-    let servings: Int
+    let servings: Double
     let protein: Double?
     let carbs: Double?
     let fat: Double?

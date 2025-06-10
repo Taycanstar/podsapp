@@ -5842,7 +5842,7 @@ func updateMeal(
     description: String,
     directions: String?,
     privacy: String,
-    servings: Int,
+    servings: Double,
     image: String?,
     totalCalories: Double,
     totalProtein: Double,
@@ -5960,7 +5960,7 @@ func updateMealWithFoods(
     description: String,
     directions: String?,
     privacy: String,
-    servings: Int,
+    servings: Double,
     foods: [Food],
     image: String?,
     totalCalories: Double,
@@ -6192,7 +6192,7 @@ func updateMealWithFoods(
                     // Try to extract as many fields as possible from the response, checking both naming conventions
                     let title = json["title"] as? String ?? "Unknown Meal"
                     let description = json["description"] as? String ?? ""
-                    let servings = json["servings"] as? Int ?? 1
+                    let servings = json["servings"] as? Double ?? 1.0
                     let privacy = json["privacy"] as? String ?? "private"
                     let directions = json["directions"] as? String
                     let image = json["image"] as? String
