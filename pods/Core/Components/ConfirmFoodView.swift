@@ -463,7 +463,7 @@ struct ConfirmFoodView: View {
         HStack {
             Text("Number of Servings")
             Spacer()
-            Text("\(String(format: "%.1f", numberOfServings))")
+            Text(numberOfServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(numberOfServings))" : String(format: "%.1f", numberOfServings))
                 .foregroundColor(.secondary)
         }
         .padding()

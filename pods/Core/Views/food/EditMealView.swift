@@ -683,7 +683,7 @@ extension EditMealView {
             Text("Servings")
                 .foregroundColor(.primary)
             Spacer()
-            Text(String(format: "%.1f", servings))
+            Text(servings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(servings))" : String(format: "%.1f", servings))
                 .foregroundColor(.secondary)
         }
         .contentShape(Rectangle())

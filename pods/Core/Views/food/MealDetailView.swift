@@ -540,7 +540,7 @@ extension MealDetailView {
             Text("Servings")
                 .foregroundColor(.primary)
             Spacer()
-            Text(String(format: "%.1f", servingsCount))
+            Text(servingsCount.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(servingsCount))" : String(format: "%.1f", servingsCount))
                 .foregroundColor(.secondary)
         }
         .contentShape(Rectangle())
