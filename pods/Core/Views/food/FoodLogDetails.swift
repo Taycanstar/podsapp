@@ -21,6 +21,7 @@ struct FoodLogDetails: View {
     @State private var isUpdating: Bool = false
     @State private var showServingsPicker: Bool = false
     @State private var showDatePicker: Bool = false
+    @State private var showTimePicker: Bool = false
     
     var food: Food {
         log.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
@@ -87,7 +88,7 @@ struct FoodLogDetails: View {
                                 .foregroundColor(.primary)
                             Spacer()
                             Text(editedServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(editedServings))" : String(format: "%.1f", editedServings))
-                                .foregroundColor(.blue)
+                                .foregroundColor(.primary)
                                 .onTapGesture {
                                     showServingsPicker = true
                                 }
@@ -101,13 +102,29 @@ struct FoodLogDetails: View {
                                 .foregroundColor(.primary)
                             Spacer()
                             HStack(spacing: 8) {
-                                Text(editedDate, style: .date)
-                                    .foregroundColor(.blue)
-                                Text(editedDate, style: .time)
-                                    .foregroundColor(.blue)
-                            }
-                            .onTapGesture {
-                                showDatePicker = true
+                                Button(action: {
+                                    showDatePicker = true
+                                }) {
+                                    Text(editedDate, style: .date)
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color("iosbtn"))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Button(action: {
+                                    showTimePicker = true
+                                }) {
+                                    Text(editedDate, style: .time)
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color("iosbtn"))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal)
@@ -248,15 +265,15 @@ struct FoodLogDetails: View {
         .sheet(isPresented: $showDatePicker) {
             NavigationView {
                 VStack {
-                    DatePicker("Select Date & Time", 
+                    DatePicker("Select Date", 
                              selection: $editedDate, 
-                             displayedComponents: [.date, .hourAndMinute])
+                             displayedComponents: [.date])
                         .datePickerStyle(.wheel)
                         .labelsHidden()
                     Spacer()
                 }
                 .padding()
-                .navigationTitle("Date & Time")
+                .navigationTitle("Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -269,6 +286,37 @@ struct FoodLogDetails: View {
                             // Reset to original date
                             editedDate = log.scheduledAt ?? Date()
                             showDatePicker = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showTimePicker) {
+            NavigationView {
+                VStack {
+                    DatePicker("Select Time", 
+                             selection: $editedDate, 
+                             displayedComponents: [.hourAndMinute])
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                    Spacer()
+                }
+                .padding()
+                .navigationTitle("Time")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            showTimePicker = false
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            // Reset to original date
+                            editedDate = log.scheduledAt ?? Date()
+                            showTimePicker = false
                         }
                     }
                 }
