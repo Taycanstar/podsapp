@@ -23,6 +23,8 @@ struct FoodLogDetails: View {
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
     
+
+    
     var food: Food {
         log.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
     }
@@ -373,22 +375,16 @@ struct FoodLogDetails: View {
             isUpdating = false
             
             switch result {
-            case .success(_):
+            case .success(let response):
                 print("✅ Successfully updated food log")
                 
-                // Update the DayLogsViewModel as well
-                if let index = dayLogsVM.logs.firstIndex(where: { $0.foodLogId == foodLogId }) {
-                    var updatedLog = dayLogsVM.logs[index]
-                    updatedLog.calories = editedServings * (food.calories ?? 0)
-                    updatedLog.food?.numberOfServings = editedServings
-                    if let newMealType = mealTypeToUpdate {
-                        updatedLog.mealType = newMealType
-                        updatedLog.message = "\(food.displayName) – \(newMealType)"
-                    }
-                    if let newDate = dateToUpdate {
-                        updatedLog.scheduledAt = newDate
-                    }
-                    dayLogsVM.logs[index] = updatedLog
+                // Simple approach: Just reload logs for the current date
+                // This automatically handles all cases:
+                // - If log moved to different date: it disappears from current view ✅
+                // - If log stayed on same date: it appears with updated values ✅
+                // - If time changed: it shows with new time ✅
+                DispatchQueue.main.async {
+                    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
                 }
                 
                 hasChanges = false

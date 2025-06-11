@@ -257,6 +257,19 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Refresh logs data when water is logged (for current selected date)
                 vm.loadLogs(for: vm.selectedDate)
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FoodLogUpdated"))) { notification in
+                print("🍎 DashboardView received FoodLogUpdated notification")
+                if let userInfo = notification.userInfo,
+                   let updatedLog = userInfo["updatedLog"] as? CombinedLog,
+                   let logId = userInfo["logId"] as? Int {
+                    
+                    // Update the log in our local state immediately
+                    if let index = vm.logs.firstIndex(where: { $0.foodLogId == logId }) {
+                        vm.logs[index] = updatedLog
+                        print("✅ Updated log in dashboard view")
+                    }
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
