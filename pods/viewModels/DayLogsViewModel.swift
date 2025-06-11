@@ -287,12 +287,16 @@ func loadLogs(for date: Date) {
                             print("✅ Log removed from current day and added to target date's cache")
                             // DO NOT navigate automatically - let user stay on current date
                         } else {
-                            // Same date - update in place
-                            self.logs[index].food?.numberOfServings = updatedFoodLog.servings
-                            self.logs[index].calories = updatedFoodLog.calories
-                            self.logs[index].mealType = updatedFoodLog.meal_type
-                            self.logs[index].scheduledAt = updatedFoodLog.logDate
-                            self.logs[index].message = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                            // Same date – update in place **and** force Combine to emit
+                            var updatedLog = self.logs[index]              // 1️⃣ copy the element (value-type struct)
+                            updatedLog.food?.numberOfServings = updatedFoodLog.servings
+                            updatedLog.calories              = updatedFoodLog.calories
+                            updatedLog.mealType              = updatedFoodLog.meal_type
+                            updatedLog.scheduledAt           = updatedFoodLog.logDate
+                            updatedLog.message               = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+
+                            // 2️⃣ overwrite the slot – this changes the array instance, so @Published fires
+                            self.logs[index] = updatedLog
                         }
                         
                         // Recalculate totals for current day

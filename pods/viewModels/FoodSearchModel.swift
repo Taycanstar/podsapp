@@ -570,8 +570,11 @@ extension CombinedLog {
 // Implement == operator for Equatable conformance
 extension CombinedLog {
     static func == (lhs: CombinedLog, rhs: CombinedLog) -> Bool {
-        // Two logs are considered equal if they have the same id
-        return lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.scheduledAt == rhs.scheduledAt &&   // time matters!
+        lhs.calories     == rhs.calories &&
+        lhs.food?.numberOfServings == rhs.food?.numberOfServings &&
+        lhs.mealType     == rhs.mealType
     }
 }
 
