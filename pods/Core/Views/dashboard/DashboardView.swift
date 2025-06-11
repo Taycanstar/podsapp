@@ -689,49 +689,42 @@ private extension DashboardView {
     }
 
     var emptyState: some View {
-        VStack(alignment: .leading,spacing: 20) {
-            Text("Recent Logs").font(.title).fontWeight(.bold)
-            Text("Food logged will appear here. Tap the (+) button to add a new log.")
-                .font(.subheadline)
-                .foregroundColor(.primary)
-
-             
-                Button(action: {
-                    // Debug prints
-                    print("🔍 Start Logging tapped - hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
-                    print("🔍 showLogFlowSheet current value: \(showLogFlowSheet)")
-                    print("🔍 onboarding.onboardingCompleted: \(onboarding.onboardingCompleted)")
-                    print("🔍 onboarding.isShowingOnboarding: \(onboarding.isShowingOnboarding)")
-                    
-                    // CRITICAL FIX: Only show log flow if onboarding is completed
-                    // This prevents modal conflicts during onboarding
-                    if !UserDefaults.standard.hasSeenLogFlow && onboarding.onboardingCompleted && !onboarding.isShowingOnboarding {
-                        print("🔍 Showing log flow sheet (onboarding completed)")
-                        showLogFlowSheet = true
-                    } else if !UserDefaults.standard.hasSeenLogFlow {
-                        print("🔍 Log flow needed but onboarding in progress - not showing")
-                        // Do nothing - wait for onboarding to complete
-                    } else {
-                        print("🔍 Posting notification for NewSheetView")
-                        // Post notification to ContentView to show NewSheetView
-                        NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
-                    }
-                    HapticFeedback.generate()
-                }) {
-                    Text("Start Logging")
-                        .font(.system(size: 16, weight: .regular))
-                        .padding(.vertical)
-                        .padding(.horizontal, 24)
-                        .background(Color("background"))
-                        .foregroundColor(Color("bg"))
-                        .cornerRadius(100)
-                }
-                .background(Color("background"))
-                 .cornerRadius(100)
-           
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                Text(getTimeBasedGreeting())
+                    .font(.system(size: 36))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("Your plate is empty. Tap + to start logging")
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            
+            Image("plate")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .opacity(0.7)
         }
-        
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+    
+    // Helper function to get time-based greeting
+    private func getTimeBasedGreeting() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        
+        switch hour {
+        case 5..<12:  // 5:00 AM to 11:59 AM
+        
+            return "Good Morning"
+        case 12..<17:  // 12:00 PM to 4:59 PM
+            return "Good Afternoon"
+        default:  // 5:00 PM to 4:59 AM
+            return "Good Evening"
+        }
     }
 
 
