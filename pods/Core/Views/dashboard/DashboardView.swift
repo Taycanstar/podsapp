@@ -691,15 +691,20 @@ private extension DashboardView {
     var emptyState: some View {
         VStack(spacing: 20) {
             VStack(spacing: 12) {
-                Text(getTimeBasedGreeting())
+                let titleText = getTimeBasedGreeting()
+                
+                Text(titleText)
                     .font(.system(size: 36))
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
+                    .fixedSize(horizontal: true, vertical: false)
                 
                 Text("Your plate is empty. Tap + to start logging")
                     .font(.system(size: 20))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: titleTextWidth(for: titleText))
             }
             
             Image("plate")
@@ -725,6 +730,14 @@ private extension DashboardView {
         default:  // 5:00 PM to 4:59 AM
             return "Good Evening"
         }
+    }
+    
+    // Helper function to calculate title text width
+    private func titleTextWidth(for text: String) -> CGFloat {
+        let font = UIFont.systemFont(ofSize: 36, weight: .semibold)
+        let attributes = [NSAttributedString.Key.font: font]
+        let size = (text as NSString).size(withAttributes: attributes)
+        return size.width
     }
 
 
@@ -1591,3 +1604,4 @@ private extension DashboardView {
         }.reduce(0, +)
     }
 }
+
