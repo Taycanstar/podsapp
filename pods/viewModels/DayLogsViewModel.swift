@@ -230,4 +230,79 @@ func loadLogs(for date: Date) {
         // Recalculate totals after removal
         recalculateTotals()
     }
+
+    func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let foodLogId = log.foodLogId else {
+            completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid log ID"])))
+            return
+        }
+
+        // Call the repository to update the log
+        repo.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedFoodLog):
+                    // Find the log in the local array
+                    if let index = self.logs.firstIndex(where: { $0.id == log.id }) {
+                        
+                        let oldLogDate = self.logs[index].scheduledAt ?? Date()
+                        let dateChanged = !Calendar.current.isDate(oldLogDate, inSameDayAs: date)
+                        
+                        if dateChanged {
+                            // Log was moved to a different date
+                            print("📅 Log moved from \(oldLogDate) to \(date)")
+                            
+                            // Remove from current day's logs
+                            self.logs.remove(at: index)
+                            
+                            // Remove from current day's pending cache
+                            let oldKey = Calendar.current.startOfDay(for: oldLogDate)
+                            if var oldPending = self.pendingByDate[oldKey] {
+                                oldPending.removeAll { $0.id == log.id }
+                                if oldPending.isEmpty {
+                                    self.pendingByDate.removeValue(forKey: oldKey)
+                                } else {
+                                    self.pendingByDate[oldKey] = oldPending
+                                }
+                            }
+                            
+                            // Add to new date's pending cache (so it shows up when user navigates there)
+                            let newKey = Calendar.current.startOfDay(for: date)
+                            var newPending = self.pendingByDate[newKey] ?? []
+                            
+                            // Create updated log for the new date
+                            var updatedLog = log
+                            updatedLog.food?.numberOfServings = updatedFoodLog.servings
+                            updatedLog.calories = updatedFoodLog.calories
+                            updatedLog.mealType = updatedFoodLog.meal_type
+                            updatedLog.scheduledAt = updatedFoodLog.logDate
+                            updatedLog.message = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                            
+                            // Don't add duplicate to pending
+                            if !newPending.contains(where: { $0.id == updatedLog.id }) {
+                                newPending.insert(updatedLog, at: 0)
+                                self.pendingByDate[newKey] = newPending
+                            }
+                            
+                            print("✅ Log removed from current day and added to target date's cache")
+                            // DO NOT navigate automatically - let user stay on current date
+                        } else {
+                            // Same date - update in place
+                            self.logs[index].food?.numberOfServings = updatedFoodLog.servings
+                            self.logs[index].calories = updatedFoodLog.calories
+                            self.logs[index].mealType = updatedFoodLog.meal_type
+                            self.logs[index].scheduledAt = updatedFoodLog.logDate
+                            self.logs[index].message = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                        }
+                        
+                        // Recalculate totals for current day
+                        self.recalculateTotals()
+                    }
+                    completion(.success(()))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
 }

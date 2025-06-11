@@ -344,49 +344,18 @@ struct FoodLogDetails: View {
         
         isUpdating = true
         
-        let originalServings = log.food?.numberOfServings ?? 1.0
-        let originalDate = log.scheduledAt ?? Date()
-        let originalMealType = log.mealType ?? "Lunch"
-        
-        var servingsToUpdate: Double? = nil
-        var dateToUpdate: Date? = nil
-        var mealTypeToUpdate: String? = nil
-        
-        // Only include changed values
-        if editedServings != originalServings {
-            servingsToUpdate = editedServings
-        }
-        
-        if abs(editedDate.timeIntervalSince(originalDate)) > 60 {
-            dateToUpdate = editedDate
-        }
-        
-        if editedMealType != originalMealType {
-            mealTypeToUpdate = editedMealType
-        }
-        
-        foodManager.updateFoodLog(
-            logId: foodLogId,
-            servings: servingsToUpdate,
-            date: dateToUpdate,
-            mealType: mealTypeToUpdate,
-            notes: nil
+        // Use the new DayLogsViewModel.updateLog function
+        dayLogsVM.updateLog(
+            log: log,
+            servings: editedServings,
+            date: editedDate,
+            mealType: editedMealType
         ) { result in
             isUpdating = false
             
             switch result {
-            case .success(let response):
+            case .success:
                 print("✅ Successfully updated food log")
-                
-                // Simple approach: Just reload logs for the current date
-                // This automatically handles all cases:
-                // - If log moved to different date: it disappears from current view ✅
-                // - If log stayed on same date: it appears with updated values ✅
-                // - If time changed: it shows with new time ✅
-                DispatchQueue.main.async {
-                    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate)
-                }
-                
                 hasChanges = false
                 dismiss()
                 
