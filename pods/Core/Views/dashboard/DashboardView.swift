@@ -699,7 +699,7 @@ private extension DashboardView {
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: true, vertical: false)
                 
-                Text("Your plate is empty. Tap + to start logging")
+                Text("Your plate is empty. Tap + to start logging.")
                     .font(.system(size: 20))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
