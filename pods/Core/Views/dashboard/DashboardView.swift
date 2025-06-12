@@ -19,6 +19,21 @@ struct DashboardView: View {
 
     @State private var showLogFlowSheet = false
     @State private var selectedFoodLogId: String? = nil
+    
+    // ─── Sort state ─────────────────────────────────────────────────────────
+    @State private var sortOption: LogSortOption = .date
+    
+    enum LogSortOption: String, CaseIterable {
+        case date = "Date"
+        case meal = "Meal"
+        
+        var iconName: String {
+            switch self {
+            case .date: return "calendar"
+            case .meal: return "fork.knife"
+            }
+        }
+    }
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -26,6 +41,25 @@ struct DashboardView: View {
 
   private var calorieGoal : Double { vm.calorieGoal }
 private var remainingCal: Double { vm.remainingCalories }
+
+    // ─── Sorted logs ────────────────────────────────────────────────────────
+    private var sortedLogs: [CombinedLog] {
+        switch sortOption {
+        case .date:
+            // Default sorting: most recent first
+            return vm.logs
+        case .meal:
+            // Sort by meal type: Breakfast, Lunch, Dinner, Snacks
+            return vm.logs.sorted { log1, log2 in
+                let mealOrder = ["Breakfast": 0, "Lunch": 1, "Dinner": 2, "Snacks": 3]
+                let meal1 = log1.mealType ?? ""
+                let meal2 = log2.mealType ?? ""
+                let order1 = mealOrder[meal1] ?? 999
+                let order2 = mealOrder[meal2] ?? 999
+                return order1 < order2
+            }
+        }
+    }
 
 
     private var navTitle: String {
@@ -112,6 +146,26 @@ private var remainingCal: Double { vm.remainingCalories }
                                     .font(.title)
                                     .fontWeight(.bold)
                                 Spacer()
+                                
+                                Menu {
+                                    ForEach(LogSortOption.allCases, id: \.self) { option in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                sortOption = option
+                                            }
+                                        }) {
+                                            HStack {
+                                                Text(option.rawValue)
+                                                Spacer()
+                                                Image(systemName: option.iconName)
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.primary)
+                                }
                             }
                             .padding(.horizontal)
                             .listRowInsets(EdgeInsets())
@@ -119,7 +173,7 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowSeparator(.hidden)
                         }
                         
-                        ForEach(vm.logs) { log in
+                        ForEach(sortedLogs) { log in
                             ZStack {
                                 LogRow(log: log)
                                     .id(log.id)
@@ -158,7 +212,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     Spacer()
                         .frame(height: 100)
                 }
-                .animation(.default, value: vm.logs)
+                .animation(.default, value: sortedLogs)
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
         VStack {
@@ -295,8 +349,8 @@ private var remainingCal: Double { vm.remainingCalories }
     private func deleteLogItems(at indexSet: IndexSet) {
         print("Deleting log items at indices: \(indexSet)")
         
-        // Get the logs that should be deleted
-        let logsToDelete = indexSet.map { vm.logs[$0] }
+        // Get the logs that should be deleted from the sorted array
+        let logsToDelete = indexSet.map { sortedLogs[$0] }
         
         // Log detailed information about the logs to be deleted
         for log in logsToDelete {
