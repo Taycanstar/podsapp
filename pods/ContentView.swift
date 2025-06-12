@@ -181,9 +181,10 @@ struct ContentView: View {
                 }
 
                 .fullScreenCover(isPresented: $showVoiceLog) {
-                    VoiceLogView(isPresented: $showVoiceLog)
+                    VoiceLogView(isPresented: $showVoiceLog, selectedMeal: selectedMeal)
                         .onAppear {
                             print("VoiceLogView appeared from ContentView")
+                            print("🍽️ ContentView passing selectedMeal to VoiceLogView: \(selectedMeal)")
                         }
                         .onDisappear {
                             print("VoiceLogView disappeared from ContentView")
@@ -228,6 +229,9 @@ struct ContentView: View {
         .onAppear {
             print("⚠️ ContentView appeared: Force checking onboarding status")
             forceCheckOnboarding()
+        }
+        .onChange(of: selectedMeal) { _, newValue in
+            print("🍽️ ContentView selectedMeal changed to: \(newValue)")
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

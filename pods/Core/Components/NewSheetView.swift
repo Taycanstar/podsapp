@@ -34,11 +34,23 @@ struct NewSheetView: View {
             
             Menu {
                      
-                Button("Snacks") { selectedMeal = "Snacks" }
-                 Button("Dinner") { selectedMeal = "Dinner" }
-                        Button("Lunch") { selectedMeal = "Lunch" }
+                Button("Snacks") { 
+                    selectedMeal = "Snacks"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+                 Button("Dinner") { 
+                    selectedMeal = "Dinner"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+                        Button("Lunch") { 
+                    selectedMeal = "Lunch"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
           
-                Button("Breakfast") { selectedMeal = "Breakfast" }
+                Button("Breakfast") { 
+                    selectedMeal = "Breakfast"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
          
             } label: {
                 HStack(spacing: 4) {
@@ -81,9 +93,10 @@ struct NewSheetView: View {
                       case "Log Food":
                         HapticFeedback.generate()
                         isPresented = false
-                        viewModel.showFoodContainer()
+                        viewModel.showFoodContainer(selectedMeal: selectedMeal)
                       case "Voice Log":
                         HapticFeedback.generate()
+                        print("🍽️ NewSheetView: Tapping Voice Log with selectedMeal: \(selectedMeal)")
                         isPresented = false
                         showVoiceLog = true
                       case "Scan Food":

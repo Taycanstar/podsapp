@@ -1207,6 +1207,8 @@ struct LogRow: View {
             return "sun.max.fill"
         case "dinner":
             return "moon.fill"
+        case "snacks", "snack":
+            return "popcorn.fill"
         default:
             return "popcorn.fill"
         }

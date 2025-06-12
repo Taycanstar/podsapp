@@ -2376,7 +2376,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             barcode: barcode,
             userEmail: userEmail,
             imageData: imageBase64,
-            mealType: "Lunch",
+            mealType: "Lunch", // Default meal type since this method doesn't have mealType parameter
             shouldLog: false
         ) { [weak self] result in
             guard let self = self else { return }
@@ -2449,7 +2449,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             barcode: barcode,
             userEmail: userEmail,
             imageData: imageBase64,
-            mealType: "Lunch",
+            mealType: "Lunch", // Default meal type since this method doesn't have mealType parameter
             shouldLog: false
         ) { [weak self] result in
             guard let self = self else { return }
@@ -2722,7 +2722,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
     }
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
-    func processVoiceRecording(audioData: Data) {
+    func processVoiceRecording(audioData: Data, mealType: String = "Lunch") {
+        print("🍽️ FoodManager.processVoiceRecording called with mealType: \(mealType)")
+        
         // Set macro generation flags for proper UI display
         isGeneratingMacros = true  // This triggers MacroGenerationCard
         isLoading = true  // This is what makes the loading card visible in DashboardView
@@ -2761,7 +2763,8 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 print("✅ Voice transcription successful: \(text)")
                 
                 // Second step: Generate AI macros from the transcribed text
-                self.generateMacrosWithAI(foodDescription: text, mealType: "Lunch") { result in
+                print("🍽️ Calling generateMacrosWithAI with mealType: \(mealType)")
+                self.generateMacrosWithAI(foodDescription: text, mealType: mealType) { result in
                     // Use defer to ensure flags are always reset
                     defer {
                         // Stop the analysis animation timer

@@ -187,19 +187,30 @@ struct FoodContainerView: View {
     }
     
     init() {
-        // Set initial meal based on time of day
-        let hour = Calendar.current.component(.hour, from: Date())
-        let defaultMeal: String
+        // Check if a meal was selected from NewSheetView
+        let selectedMealFromNewSheet = UserDefaults.standard.string(forKey: "selectedMealFromNewSheet")
         
-        switch hour {
-        case 4...11:  // 4:00 AM to 11:00 AM
-            defaultMeal = "Breakfast"
-        case 12...16:  // 11:01 AM to 4:00 PM
-            defaultMeal = "Lunch"
-        default:  // 4:01 PM to 3:59 AM
-            defaultMeal = "Dinner"
+        let initialMeal: String
+        if let selectedMeal = selectedMealFromNewSheet {
+            // Use the meal selected in NewSheetView
+            initialMeal = selectedMeal
+            // Clear the stored value so it doesn't persist for future opens
+            UserDefaults.standard.removeObject(forKey: "selectedMealFromNewSheet")
+        } else {
+            // Set initial meal based on time of day
+            let hour = Calendar.current.component(.hour, from: Date())
+            
+            switch hour {
+            case 4...11:  // 4:00 AM to 11:00 AM
+                initialMeal = "Breakfast"
+            case 12...16:  // 11:01 AM to 4:00 PM
+                initialMeal = "Lunch"
+            default:  // 4:01 PM to 3:59 AM
+                initialMeal = "Dinner"
+            }
         }
-        _selectedMeal = State(initialValue: defaultMeal)
+        
+        _selectedMeal = State(initialValue: initialMeal)
     }
     
     // Helper method to dismiss container and navigate to dashboard
