@@ -2223,6 +2223,7 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
 func analyzeFoodImage(
   image: UIImage,
   userEmail: String,
+  mealType: String = "Lunch",
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
   // ─── 1) UI state ─────────────────────────────
@@ -2242,7 +2243,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
 }
 
   // ─── 3) Call backend ─────────────────────────
-  networkManager.analyzeFoodImage(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
+  networkManager.analyzeFoodImage(image: image, userEmail: userEmail, mealType: mealType) { [weak self] success, payload, errMsg in
     guard let self = self else { return }
     DispatchQueue.main.async {
       // stop ticker + UI
@@ -2501,7 +2502,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         }
     }
     // MARK: - Enhanced Barcode Lookup
-    func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+    func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         
         // Set barcode scanning states for UI feedback
@@ -2534,7 +2535,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             barcode: barcode,
             userEmail: userEmail,
             imageData: nil,  // No image for barcode-only lookup
-            mealType: "Lunch",
+            mealType: mealType,
             shouldLog: false  // Don't log automatically, let user confirm first
         ) { [weak self] result in
             guard let self = self else {
@@ -2585,7 +2586,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     message: "Barcode scan: \(barcode) - \(food.displayName)",
                     foodLogId: nil,  // No log ID yet since not confirmed
                     food: food.asLoggedFoodItem,
-                    mealType: "Lunch",
+                    mealType: mealType,
                     mealLogId: nil,
                     meal: nil,
                     mealTime: nil,

@@ -16,8 +16,8 @@ struct NewSheetView: View {
     @Binding var selectedTab: Int 
     @Binding var showFoodScanner: Bool
     @Binding var showVoiceLog: Bool
+    @Binding var selectedMeal: String
     @EnvironmentObject var viewModel: OnboardingViewModel
-    
 
     let options = [
         ("Log Food", "magnifyingglass"),
@@ -32,10 +32,26 @@ struct NewSheetView: View {
                 .foregroundColor(Color("grabber"))
                 .padding(.top, 12)
             
-            Text("New")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.top, 24)
-                .padding(.bottom, 8)
+            Menu {
+                     
+                Button("Snacks") { selectedMeal = "Snacks" }
+                 Button("Dinner") { selectedMeal = "Dinner" }
+                        Button("Lunch") { selectedMeal = "Lunch" }
+          
+                Button("Breakfast") { selectedMeal = "Breakfast" }
+         
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedMeal)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 8)
             
             Divider()
             
