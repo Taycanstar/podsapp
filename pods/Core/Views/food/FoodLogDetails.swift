@@ -19,7 +19,6 @@ struct FoodLogDetails: View {
     @State private var editedMealType: String
     @State private var hasChanges: Bool = false
     @State private var isUpdating: Bool = false
-    @State private var showServingsPicker: Bool = false
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
     
@@ -36,20 +35,22 @@ struct FoodLogDetails: View {
         self._editedMealType = State(initialValue: log.mealType ?? "Lunch")
     }
     
-    // Helper to get nutrient value by name
+    // Helper to get nutrient value by name (scaled by servings)
     private func nutrientValue(_ name: String) -> String {
         if let value = food.foodNutrients.first(where: { $0.nutrientName == name })?.value {
-            return String(format: "%g", value)
+            let scaledValue = value * editedServings
+            return String(format: "%g", scaledValue)
         }
         return "0"
     }
     
-    // Helper to get nutrient value with unit
+    // Helper to get nutrient value with unit (scaled by servings)
     private func nutrientValueWithUnit(_ name: String, defaultUnit: String) -> String {
         if let nutrient = food.foodNutrients.first(where: { $0.nutrientName == name }) {
             let value = nutrient.value ?? 0
+            let scaledValue = value * editedServings
             let unit = nutrient.unitName ?? defaultUnit
-            return "\(String(format: "%g", value)) \(unit)"
+            return "\(String(format: "%g", scaledValue)) \(unit)"
         }
         return "0 \(defaultUnit)"
     }
@@ -89,10 +90,17 @@ struct FoodLogDetails: View {
                             Text("Number of Servings")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text(editedServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(editedServings))" : String(format: "%.1f", editedServings))
-                                .foregroundColor(.primary)
-                                .onTapGesture {
-                                    showServingsPicker = true
+                            TextField("Servings", value: $editedServings, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                                .toolbar {
+                                    ToolbarItemGroup(placement: .keyboard) {
+                                        Spacer()
+                                        Button("Done") {
+                                            hideKeyboard()
+                                        }
+                                    }
                                 }
                         }
                         .padding(.horizontal)
@@ -261,9 +269,7 @@ struct FoodLogDetails: View {
         .onChange(of: editedServings) { _ in checkForChanges() }
         .onChange(of: editedDate) { _ in checkForChanges() }
         .onChange(of: editedMealType) { _ in checkForChanges() }
-        .sheet(isPresented: $showServingsPicker) {
-            servingsSelectorSheet()
-        }
+
         .sheet(isPresented: $showDatePicker) {
             NavigationView {
                 VStack {
@@ -366,46 +372,9 @@ struct FoodLogDetails: View {
         }
     }
     
-    private func servingsSelectorSheet() -> some View {
-        VStack(spacing: 0) {
-            // Custom Navigation Bar
-            ZStack {
-                // Done button on trailing edge
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        showServingsPicker = false
-                    }
-                }
-                
-                // Centered title
-                Text("Servings")
-                    .font(.headline)
-            }
-            .padding()
-            
-            Divider()
-            
-            // Centered Picker
-            ServingsPickerWheel(
-                selectedWhole: Binding(
-                    get: { Int(editedServings) },
-                    set: { newValue in
-                        editedServings = Double(newValue) + editedServings.truncatingRemainder(dividingBy: 1)
-                    }
-                ),
-                selectedFraction: Binding(
-                    get: { editedServings.truncatingRemainder(dividingBy: 1) },
-                    set: { newValue in
-                        editedServings = Double(Int(editedServings)) + newValue
-                    }
-                )
-            )
-            .frame(height: 216)
-        }
-        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
-        .presentationDragIndicator(.visible)
-        .ignoresSafeArea(.all, edges: .top)
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     // List of additional nutrients to show
@@ -494,66 +463,4 @@ struct FoodLogDetails: View {
 
 
 
-struct ServingsPickerWheel: UIViewRepresentable {
-    @Binding var selectedWhole: Int
-    @Binding var selectedFraction: Double
-    
-    private let wholeNumbers = Array(1...20)
-    private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
-    private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
-    
-    func makeUIView(context: Context) -> UIPickerView {
-        let picker = UIPickerView()
-        picker.delegate = context.coordinator
-        picker.dataSource = context.coordinator
-        return picker
-    }
-    
-    func updateUIView(_ uiView: UIPickerView, context: Context) {
-        // Find the index of the current whole number
-        if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
-            uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
-        }
-        
-        // Find the index of the current fraction
-        if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
-            uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
-        }
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
-        let parent: ServingsPickerWheel
-        
-        init(_ parent: ServingsPickerWheel) {
-            self.parent = parent
-        }
-        
-        func numberOfComponents(in pickerView: UIPickerView) -> Int {
-            return 2
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-            return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-            if component == 0 {
-                return "\(parent.wholeNumbers[row])"
-            } else {
-                return parent.fractionLabels[row]
-            }
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-            if component == 0 {
-                parent.selectedWhole = parent.wholeNumbers[row]
-            } else {
-                parent.selectedFraction = parent.fractions[row]
-            }
-        }
-    }
-}
+

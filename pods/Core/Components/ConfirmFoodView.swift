@@ -68,7 +68,7 @@ struct ConfirmFoodView: View {
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
-    @State private var showServingSelector = false
+
     
     // Default initializer for manual food creation
     init(path: Binding<NavigationPath>) {
@@ -408,9 +408,7 @@ struct ConfirmFoodView: View {
                 }
             }
         )
-        .sheet(isPresented: $showServingSelector) {
-            servingsSelectorSheet()
-        }
+
     }
     
     // MARK: - Card Views
@@ -462,15 +460,25 @@ struct ConfirmFoodView: View {
     private var servingsRowView: some View {
         HStack {
             Text("Number of Servings")
+                .foregroundColor(.primary)
             Spacer()
-            Text(numberOfServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(numberOfServings))" : String(format: "%.1f", numberOfServings))
-                .foregroundColor(.secondary)
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .onChange(of: numberOfServings) { _ in
+                    updateNutritionValues()
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
         }
         .padding()
-        .contentShape(Rectangle())
-        .onTapGesture {
-            showServingSelector = true
-        }
     }
     
     private var nutritionFactsCard: some View {
@@ -1056,112 +1064,10 @@ extension Double {
     }
 }
 
-struct ServingsPicker: UIViewRepresentable {
-    @Binding var selectedWhole: Int
-    @Binding var selectedFraction: Double
-    
-    private let wholeNumbers = Array(1...20)
-    private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
-    private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
-    
-    func makeUIView(context: Context) -> UIPickerView {
-        let picker = UIPickerView()
-        picker.delegate = context.coordinator
-        picker.dataSource = context.coordinator
-        return picker
-    }
-    
-    func updateUIView(_ uiView: UIPickerView, context: Context) {
-        // Find the index of the current whole number
-        if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
-            uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
-        }
-        
-        // Find the index of the current fraction
-        if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
-            uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
-        }
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIPickerViewDelegate, UIPickerViewDataSource {
-        var parent: ServingsPicker
-        
-        init(_ parent: ServingsPicker) {
-            self.parent = parent
-        }
-        
-        func numberOfComponents(in pickerView: UIPickerView) -> Int {
-            return 2
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-            return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-            if component == 0 {
-                return "\(parent.wholeNumbers[row])"
-            } else {
-                return parent.fractionLabels[row]
-            }
-        }
-        
-        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-            if component == 0 {
-                parent.selectedWhole = parent.wholeNumbers[row]
-            } else {
-                parent.selectedFraction = parent.fractions[row]
-            }
-        }
-    }
-}
-
 extension ConfirmFoodView {
-    private func servingsSelectorSheet() -> some View {
-        VStack(spacing: 0) {
-            // Custom Navigation Bar
-            ZStack {
-                // Done button on trailing edge
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        showServingSelector = false
-                    }
-                }
-                
-                // Centered title
-                Text("Servings")
-                    .font(.headline)
-            }
-            .padding()
-            
-            Divider()
-            
-            // Centered Picker
-            ServingsPicker(
-                selectedWhole: Binding(
-                    get: { Int(numberOfServings) },
-                    set: { newValue in
-                        numberOfServings = Double(newValue) + numberOfServings.truncatingRemainder(dividingBy: 1)
-                        updateNutritionValues()
-                    }
-                ),
-                selectedFraction: Binding(
-                    get: { numberOfServings.truncatingRemainder(dividingBy: 1) },
-                    set: { newValue in
-                        numberOfServings = Double(Int(numberOfServings)) + newValue
-                        updateNutritionValues()
-                    }
-                )
-            )
-            .frame(height: 216)
-        }
-        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
-        .presentationDragIndicator(.visible)
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

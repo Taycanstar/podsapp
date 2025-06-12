@@ -49,7 +49,7 @@ struct CreateFoodView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
     
-    @State private var showServingSelector = false
+
     
     var body: some View {
         ScrollView {
@@ -121,9 +121,7 @@ struct CreateFoodView: View {
                 }
             }
         )
-        .sheet(isPresented: $showServingSelector) {
-            servingsSelectorView
-        }
+
     }
     
     // MARK: - Card Views
@@ -514,64 +512,35 @@ struct CreateFoodView: View {
         }
     }
     
-    // Modify the Number of Servings row to show the sheet
+    // Modify the Number of Servings row to use TextField
     private var numberOfServingsRow: some View {
         HStack {
             Text("Number of Servings")
+                .foregroundColor(.primary)
             Spacer()
-            Text(numberOfServings.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(numberOfServings))" : String(format: "%.1f", numberOfServings))
-                .foregroundColor(.secondary)
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
         }
         .padding(.horizontal)
         .padding(.vertical, 16)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            showServingSelector = true
-        }
     }
 }
 
 
 extension CreateFoodView {
-    private var servingsSelectorView: some View {
-        VStack(spacing: 0) {
-            // Custom Navigation Bar
-            ZStack {
-                // Done button on trailing edge
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        showServingSelector = false
-                    }
-                }
-                
-                // Centered title
-                Text("Servings")
-                    .font(.headline)
-            }
-            .padding()
-            
-            Divider()
-            
-            // Centered Picker
-            ServingsPicker(
-                selectedWhole: Binding(
-                    get: { Int(numberOfServings) },
-                    set: { newValue in
-                        numberOfServings = Double(newValue) + numberOfServings.truncatingRemainder(dividingBy: 1)
-                    }
-                ),
-                selectedFraction: Binding(
-                    get: { numberOfServings.truncatingRemainder(dividingBy: 1) },
-                    set: { newValue in
-                        numberOfServings = Double(Int(numberOfServings)) + newValue
-                    }
-                )
-            )
-            .frame(height: 216)
-        }
-        .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
-        .presentationDragIndicator(.visible)
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

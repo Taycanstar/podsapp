@@ -33,7 +33,7 @@ struct MealDetailView: View {
     @State private var servingsCount: Double
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
-    @State private var showServingSelector = false
+
     
     // Alert states for error handling
     @State private var showAlert = false
@@ -215,12 +215,7 @@ struct MealDetailView: View {
             // Don't update the meal - this should only happen in EditMealView
             // Just update the local UI
         }
-        .sheet(isPresented: $showServingSelector) {
-            servingsSelectorSheet()
-            
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(12)
-        }
+
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -581,118 +576,24 @@ extension MealDetailView {
             Text("Servings")
                 .foregroundColor(.primary)
             Spacer()
-            Text(servingsCount.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(servingsCount))" : String(format: "%.1f", servingsCount))
-                .foregroundColor(.secondary)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            showServingSelector = true
+            TextField("Servings", value: $servingsCount, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
         }
     }
     
-    private func servingsSelectorSheet() -> some View {
-        VStack(spacing: 0) {
-            // Custom Navigation Bar
-            ZStack {
-                // Done button on trailing edge
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        showServingSelector = false
-                    }
-                }
-                
-                // Centered title
-                Text("Servings")
-                    .font(.headline)
-            }
-            .padding()
-            
-            Divider()
-            
-            // Centered Picker
-            ServingsPicker(
-                selectedWhole: Binding(
-                    get: { Int(servingsCount) },
-                    set: { newValue in
-                        servingsCount = Double(newValue) + servingsCount.truncatingRemainder(dividingBy: 1)
-                    }
-                ),
-                selectedFraction: Binding(
-                    get: { servingsCount.truncatingRemainder(dividingBy: 1) },
-                    set: { newValue in
-                        servingsCount = Double(Int(servingsCount)) + newValue
-                    }
-                )
-            )
-            .frame(height:216)
-        }
-          .presentationDetents([.height(UIScreen.main.bounds.height / 3.3)])
-        .ignoresSafeArea(.all, edges: .top)
-    }
-    
-    struct ServingsPicker: UIViewRepresentable {
-        @Binding var selectedWhole: Int
-        @Binding var selectedFraction: Double
-        
-        private let wholeNumbers = Array(1...20)
-        private let fractions: [Double] = [0, 0.125, 0.25, 0.333, 0.5, 0.667, 0.75, 0.875]
-        private let fractionLabels = ["-", "1/8", "1/4", "1/3", "1/2", "2/3", "3/4", "7/8"]
-        
-        func makeUIView(context: Context) -> UIPickerView {
-            let picker = UIPickerView()
-            picker.delegate = context.coordinator
-            picker.dataSource = context.coordinator
-            return picker
-        }
-        
-        func updateUIView(_ uiView: UIPickerView, context: Context) {
-            // Find the index of the current whole number
-            if let wholeIndex = wholeNumbers.firstIndex(of: selectedWhole) {
-                uiView.selectRow(wholeIndex, inComponent: 0, animated: false)
-            }
-            
-            // Find the index of the current fraction
-            if let fractionIndex = fractions.firstIndex(of: selectedFraction) {
-                uiView.selectRow(fractionIndex, inComponent: 1, animated: false)
-            }
-        }
-        
-        func makeCoordinator() -> Coordinator {
-            Coordinator(self)
-        }
-        
-        class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
-            let parent: ServingsPicker
-            
-            init(_ parent: ServingsPicker) {
-                self.parent = parent
-            }
-            
-            func numberOfComponents(in pickerView: UIPickerView) -> Int {
-                return 2
-            }
-            
-            func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-                return component == 0 ? parent.wholeNumbers.count : parent.fractions.count
-            }
-            
-            func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-                if component == 0 {
-                    return "\(parent.wholeNumbers[row])"
-                } else {
-                    return parent.fractionLabels[row]
-                }
-            }
-            
-            func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-                if component == 0 {
-                    parent.selectedWhole = parent.wholeNumbers[row]
-                } else {
-                    parent.selectedFraction = parent.fractions[row]
-                }
-            }
-        }
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
