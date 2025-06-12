@@ -1094,8 +1094,12 @@ struct LogRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Top row: Name and time
+            // Top row: Meal icon, Name and time
             HStack {
+                Image(systemName: mealTimeSymbol)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
+                
                 Text(displayName)
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.primary)
@@ -1190,6 +1194,21 @@ struct LogRow: View {
             return log.meal?.title ?? "Meal"
         case .recipe:
             return log.recipe?.title ?? "Recipe"
+        }
+    }
+    
+    private var mealTimeSymbol: String {
+        guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
+        
+        switch mealType {
+        case "breakfast":
+            return "sunrise.fill"
+        case "lunch":
+            return "sun.max.fill"
+        case "dinner":
+            return "moon.fill"
+        default:
+            return "popcorn.fill"
         }
     }
     private func getTimeLabel() -> String? {
