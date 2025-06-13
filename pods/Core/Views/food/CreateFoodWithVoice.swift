@@ -82,7 +82,7 @@ struct CreateFoodWithVoice: View {
                         
                         Spacer()
                         
-                        // Checkmark button (right) - only enabled when transcription is available
+                        // Checkmark button (right) - enabled when recording or when transcription is available
                         Button(action: {
                             // Guard against double-taps during processing
                             guard !foodManager.isGeneratingFood && !audioRecorder.isProcessing else {
@@ -107,9 +107,9 @@ struct CreateFoodWithVoice: View {
                                 .frame(width: 60, height: 60)
                                 .background(Color.green)
                                 .clipShape(Circle())
-                                .opacity((foodManager.isGeneratingFood || audioRecorder.isProcessing || audioRecorder.transcribedText.isEmpty) ? 0.5 : 1.0)
+                                .opacity((foodManager.isGeneratingFood || audioRecorder.isProcessing) ? 0.5 : 1.0)
                         }
-                        .disabled(foodManager.isGeneratingFood || audioRecorder.isProcessing || audioRecorder.transcribedText.isEmpty)
+                        .disabled(foodManager.isGeneratingFood || audioRecorder.isProcessing)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 40)
@@ -182,6 +182,27 @@ struct CreateFoodWithVoice: View {
     }
     
     private func createFoodFromVoice() {
+        // If we have transcribed text, use it immediately
+        if !audioRecorder.transcribedText.isEmpty {
+            generateFoodFromTranscription()
+        } else {
+            // If no transcribed text yet, wait for transcription to complete
+            print("Waiting for transcription to complete...")
+            // Set up a timer to check for transcription completion
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+                if !audioRecorder.transcribedText.isEmpty {
+                    timer.invalidate()
+                    generateFoodFromTranscription()
+                } else if !audioRecorder.isProcessing && audioRecorder.transcribedText.isEmpty {
+                    // If processing is done but still no text, something went wrong
+                    timer.invalidate()
+                    print("❌ Transcription failed or returned empty")
+                }
+            }
+        }
+    }
+    
+    private func generateFoodFromTranscription() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
         // Use FoodManager to generate food with AI
