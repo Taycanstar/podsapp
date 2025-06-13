@@ -497,7 +497,7 @@ private struct FoodListView: View {
                         showCreateFoodWithScan = true
                     }) {
                         HStack {
-                            Text("Scan Package")
+                            Text("Scan Food")
                             Spacer()
                             Image(systemName: "barcode.viewfinder")
                         }
