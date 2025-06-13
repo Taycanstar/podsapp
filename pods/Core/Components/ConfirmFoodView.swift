@@ -36,6 +36,9 @@ struct ConfirmFoodView: View {
     @State private var calcium: String = ""
     @State private var iron: String = ""
     
+    // Brand information
+    @State private var brand: String = ""
+    
     // UI states
     @State private var isCreating: Bool = false
     @State private var showErrorAlert: Bool = false
@@ -68,15 +71,17 @@ struct ConfirmFoodView: View {
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
-
+    // NEW: Add a flag to distinguish between creation and logging modes
+    @State private var isCreationMode: Bool = false
     
     // Default initializer for manual food creation
     init(path: Binding<NavigationPath>) {
         self._path = path
         self.isBarcodeFood = false
+        self.isCreationMode = false
     }
     
-    // New initializer for barcode food confirmation
+    // New initializer for barcode food confirmation (logging mode)
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
         self._path = path
         self._title = State(initialValue: food.description)
@@ -120,7 +125,7 @@ struct ConfirmFoodView: View {
         } else {
             print("Could not encode food object to JSON")
         }
-        print("====== END BARCODE FOOD RESPONSE ======")
+        
         
         // Set serving size information
         if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
@@ -167,165 +172,161 @@ struct ConfirmFoodView: View {
         self._carbs = State(initialValue: String(format: "%.1f", tmpCarbs))
         self._fat = State(initialValue: String(format: "%.1f", tmpFat))
         
-        // Debug: Print the extracted values
-        print("DEBUG: Extracted Nutrition Values:")
-        print("- Calories: \(tmpCalories)")
-        print("- Protein: \(tmpProtein)")
-        print("- Carbs: \(tmpCarbs)")
-        print("- Fat: \(tmpFat)")
-        
-        // Debug: Print the raw food nutrients again to verify
-        print("DEBUG: Direct check of food.foodNutrients:")
-        for nutrient in food.foodNutrients {
-            print("- \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
-            
-            // Special checking for carbs
-            if nutrient.nutrientName == "Carbohydrate, by difference" {
-                print("  Found carbohydrate with value: \(nutrient.value ?? 0)")
-            }
-        }
-        
-        // Debug: Print the food object's computed properties
-        if let food = originalFood {
-            print("DEBUG: Food Object Computed Properties:")
-            print("- food.calories: \(food.calories ?? 0)")
-            print("- food.protein: \(food.protein ?? 0)")
-            print("- food.carbs: \(food.carbs ?? 0)")
-            print("- food.fat: \(food.fat ?? 0)")
-            
-            // Debug: Print how the carbs are calculated
-            print("DEBUG: Carbohydrate Calculation:")
-            if let carbNutrient = food.foodNutrients.first(where: { $0.nutrientName == "Carbohydrate, by difference" }) {
-                print("- Found exact 'Carbohydrate, by difference': \(carbNutrient.value ?? 0)")
-            } else {
-                print("- No exact 'Carbohydrate, by difference' nutrient found")
-                
-                let carbMatches = food.foodNutrients.filter { 
-                    $0.nutrientName.lowercased().contains("carbohydrate") ||
-                    $0.nutrientName.lowercased().contains("carbs")
-                }
-                print("- Carbohydrate pattern matches: \(carbMatches.count)")
-                for (index, nutrient) in carbMatches.enumerated() {
-                    print("  \(index+1). \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
-                }
-            }
-        }
-        
-        // Debug: Print the raw nutrients from food
-        print("DEBUG: Raw Nutrients from Food:")
-        for nutrient in food.foodNutrients {
-            print("- \(nutrient.nutrientName): \(nutrient.value ?? 0) \(nutrient.unitName ?? "")")
-        }
-        
-        // No longer needed - we're setting these directly from extracted values above
-        // (already set through the State initialValue assignments earlier)
-        
-        // Extract additional nutrients
-        var tmpSaturatedFat: Double = 0
-        var tmpPolyunsaturatedFat: Double = 0
-        var tmpMonounsaturatedFat: Double = 0
-        var tmpTransFat: Double = 0
-        var tmpCholesterol: Double = 0
-        var tmpSodium: Double = 0
-        var tmpPotassium: Double = 0
-        var tmpSugar: Double = 0
-        var tmpFiber: Double = 0
-        var tmpVitaminA: Double = 0
-        var tmpVitaminC: Double = 0
-        var tmpCalcium: Double = 0
-        var tmpIron: Double = 0
-        
-        // Get additional nutrients in one pass
+        // Set additional nutrients
         for nutrient in food.foodNutrients {
             switch nutrient.nutrientName {
-            case "Saturated Fatty Acids":
-                tmpSaturatedFat = nutrient.value ?? 0
-            case "Polyunsaturated Fatty Acids":
-                tmpPolyunsaturatedFat = nutrient.value ?? 0
-            case "Monounsaturated Fatty Acids":
-                tmpMonounsaturatedFat = nutrient.value ?? 0
-            case "Trans Fatty Acids":
-                tmpTransFat = nutrient.value ?? 0
+            case "Fatty acids, total saturated":
+                self._baseSaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._saturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total polyunsaturated":
+                self._basePolyunsaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._polyunsaturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total monounsaturated":
+                self._baseMonounsaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._monounsaturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total trans":
+                self._baseTransFat = State(initialValue: nutrient.value ?? 0)
+                self._transFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
             case "Cholesterol":
-                tmpCholesterol = nutrient.value ?? 0
-            case "Sodium":
-                tmpSodium = nutrient.value ?? 0
-            case "Potassium":
-                tmpPotassium = nutrient.value ?? 0
-            case "Sugar":
-                tmpSugar = nutrient.value ?? 0
-            case "Fiber":
-                tmpFiber = nutrient.value ?? 0
-            case "Vitamin A":
-                tmpVitaminA = nutrient.value ?? 0
-            case "Vitamin C":
-                tmpVitaminC = nutrient.value ?? 0
-            case "Calcium":
-                tmpCalcium = nutrient.value ?? 0
-            case "Iron":
-                tmpIron = nutrient.value ?? 0
+                self._baseCholesterol = State(initialValue: nutrient.value ?? 0)
+                self._cholesterol = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Sodium, Na":
+                self._baseSodium = State(initialValue: nutrient.value ?? 0)
+                self._sodium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Potassium, K":
+                self._basePotassium = State(initialValue: nutrient.value ?? 0)
+                self._potassium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Sugars, total including NLEA":
+                self._baseSugar = State(initialValue: nutrient.value ?? 0)
+                self._sugar = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fiber, total dietary":
+                self._baseFiber = State(initialValue: nutrient.value ?? 0)
+                self._fiber = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Vitamin A, RAE":
+                self._baseVitaminA = State(initialValue: nutrient.value ?? 0)
+                self._vitaminA = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Vitamin C, total ascorbic acid":
+                self._baseVitaminC = State(initialValue: nutrient.value ?? 0)
+                self._vitaminC = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Calcium, Ca":
+                self._baseCalcium = State(initialValue: nutrient.value ?? 0)
+                self._calcium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Iron, Fe":
+                self._baseIron = State(initialValue: nutrient.value ?? 0)
+                self._iron = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
             default:
                 break
             }
         }
         
-        // Set state for additional nutrient base values
-        self._baseSaturatedFat = State(initialValue: tmpSaturatedFat)
-        self._basePolyunsaturatedFat = State(initialValue: tmpPolyunsaturatedFat)
-        self._baseMonounsaturatedFat = State(initialValue: tmpMonounsaturatedFat)
-        self._baseTransFat = State(initialValue: tmpTransFat)
-        self._baseCholesterol = State(initialValue: tmpCholesterol)
-        self._baseSodium = State(initialValue: tmpSodium)
-        self._basePotassium = State(initialValue: tmpPotassium)
-        self._baseSugar = State(initialValue: tmpSugar)
-        self._baseFiber = State(initialValue: tmpFiber)
-        self._baseVitaminA = State(initialValue: tmpVitaminA)
-        self._baseVitaminC = State(initialValue: tmpVitaminC)
-        self._baseCalcium = State(initialValue: tmpCalcium)
-        self._baseIron = State(initialValue: tmpIron)
-        
-        // Set the displayed string values
-        self._saturatedFat = State(initialValue: String(format: "%.1f", tmpSaturatedFat))
-        self._polyunsaturatedFat = State(initialValue: String(format: "%.1f", tmpPolyunsaturatedFat))
-        self._monounsaturatedFat = State(initialValue: String(format: "%.1f", tmpMonounsaturatedFat))
-        self._transFat = State(initialValue: String(format: "%.1f", tmpTransFat))
-        self._cholesterol = State(initialValue: String(format: "%.1f", tmpCholesterol))
-        self._sodium = State(initialValue: String(format: "%.1f", tmpSodium))
-        self._potassium = State(initialValue: String(format: "%.1f", tmpPotassium))
-        self._sugar = State(initialValue: String(format: "%.1f", tmpSugar))
-        self._fiber = State(initialValue: String(format: "%.1f", tmpFiber))
-        self._vitaminA = State(initialValue: String(format: "%.1f", tmpVitaminA))
-        self._vitaminC = State(initialValue: String(format: "%.1f", tmpVitaminC))
-        self._calcium = State(initialValue: String(format: "%.1f", tmpCalcium))
-        self._iron = State(initialValue: String(format: "%.1f", tmpIron))
-        
-        // Log additional nutrients for debugging
-        print("DEBUG: Extracted Additional Nutrients:")
-        print("- Saturated Fat: \(tmpSaturatedFat)g")
-        print("- Polyunsaturated Fat: \(tmpPolyunsaturatedFat)g")
-        print("- Monounsaturated Fat: \(tmpMonounsaturatedFat)g")
-        print("- Trans Fat: \(tmpTransFat)g")
-        print("- Cholesterol: \(tmpCholesterol)mg")
-        print("- Sodium: \(tmpSodium)mg")
-        print("- Potassium: \(tmpPotassium)mg")
-        print("- Sugar: \(tmpSugar)g")
-        print("- Fiber: \(tmpFiber)g")
-        print("- Vitamin A: \(tmpVitaminA)%")
-        print("- Vitamin C: \(tmpVitaminC)%")
-        print("- Calcium: \(tmpCalcium)%")
-        print("- Iron: \(tmpIron)%")
-        
-        // Set barcode food properties
-        self._isBarcodeFood = State(initialValue: true)
+        // Set flags for barcode food
+        self.isBarcodeFood = true
+        self.isCreationMode = false // This is for logging
         self._originalFood = State(initialValue: food)
         self._barcodeFoodLogId = State(initialValue: foodLogId)
+    }
+    
+    // NEW: Initializer for food creation from scanned data
+    init(path: Binding<NavigationPath>, food: Food, isCreationMode: Bool) {
+        self._path = path
+        self._title = State(initialValue: food.description)
         
-        // Final check of string values that will be displayed
-        print("DEBUG: Final String Values to Display:")
-        print("- Calories string: \(self.calories)")
-        print("- Protein string: \(self.protein)")
-        print("- Carbs string: \(self.carbs)")
-        print("- Fat string: \(self.fat)")
+        // Set serving size information
+        if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
+            self._servingSize = State(initialValue: "\(servingSize) \(unit)")
+            self._servingUnit = State(initialValue: unit)
+        } else if let servingText = food.householdServingFullText {
+            self._servingSize = State(initialValue: servingText)
+        }
+        
+        // Set number of servings (default to 1 if nil)
+        self._numberOfServings = State(initialValue: food.numberOfServings ?? 1)
+        
+        // Calculate nutrition value variables without modifying state directly
+        var tmpCalories: Double = 0
+        var tmpProtein: Double = 0
+        var tmpCarbs: Double = 0
+        var tmpFat: Double = 0
+        
+        // Extract nutrient values directly from food.foodNutrients
+        for nutrient in food.foodNutrients {
+            if nutrient.nutrientName == "Energy" {
+                tmpCalories = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Protein" {
+                tmpProtein = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Carbohydrate, by difference" {
+                tmpCarbs = nutrient.value ?? 0
+            }
+            if nutrient.nutrientName == "Total lipid (fat)" {
+                tmpFat = nutrient.value ?? 0
+            }
+        }
+        
+        // Now set the base values and string display values
+        self._baseCalories = State(initialValue: tmpCalories)
+        self._baseProtein = State(initialValue: tmpProtein)
+        self._baseCarbs = State(initialValue: tmpCarbs)
+        self._baseFat = State(initialValue: tmpFat)
+        
+        // Set the string values for display
+        self._calories = State(initialValue: String(format: "%.1f", tmpCalories))
+        self._protein = State(initialValue: String(format: "%.1f", tmpProtein))
+        self._carbs = State(initialValue: String(format: "%.1f", tmpCarbs))
+        self._fat = State(initialValue: String(format: "%.1f", tmpFat))
+        
+        // Set additional nutrients
+        for nutrient in food.foodNutrients {
+            switch nutrient.nutrientName {
+            case "Fatty acids, total saturated":
+                self._baseSaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._saturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total polyunsaturated":
+                self._basePolyunsaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._polyunsaturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total monounsaturated":
+                self._baseMonounsaturatedFat = State(initialValue: nutrient.value ?? 0)
+                self._monounsaturatedFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fatty acids, total trans":
+                self._baseTransFat = State(initialValue: nutrient.value ?? 0)
+                self._transFat = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Cholesterol":
+                self._baseCholesterol = State(initialValue: nutrient.value ?? 0)
+                self._cholesterol = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Sodium, Na":
+                self._baseSodium = State(initialValue: nutrient.value ?? 0)
+                self._sodium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Potassium, K":
+                self._basePotassium = State(initialValue: nutrient.value ?? 0)
+                self._potassium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Sugars, total including NLEA":
+                self._baseSugar = State(initialValue: nutrient.value ?? 0)
+                self._sugar = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Fiber, total dietary":
+                self._baseFiber = State(initialValue: nutrient.value ?? 0)
+                self._fiber = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Vitamin A, RAE":
+                self._baseVitaminA = State(initialValue: nutrient.value ?? 0)
+                self._vitaminA = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Vitamin C, total ascorbic acid":
+                self._baseVitaminC = State(initialValue: nutrient.value ?? 0)
+                self._vitaminC = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Calcium, Ca":
+                self._baseCalcium = State(initialValue: nutrient.value ?? 0)
+                self._calcium = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            case "Iron, Fe":
+                self._baseIron = State(initialValue: nutrient.value ?? 0)
+                self._iron = State(initialValue: String(format: "%.1f", nutrient.value ?? 0))
+            default:
+                break
+            }
+        }
+        
+        // Set flags for creation mode
+        self.isBarcodeFood = false // Not barcode food since we're creating
+        self.isCreationMode = isCreationMode
+        self._originalFood = State(initialValue: food)
     }
     
     var body: some View {
@@ -350,8 +351,7 @@ struct ConfirmFoodView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                // Text(isBarcodeFood ? "Confirm Food" : "Create Food")
-                      Text("Log Food")
+                Text(isCreationMode ? "Create Food" : (isBarcodeFood ? "Confirm Food" : "Create Food"))
                     .font(.headline)
             }
             
@@ -359,6 +359,12 @@ struct ConfirmFoodView: View {
                 if isBarcodeFood {
                     Button(action: logBarcodeFood) {
                         Text("Done")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(isCreating)
+                } else if isCreationMode {
+                    Button(action: createFoodForCreation) {
+                        Text("Create")
                             .fontWeight(.semibold)
                     }
                     .disabled(isCreating)
@@ -1017,6 +1023,108 @@ struct ConfirmFoodView: View {
                 }
             }
         }
+    }
+    
+    // NEW: Function for creating food from scanned data (creation mode)
+    private func createFoodForCreation() {
+        guard !title.isEmpty, !calories.isEmpty else {
+            errorMessage = "Title and calories are required"
+            showErrorAlert = true
+            return
+        }
+        
+        guard let caloriesValue = Double(calories) else {
+            errorMessage = "Calories must be a valid number"
+            showErrorAlert = true
+            return
+        }
+        
+        // Mark as creating
+        isCreating = true
+        
+        // Format serving text
+        let servingText = servingSize.isEmpty ? "1 serving" : servingSize
+        
+        // Create a list of nutrients
+        var nutrients: [Nutrient] = [
+            Nutrient(nutrientName: "Energy", value: caloriesValue, unitName: "kcal")
+        ]
+        
+        // Add optional nutrients if provided
+        if let proteinValue = Double(protein) {
+            nutrients.append(Nutrient(nutrientName: "Protein", value: proteinValue, unitName: "g"))
+        }
+        
+        if let carbsValue = Double(carbs) {
+            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbsValue, unitName: "g"))
+        }
+        
+        if let fatValue = Double(fat) {
+            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fatValue, unitName: "g"))
+        }
+        
+        // Add all other nutrients if provided
+        addNutrientIfPresent(name: "Fatty acids, total saturated", value: saturatedFat, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Fatty acids, total polyunsaturated", value: polyunsaturatedFat, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Fatty acids, total monounsaturated", value: monounsaturatedFat, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Fatty acids, total trans", value: transFat, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Cholesterol", value: cholesterol, unit: "mg", to: &nutrients)
+        addNutrientIfPresent(name: "Sodium, Na", value: sodium, unit: "mg", to: &nutrients)
+        addNutrientIfPresent(name: "Potassium, K", value: potassium, unit: "mg", to: &nutrients)
+        addNutrientIfPresent(name: "Sugars, total including NLEA", value: sugar, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Fiber, total dietary", value: fiber, unit: "g", to: &nutrients)
+        addNutrientIfPresent(name: "Vitamin A, RAE", value: vitaminA, unit: "µg", to: &nutrients)
+        addNutrientIfPresent(name: "Vitamin C, total ascorbic acid", value: vitaminC, unit: "mg", to: &nutrients)
+        addNutrientIfPresent(name: "Calcium, Ca", value: calcium, unit: "mg", to: &nutrients)
+        addNutrientIfPresent(name: "Iron, Fe", value: iron, unit: "mg", to: &nutrients)
+        
+        // Create food measure
+        let foodMeasure = FoodMeasure(
+            disseminationText: servingText,
+            gramWeight: 100.0, // Default gram weight
+            id: 1,
+            modifier: servingText,
+            measureUnitName: servingUnit,
+            rank: 1
+        )
+        
+        // Create the food object
+        let food = Food(
+            fdcId: Int.random(in: 1000000..<9999999), // Generate a random ID
+            description: title,
+            brandOwner: brand.isEmpty ? nil : brand,
+            brandName: brand.isEmpty ? nil : brand,
+            servingSize: 1.0,
+            numberOfServings: numberOfServings,
+            servingSizeUnit: servingUnit,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: [foodMeasure]
+        )
+        
+        // Add directly to user foods (don't use API since we're creating, not logging)
+        if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+            foodManager.userFoods.insert(food, at: 0)
+        }
+        
+        print("✅ Successfully created food: \(food.description)")
+        
+        // Show success toast
+        foodManager.lastGeneratedFood = food
+        foodManager.showFoodGenerationSuccess = true
+        
+        // Hide toast after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            foodManager.showFoodGenerationSuccess = false
+        }
+        
+        // Track as recently added
+        foodManager.trackRecentlyAdded(foodId: food.fdcId)
+        
+        // Navigate back
+        dismiss()
+        
+        isCreating = false
     }
     
     // Helper to add optional nutrients

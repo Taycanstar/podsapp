@@ -11,11 +11,13 @@ import AVFoundation
 struct CreateFoodWithVoice: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var audioRecorder = AudioRecorder()
+    @State private var navigationPath = NavigationPath()
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
     
     var body: some View {
-        GeometryReader { geometry in
+        NavigationStack(path: $navigationPath) {
+            GeometryReader { geometry in
             ZStack {
                 // Background that adapts to dark/light mode
                 Color(UIColor.systemBackground)
@@ -136,6 +138,10 @@ struct CreateFoodWithVoice: View {
             }
             AudioSessionManager.shared.deactivateSession()
         }
+        .navigationDestination(for: Food.self) { food in
+            ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
+        }
+        }
     }
     
     private func checkMicrophonePermission() {
@@ -183,14 +189,11 @@ struct CreateFoodWithVoice: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let food):
-                    print("✅ Successfully created food: \(food.displayName)")
-                    // Add to user foods if not already present
-                    if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
-                        foodManager.userFoods.insert(food, at: 0)
-                    }
-                    dismiss()
+                    print("✅ Successfully analyzed food from voice for creation: \(food.displayName)")
+                    // Navigate to ConfirmFoodView instead of directly adding to userFoods
+                    navigationPath.append(food)
                 case .failure(let error):
-                    print("❌ Failed to create food: \(error)")
+                    print("❌ Failed to analyze food from voice: \(error)")
                     // Could show an alert here if needed
                 }
             }

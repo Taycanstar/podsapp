@@ -9,8 +9,6 @@ import SwiftUI
 import AVFoundation
 import PhotosUI
 
-
-
 struct CreateFoodWithScan: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedMode: FoodScannerView.ScanMode = .food
@@ -23,11 +21,13 @@ struct CreateFoodWithScan: View {
     @State private var isProcessingBarcode = false
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
+    @State private var navigationPath = NavigationPath()
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
     
     var body: some View {
-        ZStack {
+        NavigationStack(path: $navigationPath) {
+            ZStack {
             // Camera view (or error overlay)
             if cameraPermissionDenied {
                 ZStack {
@@ -234,9 +234,13 @@ struct CreateFoodWithScan: View {
         .onAppear {
             checkCameraPermission()
         }
+        .navigationDestination(for: Food.self) { food in
+            ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
+        }
+        }
     }
     
-    private func checkCameraPermission() {
+    func checkCameraPermission() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             cameraPermissionDenied = false
@@ -253,16 +257,16 @@ struct CreateFoodWithScan: View {
         }
     }
     
-    private func toggleFlash() {
+    func toggleFlash() {
         flashEnabled.toggle()
         NotificationCenter.default.post(name: .toggleFlash, object: nil)
     }
     
-    private func takePhoto() {
+    func takePhoto() {
         NotificationCenter.default.post(name: .capturePhoto, object: nil)
     }
     
-    private func analyzeImageForCreation(_ image: UIImage) {
+    func analyzeImageForCreation(_ image: UIImage) {
         isAnalyzing = true
         
         // Use FoodManager to analyze the image and create food
@@ -276,27 +280,23 @@ struct CreateFoodWithScan: View {
                 
                 switch result {
                 case .success(let loggedFood):
-                    print("✅ Successfully created food from image: ")
+                    print("✅ Successfully analyzed food from image for creation")
                     
-                    // Convert LoggedFoodItem to Food and add to user foods
+                    // Convert LoggedFoodItem to Food and navigate to ConfirmFoodView
                     if let foodItem = loggedFood.food {
                         let food = foodItem.asFood
-                        if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
-                            foodManager.userFoods.insert(food, at: 0)
-                        }
+                        navigationPath.append(food)
                     }
                     
-                    dismiss()
-                    
                 case .failure(let error):
-                    print("❌ Failed to create food from image: \(error)")
+                    print("❌ Failed to analyze food from image: \(error)")
                     // Could show an alert here if needed
                 }
             }
         }
     }
     
-    private func processBarcodeForCreation(_ barcode: String) {
+    func processBarcodeForCreation(_ barcode: String) {
         // Use FoodManager to lookup barcode and create food
         foodManager.lookupFoodByBarcodeEnhanced(
             barcode: barcode,
@@ -307,28 +307,21 @@ struct CreateFoodWithScan: View {
                 isProcessingBarcode = false
                 
                 if success {
-                    print("✅ Successfully created food from barcode: \(barcode)")
+                    print("✅ Successfully analyzed food from barcode for creation: \(barcode)")
                     
                     // The food should be available in foodManager.aiGeneratedFood
                     if let generatedFood = foodManager.aiGeneratedFood {
                         let food = generatedFood.asFood
-                        if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
-                            foodManager.userFoods.insert(food, at: 0)
-                        }
+                        navigationPath.append(food)
                     }
-                    
-                    dismiss()
                 } else {
-                    print("❌ Failed to create food from barcode: \(errorMessage ?? "Unknown error")")
+                    print("❌ Failed to analyze food from barcode: \(errorMessage ?? "Unknown error")")
                     // Could show an alert here if needed
                 }
             }
         }
     }
 }
-
-
-
 
 #Preview {
     CreateFoodWithScan()
