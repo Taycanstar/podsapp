@@ -20,6 +20,7 @@ struct MealDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     // MARK: - Properties
     let meal: Meal
@@ -29,9 +30,10 @@ struct MealDetailView: View {
     @State private var isShowingEditMeal = false
     @State private var isShowingDeleteAlert = false
     @State private var showLoggingSuccess = false
-    @State private var servingsCount: Int
+    @State private var servingsCount: Double
     @State private var selectedPrivacy: String
     @State private var selectedMealTime: String = "Breakfast"
+
     
     // Alert states for error handling
     @State private var showAlert = false
@@ -51,7 +53,7 @@ struct MealDetailView: View {
     init(meal: Meal, path: Binding<NavigationPath>) {
         self.meal = meal
         self._path = path
-        self._servingsCount = State(initialValue: meal.servings)
+        self._servingsCount = State(initialValue: Double(meal.servings))
         self._selectedPrivacy = State(initialValue: meal.privacy.capitalized)
         
         // Convert meal items to Food objects for the selectedFoods array
@@ -155,7 +157,7 @@ struct MealDetailView: View {
             initializeSelectedFoods()
             
             // Reset servingsCount to meal's original servings
-            self.servingsCount = meal.servings
+            self.servingsCount = Double(meal.servings)
         }
         .onChange(of: isShowingEditMeal) { isShowing in
             if isShowing {
@@ -213,6 +215,7 @@ struct MealDetailView: View {
             // Don't update the meal - this should only happen in EditMealView
             // Just update the local UI
         }
+
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -223,7 +226,7 @@ struct MealDetailView: View {
     private func logMeal() {
         // Calculate the scaled calories based on serving count
         let baseCalories = meal.calories
-        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
+        let scaledCalories = baseCalories * servingsCount / Double(meal.servings)
         
         // First, close the food container immediately
         viewModel.isShowingFoodContainer = false
@@ -231,13 +234,53 @@ struct MealDetailView: View {
         foodManager.logMeal(
             meal: meal,
             mealTime: selectedMealTime,
-            calories: scaledCalories,
-            statusCompletion: { success in
-                if success {
+            calories: scaledCalories
+        ) { result in
+            switch result {
+            case .success(let loggedMeal):
+                // Create CombinedLog and add to DayLogsVM
+                let combinedLog = CombinedLog(
+                    type:        .meal,
+                    status:      loggedMeal.status,
+                    calories:    loggedMeal.calories,
+                    message:     "\(loggedMeal.meal.title) – \(loggedMeal.mealTime)",
+                    foodLogId:   nil,
+                    food:        nil,
+                    mealType:    loggedMeal.mealTime,
+                    mealLogId:   loggedMeal.mealLogId,
+                    meal:        loggedMeal.meal,
+                    mealTime:    loggedMeal.mealTime,
+                    scheduledAt: Date(),
+                    recipeLogId: nil,
+                    recipe:      nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
+                
+                // Add to DayLogsViewModel
+                DispatchQueue.main.async {
+                    dayLogsVM.addPending(combinedLog)
+                    print("After addPending from MealDetailView, logs contains meal? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+                    
+                    // Update foodManager.combinedLogs
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.mealLogId == combinedLog.mealLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                    }
+                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    
+                    // Show success alert
                     showLoggingSuccess = true
                 }
+                
+            case .failure(let error):
+                print("❌ Failed to log meal:", error)
+                DispatchQueue.main.async {
+                    alertTitle = "Logging Failed"
+                    alertMessage = "Could not log this meal. Please try again."
+                    showAlert = true
+                }
             }
-        )
+        }
     }
     
     private func deleteMeal() {
@@ -272,14 +315,7 @@ struct MealDetailView: View {
             Divider()
             
             // Servings row
-            HStack {
-                Text("Servings")
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Stepper("\(servingsCount)", value: $servingsCount, in: 1...20)
-            }
+            servingsRowView
             
             Divider()
             
@@ -417,10 +453,10 @@ struct MealDetailView: View {
         let baseCalories = meal.calories
         
         // Scale values according to servings count
-        let proteinValue = baseProteinValue * Double(servingsCount) / Double(meal.servings)
-        let carbsValue = baseCarbsValue * Double(servingsCount) / Double(meal.servings)
-        let fatValue = baseFatValue * Double(servingsCount) / Double(meal.servings)
-        let scaledCalories = baseCalories * Double(servingsCount) / Double(meal.servings)
+        let proteinValue = baseProteinValue * servingsCount / Double(meal.servings)
+        let carbsValue = baseCarbsValue * servingsCount / Double(meal.servings)
+        let fatValue = baseFatValue * servingsCount / Double(meal.servings)
+        let scaledCalories = baseCalories * servingsCount / Double(meal.servings)
         
         // Calculate percentages
         let totalMacros = proteinValue + carbsValue + fatValue
@@ -530,6 +566,34 @@ struct MealDetailView: View {
             backupFoods = foods
             print("📊 MealDetailView initialized \(selectedFoods.count) foods from meal items")
         }
+    }
+}
+
+// MARK: - Servings Selector Components
+extension MealDetailView {
+    private var servingsRowView: some View {
+        HStack {
+            Text("Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $servingsCount, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
+        }
+    }
+    
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

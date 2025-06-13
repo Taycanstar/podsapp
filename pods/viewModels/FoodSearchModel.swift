@@ -34,14 +34,14 @@ struct BarcodeLookupResponse: Codable {
 
 struct Food: Codable, Identifiable, Hashable{
     let fdcId: Int
-    let description: String
+    var description: String
     let brandOwner: String?
     let brandName: String?
-    let servingSize: Double?
+    var servingSize: Double?
     var numberOfServings: Double?
     let servingSizeUnit: String?
-    let householdServingFullText: String?
-    let foodNutrients: [Nutrient]
+    var householdServingFullText: String?
+    var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
     
     var id: Int { fdcId }
@@ -165,8 +165,28 @@ struct LoggedFood: Codable, Identifiable {
     let mealType: String      // Changed from 'meal' to 'mealType'
     
     var id: Int { foodLogId }
-    
+}
 
+// Models for updating food logs
+struct UpdatedFoodLog: Codable, Identifiable {
+    let id: Int
+    let servings: Double
+    let date: String  // ISO format date string
+    let meal_type: String
+    let notes: String
+    let calories: Double
+    let food: LoggedFoodItem
+    
+    // Convert date string to Date object
+    var logDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: date)
+    }
+}
+
+struct UpdateFoodLogResponse: Codable {
+    let success: Bool
+    let food_log: UpdatedFoodLog
 }
 
 
@@ -246,7 +266,7 @@ struct Meal: Codable, Identifiable {
     let description: String?
     let directions: String?
     let privacy: String
-    let servings: Int
+    let servings: Double
     let mealItems: [MealFoodItem]
     let image: String?
     let totalCalories: Double?
@@ -322,7 +342,7 @@ struct MealSummary: Codable {
     let description: String?
     let image: String?
     let calories: Double
-    let servings: Int
+    let servings: Double
     let protein: Double?
     let carbs: Double?
     let fat: Double?
@@ -359,13 +379,13 @@ struct CombinedLog: Codable, Identifiable, Equatable {
     let type: LogType
     let status: String
     var calories: Double
-    let message: String
+    var message: String
     var isOptimistic: Bool = false   // NEW flag for optimistic updates
     
     // MARK: - Food-specific properties
     let foodLogId: Int?
-    let food: LoggedFoodItem?
-    let mealType: String?     // Breakfast, Lunch, Dinner, etc.
+    var food: LoggedFoodItem?
+    var mealType: String?     // Breakfast, Lunch, Dinner, etc.
     
     // MARK: - Meal-specific properties
     let mealLogId: Int?
@@ -376,7 +396,7 @@ struct CombinedLog: Codable, Identifiable, Equatable {
     // MARK: - Recipe-specific properties
     let recipeLogId: Int?
     var recipe: RecipeSummary?
-    let servingsConsumed: Int?
+    var servingsConsumed: Int?
     
     // MARK: - Date properties for date-based views
     var logDate: String?      // The date of the log in YYYY-MM-DD format
@@ -550,8 +570,11 @@ extension CombinedLog {
 // Implement == operator for Equatable conformance
 extension CombinedLog {
     static func == (lhs: CombinedLog, rhs: CombinedLog) -> Bool {
-        // Two logs are considered equal if they have the same id
-        return lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.scheduledAt == rhs.scheduledAt &&   // time matters!
+        lhs.calories     == rhs.calories &&
+        lhs.food?.numberOfServings == rhs.food?.numberOfServings &&
+        lhs.mealType     == rhs.mealType
     }
 }
 

@@ -65,6 +65,8 @@
 		364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83CD2DAEC017009D2620 /* VoiceLogView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
+		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
+		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
@@ -293,6 +295,8 @@
 		364A83CD2DAEC017009D2620 /* VoiceLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceLogView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
+		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
+		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
@@ -810,6 +814,8 @@
 				364A83C92DAB0F82009D2620 /* FoodScannerView.swift */,
 				364A83CD2DAEC017009D2620 /* VoiceLogView.swift */,
 				36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */,
+				3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */,
+				3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1192,6 +1198,7 @@
 				36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */,
 				363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
+				3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36ED35D42DDBD5DC00D174FB /* UpdateWeight.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
@@ -1242,6 +1249,7 @@
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,
+				3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */,
 				36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */,

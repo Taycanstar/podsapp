@@ -11,13 +11,15 @@ struct FoodDetailsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     let food: Food
     @Binding var selectedMeal: String 
     
     @State private var servingSize: String
-    @State private var numberOfServings: Int = 1
+    @State private var numberOfServings: Double = 1
     @State private var selectedDate = Date()
     @State private var showServingSizePicker = false
+
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
     @State private var isLoading = false
@@ -32,6 +34,7 @@ struct FoodDetailsView: View {
         self.food = food
         _selectedMeal = selectedMeal 
         _servingSize = State(initialValue: food.servingSizeText)
+        _numberOfServings = State(initialValue: food.numberOfServings ?? 1)
     }
     
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
@@ -66,16 +69,7 @@ struct FoodDetailsView: View {
                                 .cornerRadius(8)
                         }
 
-                        HStack {
-                            Text("Number of Servings")
-                            Spacer()
-                            Stepper("", value: $numberOfServings, in: 1...10)
-                            Text("\(numberOfServings)")
-                                .frame(minWidth: 40)
-                                .padding(8)
-                                .background(Color(.tertiarySystemFill))
-                                .cornerRadius(8)
-                        }
+                        servingsRowView
                         
                         // Time Row
                         // HStack {
@@ -231,6 +225,39 @@ struct FoodDetailsView: View {
                 switch result {
                 case .success(let loggedFood):
                     print("Food logged successfully: \(loggedFood)")
+                    
+                    // Create CombinedLog for dashboard updates
+                    let combinedLog = CombinedLog(
+                        type:         .food,
+                        status:       loggedFood.status,
+                        calories:     Double(loggedFood.food.calories),
+                        message:      "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                        foodLogId:    loggedFood.foodLogId,
+                        food:         loggedFood.food,
+                        mealType:     loggedFood.mealType,
+                        mealLogId:    nil,
+                        meal:         nil,
+                        mealTime:     nil,
+                        scheduledAt:  selectedDate,
+                        recipeLogId:  nil,
+                        recipe:       nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+
+                    // Ensure all UI updates happen on the main thread
+                    DispatchQueue.main.async {
+                        // Tell the day-logs view model about it
+                        dayLogsVM.addPending(combinedLog)
+                        print("After addPending from FoodDetailView, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+
+                        // Prepend it into the global `combinedLogs` so dashboard's "All" feed updates
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    }
+                    
                 case .failure(let error):
                     print("Error logging food: \(error)")
                     errorMessage = "An error occurred while logging"
@@ -257,6 +284,7 @@ struct FoodDetailsView: View {
         } message: {
             Text(errorMessage)
         }
+
     }
 }
 
@@ -357,5 +385,34 @@ struct NutritionFactsSection: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Servings Selector Components
+extension FoodDetailsView {
+    private var servingsRowView: some View {
+        HStack {
+            Text("Number of Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
+        }
+        .padding(.vertical, 16)
+    }
+    
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }

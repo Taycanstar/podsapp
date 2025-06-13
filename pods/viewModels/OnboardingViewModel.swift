@@ -271,7 +271,11 @@ class OnboardingViewModel: ObservableObject {
     }
     
     // Helper methods to show/hide food container
-    func showFoodContainer() {
+    func showFoodContainer(selectedMeal: String? = nil) {
+        if let meal = selectedMeal {
+            // Store the selected meal for FoodContainerView to use
+            UserDefaults.standard.set(meal, forKey: "selectedMealFromNewSheet")
+        }
         isShowingFoodContainer = true
     }
     

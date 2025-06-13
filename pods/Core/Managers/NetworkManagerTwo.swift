@@ -1339,6 +1339,106 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+
+    /// Update a food log entry
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - logId: ID of the food log to update
+    ///   - servings: New serving size (optional)
+    ///   - date: New date (optional)
+    ///   - mealType: New meal type (optional)
+    ///   - completion: Result callback with updated food log or error
+    func updateFoodLog(
+        userEmail: String,
+        logId: Int,
+        servings: Double? = nil,
+        date: Date? = nil,
+        mealType: String? = nil,
+        completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/update-food-log/\(logId)/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        // Add optional parameters
+        if let servings = servings {
+            parameters["servings"] = servings
+        }
+        
+        if let date = date {
+            parameters["date"] = ISO8601DateFormatter().string(from: date)
+        }
+        
+        if let mealType = mealType {
+            parameters["meal_type"] = mealType
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("📝 Updating food log \(logId) for user \(userEmail) with parameters: \(parameters)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                // Don't use convertFromSnakeCase for this endpoint since UpdateFoodLogResponse expects snake_case keys
+                
+                let response = try decoder.decode(UpdateFoodLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated food log \(logId) for user \(userEmail)")
+                    completion(.success(response.food_log))
+                }
+                
+            } catch {
+                print("❌ Decoding error in update food log: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
 }
 
 

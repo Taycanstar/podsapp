@@ -16,8 +16,24 @@ struct DashboardView: View {
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
 
-    @State private var selectedFoodLog: Food? = nil
+
     @State private var showLogFlowSheet = false
+    @State private var selectedFoodLogId: String? = nil
+    
+    // ─── Sort state ─────────────────────────────────────────────────────────
+    @State private var sortOption: LogSortOption = .date
+    
+    enum LogSortOption: String, CaseIterable {
+        case date = "Date"
+        case meal = "Meal"
+        
+        var iconName: String {
+            switch self {
+            case .date: return "calendar"
+            case .meal: return "fork.knife"
+            }
+        }
+    }
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
@@ -25,6 +41,25 @@ struct DashboardView: View {
 
   private var calorieGoal : Double { vm.calorieGoal }
 private var remainingCal: Double { vm.remainingCalories }
+
+    // ─── Sorted logs ────────────────────────────────────────────────────────
+    private var sortedLogs: [CombinedLog] {
+        switch sortOption {
+        case .date:
+            // Default sorting: most recent first
+            return vm.logs
+        case .meal:
+            // Sort by meal type: Breakfast, Lunch, Dinner, Snacks
+            return vm.logs.sorted { log1, log2 in
+                let mealOrder = ["Breakfast": 0, "Lunch": 1, "Dinner": 2, "Snacks": 3]
+                let meal1 = log1.mealType ?? ""
+                let meal2 = log2.mealType ?? ""
+                let order1 = mealOrder[meal1] ?? 999
+                let order2 = mealOrder[meal2] ?? 999
+                return order1 < order2
+            }
+        }
+    }
 
 
     private var navTitle: String {
@@ -111,6 +146,26 @@ private var remainingCal: Double { vm.remainingCalories }
                                     .font(.title)
                                     .fontWeight(.bold)
                                 Spacer()
+                                
+                                Menu {
+                                    ForEach(LogSortOption.allCases, id: \.self) { option in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                sortOption = option
+                                            }
+                                        }) {
+                                            HStack {
+                                                Text(option.rawValue)
+                                                Spacer()
+                                                Image(systemName: option.iconName)
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.primary)
+                                }
                             }
                             .padding(.horizontal)
                             .listRowInsets(EdgeInsets())
@@ -118,21 +173,21 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowSeparator(.hidden)
                         }
                         
-                        ForEach(vm.logs) { log in
+                        ForEach(sortedLogs) { log in
                             ZStack {
                                 LogRow(log: log)
                                     .id(log.id)
                                     .onTapGesture {
-                                        if log.type == .food, let loggedFood = log.food {
-                                            selectedFoodLog = loggedFood.asFood
+                                        if log.type == .food {
+                                            selectedFoodLogId = log.id
                                         }
                                     }
                                 // NavigationLink for food logs
-                                if log.type == .food, let loggedFood = log.food {
+                                if log.type == .food {
                                     NavigationLink(
-                                        destination: FoodLogDetails(food: loggedFood.asFood),
-                                        tag: loggedFood.asFood,
-                                        selection: $selectedFoodLog
+                                        destination: FoodLogDetails(log: log),
+                                        tag: log.id,
+                                        selection: $selectedFoodLogId
                                     ) {
                                         EmptyView()
                                     }
@@ -157,7 +212,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     Spacer()
                         .frame(height: 100)
                 }
-                .animation(.default, value: vm.logs)
+                .animation(.default, value: sortedLogs)
 
                    if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
         VStack {
@@ -256,6 +311,19 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Refresh logs data when water is logged (for current selected date)
                 vm.loadLogs(for: vm.selectedDate)
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FoodLogUpdated"))) { notification in
+                print("🍎 DashboardView received FoodLogUpdated notification")
+                if let userInfo = notification.userInfo,
+                   let updatedLog = userInfo["updatedLog"] as? CombinedLog,
+                   let logId = userInfo["logId"] as? Int {
+                    
+                    // Update the log in our local state immediately
+                    if let index = vm.logs.firstIndex(where: { $0.foodLogId == logId }) {
+                        vm.logs[index] = updatedLog
+                        print("✅ Updated log in dashboard view")
+                    }
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
                 // Refresh health data when permissions are granted
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
@@ -281,8 +349,8 @@ private var remainingCal: Double { vm.remainingCalories }
     private func deleteLogItems(at indexSet: IndexSet) {
         print("Deleting log items at indices: \(indexSet)")
         
-        // Get the logs that should be deleted
-        let logsToDelete = indexSet.map { vm.logs[$0] }
+        // Get the logs that should be deleted from the sorted array
+        let logsToDelete = indexSet.map { sortedLogs[$0] }
         
         // Log detailed information about the logs to be deleted
         for log in logsToDelete {
@@ -675,49 +743,55 @@ private extension DashboardView {
     }
 
     var emptyState: some View {
-        VStack(alignment: .leading,spacing: 20) {
-            Text("Recent Logs").font(.title).fontWeight(.bold)
-            Text("Food logged will appear here. Tap the (+) button to add a new log.")
-                .font(.subheadline)
-                .foregroundColor(.primary)
-
-             
-                Button(action: {
-                    // Debug prints
-                    print("🔍 Start Logging tapped - hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
-                    print("🔍 showLogFlowSheet current value: \(showLogFlowSheet)")
-                    print("🔍 onboarding.onboardingCompleted: \(onboarding.onboardingCompleted)")
-                    print("🔍 onboarding.isShowingOnboarding: \(onboarding.isShowingOnboarding)")
-                    
-                    // CRITICAL FIX: Only show log flow if onboarding is completed
-                    // This prevents modal conflicts during onboarding
-                    if !UserDefaults.standard.hasSeenLogFlow && onboarding.onboardingCompleted && !onboarding.isShowingOnboarding {
-                        print("🔍 Showing log flow sheet (onboarding completed)")
-                        showLogFlowSheet = true
-                    } else if !UserDefaults.standard.hasSeenLogFlow {
-                        print("🔍 Log flow needed but onboarding in progress - not showing")
-                        // Do nothing - wait for onboarding to complete
-                    } else {
-                        print("🔍 Posting notification for NewSheetView")
-                        // Post notification to ContentView to show NewSheetView
-                        NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
-                    }
-                    HapticFeedback.generate()
-                }) {
-                    Text("Start Logging")
-                        .font(.system(size: 16, weight: .regular))
-                        .padding(.vertical)
-                        .padding(.horizontal, 24)
-                        .background(Color("background"))
-                        .foregroundColor(Color("bg"))
-                        .cornerRadius(100)
-                }
-                .background(Color("background"))
-                 .cornerRadius(100)
-           
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                let titleText = getTimeBasedGreeting()
+                
+                Text(titleText)
+                    .font(.system(size: 36))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: true, vertical: false)
+                
+                Text("Your plate is empty. Tap + to start logging.")
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: titleTextWidth(for: titleText))
+            }
+            
+            Image("plate")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .opacity(0.7)
         }
-        
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+    
+    // Helper function to get time-based greeting
+    private func getTimeBasedGreeting() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        
+        switch hour {
+        case 5..<12:  // 5:00 AM to 11:59 AM
+        
+            return "Good Morning"
+        case 12..<17:  // 12:00 PM to 4:59 PM
+            return "Good Afternoon"
+        default:  // 5:00 PM to 4:59 AM
+            return "Good Evening"
+        }
+    }
+    
+    // Helper function to calculate title text width
+    private func titleTextWidth(for text: String) -> CGFloat {
+        let font = UIFont.systemFont(ofSize: 36, weight: .semibold)
+        let attributes = [NSAttributedString.Key.font: font]
+        let size = (text as NSString).size(withAttributes: attributes)
+        return size.width
     }
 
 
@@ -1074,8 +1148,12 @@ struct LogRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Top row: Name and time
+            // Top row: Meal icon, Name and time
             HStack {
+                Image(systemName: mealTimeSymbol)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
+                
                 Text(displayName)
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.primary)
@@ -1170,6 +1248,23 @@ struct LogRow: View {
             return log.meal?.title ?? "Meal"
         case .recipe:
             return log.recipe?.title ?? "Recipe"
+        }
+    }
+    
+    private var mealTimeSymbol: String {
+        guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
+        
+        switch mealType {
+        case "breakfast":
+            return "sunrise.fill"
+        case "lunch":
+            return "sun.max.fill"
+        case "dinner":
+            return "moon.fill"
+        case "snacks", "snack":
+            return "popcorn.fill"
+        default:
+            return "popcorn.fill"
         }
     }
     private func getTimeLabel() -> String? {
@@ -1584,3 +1679,4 @@ private extension DashboardView {
         }.reduce(0, +)
     }
 }
+

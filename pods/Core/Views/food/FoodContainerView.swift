@@ -61,6 +61,7 @@ class FoodNavigationState: ObservableObject {
 enum FoodNavigationDestination: Hashable {
     case logFood
     case foodDetails(Food, Binding<String>) // Food and selected meal
+    case foodLogDetails(CombinedLog) // For viewing/editing logged food details
     case createMeal 
     case addMealItems
     case editMeal(Meal)  // Added case for editing a meal
@@ -80,6 +81,8 @@ enum FoodNavigationDestination: Hashable {
             return true
         case let (.foodDetails(food1, meal1), .foodDetails(food2, meal2)):
             return food1.id == food2.id && meal1.wrappedValue == meal2.wrappedValue
+        case let (.foodLogDetails(log1), .foodLogDetails(log2)):
+            return log1.id == log2.id
         case (.createMeal, .createMeal):
             return true
         case (.addMealItems, .addMealItems):
@@ -115,6 +118,9 @@ enum FoodNavigationDestination: Hashable {
             hasher.combine(1)
             hasher.combine(food.id)
             hasher.combine(meal.wrappedValue)
+        case .foodLogDetails(let log):
+            hasher.combine(13)
+            hasher.combine(log.id)
         case .createMeal:
             hasher.combine(2)
         case .addMealItems:
@@ -181,19 +187,30 @@ struct FoodContainerView: View {
     }
     
     init() {
-        // Set initial meal based on time of day
-        let hour = Calendar.current.component(.hour, from: Date())
-        let defaultMeal: String
+        // Check if a meal was selected from NewSheetView
+        let selectedMealFromNewSheet = UserDefaults.standard.string(forKey: "selectedMealFromNewSheet")
         
-        switch hour {
-        case 4...11:  // 4:00 AM to 11:00 AM
-            defaultMeal = "Breakfast"
-        case 12...16:  // 11:01 AM to 4:00 PM
-            defaultMeal = "Lunch"
-        default:  // 4:01 PM to 3:59 AM
-            defaultMeal = "Dinner"
+        let initialMeal: String
+        if let selectedMeal = selectedMealFromNewSheet {
+            // Use the meal selected in NewSheetView
+            initialMeal = selectedMeal
+            // Clear the stored value so it doesn't persist for future opens
+            UserDefaults.standard.removeObject(forKey: "selectedMealFromNewSheet")
+        } else {
+            // Set initial meal based on time of day
+            let hour = Calendar.current.component(.hour, from: Date())
+            
+            switch hour {
+            case 4...11:  // 4:00 AM to 11:00 AM
+                initialMeal = "Breakfast"
+            case 12...16:  // 11:01 AM to 4:00 PM
+                initialMeal = "Lunch"
+            default:  // 4:01 PM to 3:59 AM
+                initialMeal = "Dinner"
+            }
         }
-        _selectedMeal = State(initialValue: defaultMeal)
+        
+        _selectedMeal = State(initialValue: initialMeal)
     }
     
     // Helper method to dismiss container and navigate to dashboard
@@ -280,6 +297,8 @@ struct FoodContainerView: View {
                     )
                 case .foodDetails(let food, let selectedMeal):
                     FoodDetailsView(food: food, selectedMeal: selectedMeal)
+                case .foodLogDetails(let log):
+                    FoodLogDetails(log: log)
                 case .createMeal:
                     CreateMealView(
                         path: $path,

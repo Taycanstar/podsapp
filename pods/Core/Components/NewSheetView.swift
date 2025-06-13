@@ -16,8 +16,8 @@ struct NewSheetView: View {
     @Binding var selectedTab: Int 
     @Binding var showFoodScanner: Bool
     @Binding var showVoiceLog: Bool
+    @Binding var selectedMeal: String
     @EnvironmentObject var viewModel: OnboardingViewModel
-    
 
     let options = [
         ("Log Food", "magnifyingglass"),
@@ -32,10 +32,38 @@ struct NewSheetView: View {
                 .foregroundColor(Color("grabber"))
                 .padding(.top, 12)
             
-            Text("New")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.top, 24)
-                .padding(.bottom, 8)
+            Menu {
+                     
+                Button("Snacks") { 
+                    selectedMeal = "Snacks"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+                 Button("Dinner") { 
+                    selectedMeal = "Dinner"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+                        Button("Lunch") { 
+                    selectedMeal = "Lunch"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+          
+                Button("Breakfast") { 
+                    selectedMeal = "Breakfast"
+                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
+                }
+         
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedMeal)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 8)
             
             Divider()
             
@@ -65,9 +93,10 @@ struct NewSheetView: View {
                       case "Log Food":
                         HapticFeedback.generate()
                         isPresented = false
-                        viewModel.showFoodContainer()
+                        viewModel.showFoodContainer(selectedMeal: selectedMeal)
                       case "Voice Log":
                         HapticFeedback.generate()
+                        print("🍽️ NewSheetView: Tapping Voice Log with selectedMeal: \(selectedMeal)")
                         isPresented = false
                         showVoiceLog = true
                       case "Scan Food":
