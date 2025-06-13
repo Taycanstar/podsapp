@@ -475,14 +475,6 @@ struct ConfirmFoodView: View {
                 .onChange(of: numberOfServings) { _ in
                     updateNutritionValues()
                 }
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            hideKeyboard()
-                        }
-                    }
-                }
         }
         .padding()
     }
