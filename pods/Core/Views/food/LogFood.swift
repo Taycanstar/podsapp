@@ -2315,7 +2315,9 @@ struct SheetModifiers: ViewModifier {
                 foodManager.lastGeneratedFood = nil
             }) {
                 if let food = foodManager.lastGeneratedFood {
-                    ConfirmFoodView(path: .constant(NavigationPath()), food: food, isCreationMode: true)
+                    NavigationView {
+                        ConfirmFoodView(path: .constant(NavigationPath()), food: food, isCreationMode: true)
+                    }
                 }
             }
             .fullScreenCover(isPresented: $showCreateFoodWithVoice) {

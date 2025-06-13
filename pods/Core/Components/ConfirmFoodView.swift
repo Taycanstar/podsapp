@@ -351,7 +351,7 @@ struct ConfirmFoodView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(isCreationMode ? "Create Food" : (isBarcodeFood ? "Confirm Food" : "Create Food"))
+                Text(isCreationMode ? "Create Food" : (isBarcodeFood ? "Log Food" : "Create Food"))
                     .font(.headline)
             }
             
