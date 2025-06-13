@@ -37,6 +37,7 @@ struct LogFood: View {
     // Create Food sheets
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
+    @State private var showConfirmFoodView = false
 
     
     enum FoodTab: Hashable {
@@ -81,6 +82,41 @@ struct LogFood: View {
     }
     
     var body: some View {
+        coreContent
+            .modifier(SearchModifiers())
+            .modifier(NavigationModifiers(mode: mode, selectedTab: $selectedTab, dismiss: dismiss))
+            .modifier(SheetModifiers(
+                showQuickLogSheet: $showQuickLogSheet,
+                showFoodFlowSheet: $showFoodFlowSheet,
+                showMealFlowSheet: $showMealFlowSheet,
+                showAllFlowSheet: $showAllFlowSheet,
+                showConfirmFoodView: $showConfirmFoodView,
+                showCreateFoodWithVoice: $showCreateFoodWithVoice,
+                showCreateFoodWithScan: $showCreateFoodWithScan,
+                foodManager: foodManager
+            ))
+            .modifier(LifecycleModifiers(
+                selectedFoodTab: selectedFoodTab,
+                showAllFlowSheet: $showAllFlowSheet,
+                showMealFlowSheet: $showMealFlowSheet,
+                showFoodFlowSheet: $showFoodFlowSheet,
+                safeAreaInset: $safeAreaInset,
+                keyboardHeight: $keyboardHeight,
+                foodManager: foodManager
+            ))
+            .modifier(ChangeModifiers(
+                searchText: searchText,
+                selectedFoodTab: selectedFoodTab,
+                showAllFlowSheet: $showAllFlowSheet,
+                showMealFlowSheet: $showMealFlowSheet,
+                showFoodFlowSheet: $showFoodFlowSheet,
+                showConfirmFoodView: $showConfirmFoodView,
+                foodManager: foodManager,
+                searchFoods: searchFoods
+            ))
+    }
+    
+    private var coreContent: some View {
         ZStack(alignment: .bottom) {
             // Add background color for the entire view
             Color("iosbg2").edgesIgnoringSafeArea(.all)
@@ -100,138 +136,23 @@ struct LogFood: View {
                 mainContentView
                 Spacer()
             }
-            // .padding(.top, isSearchFieldFocused ? 52 : 0)
-            .edgesIgnoringSafeArea(.bottom)  // Only ignore bottom safe area
-            .searchable(
-                text: $searchText, 
-                // placement: .navigationBarDrawer(displayMode: .always), 
-                placement: .automatic,
-                prompt: selectedFoodTab.searchPrompt
-            )
-            .focused($isSearchFieldFocused)
-            .onChange(of: searchText) { _ in
-                Task {
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                    await searchFoods()
-                }
-            }
-            .onAppear {
-                if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
-                    foodManager.refreshMeals()
-                } else {
-                    foodManager.prefetchMealImages()
-                }
-
-                // Show flow based on current tab if user hasn't seen it yet
-                if selectedFoodTab == .all && !UserDefaults.standard.hasSeenAllFlow {
-                    print("🔍 LogFood onAppear - showing All flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showAllFlowSheet = true
-                    }
-                } else if selectedFoodTab == .meals && !UserDefaults.standard.hasSeenMealFlow {
-                    print("🔍 LogFood onAppear - showing Meal flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showMealFlowSheet = true
-                    }
-                } else if selectedFoodTab == .foods && !UserDefaults.standard.hasSeenFoodFlow {
-                    print("🔍 LogFood onAppear - showing Food flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showFoodFlowSheet = true
-                    }
-                } else {
-                    print("🔍 LogFood onAppear - user has seen current tab flow or no flow needed")
-                }
-                
-                // Set up keyboard observers
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first {
-                    safeAreaInset = window.safeAreaInsets.bottom
-                }
-                
-                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-                    if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                        self.keyboardHeight = keyboardFrame.height - safeAreaInset
-                    }
-                }
-                
-                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                    self.keyboardHeight = 0
-                }
-            }
-            .onDisappear {
-                // Remove keyboard observers
-                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbarContent }
-            .alert("Something went wrong", isPresented: $showErrorAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
-            .background(
-                SearchActivator(isActivated: $activateSearch)
-            )
-            .sheet(isPresented: $showQuickLogSheet) {
-                QuickLogFood(isPresented: $showQuickLogSheet)
-            }
-            .sheet(isPresented: $showFoodFlowSheet) { 
-                FoodFlowContainerView()
-            }
-            .sheet(isPresented: $showMealFlowSheet) { 
-                MealFlowContainerView()
-            }
-            .sheet(isPresented: $showAllFlowSheet) { // Added for AllFlow
-                AllFlowContainerView()
-            }
-            .fullScreenCover(isPresented: $showCreateFoodWithVoice) {
-                CreateFoodWithVoice()
-            }
-            .fullScreenCover(isPresented: $showCreateFoodWithScan) {
-                CreateFoodWithScan()
-            }
-            .onChange(of: selectedFoodTab) { _, newTabValue in
-                print("🔍 selectedFoodTab changed to: \(newTabValue)")
-                print("🔍 UserDefaults - hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow), hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow), hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
-                
-                if newTabValue == .all {
-                    // Only show All flow if user hasn't seen it yet
-                    if !UserDefaults.standard.hasSeenAllFlow {
-                        showAllFlowSheet = true
-                        print("🔍 Set to show All flow - showAllFlowSheet: \(showAllFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen All flow, not showing")
-                    }
-                    showMealFlowSheet = false
-                    showFoodFlowSheet = false
-                } else if newTabValue == .foods {
-                    // Only show Food flow if user hasn't seen it yet
-                    if !UserDefaults.standard.hasSeenFoodFlow {
-                        showFoodFlowSheet = true
-                        print("🔍 Set to show Food flow - showFoodFlowSheet: \(showFoodFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen Food flow, not showing")
-                    }
-                    showAllFlowSheet = false
-                    showMealFlowSheet = false
-                } else if newTabValue == .meals {
-                    // Only show Meal flow if user hasn't seen it yet
-                    if !UserDefaults.standard.hasSeenMealFlow {
-                        showMealFlowSheet = true
-                        print("🔍 Set to show Meal flow - showMealFlowSheet: \(showMealFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen Meal flow, not showing")
-                    }
-                    showAllFlowSheet = false
-                    showFoodFlowSheet = false
-                }
-            }
-
-
+            
             toastMessages
         }
-        .navigationBarBackButtonHidden(mode != .addToMeal && mode != .addToRecipe)
+        .searchable(
+            text: $searchText,
+            placement: .automatic,
+            prompt: selectedFoodTab.searchPrompt
+        )
+        .focused($isSearchFieldFocused)
+        .alert("Something went wrong", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+        .background(
+            SearchActivator(isActivated: $activateSearch)
+        )
     }
     
     // MARK: - Subviews
@@ -2324,6 +2245,206 @@ struct FoodGenerationCard: View {
         withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
             animateProgress = true
         }
+    }
+}
+
+// MARK: - ViewModifiers
+
+struct SearchModifiers: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .edgesIgnoringSafeArea(.bottom)
+    }
+}
+
+struct NavigationModifiers: ViewModifier {
+    let mode: LogFoodMode
+    @Binding var selectedTab: Int
+    let dismiss: DismissAction
+    
+    func body(content: Content) -> some View {
+        content
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                Group {
+                    if mode != .addToMeal && mode != .addToRecipe {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Cancel") {
+                                selectedTab = 0
+                                dismiss()
+                            }
+                            .foregroundColor(.accentColor)
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .principal) {
+                        Text("Log Food")
+                            .font(.headline)
+                    }
+                }
+            }
+            .navigationBarBackButtonHidden(mode != .addToMeal && mode != .addToRecipe)
+    }
+}
+
+struct SheetModifiers: ViewModifier {
+    @Binding var showQuickLogSheet: Bool
+    @Binding var showFoodFlowSheet: Bool
+    @Binding var showMealFlowSheet: Bool
+    @Binding var showAllFlowSheet: Bool
+    @Binding var showConfirmFoodView: Bool
+    @Binding var showCreateFoodWithVoice: Bool
+    @Binding var showCreateFoodWithScan: Bool
+    @ObservedObject var foodManager: FoodManager
+    
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showQuickLogSheet) {
+                QuickLogFood(isPresented: $showQuickLogSheet)
+            }
+            .sheet(isPresented: $showFoodFlowSheet) { 
+                FoodFlowContainerView()
+            }
+            .sheet(isPresented: $showMealFlowSheet) { 
+                MealFlowContainerView()
+            }
+            .sheet(isPresented: $showAllFlowSheet) {
+                AllFlowContainerView()
+            }
+            .sheet(isPresented: $showConfirmFoodView, onDismiss: {
+                foodManager.lastGeneratedFood = nil
+            }) {
+                if let food = foodManager.lastGeneratedFood {
+                    ConfirmFoodView(path: .constant(NavigationPath()), food: food, isCreationMode: true)
+                }
+            }
+            .fullScreenCover(isPresented: $showCreateFoodWithVoice) {
+                CreateFoodWithVoice()
+            }
+            .fullScreenCover(isPresented: $showCreateFoodWithScan) {
+                CreateFoodWithScan()
+            }
+    }
+}
+
+struct LifecycleModifiers: ViewModifier {
+    let selectedFoodTab: LogFood.FoodTab
+    @Binding var showAllFlowSheet: Bool
+    @Binding var showMealFlowSheet: Bool
+    @Binding var showFoodFlowSheet: Bool
+    @Binding var safeAreaInset: CGFloat
+    @Binding var keyboardHeight: CGFloat
+    @ObservedObject var foodManager: FoodManager
+    
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
+                    foodManager.refreshMeals()
+                } else {
+                    foodManager.prefetchMealImages()
+                }
+
+                // Show flow based on current tab if user hasn't seen it yet
+                if selectedFoodTab == .all && !UserDefaults.standard.hasSeenAllFlow {
+                    print("🔍 LogFood onAppear - showing All flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showAllFlowSheet = true
+                    }
+                } else if selectedFoodTab == .meals && !UserDefaults.standard.hasSeenMealFlow {
+                    print("🔍 LogFood onAppear - showing Meal flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showMealFlowSheet = true
+                    }
+                } else if selectedFoodTab == .foods && !UserDefaults.standard.hasSeenFoodFlow {
+                    print("🔍 LogFood onAppear - showing Food flow")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFoodFlowSheet = true
+                    }
+                } else {
+                    print("🔍 LogFood onAppear - user has seen current tab flow or no flow needed")
+                }
+                
+                // Set up keyboard observers
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    safeAreaInset = window.safeAreaInsets.bottom
+                }
+                
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                    if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                        keyboardHeight = keyboardFrame.height - safeAreaInset
+                    }
+                }
+                
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                    keyboardHeight = 0
+                }
+            }
+            .onDisappear {
+                // Remove keyboard observers
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
+            }
+    }
+}
+
+struct ChangeModifiers: ViewModifier {
+    let searchText: String
+    let selectedFoodTab: LogFood.FoodTab
+    @Binding var showAllFlowSheet: Bool
+    @Binding var showMealFlowSheet: Bool
+    @Binding var showFoodFlowSheet: Bool
+    @Binding var showConfirmFoodView: Bool
+    @ObservedObject var foodManager: FoodManager
+    let searchFoods: () async -> Void
+    
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: searchText) { _ in
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    await searchFoods()
+                }
+            }
+            .onChange(of: selectedFoodTab) { _, newTabValue in
+                print("🔍 selectedFoodTab changed to: \(newTabValue)")
+                print("🔍 UserDefaults - hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow), hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow), hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
+                
+                if newTabValue == .all {
+                    if !UserDefaults.standard.hasSeenAllFlow {
+                        showAllFlowSheet = true
+                        print("🔍 Set to show All flow - showAllFlowSheet: \(showAllFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen All flow, not showing")
+                    }
+                    showMealFlowSheet = false
+                    showFoodFlowSheet = false
+                } else if newTabValue == .foods {
+                    if !UserDefaults.standard.hasSeenFoodFlow {
+                        showFoodFlowSheet = true
+                        print("🔍 Set to show Food flow - showFoodFlowSheet: \(showFoodFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen Food flow, not showing")
+                    }
+                    showAllFlowSheet = false
+                    showMealFlowSheet = false
+                } else if newTabValue == .meals {
+                    if !UserDefaults.standard.hasSeenMealFlow {
+                        showMealFlowSheet = true
+                        print("🔍 Set to show Meal flow - showMealFlowSheet: \(showMealFlowSheet)")
+                    } else {
+                        print("🔍 User has already seen Meal flow, not showing")
+                    }
+                    showAllFlowSheet = false
+                    showFoodFlowSheet = false
+                }
+            }
+            .onChange(of: foodManager.lastGeneratedFood) { _, newFood in
+                if newFood != nil {
+                    showConfirmFoodView = true
+                }
+            }
     }
 }
 
