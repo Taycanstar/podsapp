@@ -33,6 +33,10 @@ struct LogFood: View {
     @State private var showFoodFlowSheet = false 
     @State private var showMealFlowSheet = false 
     @State private var showAllFlowSheet = false // Corrected initialization from true to false
+    
+    // Create Food sheets
+    @State private var showCreateFoodWithVoice = false
+    @State private var showCreateFoodWithScan = false
 
     
     enum FoodTab: Hashable {
@@ -181,6 +185,12 @@ struct LogFood: View {
             .sheet(isPresented: $showAllFlowSheet) { // Added for AllFlow
                 AllFlowContainerView()
             }
+            .fullScreenCover(isPresented: $showCreateFoodWithVoice) {
+                CreateFoodWithVoice()
+            }
+            .fullScreenCover(isPresented: $showCreateFoodWithScan) {
+                CreateFoodWithScan()
+            }
             .onChange(of: selectedFoodTab) { _, newTabValue in
                 print("🔍 selectedFoodTab changed to: \(newTabValue)")
                 print("🔍 UserDefaults - hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow), hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow), hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
@@ -252,7 +262,9 @@ struct LogFood: View {
                     mode: mode,
                     selectedFoods: $selectedFoods,
                     path: $path,
-                    showQuickLogSheet: $showQuickLogSheet
+                    showQuickLogSheet: $showQuickLogSheet,
+                    showCreateFoodWithVoice: $showCreateFoodWithVoice,
+                    showCreateFoodWithScan: $showCreateFoodWithScan
                 )
             } else {
                 switch selectedFoodTab {
@@ -428,6 +440,8 @@ private struct FoodListView: View {
     @Binding var selectedFoods: [Food]
     @Binding var path: NavigationPath
     @Binding var showQuickLogSheet: Bool
+    @Binding var showCreateFoodWithVoice: Bool
+    @Binding var showCreateFoodWithScan: Bool
     
     // Add states for AI generation
     @State private var isGeneratingMacros = false
@@ -450,16 +464,45 @@ private struct FoodListView: View {
             Color.clear.frame(height: 4)
 
           
-            // Show Create Food button in Foods tab when there's no search text
+            // Show Create Food dropdown in Foods tab when there's no search text
             if searchText.isEmpty && selectedFoodTab == .foods {
-        
-
-                //create food btn
-                     Button(action: {
-                   print("Tapped Create Food")
-                    HapticFeedback.generateLigth()
-                    path.append(FoodNavigationDestination.createFood)
-                }) {
+                Menu {
+                    Button(action: {
+                        print("Tapped Manual Create Food")
+                        HapticFeedback.generateLigth()
+                        path.append(FoodNavigationDestination.createFood)
+                    }) {
+                        HStack {
+                            Text("Enter Manually")
+                            Spacer()
+                            Image(systemName: "square.and.pencil")
+                        }
+                    }
+                    
+                    Button(action: {
+                        print("Tapped Voice Create Food")
+                        HapticFeedback.generateLigth()
+                        showCreateFoodWithVoice = true
+                    }) {
+                        HStack {
+                            Text("Describe with Voice")
+                            Spacer()
+                            Image(systemName: "waveform")
+                        }
+                    }
+                    
+                    Button(action: {
+                        print("Tapped Scan Create Food")
+                        HapticFeedback.generateLigth()
+                        showCreateFoodWithScan = true
+                    }) {
+                        HStack {
+                            Text("Scan Package")
+                            Spacer()
+                            Image(systemName: "barcode.viewfinder")
+                        }
+                    }
+                } label: {
                     HStack(spacing: 6) {
                         Spacer()
                         Image(systemName: "plus.circle.fill")
@@ -469,6 +512,7 @@ private struct FoodListView: View {
                             .font(.system(size: 17))
                             .fontWeight(.semibold)
                             .foregroundColor(.accentColor)
+                
                         Spacer()
                     }
                     .padding(.horizontal, 16)
