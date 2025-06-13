@@ -187,11 +187,6 @@ struct CreateFoodWithVoice: View {
                                 .foregroundColor(Color(UIColor.secondaryLabel))
                                 .padding(.bottom, 8)
                         } else if !audioRecorder.transcribedText.isEmpty {
-                            Text("Transcription:")
-                                .font(.headline)
-                                .foregroundColor(Color(UIColor.secondaryLabel))
-                                .padding(.bottom, 4)
-                            
                             Text(audioRecorder.transcribedText)
                                 .font(.body)
                                 .multilineTextAlignment(.center)
@@ -278,6 +273,13 @@ struct CreateFoodWithVoice: View {
                 audioRecorder.stopRecording(cancel: true)
             }
             AudioSessionManager.shared.deactivateSession()
+        }
+        .onChange(of: foodManager.lastGeneratedFood) { _, newFood in
+            if newFood != nil {
+                // Food was successfully created, dismiss the entire sheet
+                print("✅ Food created successfully, dismissing CreateFoodWithVoice")
+                dismiss()
+            }
         }
         .navigationDestination(for: Food.self) { food in
             ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
