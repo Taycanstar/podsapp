@@ -385,8 +385,8 @@ private struct FoodListView: View {
             Color.clear.frame(height: 4)
 
           
-            // Show Create Food dropdown in Foods tab when there's no search text
-            if searchText.isEmpty && selectedFoodTab == .foods {
+            // Show Create Food dropdown in Foods tab when there's no search text and not generating food
+            if searchText.isEmpty && selectedFoodTab == .foods && !foodManager.isGeneratingFood {
                 Menu {
                     Button(action: {
                         print("Tapped Manual Create Food")
@@ -445,8 +445,8 @@ private struct FoodListView: View {
                 .padding(.horizontal)
                 .padding(.top, 0)
             }
-            // Show Quick Log button when there's no search text in .all tab
-            else if searchText.isEmpty && selectedFoodTab == .all {
+            // Show Quick Log button when there's no search text in .all tab and not generating food
+            else if searchText.isEmpty && selectedFoodTab == .all && !foodManager.isGeneratingFood {
                 // Quick Log Button
                 Button(action: {
                     print("Tapped quick Log")
@@ -623,7 +623,7 @@ private struct FoodListView: View {
             }
             
             // Show food generation loading card if generating food
-            if isGeneratingFood {
+            if isGeneratingFood || foodManager.isGeneratingFood {
                 FoodGenerationCard()
                     .padding(.horizontal)
                     .transition(.opacity)
@@ -2131,7 +2131,7 @@ struct MealGenerationCard: View {
                 .padding(.top, 10)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .onAppear {
             startAnimation()
@@ -2230,7 +2230,7 @@ struct FoodGenerationCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .onAppear {
             startAnimation()

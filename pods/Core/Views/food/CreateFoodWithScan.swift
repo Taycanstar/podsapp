@@ -70,6 +70,8 @@ struct CreateFoodWithScan: View {
                         guard let image = image else { return }
                         print("Food scanned with captured image for creation")
                         if selectedMode == .food {
+                            // Dismiss immediately and start analysis
+                            dismiss()
                             analyzeImageForCreation(image)
                         }
                     },
@@ -99,6 +101,8 @@ struct CreateFoodWithScan: View {
                             takePhoto()
                             
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                // Dismiss immediately and start processing
+                                dismiss()
                                 processBarcodeForCreation(barcode)
                             }
                         }
@@ -225,6 +229,8 @@ struct CreateFoodWithScan: View {
                         DispatchQueue.main.async {
                             self.selectedImage = image
                             self.isGalleryImageLoaded = true
+                            // Dismiss immediately and start analysis
+                            self.dismiss()
                             self.analyzeImageForCreation(image)
                         }
                     }
@@ -233,9 +239,6 @@ struct CreateFoodWithScan: View {
         ))
         .onAppear {
             checkCameraPermission()
-        }
-        .navigationDestination(for: Food.self) { food in
-            ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
         }
         }
     }
@@ -267,56 +270,72 @@ struct CreateFoodWithScan: View {
     }
     
     func analyzeImageForCreation(_ image: UIImage) {
-        isAnalyzing = true
+        // Set scanning state to show loader card in LogFood
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.scannedImage = image
+        foodManager.loadingMessage = "Analyzing food image..."
+        foodManager.uploadProgress = 0.1
         
-        // Use FoodManager to analyze the image and create food
+        // Use FoodManager to analyze the image (same as FoodScannerView)
         foodManager.analyzeFoodImage(
             image: image,
             userEmail: viewModel.email,
-            mealType: "Lunch" // Default since we're creating, not logging
+            mealType: "Lunch"
         ) { result in
             DispatchQueue.main.async {
-                isAnalyzing = false
-                
                 switch result {
-                case .success(let loggedFood):
+                case .success(let combinedLog):
                     print("✅ Successfully analyzed food from image for creation")
                     
-                    // Convert LoggedFoodItem to Food and navigate to ConfirmFoodView
-                    if let foodItem = loggedFood.food {
-                        let food = foodItem.asFood
-                        navigationPath.append(food)
+                    // Extract the food from the combined log and store in lastGeneratedFood
+                    if let food = combinedLog.food {
+                        self.foodManager.lastGeneratedFood = food.asFood
                     }
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
-                    // Could show an alert here if needed
                 }
+                
+                // Reset scanning states
+                self.foodManager.isScanningFood = false
+                self.foodManager.isGeneratingFood = false
+                self.foodManager.scannedImage = nil
             }
         }
     }
     
     func processBarcodeForCreation(_ barcode: String) {
-        // Use FoodManager to lookup barcode and create food
-        foodManager.lookupFoodByBarcodeEnhanced(
+        // Set scanning state to show loader card in LogFood
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.loadingMessage = "Looking up barcode..."
+        foodManager.uploadProgress = 0.2
+        
+        // Use NetworkManagerTwo to lookup barcode for creation (not logging)
+        NetworkManagerTwo.shared.lookupFoodByBarcode(
             barcode: barcode,
             userEmail: viewModel.email,
-            mealType: "Lunch" // Default since we're creating, not logging
-        ) { success, errorMessage in
+            mealType: "Lunch",
+            shouldLog: false
+        ) { result in
             DispatchQueue.main.async {
-                isProcessingBarcode = false
-                
-                if success {
+                switch result {
+                case .success(let response):
                     print("✅ Successfully analyzed food from barcode for creation: \(barcode)")
                     
-                    // The food should be available in foodManager.aiGeneratedFood
-                    if let generatedFood = foodManager.aiGeneratedFood {
-                        let food = generatedFood.asFood
-                        navigationPath.append(food)
-                    }
-                } else {
-                    print("❌ Failed to analyze food from barcode: \(errorMessage ?? "Unknown error")")
-                    // Could show an alert here if needed
+                    // Store the food in lastGeneratedFood to trigger ConfirmFoodView
+                    self.foodManager.lastGeneratedFood = response.food
+                    
+                    // Reset scanning states
+                    self.foodManager.isScanningFood = false
+                    self.foodManager.isGeneratingFood = false
+                    
+                case .failure(let error):
+                    print("❌ Failed to analyze food from barcode: \(error)")
+                    // Reset states on failure
+                    self.foodManager.isScanningFood = false
+                    self.foodManager.isGeneratingFood = false
                 }
             }
         }

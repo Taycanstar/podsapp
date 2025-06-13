@@ -239,12 +239,14 @@ struct CreateFoodWithVoice: View {
                             // First stop the recording if active
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
-                                // Wait a short moment for the recording to finish
+                                // Wait a short moment for the recording to finish, then dismiss and start generation
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    dismiss() // Dismiss immediately
                                     createFoodFromVoice()
                                 }
                             } else if !audioRecorder.transcribedText.isEmpty {
-                                // If not recording but have transcription, create food
+                                // If not recording but have transcription, dismiss and create food
+                                dismiss() // Dismiss immediately
                                 createFoodFromVoice()
                             }
                         }) {
@@ -274,13 +276,7 @@ struct CreateFoodWithVoice: View {
             }
             AudioSessionManager.shared.deactivateSession()
         }
-        .onChange(of: foodManager.lastGeneratedFood) { _, newFood in
-            if newFood != nil {
-                // Food was successfully created, dismiss the entire sheet
-                print("✅ Food created successfully, dismissing CreateFoodWithVoice")
-                dismiss()
-            }
-        }
+
         .navigationDestination(for: Food.self) { food in
             ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
         }
