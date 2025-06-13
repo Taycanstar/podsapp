@@ -8,25 +8,177 @@
 import SwiftUI
 import AVFoundation
 
+// Separate class to handle audio recording for CreateFoodWithVoice
+class CreateFoodAudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
+    @Published var isRecording = false
+    @Published var audioLevel: CGFloat = 0
+    @Published var audioSamples: [Float] = Array(repeating: 0.0, count: 60)
+    @Published var transcribedText: String = ""
+    @Published var isProcessing: Bool = false
+    
+    private var audioRecorder: AVAudioRecorder?
+    private var timer: Timer?
+    private var audioFileURL: URL?
+    
+    func startRecording() {
+        // Set up audio session
+        do {
+            try AudioSessionManager.shared.activateSession()
+            print("AudioSessionManager: audio session activated successfully")
+            
+            // Define recording settings
+            let settings: [String: Any] = [
+                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                AVSampleRateKey: 44100.0,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+            
+            // Create a unique URL for the audio file
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let timestamp = Date().timeIntervalSince1970
+            audioFileURL = documentsDirectory.appendingPathComponent("createFood_\(timestamp).m4a")
+            
+            guard let audioFileURL = audioFileURL else {
+                print("Error: Could not create audio file URL")
+                return
+            }
+            
+            print("Recording audio to \(audioFileURL.path)")
+            
+            // Create and start the audio recorder
+            audioRecorder = try AVAudioRecorder(url: audioFileURL, settings: settings)
+            audioRecorder?.delegate = self
+            audioRecorder?.isMeteringEnabled = true
+            audioRecorder?.prepareToRecord()
+            audioRecorder?.record()
+            
+            // Start monitoring audio levels
+            startMonitoringAudio()
+        } catch {
+            print("Error setting up audio session: \(error.localizedDescription)")
+        }
+    }
+    
+    func stopRecording(cancel: Bool = false) {
+        guard let recorder = audioRecorder, recorder.isRecording else { return }
+        
+        // Mark that we're no longer recording
+        isRecording = false
+        
+        // Stop the recorder
+        recorder.stop()
+        timer?.invalidate()
+        timer = nil
+        
+        print("Audio recording stopped")
+        
+        // Skip processing if canceling
+        if cancel {
+            print("Recording canceled - not processing audio")
+            audioRecorder = nil
+            return
+        }
+        
+        // Check if we have a valid audio file
+        guard let audioFileURL = audioFileURL else {
+            print("Error: No audio file to process")
+            return
+        }
+        
+        // Set processing state
+        isProcessing = true
+        
+        do {
+            // Read audio data
+            let audioData = try Data(contentsOf: audioFileURL)
+            
+            // Transcribe the audio directly using NetworkManagerTwo
+            NetworkManagerTwo.shared.transcribeAudioForFoodLogging(from: audioData) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.isProcessing = false
+                    
+                    switch result {
+                    case .success(let text):
+                        print("✅ Voice transcription successful: \(text)")
+                        self.transcribedText = text
+                        
+                    case .failure(let error):
+                        print("❌ Voice transcription failed: \(error)")
+                        // Could show an alert here if needed
+                    }
+                }
+            }
+        } catch {
+            print("Error reading audio file: \(error.localizedDescription)")
+            isProcessing = false
+        }
+        
+        // Clear references
+        audioRecorder = nil
+    }
+    
+    private func startMonitoringAudio() {
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self, let recorder = self.audioRecorder else { return }
+            
+            recorder.updateMeters()
+            let averagePower = recorder.averagePower(forChannel: 0)
+            let normalizedValue = self.normalizeAudioLevel(averagePower)
+            
+            DispatchQueue.main.async {
+                self.audioLevel = normalizedValue
+                
+                // Update the audioSamples array for the waveform visualization
+                self.audioSamples.removeFirst()
+                self.audioSamples.append(Float(normalizedValue))
+                
+                // Set isRecording flag to true if it's not already
+                if !self.isRecording {
+                    self.isRecording = true
+                }
+            }
+        }
+    }
+    
+    private func normalizeAudioLevel(_ power: Float) -> CGFloat {
+        // Convert from dB to a 0-1 scale (dB is typically negative)
+        let minDb: Float = -60.0
+        if power < minDb {
+            return 0.05 // Minimum level for visual feedback
+        }
+        
+        // Normalize between 0 and 1 with a more expressive curve
+        let normalizedValue = CGFloat((power - minDb) / abs(minDb))
+        return min(max(normalizedValue * 1.2, 0.05), 1.0) // Scale up slightly, with limits
+    }
+    
+    // MARK: - AVAudioRecorderDelegate
+    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+        if !flag {
+            print("Recording failed")
+        }
+    }
+    
+    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
+        if let error = error {
+            print("Recording error: \(error.localizedDescription)")
+        }
+    }
+}
+
 struct CreateFoodWithVoice: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var audioRecorder = AudioRecorder()
-    @State private var navigationPath = NavigationPath()
     @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var navigationPath = NavigationPath()
+    @StateObject private var audioRecorder = CreateFoodAudioRecorder()
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
             GeometryReader { geometry in
-            ZStack {
-                // Background that adapts to dark/light mode
-                Color(UIColor.systemBackground)
-                    .edgesIgnoringSafeArea(.all)
-                
-                VStack {
-                    Spacer()
-                    
-                    // Recording visualization
+                VStack(spacing: 0) {
+                    // Top section with status and waveform
                     VStack(spacing: 24) {
                         // Status text with processing state
                         if audioRecorder.isProcessing {
@@ -62,7 +214,7 @@ struct CreateFoodWithVoice: View {
                     
                     Spacer()
                     
-                    // Bottom controls - X and checkmark only (matching VoiceLogView)
+                    // Bottom controls - X and checkmark only
                     HStack {
                         // X button (left)
                         Button(action: {
@@ -118,18 +270,7 @@ struct CreateFoodWithVoice: View {
         }
         .onAppear {
             print("CreateFoodWithVoice appeared")
-            
-            // Setup without showing a loading screen
-            DispatchQueue.main.async {
-                // Inject the FoodManager
-                audioRecorder.foodManager = foodManager
-                
-                // Pre-activate audio session
-                if AudioSessionManager.shared.activateSession() {
-                    print("Audio session pre-activated")
-                    checkMicrophonePermission()
-                }
-            }
+            checkMicrophonePermission()
         }
         .onDisappear {
             // Clean up audio session
@@ -140,7 +281,6 @@ struct CreateFoodWithVoice: View {
         }
         .navigationDestination(for: Food.self) { food in
             ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
-        }
         }
     }
     
@@ -155,7 +295,6 @@ struct CreateFoodWithVoice: View {
             
         case .denied:
             print("Microphone permission denied")
-            // Show alert or handle denied permission
             showPermissionAlert()
             
         case .undetermined:
@@ -177,7 +316,6 @@ struct CreateFoodWithVoice: View {
     }
     
     private func showPermissionAlert() {
-        // In a real app, you would show an alert here
         print("Permission denied - would show alert")
     }
     
@@ -205,7 +343,7 @@ struct CreateFoodWithVoice: View {
     private func generateFoodFromTranscription() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
-        // Use FoodManager to generate food with AI
+        // Use FoodManager to generate food with AI (NOT generateMacrosWithAI)
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -221,7 +359,6 @@ struct CreateFoodWithVoice: View {
         }
     }
 }
-
 
 #Preview {
     CreateFoodWithVoice()

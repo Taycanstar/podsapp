@@ -2725,12 +2725,14 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
     func processVoiceRecording(audioData: Data, mealType: String = "Lunch") {
         print("🍽️ FoodManager.processVoiceRecording called with mealType: \(mealType)")
         
-        // Set macro generation flags for proper UI display
-        isGeneratingMacros = true  // This triggers MacroGenerationCard
-        isLoading = true  // This is what makes the loading card visible in DashboardView
-        macroGenerationStage = 0
-        showAIGenerationSuccess = false
-        macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
+        // Set macro generation flags for proper UI display (on main thread)
+        DispatchQueue.main.async {
+            self.isGeneratingMacros = true  // This triggers MacroGenerationCard
+            self.isLoading = true  // This is what makes the loading card visible in DashboardView
+            self.macroGenerationStage = 0
+            self.showAIGenerationSuccess = false
+            self.macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
+        }
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -2739,16 +2741,18 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 return 
             }
             
-            // Cycle through macro generation stages
-            self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
-            
-            // Update loading message based on current stage
-            self.macroLoadingMessage = [
-                "Transcribing your voice…",
-                "Analyzing food description…",
-                "Generating nutritional data…",
-                "Finalizing your food log…"
-            ][self.macroGenerationStage]
+            // Cycle through macro generation stages (on main thread)
+            DispatchQueue.main.async {
+                self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+                
+                // Update loading message based on current stage
+                self.macroLoadingMessage = [
+                    "Transcribing your voice…",
+                    "Analyzing food description…",
+                    "Generating nutritional data…",
+                    "Finalizing your food log…"
+                ][self.macroGenerationStage]
+            }
         }
         
         // First step: Transcribe the audio
@@ -2770,11 +2774,13 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                         // Stop the analysis animation timer
                         timer.invalidate()
                         
-                        // Reset macro generation flags
-                        self.isGeneratingMacros = false
-                        self.isLoading = false
-                        self.macroGenerationStage = 0
-                        self.macroLoadingMessage = ""
+                        // Reset macro generation flags (on main thread)
+                        DispatchQueue.main.async {
+                            self.isGeneratingMacros = false
+                            self.isLoading = false
+                            self.macroGenerationStage = 0
+                            self.macroLoadingMessage = ""
+                        }
                     }
                     
                     switch result {
@@ -2803,8 +2809,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
                             
-                            // Set error for user notification
-                            self.scanningFoodError = "Food not identified. Please try again."
+                            // Set error for user notification (on main thread)
+                            DispatchQueue.main.async {
+                                self.scanningFoodError = "Food not identified. Please try again."
+                            }
                             print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }
@@ -2830,27 +2838,27 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                         // Add to DayLogsViewModel to update the UI (must be on main thread)
                         DispatchQueue.main.async {
                             self.dayLogsViewModel?.addPending(combinedLog)
+                            
+                            // Also add to the global timeline, de-duplicating first
+                            if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                                self.combinedLogs.remove(at: idx)
+                            }
+                            self.combinedLogs.insert(combinedLog, at: 0)
                         }
                         
-                        // Also add to the global timeline, de-duplicating first
-                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                            self.combinedLogs.remove(at: idx)
-                        }
-                        self.combinedLogs.insert(combinedLog, at: 0)
-                        
-                        // Track the food in recently added
-                        self.lastLoggedFoodId = loggedFood.food.fdcId
-                        self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
-                        
-              
-                        
-                        // Save the generated food for the toast
-                        self.aiGeneratedFood = loggedFood.food
-                        
-                        // Show success toast
-                        self.showAIGenerationSuccess = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            self.showAIGenerationSuccess = false
+                        // Track the food in recently added (on main thread)
+                        DispatchQueue.main.async {
+                            self.lastLoggedFoodId = loggedFood.food.fdcId
+                            self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
+                            
+                            // Save the generated food for the toast
+                            self.aiGeneratedFood = loggedFood.food
+                            
+                            // Show success toast
+                            self.showAIGenerationSuccess = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                self.showAIGenerationSuccess = false
+                            }
                         }
                         
                         // Clear the lastLoggedFoodId after 2 seconds
@@ -2864,11 +2872,13 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                         }
                         
                     case .failure(let error):
-                        // Set error message for user notification in DashboardView
-                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                            self.scanningFoodError = message
-                        } else {
-                            self.scanningFoodError = "Failed to process voice input: \(error.localizedDescription)"
+                        // Set error message for user notification in DashboardView (on main thread)
+                        DispatchQueue.main.async {
+                            if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                                self.scanningFoodError = message
+                            } else {
+                                self.scanningFoodError = "Failed to process voice input: \(error.localizedDescription)"
+                            }
                         }
                         
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
@@ -2876,18 +2886,20 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 }
                 
             case .failure(let error):
-                // Stop the timer and reset macro generation state
+                // Stop the timer and reset macro generation state (on main thread)
                 timer.invalidate()
-                self.isGeneratingMacros = false
-                self.isLoading = false
-                self.macroGenerationStage = 0
-                self.macroLoadingMessage = ""
-                
-                // Set error message for user notification in DashboardView
-                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                    self.scanningFoodError = message
-                } else {
-                    self.scanningFoodError = "Failed to transcribe voice input: \(error.localizedDescription)"
+                DispatchQueue.main.async {
+                    self.isGeneratingMacros = false
+                    self.isLoading = false
+                    self.macroGenerationStage = 0
+                    self.macroLoadingMessage = ""
+                    
+                    // Set error message for user notification in DashboardView
+                    if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                        self.scanningFoodError = message
+                    } else {
+                        self.scanningFoodError = "Failed to transcribe voice input: \(error.localizedDescription)"
+                    }
                 }
                 
                 print("❌ Voice transcription failed: \(error.localizedDescription)")

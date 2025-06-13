@@ -588,16 +588,12 @@ private struct FoodListView: View {
                         DispatchQueue.main.async {
                             dayLogsVM.addPending(combinedLog)
 
-
-                                            
-                        // 1) see if there's an existing entry with that foodLogId
+                            // 1) see if there's an existing entry with that foodLogId
                             if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                                 foodManager.combinedLogs.remove(at: idx)
                             }
                             // 2) prepend the fresh log
                             foodManager.combinedLogs.insert(combinedLog, at: 0)
-
-
                         }
                         case .failure(let error):
                             // Show error alert
