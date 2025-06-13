@@ -1094,29 +1094,36 @@ struct ConfirmFoodView: View {
             foodMeasures: [foodMeasure]
         )
         
-        // Add directly to user foods (don't use API since we're creating, not logging)
-        if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
-            foodManager.userFoods.insert(food, at: 0)
+        // Use the API to create the food properly (same as manual creation)
+        foodManager.createManualFood(food: food) { result in
+            DispatchQueue.main.async {
+                isCreating = false
+                
+                switch result {
+                case .success(let createdFood):
+                    print("Food created successfully: \(createdFood.displayName)")
+                    
+                    // Show success toast via the food manager
+                    foodManager.lastGeneratedFood = createdFood
+                    foodManager.showFoodGenerationSuccess = true
+                    
+                    // Hide toast after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        foodManager.showFoodGenerationSuccess = false
+                    }
+                    
+                    // Track as recently added
+                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                    
+                    // Navigate back
+                    dismiss()
+                    
+                case .failure(let error):
+                    errorMessage = "Failed to create food: \(error.localizedDescription)"
+                    showErrorAlert = true
+                }
+            }
         }
-        
-        print("✅ Successfully created food: \(food.description)")
-        
-        // Show success toast
-        foodManager.lastGeneratedFood = food
-        foodManager.showFoodGenerationSuccess = true
-        
-        // Hide toast after delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            foodManager.showFoodGenerationSuccess = false
-        }
-        
-        // Track as recently added
-        foodManager.trackRecentlyAdded(foodId: food.fdcId)
-        
-        // Navigate back
-        dismiss()
-        
-        isCreating = false
     }
     
     // Helper to add optional nutrients

@@ -34,6 +34,7 @@ struct FoodDetailsView: View {
         self.food = food
         _selectedMeal = selectedMeal 
         _servingSize = State(initialValue: food.servingSizeText)
+        _numberOfServings = State(initialValue: food.numberOfServings ?? 1)
     }
     
     private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {

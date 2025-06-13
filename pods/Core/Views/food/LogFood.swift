@@ -831,6 +831,8 @@ private struct FoodListView: View {
                     fat: food.fat
                 )
                 
+
+                
                 // Create a CombinedLog for the LoggedFoodItem
                 return CombinedLog(
                     type: .food,
