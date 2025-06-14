@@ -8,11 +8,36 @@
 import SwiftUI
 
 struct WorkoutContainerView: View {
+    @Binding var selectedTab: Int
+    @State private var navigationPath = NavigationPath()
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        NavigationStack(path: $navigationPath) {
+            LogWorkoutView(selectedTab: $selectedTab, navigationPath: $navigationPath)
+                .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
+                    switch destination {
+                    case .createWorkout:
+                        CreateWorkoutView(navigationPath: $navigationPath)
+                    case .editWorkout(let workout):
+                        // TODO: Implement EditWorkoutView
+                        CreateWorkoutView(navigationPath: $navigationPath, workout: workout)
+                    case .exerciseSelection:
+                        // TODO: Implement ExerciseSelectionView
+                        Text("Exercise Selection View")
+                            .navigationTitle("Select Exercise")
+                    }
+                }
+        }
     }
 }
 
+// MARK: - Navigation Destinations
+enum WorkoutNavigationDestination: Hashable {
+    case createWorkout
+    case editWorkout(Workout)
+    case exerciseSelection
+}
+
 #Preview {
-    WorkoutContainerView()
+    WorkoutContainerView(selectedTab: .constant(0))
 }

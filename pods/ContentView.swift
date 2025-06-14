@@ -194,9 +194,7 @@ struct ContentView: View {
                 }
 
                 .fullScreenCover(isPresented: $showLogWorkoutView) {
-                    NavigationView {
-                        LogWorkoutView(selectedTab: $selectedTab)
-                    }
+                    WorkoutContainerView(selectedTab: $selectedTab)
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in

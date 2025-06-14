@@ -26,23 +26,41 @@ struct Exercise: Codable, Identifiable, Hashable {
     }
 }
 
-struct WorkoutSet: Codable, Identifiable {
+struct WorkoutSet: Codable, Identifiable, Hashable {
     let id: Int
     let reps: Int?
     let weight: Double? // in kg or lbs
     let duration: Int? // in seconds for time-based exercises
     let distance: Double? // in meters or miles for cardio
     let restTime: Int? // in seconds
+    
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: WorkoutSet, rhs: WorkoutSet) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-struct WorkoutExercise: Codable, Identifiable {
+struct WorkoutExercise: Codable, Identifiable, Hashable {
     let id: Int
     let exercise: Exercise
     let sets: [WorkoutSet]
     let notes: String?
+    
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: WorkoutExercise, rhs: WorkoutExercise) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-struct Workout: Codable, Identifiable {
+struct Workout: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
     let date: Date
@@ -58,9 +76,18 @@ struct Workout: Codable, Identifiable {
     var displayName: String {
         name.isEmpty ? "Workout" : name
     }
+    
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: Workout, rhs: Workout) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-struct LoggedWorkout: Codable, Identifiable {
+struct LoggedWorkout: Codable, Identifiable, Hashable {
     let id: Int
     let workoutLogId: Int
     let workout: Workout
@@ -69,6 +96,15 @@ struct LoggedWorkout: Codable, Identifiable {
     let message: String
     
     var logDate: Date { loggedAt }
+    
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: LoggedWorkout, rhs: LoggedWorkout) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 // MARK: - WorkoutManager

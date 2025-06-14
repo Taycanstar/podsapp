@@ -10,9 +10,9 @@ import SwiftUI
 struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedTab: Int
+    @Binding var navigationPath: NavigationPath
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
-    @State private var showCreateWorkout = false
     
     // Add WorkoutManager
     @StateObject private var workoutManager = WorkoutManager()
@@ -58,7 +58,7 @@ struct LogWorkoutView: View {
                     Button(action: {
                         print("Tapped New Workout")
                         HapticFeedback.generate()
-                        showCreateWorkout = true
+                        navigationPath.append(WorkoutNavigationDestination.createWorkout)
                     }) {
                         HStack(spacing: 6) {
                             Spacer()
@@ -120,9 +120,6 @@ struct LogWorkoutView: View {
                 workoutManager.initialize(userEmail: userEmail)
             }
         }
-        .sheet(isPresented: $showCreateWorkout) {
-            CreateWorkoutView()
-        }
     }
     
     private var toolbarContent: some ToolbarContent {
@@ -145,6 +142,6 @@ struct LogWorkoutView: View {
 
 #Preview {
     NavigationView {
-        LogWorkoutView(selectedTab: .constant(0))
+        LogWorkoutView(selectedTab: .constant(0), navigationPath: .constant(NavigationPath()))
     }
 }

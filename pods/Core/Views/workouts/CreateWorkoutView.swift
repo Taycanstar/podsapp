@@ -9,11 +9,25 @@ import SwiftUI
 
 struct CreateWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
+    @Binding var navigationPath: NavigationPath
     @State private var workoutTitle: String = ""
     @State private var exercises: [WorkoutExercise] = []
     
+    // Optional workout for editing
+    let workout: Workout?
+    
+    init(navigationPath: Binding<NavigationPath>, workout: Workout? = nil) {
+        self._navigationPath = navigationPath
+        self.workout = workout
+        
+        // Initialize with existing workout data if editing
+        if let workout = workout {
+            self._workoutTitle = State(initialValue: workout.name)
+            self._exercises = State(initialValue: workout.exercises)
+        }
+    }
+    
     var body: some View {
-        NavigationView {
             VStack(spacing: 0) {
                 // Background color for the entire view
                 Color("iosbg2")
@@ -51,12 +65,12 @@ struct CreateWorkoutView: View {
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
                                     
-                                    // Add Exercise button
-                                    Button(action: {
-                                        print("Tapped Add Exercise")
-                                        HapticFeedback.generate()
-                                        // TODO: Navigate to exercise selection
-                                    }) {
+                                                                         // Add Exercise button
+                                     Button(action: {
+                                         print("Tapped Add Exercise")
+                                         HapticFeedback.generate()
+                                         navigationPath.append(WorkoutNavigationDestination.exerciseSelection)
+                                     }) {
                                         HStack(spacing: 6) {
                                             Spacer()
                                             Image(systemName: "plus.circle.fill")
@@ -72,7 +86,7 @@ struct CreateWorkoutView: View {
                                         .padding(.vertical, 12)
                                         .frame(maxWidth: .infinity)
                                         // .background(Color("iosfit"))
-                                             .background(.accentColor)
+                                             .background(Color("accentColor"))
                                         .cornerRadius(12)
                                     }
                                     .padding(.horizontal)
@@ -95,37 +109,38 @@ struct CreateWorkoutView: View {
                         }
                     )
             }
-            .navigationTitle("New Workout")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(.accentColor)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        saveWorkout()
-                    }
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.accentColor)
-                    .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
+                     .navigationTitle(workout != nil ? "Edit Workout" : "New Workout")
+         .navigationBarTitleDisplayMode(.inline)
+         .navigationBarBackButtonHidden(true)
+         .toolbar {
+             ToolbarItem(placement: .navigationBarLeading) {
+                 Button("Cancel") {
+                     navigationPath.removeLast()
+                 }
+                 .foregroundColor(.accentColor)
+             }
+             
+             ToolbarItem(placement: .navigationBarTrailing) {
+                 Button("Done") {
+                     saveWorkout()
+                 }
+                 .font(.system(size: 17, weight: .semibold))
+                 .foregroundColor(.accentColor)
+                 .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+             }
+         }
     }
     
     private func saveWorkout() {
         // TODO: Implement workout saving logic
         print("Saving workout: \(workoutTitle)")
         HapticFeedback.generate()
-        dismiss()
+        navigationPath.removeLast()
     }
 }
 
 #Preview {
-    CreateWorkoutView()
+    NavigationView {
+        CreateWorkoutView(navigationPath: .constant(NavigationPath()))
+    }
 }
