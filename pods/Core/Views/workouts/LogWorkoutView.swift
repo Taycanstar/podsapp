@@ -13,6 +13,12 @@ struct LogWorkoutView: View {
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
     
+    // Add WorkoutManager
+    @StateObject private var workoutManager = WorkoutManager()
+    
+    // Add user email - you'll need to pass this in or get it from environment
+    @State private var userEmail: String = UserDefaults.standard.string(forKey: "user_email") ?? ""
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             // Background color for the entire view
@@ -24,30 +30,75 @@ struct LogWorkoutView: View {
                 
                 // Main content
                 VStack(spacing: 20) {
-                    // Add Exercise section - styled like Quick Log button
+             
+                  // Show "blackex" image when no workouts exist
+                    if !workoutManager.hasWorkouts && !workoutManager.isLoadingWorkouts {
+                        VStack(spacing: 16) {
+                            Image("blackex")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 250, maxHeight: 250)
+                         
+                            
+                            Text("Build your perfect workout")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Text("Create routines, track progress, and stay consistent. Once you add workouts, they'll show up here. ")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 45)
+                        }
+                        .padding(.top, 40)
+                    }
+
+                           // Add Exercise section - styled like Quick Log button
                     Button(action: {
-                        print("Tapped Add Exercise")
+                        print("Tapped New Workout")
                         // TODO: Add exercise functionality
                     }) {
                         HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentColor)
-                            Text("Add Exercise")
+                      Spacer()
+                            Text("New Workout")
                                 .font(.system(size: 17))
                                 .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(Color("bg"))
                             Spacer()
                         }
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 18)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color("iosfit"))
+                        // .background(Color("iosfit"))
+                        .background(.primary)
+                        
                         .cornerRadius(12)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
+                    .padding(.horizontal, 100)
+                    .padding(.top, 10)
+                    
+                    
+                    // Show loading indicator when loading workouts
+                    if workoutManager.isLoadingWorkouts {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                            
+                            Text("Loading workouts...")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 40)
+                    }
+                    
+                    // TODO: Show workout list when workouts exist
+                    if workoutManager.hasWorkouts {
+                        // This will be implemented later when we have workout data
+                        Text("Workouts will be displayed here")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 40)
+                    }
                     
                     Spacer()
                 }
@@ -63,6 +114,12 @@ struct LogWorkoutView: View {
             .toolbar { toolbarContent }
         }
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            // Initialize WorkoutManager when view appears
+            if !userEmail.isEmpty {
+                workoutManager.initialize(userEmail: userEmail)
+            }
+        }
     }
     
     private var toolbarContent: some ToolbarContent {

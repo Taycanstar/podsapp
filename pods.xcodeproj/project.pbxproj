@@ -68,6 +68,7 @@
 		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
 		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
 		3662A54F2DFDE03700847487 /* LogWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54E2DFDE03700847487 /* LogWorkoutView.swift */; };
+		3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5502DFDFF7B00847487 /* WorkoutManager.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
@@ -299,6 +300,7 @@
 		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
 		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
 		3662A54E2DFDE03700847487 /* LogWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWorkoutView.swift; sourceTree = "<group>"; };
+		3662A5502DFDFF7B00847487 /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
@@ -515,6 +517,7 @@
 				364A83CB2DACA02F009D2620 /* NetworkManagerTwo.swift */,
 				36ED359C2DD0DE1600D174FB /* LogRepository.swift */,
 				36ED35A42DD5291900D174FB /* HealthKitManager.swift */,
+				3662A5502DFDFF7B00847487 /* WorkoutManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -1239,6 +1242,7 @@
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
+				3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
 				36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */,
