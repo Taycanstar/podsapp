@@ -19,6 +19,9 @@ struct LogWorkoutView: View {
             Color("iosbg2").edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
+                // Divider below searchbar
+                Divider()
+                
                 // Main content
                 VStack(spacing: 20) {
                     // Add Exercise section - styled like Quick Log button
@@ -44,7 +47,7 @@ struct LogWorkoutView: View {
                         .cornerRadius(12)
                     }
                     .padding(.horizontal)
-                    .padding(.top, 0)
+                    .padding(.top, 20)
                     
                     Spacer()
                 }

@@ -164,7 +164,7 @@ struct ContentView: View {
                                  showVoiceLog: $showVoiceLog,
                                  showLogWorkoutView: $showLogWorkoutView,
                                  selectedMeal: $selectedMeal)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
                 }
