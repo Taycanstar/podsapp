@@ -72,7 +72,7 @@ struct LogWorkoutView: View {
                         .background(Color.primary)
                         .cornerRadius(12)
                     }
-                    .padding(.horizontal, 140)
+                    .padding(.horizontal, 145)
                     .padding(.top, 10)
                     
                     
