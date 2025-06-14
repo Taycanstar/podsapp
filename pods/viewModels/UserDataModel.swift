@@ -22,6 +22,7 @@ struct UserData: Codable {
 
 struct LogsByDateResponse: Codable {
     var logs: [CombinedLog]
+    var waterLogs: [WaterLogResponse] = []
     var targetDate: String
     var adjacentDaysIncluded: Bool
     var goals: NutritionGoals?
@@ -29,6 +30,7 @@ struct LogsByDateResponse: Codable {
     
     enum CodingKeys: String, CodingKey {
         case logs
+        case waterLogs = "water_logs"
         case targetDate = "target_date"
         case adjacentDaysIncluded = "adjacent_days_included"
         case goals
@@ -63,6 +65,23 @@ struct WeightLogResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case weightKg = "weight_kg"
+        case dateLogged = "date_logged"
+        case notes
+    }
+}
+
+/// Response from logging a water intake measurement
+struct WaterLogResponse: Codable {
+    let id: Int
+    let waterOz: Double
+    let waterLiters: Double
+    let dateLogged: String
+    let notes: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case waterOz = "water_oz"
+        case waterLiters = "water_liters"
         case dateLogged = "date_logged"
         case notes
     }

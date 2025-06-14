@@ -40,6 +40,19 @@ struct ContentView: View {
     @State private var showVoiceLog = false
     @State private var showLogWorkoutView = false
     
+    // State for selected meal - initialized with time-based default
+    @State private var selectedMeal: String = {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  // 5:00 AM to 11:59 AM
+            return "Breakfast"
+        case 12..<17:  // 12:00 PM to 4:59 PM
+            return "Lunch"
+        default:  // 5:00 PM to 4:59 AM
+            return "Dinner"
+        }
+    }()
+    
     // New states for barcode confirmation
     @State private var showConfirmFoodView = false
     @State private var scannedFood: Food?
@@ -149,14 +162,15 @@ struct ContentView: View {
                                  selectedTab: $selectedTab,
                                  showFoodScanner: $showFoodScanner,
                                  showVoiceLog: $showVoiceLog,
-                                 showLogWorkoutView: $showLogWorkoutView)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                                 showLogWorkoutView: $showLogWorkoutView,
+                                 selectedMeal: $selectedMeal)
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
                 }
 
                 .sheet(isPresented: $showFoodScanner) {
-                    FoodScannerView(isPresented: $showFoodScanner, onFoodScanned: { food, foodLogId in
+                    FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal, onFoodScanned: { food, foodLogId in
                         // When a barcode is scanned and food is returned, show the confirmation view
                         scannedFood = food
                         scannedFoodLogId = foodLogId
@@ -169,9 +183,10 @@ struct ContentView: View {
                 }
 
                 .fullScreenCover(isPresented: $showVoiceLog) {
-                    VoiceLogView(isPresented: $showVoiceLog)
+                    VoiceLogView(isPresented: $showVoiceLog, selectedMeal: selectedMeal)
                         .onAppear {
                             print("VoiceLogView appeared from ContentView")
+                            print("🍽️ ContentView passing selectedMeal to VoiceLogView: \(selectedMeal)")
                         }
                         .onDisappear {
                             print("VoiceLogView disappeared from ContentView")
@@ -222,6 +237,9 @@ struct ContentView: View {
         .onAppear {
             print("⚠️ ContentView appeared: Force checking onboarding status")
             forceCheckOnboarding()
+        }
+        .onChange(of: selectedMeal) { _, newValue in
+            print("🍽️ ContentView selectedMeal changed to: \(newValue)")
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

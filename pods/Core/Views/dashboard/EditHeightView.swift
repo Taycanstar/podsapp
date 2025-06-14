@@ -48,7 +48,7 @@ struct EditHeightView: View {
                         // Convert from metric to imperial
                         let totalInches = Double(selectedCentimeters) / 2.54
                         selectedFeet = Int(totalInches / 12)
-                        selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12))
+                        selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
                     } else {
                         // Convert from imperial to metric
                         let totalInches = (selectedFeet * 12) + selectedInches
@@ -111,7 +111,7 @@ struct EditHeightView: View {
                 // Calculate imperial values
                 let totalInches = vm.height / 2.54
                 selectedFeet = Int(totalInches / 12)
-                selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12))
+                selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
             }
         }
     }

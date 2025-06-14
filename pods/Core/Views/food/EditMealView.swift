@@ -22,9 +22,10 @@ struct EditMealView: View {
     @State private var mealName: String
     @State private var shareWith: String
     @State private var instructions: String
-    @State private var servings: Int
+    @State private var servings: Double
     @State private var mealTime: String = "Breakfast"
     @State private var scheduledDate: Date?
+
     
     // Track if the meal has been modified
     @State private var hasChanges: Bool = false
@@ -231,6 +232,7 @@ struct EditMealView: View {
                 })
             }
         }
+
     }
     
     // MARK: - Methods
@@ -257,7 +259,7 @@ struct EditMealView: View {
             description: meal.description,
             directions: instructions,
             privacy: shareWith.lowercased(),
-            servings: Int(servings),
+            servings: Double(servings),
             mealItems: [],  // Original meal items (will be replaced by selectedFoods)
             image: meal.image, // Preserve existing image if any
             totalCalories: totals.calories,
@@ -315,14 +317,8 @@ struct EditMealView: View {
             Divider()
             
             // Servings row
-            HStack {
-                Text("Servings")
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Stepper("\(servings)", value: $servings, in: 1...20)
-            }
+            servingsRowView
+          
             
             Divider()
             
@@ -672,6 +668,37 @@ struct EditMealView: View {
         }
         
         return totals
+    }
+}
+
+// MARK: - Servings Selector Components
+extension EditMealView {
+    private var servingsRowView: some View {
+        HStack {
+            Text("Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $servings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .onChange(of: servings) { _ in
+                    hasChanges = true
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
+        }
+    }
+    
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

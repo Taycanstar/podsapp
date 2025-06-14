@@ -110,6 +110,7 @@ struct OrbDot: Identifiable {
 
 struct VoiceLogView: View {
     @Binding var isPresented: Bool
+    let selectedMeal: String
     @StateObject private var audioRecorder = AudioRecorder()
     @State private var allowDismissal = false
     @EnvironmentObject var foodManager: FoodManager
@@ -216,11 +217,14 @@ struct VoiceLogView: View {
         }
         .onAppear {
             print("VoiceLogView appeared")
+            print("🍽️ VoiceLogView received selectedMeal: \(selectedMeal)")
             
             // Setup without showing a loading screen
             DispatchQueue.main.async {
-                // Inject the FoodManager
+                // Inject the FoodManager and selectedMeal
                 audioRecorder.foodManager = foodManager
+                audioRecorder.selectedMeal = selectedMeal
+                print("🍽️ AudioRecorder.selectedMeal set to: \(audioRecorder.selectedMeal)")
                 
                 // Note: No longer using foodDataReady callback since FoodManager.processVoiceRecording
                 // handles the entire process including logging
@@ -337,7 +341,8 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var foodData: Food?
     
     // The FoodManager instance passed from VoiceLogView
-    var foodManager: FoodManager? 
+    var foodManager: FoodManager?
+    var selectedMeal: String = "Lunch" 
     
     private var audioRecorder: AVAudioRecorder?
     private var timer: Timer?
@@ -417,8 +422,9 @@ class AudioRecorder: NSObject, ObservableObject {
             // Pass the audio data to FoodManager to process instead of handling it ourselves
             // This ensures processing continues even after VoiceLogView is dismissed
             if let foodManager = foodManager {
-                print("🎤 Passing audio data to FoodManager for processing")
-                foodManager.processVoiceRecording(audioData: audioData)
+                print("🎤 Passing audio data to FoodManager for processing with meal: \(selectedMeal)")
+                print("🍽️ AudioRecorder.selectedMeal value: \(selectedMeal)")
+                foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal)
             } else {
                 print("⚠️ No FoodManager available to process audio")
             }
@@ -482,6 +488,6 @@ extension AudioRecorder: AVAudioRecorderDelegate {
 }
 
 #Preview {
-    VoiceLogView(isPresented: .constant(false))
+    VoiceLogView(isPresented: .constant(false), selectedMeal: "Lunch")
 }
 

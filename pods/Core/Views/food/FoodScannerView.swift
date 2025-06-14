@@ -23,6 +23,7 @@ struct BarcodeFood: Hashable {
 
 struct FoodScannerView: View {
     @Binding var isPresented: Bool
+    let selectedMeal: String
     @State private var selectedMode: ScanMode = .food
     @State private var showPhotosPicker = false
     @State private var selectedImage: UIImage?
@@ -307,17 +308,18 @@ private func analyzeImage(_ image: UIImage) {
   foodManager.loadingMessage   = "Analyzing image..."
   foodManager.uploadProgress   = 0.1
 
-  print("🔍 Starting food image analysis via server")
+  print("🔍 Starting food image analysis via server with meal: \(selectedMeal)")
 
   foodManager.analyzeFoodImage(image: image,
-                               userEmail: userEmail) { result in
+                               userEmail: userEmail,
+                               mealType: selectedMeal) { result in
     switch result {
     case .success(let combinedLog):
       // Instant optimistic insert
       dayLogsVM.addPending(combinedLog)
 
       DispatchQueue.main.async {
-  // 1) see if there’s an existing entry with that foodLogId
+  // 1) see if there's an existing entry with that foodLogId
   if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
     foodManager.combinedLogs.remove(at: idx)
   }
@@ -359,7 +361,8 @@ private func analyzeImage(_ image: UIImage) {
         // Start the enhanced barcode lookup process
         foodManager.lookupFoodByBarcodeEnhanced(
                 barcode: barcode,
-            userEmail: userEmail
+            userEmail: userEmail,
+            mealType: selectedMeal
             ) { success, message in
             // The FoodManager will handle all UI state updates
             // including showing the confirmation view when ready

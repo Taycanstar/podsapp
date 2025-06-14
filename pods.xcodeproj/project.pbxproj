@@ -65,8 +65,8 @@
 		364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83CD2DAEC017009D2620 /* VoiceLogView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
-		3662A5442DF254C100847487 /* LogWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5432DF254C100847487 /* LogWorkoutView.swift */; };
-		3662A5472DF2568C00847487 /* Final_Exercise_List.xlsx in Resources */ = {isa = PBXBuildFile; fileRef = 3662A5462DF2568C00847487 /* Final_Exercise_List.xlsx */; };
+		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
+		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
 		367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */; };
@@ -295,8 +295,8 @@
 		364A83CD2DAEC017009D2620 /* VoiceLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceLogView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
-		3662A5432DF254C100847487 /* LogWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWorkoutView.swift; sourceTree = "<group>"; };
-		3662A5462DF2568C00847487 /* Final_Exercise_List.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Final_Exercise_List.xlsx; sourceTree = "<group>"; };
+		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
+		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
 		367979A22C67EF5E00F89435 /* DefaultProfilePicture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfilePicture.swift; sourceTree = "<group>"; };
@@ -545,26 +545,9 @@
 			path = viewModels;
 			sourceTree = "<group>";
 		};
-		3662A5422DF2545E00847487 /* workout */ = {
-			isa = PBXGroup;
-			children = (
-				3662A5432DF254C100847487 /* LogWorkoutView.swift */,
-			);
-			path = workout;
-			sourceTree = "<group>";
-		};
-		3662A5452DF2565D00847487 /* tables */ = {
-			isa = PBXGroup;
-			children = (
-				3662A5462DF2568C00847487 /* Final_Exercise_List.xlsx */,
-			);
-			path = tables;
-			sourceTree = "<group>";
-		};
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				3662A5452DF2565D00847487 /* tables */,
 				363AF9F32D1125F600C91A14 /* Managers */,
 				3688DBF62BDEAE54001E244C /* Views */,
 				3682C86A2BBAED5B00B350E2 /* Components */,
@@ -619,7 +602,6 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				3662A5422DF2545E00847487 /* workout */,
 				36ED35D72DDE502000D174FB /* helperViews */,
 				36ED35AC2DD53B5C00D174FB /* dashboard */,
 				36CB032A2D5AAD4A006A74E9 /* food */,
@@ -832,6 +814,8 @@
 				364A83C92DAB0F82009D2620 /* FoodScannerView.swift */,
 				364A83CD2DAEC017009D2620 /* VoiceLogView.swift */,
 				36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */,
+				3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */,
+				3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1024,7 +1008,6 @@
 				3698E4FC2C24968F0040AF60 /* .gitignore in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,
-				3662A5472DF2568C00847487 /* Final_Exercise_List.xlsx in Resources */,
 				36E097362C4C74CE00F354E6 /* .lldbinit in Resources */,
 				3683FDA92CB5A28F0031F149 /* product.storekit in Resources */,
 				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
@@ -1215,6 +1198,7 @@
 				36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */,
 				363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */,
 				360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */,
+				3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */,
 				36C458BC2B7421100060355F /* ContentView.swift in Sources */,
 				36ED35D42DDBD5DC00D174FB /* UpdateWeight.swift in Sources */,
 				36C458BA2B7421100060355F /* podsApp.swift in Sources */,
@@ -1248,7 +1232,6 @@
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
 				36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */,
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
-				3662A5442DF254C100847487 /* LogWorkoutView.swift in Sources */,
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
@@ -1266,6 +1249,7 @@
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,
+				3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */,
 				36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */,
@@ -1508,7 +1492,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -1546,11 +1530,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.9;
+				MARKETING_VERSION = 1.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -1577,7 +1561,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -1615,11 +1599,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.9;
+				MARKETING_VERSION = 1.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";

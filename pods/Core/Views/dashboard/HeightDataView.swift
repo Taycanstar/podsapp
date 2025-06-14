@@ -104,9 +104,9 @@ struct HeightDataView: View {
                 .foregroundColor(.gray)
             
             if averageHeight > 0 {
-                let feet = Int(averageHeight / 30.48)
-                let remainingCm = averageHeight.truncatingRemainder(dividingBy: 30.48)
-                let inches = Int(remainingCm / 2.54)
+                let totalInches = averageHeight / 2.54
+                let feet = Int(totalInches / 12)
+                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
                 
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(feet)' \(inches)\"")
@@ -186,9 +186,9 @@ struct HeightDataView: View {
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
                         // Calculate feet and inches
-                        let feet = Int(selectedPoint.heightCm / 30.48)
-                        let remainingCm = selectedPoint.heightCm.truncatingRemainder(dividingBy: 30.48)
-                        let inches = Int(remainingCm / 2.54)
+                        let totalInches = selectedPoint.heightCm / 2.54
+                        let feet = Int(totalInches / 12)
+                        let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
                         
                         Text("\(feet)' \(inches)\"")
                             .font(.headline)

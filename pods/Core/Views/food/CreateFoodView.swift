@@ -18,7 +18,7 @@ struct CreateFoodView: View {
     @State private var title: String = ""
     @State private var brand: String = ""
     @State private var servingSize: String = ""
-    @State private var numberOfServings: Int = 1
+    @State private var numberOfServings: Double = 1
     @State private var calories: String = ""
     
     // Basic nutrition facts
@@ -48,6 +48,8 @@ struct CreateFoodView: View {
     @State private var isCreating: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
+    
+
     
     var body: some View {
         ScrollView {
@@ -119,6 +121,7 @@ struct CreateFoodView: View {
                 }
             }
         )
+
     }
     
     // MARK: - Card Views
@@ -162,16 +165,7 @@ struct CreateFoodView: View {
                     .padding(.leading, 16)
                 
                 // Number of Servings
-                HStack {
-                    Text("Number of Servings")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    Stepper("\(numberOfServings)", value: $numberOfServings, in: 1...20)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
+                numberOfServingsRow
             }
         }
         .padding(.horizontal)
@@ -472,7 +466,7 @@ struct CreateFoodView: View {
             brandOwner: brandText,
             brandName: brandText,
             servingSize: 1.0,
-            numberOfServings: Double(numberOfServings),
+            numberOfServings: numberOfServings,
             servingSizeUnit: servingUnit,
             householdServingFullText: servingText,
             foodNutrients: nutrients,
@@ -516,6 +510,37 @@ struct CreateFoodView: View {
         if let doubleValue = Double(value), doubleValue > 0 {
             nutrients.append(Nutrient(nutrientName: name, value: doubleValue, unitName: unit))
         }
+    }
+    
+    // Modify the Number of Servings row to use TextField
+    private var numberOfServingsRow: some View {
+        HStack {
+            Text("Number of Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 16)
+    }
+}
+
+
+extension CreateFoodView {
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
