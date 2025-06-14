@@ -12,6 +12,7 @@ struct LogWorkoutView: View {
     @Binding var selectedTab: Int
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
+    @State private var showCreateWorkout = false
     
     // Add WorkoutManager
     @StateObject private var workoutManager = WorkoutManager()
@@ -56,7 +57,8 @@ struct LogWorkoutView: View {
                     // New Workout button
                     Button(action: {
                         print("Tapped New Workout")
-                        // TODO: Add exercise functionality
+                        HapticFeedback.generate()
+                        showCreateWorkout = true
                     }) {
                         HStack(spacing: 6) {
                             Spacer()
@@ -72,7 +74,7 @@ struct LogWorkoutView: View {
                         .background(Color.primary)
                         .cornerRadius(12)
                     }
-                    .padding(.horizontal, 145)
+                    .padding(.horizontal, 142)
                     .padding(.top, 10)
                     
                     
@@ -117,6 +119,9 @@ struct LogWorkoutView: View {
             if !userEmail.isEmpty {
                 workoutManager.initialize(userEmail: userEmail)
             }
+        }
+        .sheet(isPresented: $showCreateWorkout) {
+            CreateWorkoutView()
         }
     }
     
