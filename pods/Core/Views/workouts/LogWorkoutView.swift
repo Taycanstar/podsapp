@@ -46,35 +46,33 @@ struct LogWorkoutView: View {
                             
                             Text("Create routines, track progress, and stay consistent. Once you add workouts, they'll show up here. ")
                                 .font(.subheadline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 45)
                         }
                         .padding(.top, 40)
                     }
 
-                           // Add Exercise section - styled like Quick Log button
+                    // New Workout button
                     Button(action: {
                         print("Tapped New Workout")
                         // TODO: Add exercise functionality
                     }) {
                         HStack(spacing: 6) {
-                      Spacer()
+                            Spacer()
                             Text("New Workout")
-                                .font(.system(size: 17))
+                                .font(.system(size: 15))
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color("bg"))
                             Spacer()
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        // .background(Color("iosfit"))
-                        .background(.primary)
-                        
+                        .frame(maxWidth: .infinity)
+                        .background(Color.primary)
                         .cornerRadius(12)
                     }
-                    .padding(.horizontal, 100)
+                    .padding(.horizontal, 140)
                     .padding(.top, 10)
                     
                     
