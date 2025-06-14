@@ -40,7 +40,8 @@ struct CreateWorkoutView: View {
                                     .font(.system(size: 17))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
-                                    .background(Color(.systemBackground))
+                                    // .background(Color(.systemBackground))
+                                    .background(Color("iosfit"))
                                     .cornerRadius(10)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10)
@@ -85,8 +86,7 @@ struct CreateWorkoutView: View {
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
                                         .frame(maxWidth: .infinity)
-                                        // .background(Color("iosfit"))
-                                             .background(Color("accentColor"))
+                                        .background(Color.accentColor)
                                         .cornerRadius(12)
                                     }
                                     .padding(.horizontal)

@@ -116,7 +116,7 @@ struct ContentView: View {
             }
             .tint(.accentColor)
         } message: {
-            Text("An update to Pods is required to continue.")
+            Text("An update to Humuli is required to continue.")
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active && !hasCheckedOnboarding {
