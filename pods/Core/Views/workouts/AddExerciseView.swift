@@ -28,7 +28,7 @@ struct AddExerciseView: View {
         NavigationView {
             VStack(spacing: 0) {
                 // Background color
-                Color("iosbg2")
+                Color(.systemBackground)
                     .ignoresSafeArea(.all)
                     .overlay(contentView)
             }
@@ -87,7 +87,7 @@ struct AddExerciseView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
-                                        .background(Color("iosbg2").opacity(0.8))
+                                        .background(Color(.systemGray6))
                                         .id(sectionKey) // Used by letter index for scrolling
                                     
                                     // Section Content
@@ -99,13 +99,14 @@ struct AddExerciseView: View {
                                             toggleExerciseSelection(exercise)
                                         }
                                         .padding(.horizontal, 16)
-                                        .background(Color("iosbg2"))
+                                        .padding(.trailing, 40) // Add trailing padding for letter wheel
+                                        .background(Color(.systemBackground))
                                         
                                         // Divider between exercises (except for last one)
                                         if exercise.id != exercises.last?.id {
                                             Divider()
                                                 .padding(.leading, 78) // Align with text, not image
-                                                .background(Color("iosbg2"))
+                                                .background(Color(.systemBackground))
                                         }
                                     }
                                 }
@@ -121,7 +122,7 @@ struct AddExerciseView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
-                                        .background(Color("iosbg2").opacity(0.8))
+                                        .background(Color(.systemGray6))
                                     
                                     // Section Content
                                     ForEach(exercises, id: \.id) { exercise in
@@ -132,13 +133,14 @@ struct AddExerciseView: View {
                                             toggleExerciseSelection(exercise)
                                         }
                                         .padding(.horizontal, 16)
-                                        .background(Color("iosbg2"))
+                                        .padding(.trailing, 40) // Add trailing padding for letter wheel
+                                        .background(Color(.systemBackground))
                                         
                                         // Divider between exercises (except for last one)
                                         if exercise.id != exercises.last?.id {
                                             Divider()
                                                 .padding(.leading, 78)
-                                                .background(Color("iosbg2"))
+                                                .background(Color(.systemBackground))
                                         }
                                     }
                                 }
@@ -146,7 +148,7 @@ struct AddExerciseView: View {
                         }
                     }
                 }
-                .background(Color("iosbg2"))
+                .background(Color(.systemBackground))
                 .searchable(text: $searchText, prompt: "Search exercises")
                 .overlay(
                     // Only show section index for "All" view and when we have exercises
