@@ -12,6 +12,7 @@ struct CreateWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     @State private var workoutTitle: String = ""
     @State private var exercises: [WorkoutExercise] = []
+    @State private var showingAddExercise = false
     
     // Optional workout for editing
     let workout: Workout?
@@ -70,7 +71,7 @@ struct CreateWorkoutView: View {
                                      Button(action: {
                                          print("Tapped Add Exercise")
                                          HapticFeedback.generate()
-                                         navigationPath.append(WorkoutNavigationDestination.exerciseSelection)
+                                         showingAddExercise = true
                                      }) {
                                         HStack(spacing: 6) {
                                             Spacer()
@@ -95,11 +96,35 @@ struct CreateWorkoutView: View {
                                     Spacer()
                                 }
                             } else {
-                                // TODO: Show exercise list when exercises are added
-                                VStack {
-                                    Text("Exercises will be displayed here")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                // Show exercise list when exercises are added
+                                VStack(spacing: 16) {
+                                    // Exercise list
+                                    ScrollView {
+                                        LazyVStack(spacing: 12) {
+                                            ForEach(exercises, id: \.id) { exercise in
+                                                WorkoutExerciseRow(exercise: exercise) {
+                                                    removeExercise(exercise)
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, 16)
+                                    }
+                                    
+                                    // Add more exercises button
+                                    Button(action: {
+                                        showingAddExercise = true
+                                        HapticFeedback.generate()
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "plus.circle.fill")
+                                                .font(.system(size: 16))
+                                            Text("Add More Exercises")
+                                                .font(.system(size: 16, weight: .medium))
+                                        }
+                                        .foregroundColor(.accentColor)
+                                        .padding(.vertical, 12)
+                                    }
+                                    .padding(.horizontal, 16)
                                     
                                     Spacer()
                                 }
@@ -129,6 +154,11 @@ struct CreateWorkoutView: View {
                  .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
              }
          }
+         .sheet(isPresented: $showingAddExercise) {
+             AddExerciseView { selectedExercises in
+                 addExercisesToWorkout(selectedExercises)
+             }
+         }
     }
     
     private func saveWorkout() {
@@ -136,6 +166,100 @@ struct CreateWorkoutView: View {
         print("Saving workout: \(workoutTitle)")
         HapticFeedback.generate()
         navigationPath.removeLast()
+    }
+    
+    private func addExercisesToWorkout(_ selectedExercises: [ExerciseData]) {
+        // Convert ExerciseData to WorkoutExercise
+        let newExercises = selectedExercises.map { exerciseData in
+            let exercise = Exercise(
+                id: exerciseData.id,
+                name: exerciseData.name,
+                category: exerciseData.category,
+                description: exerciseData.instructions,
+                instructions: exerciseData.target
+            )
+            
+            return WorkoutExercise(
+                id: Int.random(in: 1000...9999), // Generate random ID
+                exercise: exercise,
+                sets: [],
+                notes: nil
+            )
+        }
+        
+        // Add to existing exercises
+        exercises.append(contentsOf: newExercises)
+        
+        print("Added \(selectedExercises.count) exercises to workout")
+        HapticFeedback.generate()
+    }
+    
+    private func removeExercise(_ exercise: WorkoutExercise) {
+        exercises.removeAll { $0.id == exercise.id }
+        HapticFeedback.generate()
+    }
+}
+
+// MARK: - Workout Exercise Row
+struct WorkoutExerciseRow: View {
+    let exercise: WorkoutExercise
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Exercise thumbnail
+            Group {
+                if let image = UIImage(named: "exercise_\(exercise.exercise.id)") {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    // Default exercise icon
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray5))
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 20))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
+            
+            // Exercise details
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.exercise.name)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                Text("\(exercise.sets.count) sets")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Remove button
+            Button(action: onRemove) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.red)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color("iosfit"))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(.systemGray4), lineWidth: 1)
+        )
     }
 }
 
