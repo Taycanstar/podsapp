@@ -13,7 +13,6 @@ struct AddExerciseView: View {
     @State private var selectedSegment = 0
     @State private var selectedExercises: Set<Int> = []
     @State private var exercises: [ExerciseData] = []
-    @State private var isLoading = true
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -44,16 +43,7 @@ struct AddExerciseView: View {
                             .padding(.top, 16)
                             
                             // Exercise List
-                            if isLoading {
-                                VStack {
-                                    Spacer()
-                                    ProgressView("Loading exercises...")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                }
-                            } else {
-                                List {
+                            List {
                                     if selectedSegment == 0 {
                                         // All exercises - no sections
                                         ForEach(filteredExercises, id: \.id) { exercise in
@@ -90,7 +80,6 @@ struct AddExerciseView: View {
                                 }
                                 .listStyle(PlainListStyle())
                                 .searchable(text: $searchText, prompt: "Search exercises")
-                            }
                         }
                     )
             }
@@ -206,16 +195,13 @@ struct AddExerciseView: View {
     }
     
     private func loadExercises() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.exercises = ExerciseDataLoader.loadExercises()
-            self.isLoading = false
-            
-            // Debug info
-            print("🏋️ AddExerciseView: Loaded \(self.exercises.count) exercises")
-            if !self.exercises.isEmpty {
-                print("🏋️ First exercise: \(self.exercises[0].name) (ID: \(self.exercises[0].id))")
-                print("🏋️ Sample exercises: \(self.exercises.prefix(3).map { "\($0.name) (\($0.id))" }.joined(separator: ", "))")
-            }
+        self.exercises = ExerciseDatabase.getAllExercises()
+        
+        // Debug info
+        print("🏋️ AddExerciseView: Loaded \(self.exercises.count) exercises")
+        if !self.exercises.isEmpty {
+            print("🏋️ First exercise: \(self.exercises[0].name) (ID: \(self.exercises[0].id))")
+            print("🏋️ Sample exercises: \(self.exercises.prefix(3).map { "\($0.name) (\($0.id))" }.joined(separator: ", "))")
         }
     }
 }
@@ -236,22 +222,14 @@ struct ExerciseRow: View {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .onAppear {
-                                // Debug: Image found
-                                print("✅ Image found for exercise \(exercise.id): \(imageId)")
-                            }
                     } else {
-                        // Default exercise icon
+                        // Fallback icon (should rarely be used now)
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(Color(.systemGray5))
                             Image(systemName: "figure.strengthtraining.traditional")
                                 .font(.system(size: 24))
                                 .foregroundColor(.secondary)
-                        }
-                        .onAppear {
-                            // Debug: Image not found
-                            print("⚠️ Image NOT found for exercise \(exercise.id): \(imageId)")
                         }
                     }
                 }
@@ -310,13 +288,7 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     }
 }
 
-// MARK: - Exercise Data Loader (Deprecated - Use ExerciseDatabase instead)
-struct ExerciseDataLoader {
-    static func loadExercises() -> [ExerciseData] {
-        print("⚠️ ExerciseDataLoader is deprecated, using ExerciseDatabase instead")
-        return ExerciseDatabase.getAllExercises()
-    }
-}
+
 
 #Preview {
     AddExerciseView { exercises in

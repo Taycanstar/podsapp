@@ -10,14 +10,8 @@ import UIKit
 
 struct ExerciseDatabase {
     static func getAllExercises() -> [ExerciseData] {
-        // First try to load from JSON
-        if let exercises = loadFromJSON(), !exercises.isEmpty {
-            return filterExercisesWithImages(exercises)
-        }
-        
-        // Fallback to embedded data
-        print("📚 Using embedded exercise database")
-        return filterExercisesWithImages(getEmbeddedExercises())
+        print("📚 Loading embedded exercise database")
+        return filterExercisesWithImages(loadAllExercisesFromEmbeddedData())
     }
     
     private static func filterExercisesWithImages(_ exercises: [ExerciseData]) -> [ExerciseData] {
@@ -31,22 +25,9 @@ struct ExerciseDatabase {
         return exercisesWithImages
     }
     
-    private static func loadFromJSON() -> [ExerciseData]? {
-        guard let path = Bundle.main.path(forResource: "exercises", ofType: "json"),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-              let exercises = try? JSONDecoder().decode([ExerciseData].self, from: data) else {
-            return nil
-        }
-        
-        print("✅ Loaded \(exercises.count) exercises from JSON")
-        return exercises
-    }
+
     
-    private static func getEmbeddedExercises() -> [ExerciseData] {
-        // All 1200 exercises from the spreadsheet embedded as fallback
-        // This ensures the app works even if the JSON file isn't found
-        return loadAllExercisesFromEmbeddedData()
-    }
+
     
     private static func loadAllExercisesFromEmbeddedData() -> [ExerciseData] {
         return [
