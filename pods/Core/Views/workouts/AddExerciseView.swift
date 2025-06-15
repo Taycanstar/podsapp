@@ -206,11 +206,16 @@ struct AddExerciseView: View {
     }
     
     private func loadExercises() {
-        // TODO: Load exercises from the Excel file
-        // For now, create sample data
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.exercises = ExerciseDataLoader.loadExercises()
             self.isLoading = false
+            
+            // Debug info
+            print("🏋️ AddExerciseView: Loaded \(self.exercises.count) exercises")
+            if !self.exercises.isEmpty {
+                print("🏋️ First exercise: \(self.exercises[0].name) (ID: \(self.exercises[0].id))")
+                print("🏋️ Sample exercises: \(self.exercises.prefix(3).map { "\($0.name) (\($0.id))" }.joined(separator: ", "))")
+            }
         }
     }
 }
@@ -226,10 +231,16 @@ struct ExerciseRow: View {
             HStack(spacing: 12) {
                 // Exercise thumbnail
                 Group {
-                    if let image = UIImage(named: "exercise_\(exercise.id)") {
+                    // Use 4-digit padded format for exercise images (e.g., "0001", "0025")
+                    let imageId = String(format: "%04d", exercise.id)
+                    if let image = UIImage(named: imageId) {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
+                            .onAppear {
+                                // Debug: Image found
+                                print("✅ Image found for exercise \(exercise.id): \(imageId)")
+                            }
                     } else {
                         // Default exercise icon
                         ZStack {
@@ -238,6 +249,10 @@ struct ExerciseRow: View {
                             Image(systemName: "figure.strengthtraining.traditional")
                                 .font(.system(size: 24))
                                 .foregroundColor(.secondary)
+                        }
+                        .onAppear {
+                            // Debug: Image not found
+                            print("⚠️ Image NOT found for exercise \(exercise.id): \(imageId)")
                         }
                     }
                 }
@@ -309,31 +324,11 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     }
 }
 
-// MARK: - Exercise Data Loader
+// MARK: - Exercise Data Loader (Deprecated - Use ExerciseDatabase instead)
 struct ExerciseDataLoader {
     static func loadExercises() -> [ExerciseData] {
-        guard let url = Bundle.main.url(forResource: "exercises", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let exercises = try? JSONDecoder().decode([ExerciseData].self, from: data) else {
-            print("Failed to load exercises.json, using sample data")
-            return getSampleExercises()
-        }
-        
-        print("Loaded \(exercises.count) exercises from JSON file")
-        return exercises
-    }
-    
-    private static func getSampleExercises() -> [ExerciseData] {
-        return [
-            ExerciseData(id: 1, name: "Push-ups", exerciseType: "Strength", bodyPart: "Chest", equipment: "Bodyweight", gender: "Male", target: "Pectoralis Major", synergist: "Deltoid Anterior, Triceps Brachii"),
-            ExerciseData(id: 2, name: "Squats", exerciseType: "Strength", bodyPart: "Legs", equipment: "Bodyweight", gender: "Male", target: "Quadriceps", synergist: "Gluteus Maximus, Hamstrings"),
-            ExerciseData(id: 3, name: "Bench Press", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "Pectoralis Major", synergist: "Deltoid Anterior, Triceps Brachii"),
-            ExerciseData(id: 4, name: "Deadlift", exerciseType: "Strength", bodyPart: "Back", equipment: "Barbell", gender: "Male", target: "Erector Spinae", synergist: "Gluteus Maximus, Hamstrings"),
-            ExerciseData(id: 5, name: "Pull-ups", exerciseType: "Strength", bodyPart: "Back", equipment: "Bodyweight", gender: "Male", target: "Latissimus Dorsi", synergist: "Biceps Brachii, Rhomboids"),
-            ExerciseData(id: 6, name: "Bicep Curls", exerciseType: "Strength", bodyPart: "Arms", equipment: "Dumbbell", gender: "Male", target: "Biceps Brachii", synergist: "Brachialis"),
-            ExerciseData(id: 7, name: "Overhead Press", exerciseType: "Strength", bodyPart: "Shoulders", equipment: "Barbell", gender: "Male", target: "Deltoid Anterior", synergist: "Triceps Brachii"),
-            ExerciseData(id: 8, name: "Lunges", exerciseType: "Strength", bodyPart: "Legs", equipment: "Bodyweight", gender: "Male", target: "Quadriceps", synergist: "Gluteus Maximus"),
-        ]
+        print("⚠️ ExerciseDataLoader is deprecated, using ExerciseDatabase instead")
+        return ExerciseDatabase.getAllExercises()
     }
 }
 

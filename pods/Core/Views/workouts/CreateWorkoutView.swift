@@ -209,7 +209,9 @@ struct WorkoutExerciseRow: View {
         HStack(spacing: 12) {
             // Exercise thumbnail
             Group {
-                if let image = UIImage(named: "exercise_\(exercise.exercise.id)") {
+                // Use 4-digit padded format for exercise images (e.g., "0001", "0025")
+                let imageId = String(format: "%04d", exercise.exercise.id)
+                if let image = UIImage(named: imageId) {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
