@@ -77,28 +77,37 @@ struct AddExerciseView: View {
                 List {
                     if selectedSegment == 0 {
                         // All exercises - with alphabetical sections
-                        ForEach(sortedSectionKeys, id: \.self) { sectionKey in
-                            Section(header: HStack {
-                                Text(sectionKey)
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .textCase(nil)
-                                Spacer()
+                        // Only show sections that actually have exercises
+                        let validSectionKeys = sortedSectionKeys.filter { key in
+                            if let exercises = alphabeticalSections[key] {
+                                return !exercises.isEmpty
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color("iosbg2"))
-                            .id(sectionKey) // Add ID for scrolling
-                            ) {
-                                ForEach(alphabeticalSections[sectionKey] ?? [], id: \.id) { exercise in
-                                    ExerciseRow(
-                                        exercise: exercise,
-                                        isSelected: selectedExercises.contains(exercise.id)
-                                    ) {
-                                        toggleExerciseSelection(exercise.id)
+                            return false
+                        }
+                        
+                        ForEach(validSectionKeys, id: \.self) { sectionKey in
+                            let exercises = alphabeticalSections[sectionKey] ?? []
+                            
+                            // Double-check that we have exercises (safety net)
+                            if !exercises.isEmpty {
+                                Section(header: HStack {
+                                    Text(sectionKey)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .textCase(nil)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .id(sectionKey)) {
+                                    ForEach(exercises, id: \.id) { exercise in
+                                        ExerciseRow(
+                                            exercise: exercise,
+                                            isSelected: selectedExercises.contains(exercise.id)
+                                        ) {
+                                            toggleExerciseSelection(exercise)
+                                        }
                                     }
-                                    .listRowBackground(Color("iosbg2"))
-                                    .listRowSeparator(.hidden)
                                 }
                             }
                         }
@@ -115,7 +124,7 @@ struct AddExerciseView: View {
                                         exercise: exercise,
                                         isSelected: selectedExercises.contains(exercise.id)
                                     ) {
-                                        toggleExerciseSelection(exercise.id)
+                                        toggleExerciseSelection(exercise)
                                     }
                                     .listRowBackground(Color("iosbg2"))
                                     .listRowSeparator(.hidden)
@@ -124,17 +133,27 @@ struct AddExerciseView: View {
                         }
                     }
                 }
-                .listStyle(PlainListStyle())
-                .environment(\.defaultMinListHeaderHeight, 0) // Remove default header spacing
+                .listStyle(.grouped)   // grouped style keeps headers scrolling with content (no pinning)
+                // .environment(\.defaultMinListHeaderHeight, 0)
                 .searchable(text: $searchText, prompt: "Search exercises")
                 .overlay(
-                    // Section Index (Letter Wheel) - only show for "All" view
-                    selectedSegment == 0 ? AnyView(
-                        SectionIndexTitles(
-                            proxy: proxy,
-                            titles: sortedSectionKeys
-                        )
-                    ) : AnyView(EmptyView())
+                    // Only show section index for "All" view and when we have exercises
+                    Group {
+                        if selectedSegment == 0 && !exercises.isEmpty {
+                            // Only show valid section keys that have exercises
+                            let validSectionKeys = sortedSectionKeys.filter { key in
+                                if let exercises = alphabeticalSections[key] {
+                                    return !exercises.isEmpty
+                                }
+                                return false
+                            }
+                            
+                            SectionIndexTitles(
+                                proxy: proxy,
+                                titles: validSectionKeys
+                            )
+                        }
+                    }
                 )
             }
         }
@@ -181,6 +200,7 @@ struct AddExerciseView: View {
     }
     
     private var sortedSectionKeys: [String] {
+        // Only include keys that actually have exercises (no empty sections)
         let keys = Array(alphabeticalSections.keys)
         return keys.sorted { key1, key2 in
             // Sort order: symbols (•), numbers (#), then A-Z
@@ -248,24 +268,18 @@ struct AddExerciseView: View {
     }
     
     // MARK: - Methods
-    private func toggleExerciseSelection(_ exerciseId: Int) {
+    private func toggleExerciseSelection(_ exercise: ExerciseData) {
         HapticFeedback.generate()
-        if selectedExercises.contains(exerciseId) {
-            selectedExercises.remove(exerciseId)
+        if selectedExercises.contains(exercise.id) {
+            selectedExercises.remove(exercise.id)
         } else {
-            selectedExercises.insert(exerciseId)
+            selectedExercises.insert(exercise.id)
         }
     }
     
     private func loadExercises() {
         self.exercises = ExerciseDatabase.getAllExercises()
-        
-        // Debug info
         print("🏋️ AddExerciseView: Loaded \(self.exercises.count) exercises")
-        if !self.exercises.isEmpty {
-            print("🏋️ First exercise: \(self.exercises[0].name) (ID: \(self.exercises[0].id))")
-            print("🏋️ Sample exercises: \(self.exercises.prefix(3).map { "\($0.name) (\($0.id))" }.joined(separator: ", "))")
-        }
     }
 }
 
@@ -320,6 +334,7 @@ struct ExerciseRow: View {
                     .foregroundColor(isSelected ? .accentColor : .secondary)
             }
             .padding(.vertical, 8)
+            .padding(.trailing, 50)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())

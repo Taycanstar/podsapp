@@ -10,20 +10,13 @@ import UIKit
 
 struct ExerciseDatabase {
     static func getAllExercises() -> [ExerciseData] {
-        print("📚 Loading embedded exercise database")
-        return filterExercisesWithImages(loadAllExercisesFromEmbeddedData())
+        let allExercises = loadAllExercisesFromEmbeddedData()
+        print("🏋️ ExerciseDatabase: \(allExercises.count) exercises loaded (all images should now work after fixing asset scales)")
+        return allExercises
     }
     
-    private static func filterExercisesWithImages(_ exercises: [ExerciseData]) -> [ExerciseData] {
-        let exercisesWithImages = exercises.filter { exercise in
-            let imageId = String(format: "%04d", exercise.id)
-            let hasImage = UIImage(named: imageId) != nil
-            return hasImage
-        }
-        
-        print("🖼️ Filtered exercises: \(exercisesWithImages.count) out of \(exercises.count) have images")
-        return exercisesWithImages
-    }
+    // Note: Image filtering removed - all exercises should now have working images
+    // after copying 1x images to 2x and 3x scales in all asset files
     
 
     
