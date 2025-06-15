@@ -74,32 +74,23 @@ struct AddExerciseView: View {
             
             // Exercise List
             ScrollViewReader { (proxy: ScrollViewProxy) in
-                List {
-                    if selectedSegment == 0 {
-                        // All exercises - with alphabetical sections
-                        // Only show sections that actually have exercises
-                        let validSectionKeys = sortedSectionKeys.filter { key in
-                            if let exercises = alphabeticalSections[key] {
-                                return !exercises.isEmpty
-                            }
-                            return false
-                        }
-                        
-                        ForEach(validSectionKeys, id: \.self) { sectionKey in
-                            let exercises = alphabeticalSections[sectionKey] ?? []
-                            
-                            // Double-check that we have exercises (safety net)
-                            if !exercises.isEmpty {
-                                Section(header: HStack {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        if selectedSegment == 0 {
+                            // All exercises - with alphabetical sections
+                            ForEach(validSectionKeys, id: \.self) { sectionKey in
+                                if let exercises = alphabeticalSections[sectionKey], !exercises.isEmpty {
+                                    // Section Header (now just a normal view, never "pinned" or re-used)
                                     Text(sectionKey)
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.primary)
-                                        .textCase(nil)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .id(sectionKey)) {
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(Color("iosbg2").opacity(0.8))
+                                        .id(sectionKey) // Used by letter index for scrolling
+                                    
+                                    // Section Content
                                     ForEach(exercises, id: \.id) { exercise in
                                         ExerciseRow(
                                             exercise: exercise,
@@ -107,47 +98,60 @@ struct AddExerciseView: View {
                                         ) {
                                             toggleExerciseSelection(exercise)
                                         }
+                                        .padding(.horizontal, 16)
+                                        .background(Color("iosbg2"))
+                                        
+                                        // Divider between exercises (except for last one)
+                                        if exercise.id != exercises.last?.id {
+                                            Divider()
+                                                .padding(.leading, 78) // Align with text, not image
+                                                .background(Color("iosbg2"))
+                                        }
                                     }
                                 }
                             }
-                        }
-                    } else {
-                        // Grouped exercises with sections
-                        ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
-                            Section(header: Text(sectionKey)
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                                .padding(.vertical, 4)
-                            ) {
-                                ForEach(groupedExercises[sectionKey] ?? [], id: \.id) { exercise in
-                                    ExerciseRow(
-                                        exercise: exercise,
-                                        isSelected: selectedExercises.contains(exercise.id)
-                                    ) {
-                                        toggleExerciseSelection(exercise)
+                        } else {
+                            // Grouped exercises with sections
+                            ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
+                                if let exercises = groupedExercises[sectionKey], !exercises.isEmpty {
+                                    // Section Header
+                                    Text(sectionKey)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(Color("iosbg2").opacity(0.8))
+                                    
+                                    // Section Content
+                                    ForEach(exercises, id: \.id) { exercise in
+                                        ExerciseRow(
+                                            exercise: exercise,
+                                            isSelected: selectedExercises.contains(exercise.id)
+                                        ) {
+                                            toggleExerciseSelection(exercise)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .background(Color("iosbg2"))
+                                        
+                                        // Divider between exercises (except for last one)
+                                        if exercise.id != exercises.last?.id {
+                                            Divider()
+                                                .padding(.leading, 78)
+                                                .background(Color("iosbg2"))
+                                        }
                                     }
-                                    .listRowBackground(Color("iosbg2"))
-                                    .listRowSeparator(.hidden)
                                 }
                             }
                         }
                     }
                 }
-                .listStyle(.grouped)   // grouped style keeps headers scrolling with content (no pinning)
-                // .environment(\.defaultMinListHeaderHeight, 0)
+                .background(Color("iosbg2"))
                 .searchable(text: $searchText, prompt: "Search exercises")
                 .overlay(
                     // Only show section index for "All" view and when we have exercises
                     Group {
                         if selectedSegment == 0 && !exercises.isEmpty {
-                            // Only show valid section keys that have exercises
-                            let validSectionKeys = sortedSectionKeys.filter { key in
-                                if let exercises = alphabeticalSections[key] {
-                                    return !exercises.isEmpty
-                                }
-                                return false
-                            }
-                            
                             SectionIndexTitles(
                                 proxy: proxy,
                                 titles: validSectionKeys
@@ -160,6 +164,16 @@ struct AddExerciseView: View {
     }
     
     // MARK: - Computed Properties
+    private var validSectionKeys: [String] {
+        // Only include keys that actually have exercises (no empty sections)
+        return sortedSectionKeys.filter { key in
+            if let exercises = alphabeticalSections[key] {
+                return !exercises.isEmpty
+            }
+            return false
+        }
+    }
+    
     private var alphabeticalSections: [String: [ExerciseData]] {
         let sortedExercises = filteredExercises.sorted { exercise1, exercise2 in
             // Sort alphabetically: symbols, numbers, then a-z
@@ -334,7 +348,6 @@ struct ExerciseRow: View {
                     .foregroundColor(isSelected ? .accentColor : .secondary)
             }
             .padding(.vertical, 8)
-            .padding(.trailing, 50)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
