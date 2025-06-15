@@ -6,17 +6,29 @@
 //
 
 import Foundation
+import UIKit
 
 struct ExerciseDatabase {
     static func getAllExercises() -> [ExerciseData] {
         // First try to load from JSON
         if let exercises = loadFromJSON(), !exercises.isEmpty {
-            return exercises
+            return filterExercisesWithImages(exercises)
         }
         
         // Fallback to embedded data
         print("📚 Using embedded exercise database")
-        return getEmbeddedExercises()
+        return filterExercisesWithImages(getEmbeddedExercises())
+    }
+    
+    private static func filterExercisesWithImages(_ exercises: [ExerciseData]) -> [ExerciseData] {
+        let exercisesWithImages = exercises.filter { exercise in
+            let imageId = String(format: "%04d", exercise.id)
+            let hasImage = UIImage(named: imageId) != nil
+            return hasImage
+        }
+        
+        print("🖼️ Filtered exercises: \(exercisesWithImages.count) out of \(exercises.count) have images")
+        return exercisesWithImages
     }
     
     private static func loadFromJSON() -> [ExerciseData]? {
