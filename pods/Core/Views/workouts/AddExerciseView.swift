@@ -30,58 +30,7 @@ struct AddExerciseView: View {
                 // Background color
                 Color("iosbg2")
                     .ignoresSafeArea(.all)
-                    .overlay(
-                        VStack(spacing: 0) {
-                            // Segmented Control
-                            Picker("Exercise Filter", selection: $selectedSegment) {
-                                ForEach(0..<segments.count, id: \.self) { index in
-                                    Text(segments[index]).tag(index)
-                                }
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            
-                            // Exercise List
-                            List {
-                                    if selectedSegment == 0 {
-                                        // All exercises - no sections
-                                        ForEach(filteredExercises, id: \.id) { exercise in
-                                            ExerciseRow(
-                                                exercise: exercise,
-                                                isSelected: selectedExercises.contains(exercise.id)
-                                            ) {
-                                                toggleExerciseSelection(exercise.id)
-                                            }
-                                            .listRowBackground(Color("iosbg2"))
-                                            .listRowSeparator(.hidden)
-                                        }
-                                    } else {
-                                        // Grouped exercises with sections
-                                        ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
-                                            Section(header: Text(sectionKey)
-                                                .font(.headline)
-                                                .foregroundColor(.primary)
-                                                .padding(.vertical, 4)
-                                            ) {
-                                                ForEach(groupedExercises[sectionKey] ?? [], id: \.id) { exercise in
-                                                    ExerciseRow(
-                                                        exercise: exercise,
-                                                        isSelected: selectedExercises.contains(exercise.id)
-                                                    ) {
-                                                        toggleExerciseSelection(exercise.id)
-                                                    }
-                                                    .listRowBackground(Color("iosbg2"))
-                                                    .listRowSeparator(.hidden)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                .listStyle(PlainListStyle())
-                                .searchable(text: $searchText, prompt: "Search exercises")
-                        }
-                    )
+                    .overlay(contentView)
             }
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
@@ -110,7 +59,144 @@ struct AddExerciseView: View {
         }
     }
     
+    // MARK: - Content View
+    private var contentView: some View {
+        VStack(spacing: 0) {
+            // Segmented Control
+            Picker("Exercise Filter", selection: $selectedSegment) {
+                ForEach(0..<segments.count, id: \.self) { index in
+                    Text(segments[index]).tag(index)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            
+            // Exercise List
+            ScrollViewReader { (proxy: ScrollViewProxy) in
+                List {
+                    if selectedSegment == 0 {
+                        // All exercises - with alphabetical sections
+                        ForEach(sortedSectionKeys, id: \.self) { sectionKey in
+                            Section(header: HStack {
+                                Text(sectionKey)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                    .textCase(nil)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color("iosbg2"))
+                            .id(sectionKey) // Add ID for scrolling
+                            ) {
+                                ForEach(alphabeticalSections[sectionKey] ?? [], id: \.id) { exercise in
+                                    ExerciseRow(
+                                        exercise: exercise,
+                                        isSelected: selectedExercises.contains(exercise.id)
+                                    ) {
+                                        toggleExerciseSelection(exercise.id)
+                                    }
+                                    .listRowBackground(Color("iosbg2"))
+                                    .listRowSeparator(.hidden)
+                                }
+                            }
+                        }
+                    } else {
+                        // Grouped exercises with sections
+                        ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
+                            Section(header: Text(sectionKey)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                                .padding(.vertical, 4)
+                            ) {
+                                ForEach(groupedExercises[sectionKey] ?? [], id: \.id) { exercise in
+                                    ExerciseRow(
+                                        exercise: exercise,
+                                        isSelected: selectedExercises.contains(exercise.id)
+                                    ) {
+                                        toggleExerciseSelection(exercise.id)
+                                    }
+                                    .listRowBackground(Color("iosbg2"))
+                                    .listRowSeparator(.hidden)
+                                }
+                            }
+                        }
+                    }
+                }
+                .listStyle(PlainListStyle())
+                .searchable(text: $searchText, prompt: "Search exercises")
+                .overlay(
+                    // Section Index (Letter Wheel) - only show for "All" view
+                    selectedSegment == 0 ? AnyView(
+                        SectionIndexTitles(
+                            proxy: proxy,
+                            titles: sortedSectionKeys
+                        )
+                    ) : AnyView(EmptyView())
+                )
+            }
+        }
+    }
+    
     // MARK: - Computed Properties
+    private var alphabeticalSections: [String: [ExerciseData]] {
+        let sortedExercises = filteredExercises.sorted { exercise1, exercise2 in
+            // Sort alphabetically: symbols, numbers, then a-z
+            let name1 = exercise1.name.lowercased()
+            let name2 = exercise2.name.lowercased()
+            
+            let char1 = name1.first ?? Character(" ")
+            let char2 = name2.first ?? Character(" ")
+            
+            let isAlpha1 = char1.isLetter
+            let isAlpha2 = char2.isLetter
+            let isNumber1 = char1.isNumber
+            let isNumber2 = char2.isNumber
+            
+            if !isAlpha1 && !isNumber1 && (isAlpha2 || isNumber2) {
+                return true // symbols first
+            } else if (isAlpha1 || isNumber1) && !isAlpha2 && !isNumber2 {
+                return false // symbols first
+            } else if isNumber1 && isAlpha2 {
+                return true // numbers before letters
+            } else if isAlpha1 && isNumber2 {
+                return false // numbers before letters
+            } else {
+                return name1 < name2 // alphabetical within same category
+            }
+        }
+        
+        return Dictionary(grouping: sortedExercises) { exercise in
+            let firstChar = exercise.name.first ?? Character(" ")
+            if firstChar.isLetter {
+                return String(firstChar.uppercased())
+            } else if firstChar.isNumber {
+                return "#"
+            } else {
+                return "•"
+            }
+        }
+    }
+    
+    private var sortedSectionKeys: [String] {
+        let keys = Array(alphabeticalSections.keys)
+        return keys.sorted { key1, key2 in
+            // Sort order: symbols (•), numbers (#), then A-Z
+            if key1 == "•" && key2 != "•" {
+                return true
+            } else if key1 != "•" && key2 == "•" {
+                return false
+            } else if key1 == "#" && key2 != "#" && key2 != "•" {
+                return true
+            } else if key1 != "#" && key1 != "•" && key2 == "#" {
+                return false
+            } else {
+                return key1 < key2
+            }
+        }
+    }
+    
     private var groupedExercises: [String: [ExerciseData]] {
         let groupKey: (ExerciseData) -> String = { exercise in
             switch selectedSegment {
@@ -140,31 +226,7 @@ struct AddExerciseView: View {
         // Apply segment filter and sort
         switch selectedSegment {
         case 0: // All
-            return filtered.sorted { exercise1, exercise2 in
-                // Sort alphabetically: symbols, numbers, then a-z
-                let name1 = exercise1.name.lowercased()
-                let name2 = exercise2.name.lowercased()
-                
-                let char1 = name1.first ?? Character(" ")
-                let char2 = name2.first ?? Character(" ")
-                
-                let isAlpha1 = char1.isLetter
-                let isAlpha2 = char2.isLetter
-                let isNumber1 = char1.isNumber
-                let isNumber2 = char2.isNumber
-                
-                if !isAlpha1 && !isNumber1 && (isAlpha2 || isNumber2) {
-                    return true // symbols first
-                } else if (isAlpha1 || isNumber1) && !isAlpha2 && !isNumber2 {
-                    return false // symbols first
-                } else if isNumber1 && isAlpha2 {
-                    return true // numbers before letters
-                } else if isAlpha1 && isNumber2 {
-                    return false // numbers before letters
-                } else {
-                    return name1 < name2 // alphabetical within same category
-                }
-            }
+            return filtered // Sorting is handled in alphabeticalSections
         case 1: // By Muscle
             return filtered.sorted { exercise1, exercise2 in
                 if exercise1.muscle == exercise2.muscle {
@@ -289,6 +351,66 @@ struct ExerciseData: Identifiable, Hashable, Codable {
 }
 
 
+
+// MARK: - Section Index Titles (Letter Wheel)
+struct SectionIndexTitles: View {
+    let proxy: ScrollViewProxy
+    let titles: [String]
+    @State private var dragLocation: CGPoint = .zero
+    @State private var isDragging: Bool = false
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: 1) {
+                ForEach(titles, id: \.self) { title in
+                    Text(title)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 16, height: 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.accentColor.opacity(0.15))
+                                .scaleEffect(isDragging ? 1.3 : 0.1)
+                                .opacity(isDragging ? 1 : 0)
+                        )
+                        .onTapGesture {
+                            scrollToSection(title)
+                            HapticFeedback.generate()
+                        }
+                }
+            }
+            .padding(.trailing, 8)
+            .padding(.vertical, 20)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        dragLocation = value.location
+                        isDragging = true
+                        
+                        // Calculate which section we're over
+                        let sectionHeight: CGFloat = 15 // 14 height + 1 spacing
+                        let index = Int(dragLocation.y / sectionHeight)
+                        
+                        if index >= 0 && index < titles.count {
+                            let title = titles[index]
+                            scrollToSection(title)
+                            HapticFeedback.generate()
+                        }
+                    }
+                    .onEnded { _ in
+                        isDragging = false
+                    }
+            )
+        }
+    }
+    
+    private func scrollToSection(_ title: String) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            proxy.scrollTo(title, anchor: UnitPoint.top)
+        }
+    }
+}
 
 #Preview {
     AddExerciseView { exercises in
