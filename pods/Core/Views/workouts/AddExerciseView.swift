@@ -125,6 +125,7 @@ struct AddExerciseView: View {
                     }
                 }
                 .listStyle(PlainListStyle())
+                .environment(\.defaultMinListHeaderHeight, 0) // Remove default header spacing
                 .searchable(text: $searchText, prompt: "Search exercises")
                 .overlay(
                     // Section Index (Letter Wheel) - only show for "All" view
@@ -350,64 +351,82 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     }
 }
 
-
-
 // MARK: - Section Index Titles (Letter Wheel)
 struct SectionIndexTitles: View {
     let proxy: ScrollViewProxy
     let titles: [String]
     @State private var dragLocation: CGPoint = .zero
     @State private var isDragging: Bool = false
+    @State private var currentIndex: Int = -1
     
     var body: some View {
         HStack {
             Spacer()
-            VStack(spacing: 1) {
-                ForEach(titles, id: \.self) { title in
+            VStack(spacing: 2) {
+                ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
                     Text(title)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.accentColor)
-                        .frame(width: 16, height: 14)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(currentIndex == index ? .white : .primary)
+                        .frame(width: 20, height: 16)
                         .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.accentColor.opacity(0.15))
-                                .scaleEffect(isDragging ? 1.3 : 0.1)
-                                .opacity(isDragging ? 1 : 0)
+                            Circle()
+                                .fill(currentIndex == index ? Color("iosfit") : Color("iosfit").opacity(0.3))
+                                .scaleEffect(currentIndex == index ? 1.2 : 1.0)
                         )
                         .onTapGesture {
-                            scrollToSection(title)
-                            HapticFeedback.generate()
+                            scrollToSection(title, index: index)
                         }
                 }
             }
             .padding(.trailing, 8)
             .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color("iosfit").opacity(0.1))
+                    .blur(radius: 0.5)
+            )
             .gesture(
-                DragGesture(minimumDistance: 0)
+                DragGesture(minimumDistance: 0, coordinateSpace: .local)
                     .onChanged { value in
-                        dragLocation = value.location
                         isDragging = true
+                        dragLocation = value.location
                         
-                        // Calculate which section we're over
-                        let sectionHeight: CGFloat = 15 // 14 height + 1 spacing
-                        let index = Int(dragLocation.y / sectionHeight)
+                        // Calculate which section we're over based on the VStack layout
+                        let itemHeight: CGFloat = 18 // 16 height + 2 spacing
+                        let startY: CGFloat = 20 // top padding
+                        let adjustedY = dragLocation.y - startY
+                        let index = Int(adjustedY / itemHeight)
                         
-                        if index >= 0 && index < titles.count {
+                        if index >= 0 && index < titles.count && index != currentIndex {
+                            currentIndex = index
                             let title = titles[index]
-                            scrollToSection(title)
-                            HapticFeedback.generate()
+                            scrollToSection(title, index: index)
                         }
                     }
                     .onEnded { _ in
                         isDragging = false
+                        // Reset current index after a delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            currentIndex = -1
+                        }
                     }
             )
         }
     }
     
-    private func scrollToSection(_ title: String) {
-        withAnimation(.easeInOut(duration: 0.3)) {
+    private func scrollToSection(_ title: String, index: Int) {
+        currentIndex = index
+        HapticFeedback.generate()
+        
+        withAnimation(.easeOut(duration: 0.2)) {
             proxy.scrollTo(title, anchor: UnitPoint.top)
+        }
+        
+        // Reset highlight after scrolling
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if !isDragging {
+                currentIndex = -1
+            }
         }
     }
 }
