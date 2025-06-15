@@ -220,7 +220,6 @@ struct AddExerciseView: View {
     }
 }
 
-// MARK: - Exercise Row View
 struct ExerciseRow: View {
     let exercise: ExerciseData
     let isSelected: Bool
@@ -270,19 +269,6 @@ struct ExerciseRow: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.leading)
                     
-                    HStack {
-                        Text(exercise.muscle)
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                        
-                        Text("•")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                        
-                        Text(exercise.category)
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
                 }
                 
                 Spacer()
