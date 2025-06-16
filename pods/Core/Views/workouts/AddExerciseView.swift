@@ -71,6 +71,7 @@ struct AddExerciseView: View {
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, 16)
             .padding(.top, 0)
+            .padding(.bottom, 12)
             
             // Exercise List
             ScrollViewReader { (proxy: ScrollViewProxy) in
@@ -101,13 +102,6 @@ struct AddExerciseView: View {
                                         .padding(.horizontal, 16)
                                         .padding(.trailing, 40) // Add trailing padding for letter wheel
                                         .background(Color(.systemBackground))
-                                        
-                                        // Divider between exercises (except for last one)
-                                        if exercise.id != exercises.last?.id {
-                                            Divider()
-                                                .padding(.leading, 78) // Align with text, not image
-                                                .background(Color(.systemBackground))
-                                        }
                                     }
                                 }
                             }
@@ -136,13 +130,6 @@ struct AddExerciseView: View {
                                         .padding(.horizontal, 16)
                                         .padding(.trailing, 40) // Add trailing padding for letter wheel
                                         .background(Color(.systemBackground))
-                                        
-                                        // Divider between exercises (except for last one)
-                                        if exercise.id != exercises.last?.id {
-                                            Divider()
-                                                .padding(.leading, 78)
-                                                .background(Color(.systemBackground))
-                                        }
                                     }
                                 }
                             }
