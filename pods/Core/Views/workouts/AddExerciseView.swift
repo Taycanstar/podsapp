@@ -70,7 +70,7 @@ struct AddExerciseView: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .padding(.top, 0)
             
             // Exercise List
             ScrollViewReader { (proxy: ScrollViewProxy) in
@@ -87,7 +87,7 @@ struct AddExerciseView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
-                                        .background(Color(.systemGray6))
+                                        .background( Color(.systemBackground))
                                         .id(sectionKey) // Used by letter index for scrolling
                                     
                                     // Section Content
@@ -122,7 +122,8 @@ struct AddExerciseView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
-                                        .background(Color(.systemGray6))
+                                        // .background(Color(.systemGray6))
+                                            .background(Color(.systemGray6))
                                     
                                     // Section Content
                                     ForEach(exercises, id: \.id) { exercise in
