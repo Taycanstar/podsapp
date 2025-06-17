@@ -73,7 +73,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("New Meal")
+                Text("New Recipe")
                     .fontWeight(.semibold)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -258,7 +258,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
 
         private var mealItemsSection: some View {
     VStack(alignment: .leading, spacing: 12) {
-        Text("Meal Items")
+        Text("Food Items")
             .font(.title2)
             .fontWeight(.bold)
         
@@ -335,7 +335,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
         Button {
             path.append(FoodNavigationDestination.addFoodToMeal)
         } label: {
-            Text("Add item to meal")
+            Text("Add item to recipe")
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()

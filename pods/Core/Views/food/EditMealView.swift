@@ -124,7 +124,7 @@ struct EditMealView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Edit Meal")
+                Text("Edit Recipe")
                     .fontWeight(.semibold)
             }
             
@@ -414,7 +414,7 @@ struct EditMealView: View {
     
     private var mealItemsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Meal Items")
+            Text("Food Items")
                 .font(.title2)
                 .fontWeight(.bold)
             
@@ -468,7 +468,7 @@ struct EditMealView: View {
             Button {
                 path.append(FoodNavigationDestination.addFoodToMeal)
             } label: {
-                Text("Add item to meal")
+                Text("Add item to recipe")
                     .foregroundColor(.accentColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()

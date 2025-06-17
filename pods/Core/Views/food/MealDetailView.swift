@@ -96,7 +96,7 @@ struct MealDetailView: View {
                 // }
 
                 ButtonWithIcon(
-                    label: "Edit Meal",
+                    label: "Edit Recipe",
                     iconName: "square.and.pencil",
                     action: {
                         isShowingEditMeal = true
@@ -114,7 +114,7 @@ struct MealDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Meal Details")
+                Text("Recipe Details")
                     .fontWeight(.semibold)
             }
             
@@ -391,7 +391,7 @@ struct MealDetailView: View {
 
     private var mealItemsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Meal Items")
+            Text("Food Items")
                 .font(.title2)
                 .fontWeight(.bold)
             

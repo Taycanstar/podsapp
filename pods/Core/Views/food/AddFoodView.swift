@@ -8,19 +8,19 @@
 import SwiftUI
 
 enum AddFoodTab: Hashable {
-    case all, myFoods, savedScans
+    case all, myFoods
     
     var title: String {
         switch self {
         case .all: return "All"
         case .myFoods: return "My Foods"
-        case .savedScans: return "Saved Scans"
+
         }
     }
     
     var searchPrompt: String {
         switch self {
-        case .all, .myFoods, .savedScans:
+        case .all, .myFoods:
             return "Search"
         }
     }
@@ -60,7 +60,7 @@ struct AddFoodView: View {
     // Change from a single generated food to an array of generated foods
     @State private var generatedFoods: [Food] = []
     
-    let foodTabs: [AddFoodTab] = [.all, .myFoods, .savedScans]
+    let foodTabs: [AddFoodTab] = [.all, .myFoods]
     
     // MARK: - Body
     var body: some View {
@@ -343,9 +343,6 @@ struct AddFoodView: View {
         case .myFoods:
             // Return recent foods from logged foods
             return getRecentFoods()
-        case .savedScans:
-            // This will be implemented later
-            return []
         }
     }
     
@@ -407,9 +404,7 @@ struct AddFoodView: View {
             }
             return foodManager.userFoods
             
-        case .savedScans:
-            // This will be implemented later
-            return []
+
         }
     }
     
@@ -421,8 +416,7 @@ struct AddFoodView: View {
                 "No results found for '\(searchText)'."
         case .myFoods:
             return "No saved foods found."
-        case .savedScans:
-            return "No saved scans found."
+
         }
     }
     

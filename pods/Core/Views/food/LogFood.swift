@@ -46,7 +46,7 @@ struct LogFood: View {
         var title: String {
             switch self {
             case .all: return "All"
-            case .meals: return "My Meals"
+            case .meals: return "My Recipes"
             case .foods: return "My Foods"
             }
         }
@@ -56,7 +56,7 @@ struct LogFood: View {
             case .all:
                 return "Describe what you ate"
             case .meals:
-                return "Describe your meal"
+                return "Describe your recipe"
             case .foods:
                 return "Describe your food"
             }
@@ -1002,7 +1002,7 @@ private struct CreateMealButton: View {
 
       
                     Button(action: {
-                        print("Tapped Create Meal")
+                        print("Tapped Create Recipe")
                         HapticFeedback.generateLigth()
                          path.append(FoodNavigationDestination.createMeal)
                     }) {
@@ -1011,7 +1011,7 @@ private struct CreateMealButton: View {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.accentColor)
-                            Text("Create Meal")
+                            Text("Create Recipe")
                                 .font(.system(size: 17))
                                 .fontWeight(.semibold)
                                 .foregroundColor(.accentColor)
@@ -1122,7 +1122,7 @@ private struct MealListView: View {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 24))
                             .foregroundColor(.accentColor)
-                        Text("Create Meal")
+                        Text("Create Recipe")
                             .font(.system(size: 17))
                             .fontWeight(.semibold)
                             .foregroundColor(.accentColor)
