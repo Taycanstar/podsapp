@@ -47,6 +47,28 @@ struct ConfirmFoodView: View {
     // NEW: Add a flag to distinguish between creation and logging modes
     @State private var isCreationMode: Bool = true  // Always true for this view
     
+    // Base nutrition values (per single serving) for dynamic calculation
+    @State private var baseCalories: Double = 0
+    @State private var baseProtein: Double = 0
+    @State private var baseCarbs: Double = 0
+    @State private var baseFat: Double = 0
+    @State private var baseSaturatedFat: Double = 0
+    @State private var basePolyunsaturatedFat: Double = 0
+    @State private var baseMonounsaturatedFat: Double = 0
+    @State private var baseTransFat: Double = 0
+    @State private var baseCholesterol: Double = 0
+    @State private var baseSodium: Double = 0
+    @State private var basePotassium: Double = 0
+    @State private var baseSugar: Double = 0
+    @State private var baseFiber: Double = 0
+    @State private var baseVitaminA: Double = 0
+    @State private var baseVitaminC: Double = 0
+    @State private var baseCalcium: Double = 0
+    @State private var baseIron: Double = 0
+    
+    // Flag to indicate if this food was created from scanned data (should update dynamically)
+    @State private var isFromScannedData: Bool = false
+    
     // Default initializer for manual food creation
     init(path: Binding<NavigationPath>) {
         self._path = path
@@ -57,6 +79,7 @@ struct ConfirmFoodView: View {
     init(path: Binding<NavigationPath>, food: Food) {
         self._path = path
         self._isCreationMode = State(initialValue: true)
+        self._isFromScannedData = State(initialValue: true)
         
         // Populate fields with the food data
         self._title = State(initialValue: food.description)
@@ -64,83 +87,104 @@ struct ConfirmFoodView: View {
         self._numberOfServings = State(initialValue: food.numberOfServings ?? 1.0)
         self._brand = State(initialValue: food.brandName ?? "")
         
-        // Extract nutrition values from foodNutrients
-        var caloriesValue = ""
-        var proteinValue = ""
-        var carbsValue = ""
-        var fatValue = ""
-        var saturatedFatValue = ""
-        var polyunsaturatedFatValue = ""
-        var monounsaturatedFatValue = ""
-        var transFatValue = ""
-        var cholesterolValue = ""
-        var sodiumValue = ""
-        var potassiumValue = ""
-        var sugarValue = ""
-        var fiberValue = ""
-        var vitaminAValue = ""
-        var vitaminCValue = ""
-        var calciumValue = ""
-        var ironValue = ""
+        // Extract nutrition values from foodNutrients and store both base values and display strings
+        var caloriesBase: Double = 0
+        var proteinBase: Double = 0
+        var carbsBase: Double = 0
+        var fatBase: Double = 0
+        var saturatedFatBase: Double = 0
+        var polyunsaturatedFatBase: Double = 0
+        var monounsaturatedFatBase: Double = 0
+        var transFatBase: Double = 0
+        var cholesterolBase: Double = 0
+        var sodiumBase: Double = 0
+        var potassiumBase: Double = 0
+        var sugarBase: Double = 0
+        var fiberBase: Double = 0
+        var vitaminABase: Double = 0
+        var vitaminCBase: Double = 0
+        var calciumBase: Double = 0
+        var ironBase: Double = 0
         
         for nutrient in food.foodNutrients {
             let name = nutrient.nutrientName.lowercased()
             guard let value = nutrient.value else { continue }
             
             if name.contains("energy") || name.contains("calorie") {
-                caloriesValue = String(format: "%.1f", value)
+                caloriesBase = value
             } else if name.contains("protein") {
-                proteinValue = String(format: "%.1f", value)
+                proteinBase = value
             } else if name.contains("carbohydrate") {
-                carbsValue = String(format: "%.1f", value)
+                carbsBase = value
             } else if name.contains("total lipid") || name.contains("fat") && !name.contains("saturated") && !name.contains("trans") {
-                fatValue = String(format: "%.1f", value)
+                fatBase = value
             } else if name.contains("saturated") {
-                saturatedFatValue = String(format: "%.1f", value)
+                saturatedFatBase = value
             } else if name.contains("polyunsaturated") {
-                polyunsaturatedFatValue = String(format: "%.1f", value)
+                polyunsaturatedFatBase = value
             } else if name.contains("monounsaturated") {
-                monounsaturatedFatValue = String(format: "%.1f", value)
+                monounsaturatedFatBase = value
             } else if name.contains("trans") {
-                transFatValue = String(format: "%.1f", value)
+                transFatBase = value
             } else if name.contains("cholesterol") {
-                cholesterolValue = String(format: "%.1f", value)
+                cholesterolBase = value
             } else if name.contains("sodium") {
-                sodiumValue = String(format: "%.1f", value)
+                sodiumBase = value
             } else if name.contains("potassium") {
-                potassiumValue = String(format: "%.1f", value)
+                potassiumBase = value
             } else if name.contains("sugar") {
-                sugarValue = String(format: "%.1f", value)
+                sugarBase = value
             } else if name.contains("fiber") {
-                fiberValue = String(format: "%.1f", value)
+                fiberBase = value
             } else if name.contains("vitamin a") {
-                vitaminAValue = String(format: "%.1f", value)
+                vitaminABase = value
             } else if name.contains("vitamin c") {
-                vitaminCValue = String(format: "%.1f", value)
+                vitaminCBase = value
             } else if name.contains("calcium") {
-                calciumValue = String(format: "%.1f", value)
+                calciumBase = value
             } else if name.contains("iron") {
-                ironValue = String(format: "%.1f", value)
+                ironBase = value
             }
         }
         
-        self._calories = State(initialValue: caloriesValue)
-        self._protein = State(initialValue: proteinValue)
-        self._carbs = State(initialValue: carbsValue)
-        self._fat = State(initialValue: fatValue)
-        self._saturatedFat = State(initialValue: saturatedFatValue)
-        self._polyunsaturatedFat = State(initialValue: polyunsaturatedFatValue)
-        self._monounsaturatedFat = State(initialValue: monounsaturatedFatValue)
-        self._transFat = State(initialValue: transFatValue)
-        self._cholesterol = State(initialValue: cholesterolValue)
-        self._sodium = State(initialValue: sodiumValue)
-        self._potassium = State(initialValue: potassiumValue)
-        self._sugar = State(initialValue: sugarValue)
-        self._fiber = State(initialValue: fiberValue)
-        self._vitaminA = State(initialValue: vitaminAValue)
-        self._vitaminC = State(initialValue: vitaminCValue)
-        self._calcium = State(initialValue: calciumValue)
-        self._iron = State(initialValue: ironValue)
+        // Set base values for dynamic calculation
+        self._baseCalories = State(initialValue: caloriesBase)
+        self._baseProtein = State(initialValue: proteinBase)
+        self._baseCarbs = State(initialValue: carbsBase)
+        self._baseFat = State(initialValue: fatBase)
+        self._baseSaturatedFat = State(initialValue: saturatedFatBase)
+        self._basePolyunsaturatedFat = State(initialValue: polyunsaturatedFatBase)
+        self._baseMonounsaturatedFat = State(initialValue: monounsaturatedFatBase)
+        self._baseTransFat = State(initialValue: transFatBase)
+        self._baseCholesterol = State(initialValue: cholesterolBase)
+        self._baseSodium = State(initialValue: sodiumBase)
+        self._basePotassium = State(initialValue: potassiumBase)
+        self._baseSugar = State(initialValue: sugarBase)
+        self._baseFiber = State(initialValue: fiberBase)
+        self._baseVitaminA = State(initialValue: vitaminABase)
+        self._baseVitaminC = State(initialValue: vitaminCBase)
+        self._baseCalcium = State(initialValue: calciumBase)
+        self._baseIron = State(initialValue: ironBase)
+        
+        // Set display values (will be updated by numberOfServings)
+        let servings = food.numberOfServings ?? 1.0
+        self._calories = State(initialValue: String(format: "%.1f", caloriesBase * servings))
+        self._protein = State(initialValue: String(format: "%.1f", proteinBase * servings))
+        self._carbs = State(initialValue: String(format: "%.1f", carbsBase * servings))
+        self._fat = State(initialValue: String(format: "%.1f", fatBase * servings))
+        self._saturatedFat = State(initialValue: String(format: "%.1f", saturatedFatBase * servings))
+        self._polyunsaturatedFat = State(initialValue: String(format: "%.1f", polyunsaturatedFatBase * servings))
+        self._monounsaturatedFat = State(initialValue: String(format: "%.1f", monounsaturatedFatBase * servings))
+        self._transFat = State(initialValue: String(format: "%.1f", transFatBase * servings))
+        self._cholesterol = State(initialValue: String(format: "%.1f", cholesterolBase * servings))
+        self._sodium = State(initialValue: String(format: "%.1f", sodiumBase * servings))
+        self._potassium = State(initialValue: String(format: "%.1f", potassiumBase * servings))
+        self._sugar = State(initialValue: String(format: "%.1f", sugarBase * servings))
+        self._fiber = State(initialValue: String(format: "%.1f", fiberBase * servings))
+        self._vitaminA = State(initialValue: String(format: "%.1f", vitaminABase * servings))
+        self._vitaminC = State(initialValue: String(format: "%.1f", vitaminCBase * servings))
+        self._calcium = State(initialValue: String(format: "%.1f", calciumBase * servings))
+        self._iron = State(initialValue: String(format: "%.1f", ironBase * servings))
     }
     
     var body: some View {
@@ -270,6 +314,11 @@ struct ConfirmFoodView: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
+                .onChange(of: numberOfServings) { _ in
+                    if isFromScannedData {
+                        updateNutritionValues()
+                    }
+                }
         }
         .padding()
     }
@@ -739,7 +788,32 @@ struct ConfirmFoodView: View {
         return (baseValue * servings).rounded(toPlaces: 1)
     }
     
-    // Update all nutrition values when number of servings changes
+    // Update all nutrition values when number of servings changes (only for scanned foods)
+    private func updateNutritionValues() {
+        // Only update if this food came from scanned data
+        guard isFromScannedData else { return }
+        
+        // Update main nutrition values
+        calories = String(format: "%.1f", baseCalories * numberOfServings)
+        protein = String(format: "%.1f", baseProtein * numberOfServings)
+        carbs = String(format: "%.1f", baseCarbs * numberOfServings)
+        fat = String(format: "%.1f", baseFat * numberOfServings)
+        
+        // Update additional nutrients
+        saturatedFat = String(format: "%.1f", baseSaturatedFat * numberOfServings)
+        polyunsaturatedFat = String(format: "%.1f", basePolyunsaturatedFat * numberOfServings)
+        monounsaturatedFat = String(format: "%.1f", baseMonounsaturatedFat * numberOfServings)
+        transFat = String(format: "%.1f", baseTransFat * numberOfServings)
+        cholesterol = String(format: "%.1f", baseCholesterol * numberOfServings)
+        sodium = String(format: "%.1f", baseSodium * numberOfServings)
+        potassium = String(format: "%.1f", basePotassium * numberOfServings)
+        sugar = String(format: "%.1f", baseSugar * numberOfServings)
+        fiber = String(format: "%.1f", baseFiber * numberOfServings)
+        vitaminA = String(format: "%.1f", baseVitaminA * numberOfServings)
+        vitaminC = String(format: "%.1f", baseVitaminC * numberOfServings)
+        calcium = String(format: "%.1f", baseCalcium * numberOfServings)
+        iron = String(format: "%.1f", baseIron * numberOfServings)
+    }
 
 }
 
