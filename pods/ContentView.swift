@@ -38,6 +38,7 @@ struct ContentView: View {
     @State private var showQuickPodView = false
     @State private var showFoodScanner = false
     @State private var showVoiceLog = false
+    @State private var showLogWorkoutView = false
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -115,7 +116,7 @@ struct ContentView: View {
             }
             .tint(.accentColor)
         } message: {
-            Text("An update to Pods is required to continue.")
+            Text("An update to Humuli is required to continue.")
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active && !hasCheckedOnboarding {
@@ -161,8 +162,9 @@ struct ContentView: View {
                                  selectedTab: $selectedTab,
                                  showFoodScanner: $showFoodScanner,
                                  showVoiceLog: $showVoiceLog,
+                                 showLogWorkoutView: $showLogWorkoutView,
                                  selectedMeal: $selectedMeal)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3.5)])
+                        .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
                         .presentationCornerRadius(25)
                         .presentationBackground(Color(.systemBackground))
                 }
@@ -189,6 +191,10 @@ struct ContentView: View {
                         .onDisappear {
                             print("VoiceLogView disappeared from ContentView")
                         }
+                }
+
+                .fullScreenCover(isPresented: $showLogWorkoutView) {
+                    WorkoutContainerView(selectedTab: $selectedTab)
                 }
 
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
