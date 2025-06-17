@@ -2318,7 +2318,7 @@ struct SheetModifiers: ViewModifier {
             }) {
                 if let food = foodManager.lastGeneratedFood {
                     NavigationView {
-                        ConfirmFoodView(path: .constant(NavigationPath()), food: food, isCreationMode: true)
+                        ConfirmFoodView(path: .constant(NavigationPath()), food: food)
                     }
                 }
             }

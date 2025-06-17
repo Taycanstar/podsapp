@@ -22,6 +22,7 @@
 		362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B12D0D3E4700DF0B26 /* EditActivityView.swift */; };
 		362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */; };
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
+		363068C32E01DCF600F2D4EC /* ConfirmLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068C22E01DCF600F2D4EC /* ConfirmLogView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -259,6 +260,7 @@
 		362969B12D0D3E4700DF0B26 /* EditActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditActivityView.swift; sourceTree = "<group>"; };
 		362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivityLogView.swift; sourceTree = "<group>"; };
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
+		363068C22E01DCF600F2D4EC /* ConfirmLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmLogView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -623,6 +625,7 @@
 				364A83B72D8CBE10009D2620 /* ButtonWithIcon.swift */,
 				36ED35982DCFDE5400D174FB /* ConfirmFoodView.swift */,
 				36ED35A62DD5294300D174FB /* HealthDataCard.swift */,
+				363068C22E01DCF600F2D4EC /* ConfirmLogView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1214,6 +1217,7 @@
 				36CB032C2D5AAD5C006A74E9 /* LogFood.swift in Sources */,
 				364A83AC2D81F3F7009D2620 /* EditMealView.swift in Sources */,
 				36ED35EB2DDE533300D174FB /* TapCreateMealView.swift in Sources */,
+				363068C32E01DCF600F2D4EC /* ConfirmLogView.swift in Sources */,
 				3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */,
 				367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */,
 				364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */,

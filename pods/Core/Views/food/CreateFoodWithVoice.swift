@@ -278,7 +278,7 @@ struct CreateFoodWithVoice: View {
         }
 
         .navigationDestination(for: Food.self) { food in
-            ConfirmFoodView(path: $navigationPath, food: food, isCreationMode: true)
+                            ConfirmFoodView(path: $navigationPath)
         }
     }
     

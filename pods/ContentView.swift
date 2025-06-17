@@ -204,7 +204,7 @@ struct ContentView: View {
                                  TeamInvitationView(invitation: invitation)
                              }
                 
-                // Add presentation for ConfirmFoodView when food is scanned
+                // Add presentation for ConfirmLogView when food is scanned
                 .sheet(isPresented: $showConfirmFoodView, onDismiss: {
                     // Reset scanned food data
                     scannedFood = nil
@@ -212,7 +212,7 @@ struct ContentView: View {
                 }) {
                     if let food = scannedFood {
                         NavigationView {
-                            ConfirmFoodView(
+                            ConfirmLogView(
                                 path: .constant(NavigationPath()), // Dummy navigation path since we're using sheets
                                 food: food,
                                 foodLogId: scannedFoodLogId

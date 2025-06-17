@@ -260,9 +260,9 @@ struct FoodScannerView: View {
                     }
             }
             .background(Color.black)
-            // Add navigation destination for ConfirmFoodView using BarcodeFood struct
+            // Add navigation destination for ConfirmLogView using BarcodeFood struct
             .navigationDestination(for: BarcodeFood.self) { barcodeFood in
-                ConfirmFoodView(path: $navigationPath, food: barcodeFood.food, foodLogId: barcodeFood.foodLogId)
+                ConfirmLogView(path: $navigationPath, food: barcodeFood.food, foodLogId: barcodeFood.foodLogId)
             }
         }
         .onAppear {
