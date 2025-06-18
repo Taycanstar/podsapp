@@ -41,13 +41,14 @@ struct LogFood: View {
 
     
     enum FoodTab: Hashable {
-        case all, meals, foods
+        case all, meals, foods, savedMeals
         
         var title: String {
             switch self {
             case .all: return "All"
             case .meals: return "My Recipes"
             case .foods: return "My Foods"
+            case .savedMeals: return "Saved Meals"
             }
         }
         
@@ -59,11 +60,13 @@ struct LogFood: View {
                 return "Describe your recipe"
             case .foods:
                 return "Describe your food"
+            case .savedMeals:
+                return "Search saved meals"
             }
         }
     }
     
-    let foodTabs: [FoodTab] = [.all, .meals, .foods]
+    let foodTabs: [FoodTab] = [.all, .meals, .foods, .savedMeals]
     
     // IMPORTANT: Keep init argument order exactly the same
     init(selectedTab: Binding<Int>, 
@@ -191,6 +194,15 @@ struct LogFood: View {
                 switch selectedFoodTab {
                 case .meals:
                     MealListView(
+                        selectedMeal: $selectedMeal,
+                        mode: mode,
+                        selectedFoods: $selectedFoods,
+                        path: $path,
+                        searchText: searchText,
+                        onItemAdded: onItemAdded
+                    )
+                case .savedMeals:
+                    SavedMealListView(
                         selectedMeal: $selectedMeal,
                         mode: mode,
                         selectedFoods: $selectedFoods,
@@ -2246,6 +2258,292 @@ struct FoodGenerationCard: View {
         // Animate with delay
         withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
             animateProgress = true
+        }
+    }
+}
+
+// MARK: - Saved Meal List View
+private struct SavedMealListView: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @Binding var selectedMeal: String
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    let searchText: String
+    
+    var onItemAdded: ((Food) -> Void)?
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Add invisible spacing at the top to prevent overlap with header
+            Color.clear.frame(height: 6)
+            
+            // Saved Meals Card - Single unified card for all saved meals
+            if !foodManager.savedMeals.isEmpty {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color("bg"))
+                    
+                    List {
+                        ForEach(foodManager.savedMeals) { savedMeal in
+                            SavedMealRow(
+                                savedMeal: savedMeal,
+                                selectedMeal: $selectedMeal,
+                                mode: mode,
+                                selectedFoods: $selectedFoods,
+                                path: $path,
+                                onItemAdded: onItemAdded
+                            )
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(Color("iosfit"))
+                            .listRowSeparator(.hidden)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+                        .onDelete { indexSet in
+                            deleteSavedMeals(at: indexSet)
+                        }
+                    }
+                    .listStyle(PlainListStyle())
+                    .scrollContentBackground(.hidden)
+                }
+                .frame(height: min(CGFloat(foodManager.savedMeals.count * 63), UIScreen.main.bounds.height * 0.7))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+            } else if foodManager.isLoadingSavedMeals {
+                // Loading indicator
+                ProgressView()
+                    .frame(height: 100)
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image("bookmark")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 150, height: 150)
+                        .foregroundColor(.secondary)
+                    
+                    Text("No saved meals yet")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Swipe right on meals in your dashboard to save them for quick access")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .frame(height: 200)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.bottom, 16)
+        .background(Color("iosbg2"))
+        .onAppear {
+            if foodManager.savedMeals.isEmpty && !foodManager.isLoadingSavedMeals {
+                foodManager.refreshSavedMeals()
+            }
+        }
+    }
+    
+    private func deleteSavedMeals(at indexSet: IndexSet) {
+        print("Deleting saved meals at indices: \(indexSet)")
+        
+        // Get the saved meals to delete
+        let savedMealsToDelete = indexSet.map { foodManager.savedMeals[$0] }
+        
+        // Actually delete the saved meals
+        for savedMeal in savedMealsToDelete {
+            foodManager.unsaveMeal(savedMealId: savedMeal.id) { result in
+                switch result {
+                case .success:
+                    print("Successfully removed saved meal: \(savedMeal.displayName)")
+                case .failure(let error):
+                    print("Failed to remove saved meal: \(error)")
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Saved Meal Row
+private struct SavedMealRow: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @Environment(\.dismiss) private var dismiss
+    let savedMeal: SavedMeal
+    @Binding var selectedMeal: String
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    var onItemAdded: ((Food) -> Void)?
+    @State private var showLoggingErrorAlert = false
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Saved indicator icon
+            Image("bookmark")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 16, height: 16)
+                .foregroundColor(.red)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(savedMeal.displayName)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+            
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Text("\(Int(savedMeal.calories)) cal")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                    
+                    if !savedMeal.mealType.isEmpty {
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        Text(savedMeal.mealType)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Button {
+                HapticFeedback.generate()
+                logSavedMeal()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color("iosbg2"))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .contentShape(Rectangle())
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
+        }
+    }
+    
+    private func logSavedMeal() {
+        // First, close the food container immediately
+        viewModel.isShowingFoodContainer = false
+        
+        if savedMeal.itemType == .foodLog, let foodLog = savedMeal.foodLog {
+            // Convert LoggedFoodItem back to Food for logging
+            let food = foodLog.asFood
+            
+            foodManager.logFood(
+                email: viewModel.email,
+                food: food,
+                meal: selectedMeal,
+                servings: foodLog.numberOfServings,
+                date: Date(),
+                notes: nil
+            ) { result in
+                switch result {
+                case .success(let loggedFood):
+                    let combinedLog = CombinedLog(
+                        type: .food,
+                        status: loggedFood.status,
+                        calories: Double(loggedFood.food.calories),
+                        message: "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                        foodLogId: loggedFood.foodLogId,
+                        food: loggedFood.food,
+                        mealType: loggedFood.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: Date(),
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+
+                    DispatchQueue.main.async {
+                        dayLogsVM.addPending(combinedLog)
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    }
+                case .failure(let error):
+                    print("Error logging saved food: \(error)")
+                    showLoggingErrorAlert = true
+                }
+            }
+        } else if savedMeal.itemType == .mealLog, let mealSummary = savedMeal.mealLog {
+            // Convert MealSummary to Meal for logging
+            let meal = Meal(
+                id: mealSummary.mealId,
+                title: mealSummary.title,
+                description: mealSummary.description,
+                directions: nil,
+                privacy: "private",
+                servings: mealSummary.servings,
+                mealItems: [],
+                image: mealSummary.image,
+                totalCalories: mealSummary.calories,
+                totalProtein: mealSummary.protein,
+                totalCarbs: mealSummary.carbs,
+                totalFat: mealSummary.fat,
+                scheduledAt: Date()
+            )
+            
+            foodManager.logMeal(
+                meal: meal,
+                mealTime: selectedMeal,
+                calories: mealSummary.displayCalories
+            ) { result in
+                switch result {
+                case .success(let loggedMeal):
+                    let combinedLog = CombinedLog(
+                        type: .meal,
+                        status: loggedMeal.status,
+                        calories: loggedMeal.calories,
+                        message: "\(loggedMeal.meal.title) – \(loggedMeal.mealTime)",
+                        foodLogId: nil,
+                        food: nil,
+                        mealType: loggedMeal.mealTime,
+                        mealLogId: loggedMeal.mealLogId,
+                        meal: loggedMeal.meal,
+                        mealTime: loggedMeal.mealTime,
+                        scheduledAt: Date(),
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+                    
+                    DispatchQueue.main.async {
+                        dayLogsVM.addPending(combinedLog)
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.mealLogId == combinedLog.mealLogId }) {
+                            foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
+                    }
+                case .failure(let error):
+                    print("Error logging saved meal: \(error)")
+                    showLoggingErrorAlert = true
+                }
+            }
         }
     }
 }

@@ -951,3 +951,103 @@ struct NutritionGoalsResponse: Codable {
     let success: Bool
     let goals: NutritionGoals
 }
+
+// MARK: - Saved Meals
+
+enum SavedItemType: String, Codable, CaseIterable {
+    case foodLog = "food_log"
+    case mealLog = "meal_log"
+    
+    var displayName: String {
+        switch self {
+        case .foodLog: return "Food"
+        case .mealLog: return "Meal"
+        }
+    }
+}
+
+struct SavedMeal: Codable, Identifiable {
+    let id: Int
+    let itemType: SavedItemType
+    let customName: String?
+    let savedAt: String  // Keep as string to avoid date-parsing issues
+    let notes: String?
+    
+    // The actual food or meal log data
+    let foodLog: LoggedFoodItem?
+    let mealLog: MealSummary?
+    
+    // Computed properties for display
+    var displayName: String {
+        if let customName = customName, !customName.isEmpty {
+            return customName
+        } else if let foodLog = foodLog {
+            return foodLog.displayName
+        } else if let mealLog = mealLog {
+            return mealLog.title
+        }
+        return "Unknown item"
+    }
+    
+    var calories: Double {
+        if let foodLog = foodLog {
+            return foodLog.calories
+        } else if let mealLog = mealLog {
+            return mealLog.displayCalories
+        }
+        return 0
+    }
+    
+    var mealType: String {
+        if let foodLog = foodLog {
+            // For food logs, we don't have direct meal type, so we'll use a generic description
+            return "Food Item"
+        } else if let mealLog = mealLog {
+            return "Recipe"
+        }
+        return ""
+    }
+    
+    // Custom coding keys to match the backend
+    enum CodingKeys: String, CodingKey {
+        case id
+        case itemType = "item_type"
+        case customName = "custom_name"
+        case savedAt = "saved_at"
+        case notes
+        case foodLog = "food_log"
+        case mealLog = "meal_log"
+    }
+}
+
+struct SavedMealsResponse: Codable {
+    let savedMeals: [SavedMeal]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case savedMeals = "saved_meals"
+        case hasMore = "has_more"
+        case totalPages = "total_pages"
+        case currentPage = "current_page"
+    }
+}
+
+// Response for save/unsave operations
+struct SaveMealResponse: Codable {
+    let success: Bool
+    let message: String
+    let savedMeal: SavedMeal?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case savedMeal = "saved_meal"
+    }
+}
+
+struct UnsaveMealResponse: Codable {
+    let success: Bool
+    let message: String
+}

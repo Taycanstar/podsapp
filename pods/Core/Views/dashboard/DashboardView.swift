@@ -198,6 +198,26 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
+                            .swipeActions(edge: .leading) {
+                                // Save action - only for meal logs and food logs (opposite direction from delete)
+                                if log.type == .meal || log.type == .food {
+                                    Button(action: {
+                                        saveMealAction(log: log)
+                                    }) {
+                                        Image(systemName: "bookmark.fill")
+                                    }
+                                    .tint(.accentColor)
+                                }
+                            }
+                            .swipeActions(edge: .trailing) {
+                                // Delete action with trash icon
+                                Button(action: {
+                                    deleteLogItem(log: log)
+                                }) {
+                                    Image(systemName: "trash.fill")
+                                }
+                                .tint(.red)
+                            }
                         }
                         .onDelete { indexSet in
                             deleteLogItems(at: indexSet)
@@ -421,6 +441,132 @@ private var remainingCal: Double { vm.remainingCalories }
                     print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
                 }
             }
+        }
+    }
+    
+    // Save function for swipe-to-save functionality
+    private func saveMealAction(log: CombinedLog) {
+        print("💾 Saving meal/food log: \(log.id)")
+        
+        switch log.type {
+        case .food:
+            guard let foodLogId = log.foodLogId else {
+                print("❌ No food log ID available")
+                return
+            }
+            
+            HapticFeedback.generateLigth()
+            
+            foodMgr.saveMeal(
+                itemType: .foodLog,
+                itemId: foodLogId,
+                customName: nil,
+                notes: nil
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let response):
+                        print("✅ Successfully saved food log: \(response.message)")
+                        // Show success feedback
+                        withAnimation {
+                            // Could add a success animation here
+                        }
+                    case .failure(let error):
+                        print("❌ Failed to save food log: \(error)")
+                        // Could show an error alert here
+                    }
+                }
+            }
+            
+        case .meal:
+            guard let mealLogId = log.mealLogId else {
+                print("❌ No meal log ID available")
+                return
+            }
+            
+            HapticFeedback.generateLigth()
+            
+            foodMgr.saveMeal(
+                itemType: .mealLog,
+                itemId: mealLogId,
+                customName: nil,
+                notes: nil
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let response):
+                        print("✅ Successfully saved meal log: \(response.message)")
+                        // Show success feedback
+                        withAnimation {
+                            // Could add a success animation here
+                        }
+                    case .failure(let error):
+                        print("❌ Failed to save meal log: \(error)")
+                        // Could show an error alert here
+                    }
+                }
+            }
+            
+        case .recipe:
+            print("📝 Recipe saving not yet implemented")
+        }
+    }
+    
+    // Delete function for individual log items
+    private func deleteLogItem(log: CombinedLog) {
+        print("🗑️ Deleting individual log item: \(log.id)")
+        
+        switch log.type {
+        case .food:
+            guard let foodLogId = log.foodLogId else {
+                print("❌ No food log ID available")
+                return
+            }
+            
+            HapticFeedback.generate()
+            
+            foodMgr.deleteFoodLog(id: foodLogId) { result in
+                switch result {
+                case .success:
+                    print("✅ Successfully deleted food log ID: \(foodLogId)")
+                    // Remove from local logs after successful deletion
+                    DispatchQueue.main.async {
+                        vm.removeLog(log)
+                    }
+                case .failure(let error):
+                    print("❌ Failed to delete food log: \(error)")
+                }
+            }
+            
+        case .meal:
+            guard let mealLogId = log.mealLogId else {
+                print("❌ No meal log ID available")
+                return
+            }
+            
+            HapticFeedback.generate()
+            
+            foodMgr.deleteMealLog(id: mealLogId) { result in
+                switch result {
+                case .success:
+                    print("✅ Successfully deleted meal log ID: \(mealLogId)")
+                    // Remove from local logs after successful deletion
+                    DispatchQueue.main.async {
+                        vm.removeLog(log)
+                    }
+                case .failure(let error):
+                    print("❌ Failed to delete meal log: \(error)")
+                }
+            }
+            
+        case .recipe:
+            guard let recipeLogId = log.recipeLogId else {
+                print("❌ No recipe log ID available")
+                return
+            }
+            
+            HapticFeedback.generate()
+            print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
         }
     }
 }

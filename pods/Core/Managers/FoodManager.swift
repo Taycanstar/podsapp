@@ -114,6 +114,12 @@ class FoodManager: ObservableObject {
     
     // Add errorMessage property after other published properties, around line 85
     @Published var errorMessage: String? = nil
+    
+    // Saved meals properties
+    @Published var savedMeals: [SavedMeal] = []
+    @Published var isLoadingSavedMeals = false
+    private var currentSavedMealsPage = 1
+    private var hasMoreSavedMeals = true
 
     // Reference to DayLogsViewModel for updating UI after voice logging
     weak var dayLogsViewModel: DayLogsViewModel?
@@ -140,6 +146,7 @@ class FoodManager: ObservableObject {
         resetAndFetchRecipes()
         resetAndFetchLogs()
         resetAndFetchUserFoods()
+        resetAndFetchSavedMeals()
     }
     func trackRecentlyAdded(foodId: Int) {
     recentlyAddedFoodIds.insert(foodId)
@@ -3024,5 +3031,114 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
     // Helper method to get the device's timezone offset in minutes
     private func getTimezoneOffsetInMinutes() -> Int {
         return TimeZone.current.secondsFromGMT() / 60
+    }
+    
+    // MARK: - Saved Meals Functions
+    
+    private func resetAndFetchSavedMeals() {
+        print("💾 FoodManager: Reset and fetch saved meals called")
+        currentSavedMealsPage = 1
+        hasMoreSavedMeals = true
+        savedMeals = []
+        loadSavedMeals(refresh: true)
+    }
+    
+    func refreshSavedMeals() {
+        print("🔄 FoodManager: Refreshing saved meals")
+        currentSavedMealsPage = 1
+        hasMoreSavedMeals = true
+        loadSavedMeals(refresh: true)
+    }
+    
+    private func loadSavedMeals(refresh: Bool = false) {
+        guard let email = userEmail else { return }
+        guard !isLoadingSavedMeals else { return }
+        
+        isLoadingSavedMeals = true
+        let pageToLoad = refresh ? 1 : currentSavedMealsPage
+        
+        NetworkManagerTwo.shared.getSavedMeals(
+            userEmail: email,
+            page: pageToLoad
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isLoadingSavedMeals = false
+                
+                switch result {
+                case .success(let response):
+                    if refresh {
+                        self.savedMeals = response.savedMeals
+                        self.currentSavedMealsPage = 2
+                    } else {
+                        self.savedMeals.append(contentsOf: response.savedMeals)
+                        self.currentSavedMealsPage += 1
+                    }
+                    self.hasMoreSavedMeals = response.hasMore
+                    print("✅ Loaded \(response.savedMeals.count) saved meals")
+                    
+                case .failure(let error):
+                    print("❌ Failed to load saved meals: \(error)")
+                    self.errorMessage = "Failed to load saved meals: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    func saveMeal(itemType: SavedItemType, itemId: Int, customName: String? = nil, notes: String? = nil, completion: @escaping (Result<SaveMealResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+        
+        let itemTypeString = itemType == .foodLog ? "food_log" : "meal_log"
+        
+        NetworkManagerTwo.shared.saveMeal(
+            userEmail: email,
+            itemType: itemTypeString,
+            itemId: itemId,
+            customName: customName,
+            notes: notes
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully saved meal: \(response.message)")
+                    // Refresh the saved meals list to include the new item
+                    self?.refreshSavedMeals()
+                    completion(.success(response))
+                    
+                case .failure(let error):
+                    print("❌ Failed to save meal: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    func unsaveMeal(savedMealId: Int, completion: @escaping (Result<UnsaveMealResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+        
+        NetworkManagerTwo.shared.unsaveMeal(
+            userEmail: email,
+            savedMealId: savedMealId
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully unsaved meal: \(response.message)")
+                    // Remove the item from the local array
+                    self?.savedMeals.removeAll { $0.id == savedMealId }
+                    completion(.success(response))
+                    
+                case .failure(let error):
+                    print("❌ Failed to unsave meal: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
     }
 }
