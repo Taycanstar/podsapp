@@ -227,6 +227,7 @@ private var remainingCal: Double { vm.remainingCalories }
                                 }
                                 .tint(.red)
                             }
+                            .id("\(log.id)_\(foodMgr.savedLogIds.count)")
                         }
                         .onDelete { indexSet in
                             deleteLogItems(at: indexSet)
@@ -272,6 +273,16 @@ private var remainingCal: Double { vm.remainingCalories }
         .zIndex(1)
         .transition(.opacity)
         .animation(.spring(), value: foodMgr.showSavedMealToast)
+      }
+      else if foodMgr.showUnsavedMealToast {
+        VStack {
+          Spacer()
+          BottomPopup(message: "Unsaved Meal")
+            .padding(.bottom, 55)
+        }
+        .zIndex(1)
+        .transition(.opacity)
+        .animation(.spring(), value: foodMgr.showUnsavedMealToast)
       }
     }
             

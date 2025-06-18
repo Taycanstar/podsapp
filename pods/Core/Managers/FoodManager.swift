@@ -35,6 +35,7 @@ class FoodManager: ObservableObject {
     @Published var showMealLoggedToast = false
     @Published var showRecipeLoggedToast = false
     @Published var showSavedMealToast = false
+    @Published var showUnsavedMealToast = false
     @Published var recentlyAddedFoodIds: Set<Int> = []
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
@@ -2156,10 +2157,9 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
             return
         }
-        let repo = LogRepository()
-        // Assuming logType "meal" is used for deleting meal templates in the backend.
-        // If not, the backend `delete_log_item` might need adjustment or a new endpoint.
-        repo.deleteLogItem(email: email, logId: id, logType: "meal") { result in
+        
+        // Use networkManager.deleteMeal to delete the meal template
+        networkManager.deleteMeal(mealId: id, userEmail: email) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
@@ -3083,13 +3083,15 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     for savedMeal in response.savedMeals {
                         if savedMeal.itemType == .foodLog, let foodLog = savedMeal.foodLog, let foodLogId = foodLog.foodLogId {
                             self.savedLogIds.insert(foodLogId)
+                            print("💾 Added foodLogId \(foodLogId) to savedLogIds")
                         } else if savedMeal.itemType == .mealLog, let mealLog = savedMeal.mealLog, let mealLogId = mealLog.mealLogId {
                             self.savedLogIds.insert(mealLogId)
+                            print("💾 Added mealLogId \(mealLogId) to savedLogIds")
                         }
                     }
                     
                     self.hasMoreSavedMeals = response.hasMore
-                    print("✅ Loaded \(response.savedMeals.count) saved meals")
+                    print("✅ Loaded \(response.savedMeals.count) saved meals, savedLogIds now contains: \(self.savedLogIds)")
                     
                 case .failure(let error):
                     print("❌ Failed to load saved meals: \(error)")
@@ -3163,6 +3165,13 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                         }
                     }
                     self?.savedMeals.removeAll { $0.id == savedMealId }
+                    
+                    // Show unsaved meal toast
+                    self?.showUnsavedMealToast = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self?.showUnsavedMealToast = false
+                    }
+                    
                     completion(.success(response))
                     
                 case .failure(let error):
