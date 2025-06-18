@@ -199,12 +199,21 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .swipeActions(edge: .leading) {
-                                // Save action - only for meal logs and food logs (opposite direction from delete)
+                                // Save/Unsave action - only for meal logs and food logs
                                 if log.type == .meal || log.type == .food {
+                                    let isSaved = foodMgr.isLogSaved(
+                                        foodLogId: log.type == .food ? log.foodLogId : nil,
+                                        mealLogId: log.type == .meal ? log.mealLogId : nil
+                                    )
+                                    
                                     Button(action: {
-                                        saveMealAction(log: log)
+                                        if isSaved {
+                                            unsaveMealAction(log: log)
+                                        } else {
+                                            saveMealAction(log: log)
+                                        }
                                     }) {
-                                        Image(systemName: "bookmark.fill")
+                                        Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                                     }
                                     .tint(.accentColor)
                                 }
@@ -253,6 +262,16 @@ private var remainingCal: Double { vm.remainingCalories }
         .zIndex(1)
         .transition(.opacity)
         .animation(.spring(), value: foodMgr.showLogSuccess)
+      }
+      else if foodMgr.showSavedMealToast {
+        VStack {
+          Spacer()
+          BottomPopup(message: "Saved Meal")
+            .padding(.bottom, 55)
+        }
+        .zIndex(1)
+        .transition(.opacity)
+        .animation(.spring(), value: foodMgr.showSavedMealToast)
       }
     }
             
@@ -509,6 +528,54 @@ private var remainingCal: Double { vm.remainingCalories }
             
         case .recipe:
             print("📝 Recipe saving not yet implemented")
+        }
+    }
+    
+    // Unsave function for swipe-to-unsave functionality
+    private func unsaveMealAction(log: CombinedLog) {
+        print("🗑️ Unsaving meal/food log: \(log.id)")
+        
+        switch log.type {
+        case .food:
+            guard let foodLogId = log.foodLogId else {
+                print("❌ No food log ID available")
+                return
+            }
+            
+            HapticFeedback.generateLigth()
+            
+            foodMgr.unsaveByLogId(foodLogId: foodLogId) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let response):
+                        print("✅ Successfully unsaved food log: \(response.message)")
+                    case .failure(let error):
+                        print("❌ Failed to unsave food log: \(error)")
+                    }
+                }
+            }
+            
+        case .meal:
+            guard let mealLogId = log.mealLogId else {
+                print("❌ No meal log ID available")
+                return
+            }
+            
+            HapticFeedback.generateLigth()
+            
+            foodMgr.unsaveByLogId(mealLogId: mealLogId) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let response):
+                        print("✅ Successfully unsaved meal log: \(response.message)")
+                    case .failure(let error):
+                        print("❌ Failed to unsave meal log: \(error)")
+                    }
+                }
+            }
+            
+        case .recipe:
+            print("📝 Recipe unsaving not yet implemented")
         }
     }
     

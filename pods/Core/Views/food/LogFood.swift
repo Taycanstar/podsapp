@@ -2331,11 +2331,12 @@ private struct SavedMealListView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
                     
-                    Text("Swipe right on meals in your dashboard to save them for quick access")
+                    Text("Swipe right on meals in Home to save them for quick access")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 60)
                 }
                 .frame(height: 200)
                 .frame(maxWidth: .infinity)

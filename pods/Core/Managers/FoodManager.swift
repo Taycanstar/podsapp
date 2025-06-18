@@ -34,6 +34,7 @@ class FoodManager: ObservableObject {
     @Published var showMealToast = false
     @Published var showMealLoggedToast = false
     @Published var showRecipeLoggedToast = false
+    @Published var showSavedMealToast = false
     @Published var recentlyAddedFoodIds: Set<Int> = []
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
@@ -120,6 +121,7 @@ class FoodManager: ObservableObject {
     @Published var isLoadingSavedMeals = false
     private var currentSavedMealsPage = 1
     private var hasMoreSavedMeals = true
+    @Published var savedLogIds: Set<Int> = [] // Track which log IDs are saved
 
     // Reference to DayLogsViewModel for updating UI after voice logging
     weak var dayLogsViewModel: DayLogsViewModel?
@@ -3070,10 +3072,22 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     if refresh {
                         self.savedMeals = response.savedMeals
                         self.currentSavedMealsPage = 2
+                        // Reset and rebuild saved log IDs
+                        self.savedLogIds.removeAll()
                     } else {
                         self.savedMeals.append(contentsOf: response.savedMeals)
                         self.currentSavedMealsPage += 1
                     }
+                    
+                    // Update saved log IDs
+                    for savedMeal in response.savedMeals {
+                        if savedMeal.itemType == .foodLog, let foodLog = savedMeal.foodLog, let foodLogId = foodLog.foodLogId {
+                            self.savedLogIds.insert(foodLogId)
+                        } else if savedMeal.itemType == .mealLog, let mealLog = savedMeal.mealLog, let mealLogId = mealLog.mealLogId {
+                            self.savedLogIds.insert(mealLogId)
+                        }
+                    }
+                    
                     self.hasMoreSavedMeals = response.hasMore
                     print("✅ Loaded \(response.savedMeals.count) saved meals")
                     
@@ -3106,6 +3120,16 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     print("✅ Successfully saved meal: \(response.message)")
                     // Refresh the saved meals list to include the new item
                     self?.refreshSavedMeals()
+                    
+                    // Add to saved log IDs
+                    self?.savedLogIds.insert(itemId)
+                    
+                    // Show saved meal toast
+                    self?.showSavedMealToast = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self?.showSavedMealToast = false
+                    }
+                    
                     completion(.success(response))
                     
                 case .failure(let error):
@@ -3130,7 +3154,14 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 switch result {
                 case .success(let response):
                     print("✅ Successfully unsaved meal: \(response.message)")
-                    // Remove the item from the local array
+                    // Remove the item from the local array and update saved log IDs
+                    if let removedMeal = self?.savedMeals.first(where: { $0.id == savedMealId }) {
+                        if removedMeal.itemType == .foodLog, let foodLog = removedMeal.foodLog, let foodLogId = foodLog.foodLogId {
+                            self?.savedLogIds.remove(foodLogId)
+                        } else if removedMeal.itemType == .mealLog, let mealLog = removedMeal.mealLog, let mealLogId = mealLog.mealLogId {
+                            self?.savedLogIds.remove(mealLogId)
+                        }
+                    }
                     self?.savedMeals.removeAll { $0.id == savedMealId }
                     completion(.success(response))
                     
@@ -3140,5 +3171,37 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 }
             }
         }
+    }
+    
+    // Helper function to check if a log is saved
+    func isLogSaved(foodLogId: Int? = nil, mealLogId: Int? = nil) -> Bool {
+        if let foodLogId = foodLogId {
+            return savedLogIds.contains(foodLogId)
+        } else if let mealLogId = mealLogId {
+            return savedLogIds.contains(mealLogId)
+        }
+        return false
+    }
+    
+    // Helper function to find saved meal by log ID and unsave it
+    func unsaveByLogId(foodLogId: Int? = nil, mealLogId: Int? = nil, completion: @escaping (Result<UnsaveMealResponse, Error>) -> Void) {
+        var targetSavedMeal: SavedMeal?
+        
+        if let foodLogId = foodLogId {
+            targetSavedMeal = savedMeals.first { savedMeal in
+                savedMeal.itemType == .foodLog && savedMeal.foodLog?.foodLogId == foodLogId
+            }
+        } else if let mealLogId = mealLogId {
+            targetSavedMeal = savedMeals.first { savedMeal in
+                savedMeal.itemType == .mealLog && savedMeal.mealLog?.mealLogId == mealLogId
+            }
+        }
+        
+        guard let savedMeal = targetSavedMeal else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "Saved meal not found")))
+            return
+        }
+        
+        unsaveMeal(savedMealId: savedMeal.id, completion: completion)
     }
 }

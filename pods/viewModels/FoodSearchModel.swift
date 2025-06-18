@@ -145,6 +145,7 @@ class FoodService {
 
 // For logged foods from our database
 struct LoggedFoodItem: Codable {
+    let foodLogId: Int?   // Add food log ID
     let fdcId: Int 
     let displayName: String
     let calories: Double
@@ -234,6 +235,20 @@ extension LoggedFoodItem {
             ],
             foodMeasures: []
         )
+    }
+    
+    // Helper to create LoggedFoodItem without foodLogId (for backward compatibility)
+    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?) {
+        self.foodLogId = nil
+        self.fdcId = fdcId
+        self.displayName = displayName
+        self.calories = calories
+        self.servingSizeText = servingSizeText
+        self.numberOfServings = numberOfServings
+        self.brandText = brandText
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
     }
 }
 
@@ -337,6 +352,7 @@ struct LoggedMeal: Codable, Identifiable {
 }
 
 struct MealSummary: Codable {
+    let mealLogId: Int?   // Add meal log ID
     let mealId: Int
     let title: String
     let description: String?
@@ -597,6 +613,21 @@ protocol MealDisplayable {
 
 extension MealSummary: MealDisplayable {
     var id: Int { mealId }  // Map mealId to id for the protocol
+    
+    // Helper to create MealSummary without mealLogId (for backward compatibility)
+    init(mealId: Int, title: String, description: String?, image: String?, calories: Double, servings: Double, protein: Double?, carbs: Double?, fat: Double?, scheduledAt: Date?) {
+        self.mealLogId = nil
+        self.mealId = mealId
+        self.title = title
+        self.description = description
+        self.image = image
+        self.calories = calories
+        self.servings = servings
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.scheduledAt = scheduledAt
+    }
 }
 
 // MARK: - Recipe Structs
