@@ -1683,7 +1683,7 @@ class NetworkManagerTwo {
             
             do {
                 let decoder = JSONDecoder()
-                // decoder.keyDecodingStrategy = .convertFromSnakeCase
+               
                 
                 // Custom date formatter to handle microseconds
                 let formatter = DateFormatter()

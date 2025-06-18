@@ -2386,13 +2386,6 @@ private struct SavedMealRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Saved indicator icon
-            Image("bookmark")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 16, height: 16)
-                .foregroundColor(.red)
-            
             VStack(alignment: .leading, spacing: 4) {
                 Text(savedMeal.displayName)
                     .font(.system(size: 14))
