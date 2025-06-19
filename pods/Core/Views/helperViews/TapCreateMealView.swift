@@ -12,7 +12,7 @@ struct TapCreateMealView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Create Your Meal From Scratch") // Title for this view
+            Text("Create Your Recipe From Scratch") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 30)
@@ -20,14 +20,14 @@ struct TapCreateMealView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("meals2 1") // Image for this view
+            Image("recipe02") // Image for this view
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 285)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Build your meal. Tap Create Meal to begin") // Placeholder text
+            Text("Build your recipe. Tap Create Recipe to begin") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)

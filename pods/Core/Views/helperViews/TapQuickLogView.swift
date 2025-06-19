@@ -20,7 +20,7 @@ struct TapQuickLogView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("logfood3") // Image for this view
+            Image("logfood02") // Image for this view
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 285)

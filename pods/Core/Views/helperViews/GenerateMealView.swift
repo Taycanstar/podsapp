@@ -12,7 +12,7 @@ struct GenerateMealView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Meal Magic with AI") // Title for this view
+            Text("Recipe Magic with AI") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -20,14 +20,14 @@ struct GenerateMealView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("meals1") // Image for this view
+            Image("recipe01") // Image for this view
                 .resizable()
                 .scaledToFit()
               .frame(width: 375, height: 185)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Turn your meal description into a ready to log meal") // Placeholder text
+            Text("Turn your description into a ready to log recipe") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)

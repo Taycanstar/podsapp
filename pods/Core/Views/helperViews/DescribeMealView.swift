@@ -12,7 +12,7 @@ struct DescribeMealView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Bring Your Meal Together") // Title for this view
+            Text("Bring Your Recipe Together") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -20,14 +20,14 @@ struct DescribeMealView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("meals0") // Image for this view
+            Image("recipe00") // Image for this view
                 .resizable()
                 .scaledToFit()
              .frame(width: 375, height: 200)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Describe your complete meal in the search bar") // Placeholder text
+            Text("Describe your complete recipe in the search bar") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 30)
                 .multilineTextAlignment(.center)

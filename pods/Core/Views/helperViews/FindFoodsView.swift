@@ -13,7 +13,7 @@ struct FindFoodsView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            Text("Add Foods to Your Meal") // Title for this view
+            Text("Add Foods to Your Recipe") // Title for this view
                 .font(.title)
                 .fontWeight(.bold)
                 .padding(.horizontal, 25)
@@ -21,14 +21,14 @@ struct FindFoodsView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("meals4 1") // Image for this view
+            Image("recipe05") // Image for this view
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 285)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
             
-            Text("Find foods and tap + to add foods to your meal") // Placeholder text
+            Text("Find foods and tap + to add foods to your recipe") // Placeholder text
                 .font(.system(size: 18, weight: .regular))
                 .padding(.horizontal, 35)
                 .multilineTextAlignment(.center)

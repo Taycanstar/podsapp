@@ -1105,7 +1105,7 @@ private struct MealListView: View {
                         Image(systemName: "sparkle")
                             .font(.system(size: 24))
                             .foregroundColor(.accentColor)
-                        Text("Generate Meal with AI")
+                        Text("Generate Recipe with AI")
                             .font(.system(size: 17))
                             .fontWeight(.semibold)
                             .foregroundColor(.accentColor)
@@ -2155,13 +2155,13 @@ struct MealGenerationCard: View {
     private func getStageTitle() -> String {
         switch foodManager.analysisStage {
         case 0:
-            return "Analyzing meal description..."
+            return "Analyzing recipe description..."
         case 1:
             return "Finding matching ingredients..."
         case 2:
             return "Calculating portions..."
         case 3:
-            return "Finalizing meal creation..."
+            return "Finalizing recipe creation..."
         default:
             return "Processing..."
         }

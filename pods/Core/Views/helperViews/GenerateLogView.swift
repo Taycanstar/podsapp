@@ -20,7 +20,7 @@ struct GenerateLogView: View {
                 .padding(.bottom, 20)
                 .multilineTextAlignment(.center)
 
-            Image("logfood2") // Image for this view
+            Image("logfood01") // Image for this view
                 .resizable()
                 .scaledToFit()
                 .frame(width: 375, height: 285)
