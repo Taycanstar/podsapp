@@ -1678,18 +1678,18 @@ func macroCell(title: String, value: Double,
     .frame(maxWidth: .infinity)
 }
 
-// Calculated macro goals based on total calories
+// Use actual macro goals from DayLogsViewModel
 private extension DashboardView {
     var proteinGoal: Double {
-        return calorieGoal * 0.3 / 4 // 30% of calories from protein (4 calories per gram)
+        return vm.proteinGoal
     }
     
     var carbsGoal: Double {
-        return calorieGoal * 0.45 / 4 // 45% of calories from carbs (4 calories per gram)
+        return vm.carbsGoal
     }
     
     var fatGoal: Double {
-        return calorieGoal * 0.25 / 9 // 25% of calories from fat (9 calories per gram)
+        return vm.fatGoal
     }
 }
 
