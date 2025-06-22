@@ -13,9 +13,17 @@ struct AddExerciseView: View {
     @State private var selectedSegment = 0
     @State private var selectedExercises: Set<Int> = []
     @State private var exercises: [ExerciseData] = []
+    @State private var selectedMuscle: String? = nil
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
+    
+    // Muscle group options for the carousel
+    private let muscleGroups = [
+        "Chest", "Abs", "Back", "Lower Back", "Trapezius", "Neck", 
+        "Shoulders", "Biceps", "Triceps", "Forearms", "Glutes", 
+        "Quads", "Hamstrings", "Calves", "Abductors", "Adductors"
+    ]
     
     // Callback to pass selected exercises back
     let onExercisesSelected: ([ExerciseData]) -> Void
@@ -72,6 +80,43 @@ struct AddExerciseView: View {
             .padding(.horizontal, 16)
             .padding(.top, 0)
             .padding(.bottom, 12)
+            .onChange(of: selectedSegment) { _, newValue in
+                // Reset muscle selection when switching segments
+                if newValue != 1 {
+                    selectedMuscle = nil
+                }
+            }
+            
+            // Muscle Group Carousel (only show when "By Muscle" is selected)
+            if selectedSegment == 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(muscleGroups, id: \.self) { muscle in
+                            Button(action: {
+                                HapticFeedback.generate()
+                                if selectedMuscle == muscle {
+                                    selectedMuscle = nil // Deselect if already selected
+                                } else {
+                                    selectedMuscle = muscle
+                                }
+                            }) {
+                                Text(muscle)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(selectedMuscle == muscle ? .white : .primary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(selectedMuscle == muscle ? Color.accentColor : Color(.systemGray5))
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 12)
+            }
             
             // Exercise List
             ScrollViewReader { (proxy: ScrollViewProxy) in
@@ -248,26 +293,36 @@ struct AddExerciseView: View {
             }
         }
         
+        // Apply muscle group filter when in "By Muscle" mode
+        let muscleFiltered: [ExerciseData]
+        if selectedSegment == 1, let selectedMuscle = selectedMuscle {
+            muscleFiltered = filtered.filter { exercise in
+                exercise.muscle.localizedCaseInsensitiveContains(selectedMuscle)
+            }
+        } else {
+            muscleFiltered = filtered
+        }
+        
         // Apply segment filter and sort
         switch selectedSegment {
         case 0: // All
-            return filtered // Sorting is handled in alphabeticalSections
+            return muscleFiltered // Sorting is handled in alphabeticalSections
         case 1: // By Muscle
-            return filtered.sorted { exercise1, exercise2 in
+            return muscleFiltered.sorted { exercise1, exercise2 in
                 if exercise1.muscle == exercise2.muscle {
                     return exercise1.name < exercise2.name
                 }
                 return exercise1.muscle < exercise2.muscle
             }
         case 2: // Categories
-            return filtered.sorted { exercise1, exercise2 in
+            return muscleFiltered.sorted { exercise1, exercise2 in
                 if exercise1.category == exercise2.category {
                     return exercise1.name < exercise2.name
                 }
                 return exercise1.category < exercise2.category
             }
         default:
-            return filtered
+            return muscleFiltered
         }
     }
     
