@@ -25,6 +25,8 @@ struct WorkoutContainerView: View {
                         // TODO: Implement ExerciseSelectionView
                         Text("Exercise Selection View")
                             .navigationTitle("Select Exercise")
+                    case .recentlyAdded:
+                        RecentlyAddedView()
                     }
                 }
         }
@@ -36,6 +38,7 @@ enum WorkoutNavigationDestination: Hashable {
     case createWorkout
     case editWorkout(Workout)
     case exerciseSelection
+    case recentlyAdded
 }
 
 #Preview {

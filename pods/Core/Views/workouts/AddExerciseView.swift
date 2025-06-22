@@ -14,6 +14,8 @@ struct AddExerciseView: View {
     @State private var selectedExercises: Set<Int> = []
     @State private var exercises: [ExerciseData] = []
     @State private var selectedMuscle: String? = nil
+    @State private var showingRecentlyAdded = false
+    @State private var showingAddedByMe = false
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -105,6 +107,16 @@ struct AddExerciseView: View {
         .onAppear {
             loadExercises()
         }
+        .sheet(isPresented: $showingRecentlyAdded) {
+            NavigationView {
+                RecentlyAddedView()
+            }
+        }
+        .sheet(isPresented: $showingAddedByMe) {
+            NavigationView {
+                AddedByMe()
+            }
+        }
     }
     
     // MARK: - Content View
@@ -178,8 +190,16 @@ struct AddExerciseView: View {
                             ForEach(Array(categories.enumerated()), id: \.offset) { index, category in
                                 Button(action: {
                                     HapticFeedback.generate()
-                                    // TODO: Navigate to specific category view
-                                    print("Tapped category: \(category.0)")
+                                    
+                                    switch category.0 {
+                                    case "Recently Added":
+                                        showingRecentlyAdded = true
+                                    case "Added by Me":
+                                        showingAddedByMe = true
+                                    default:
+                                        // TODO: Navigate to other category views
+                                        print("Tapped category: \(category.0)")
+                                    }
                                 }) {
                                     HStack(spacing: 16) {
                                         Image(systemName: category.1)

@@ -23,6 +23,8 @@
 		362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */; };
 		3629CE982BCECCA100040725 /* UploadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3629CE972BCECCA100040725 /* UploadViewModel.swift */; };
 		363068C32E01DCF600F2D4EC /* ConfirmLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068C22E01DCF600F2D4EC /* ConfirmLogView.swift */; };
+		363068C52E085D9200F2D4EC /* RecentlyAddedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068C42E085D9200F2D4EC /* RecentlyAddedView.swift */; };
+		363068C72E089D2A00F2D4EC /* AddedByMe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068C62E089D2A00F2D4EC /* AddedByMe.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -261,6 +263,8 @@
 		362969B22D0D3E4700DF0B26 /* FullActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullActivityLogView.swift; sourceTree = "<group>"; };
 		3629CE972BCECCA100040725 /* UploadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadViewModel.swift; sourceTree = "<group>"; };
 		363068C22E01DCF600F2D4EC /* ConfirmLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmLogView.swift; sourceTree = "<group>"; };
+		363068C42E085D9200F2D4EC /* RecentlyAddedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyAddedView.swift; sourceTree = "<group>"; };
+		363068C62E089D2A00F2D4EC /* AddedByMe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddedByMe.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -570,6 +574,8 @@
 				3662A5542DFE3B8500847487 /* WorkoutContainerView.swift */,
 				3662A5562DFE430D00847487 /* AddExerciseView.swift */,
 				3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */,
+				363068C42E085D9200F2D4EC /* RecentlyAddedView.swift */,
+				363068C62E089D2A00F2D4EC /* AddedByMe.swift */,
 			);
 			path = workouts;
 			sourceTree = "<group>";
@@ -1262,7 +1268,9 @@
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
+				363068C72E089D2A00F2D4EC /* AddedByMe.swift in Sources */,
 				36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */,
+				363068C52E085D9200F2D4EC /* RecentlyAddedView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
 				3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
