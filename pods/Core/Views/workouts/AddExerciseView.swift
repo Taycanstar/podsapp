@@ -162,7 +162,54 @@ struct AddExerciseView: View {
             ScrollViewReader { (proxy: ScrollViewProxy) in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        if selectedSegment == 0 {
+                        if selectedSegment == 2 {
+                            // Categories View
+                            let categories = [
+                                ("Recently Added", "calendar"),
+                                ("Added by Me", "person"),
+                                ("By Equipment", "dumbbell"),
+                                ("Weighted Exercises", "scalemass"),
+                                ("Bodyweight", "figure.strengthtraining.functional"),
+                                ("Bodyweight with Equipment", "figure.play"),
+                                ("Cardio", "figure.run"),
+                                ("Stretching and Mobility", "figure.flexibility")
+                            ]
+                            
+                            ForEach(Array(categories.enumerated()), id: \.offset) { index, category in
+                                Button(action: {
+                                    HapticFeedback.generate()
+                                    // TODO: Navigate to specific category view
+                                    print("Tapped category: \(category.0)")
+                                }) {
+                                    HStack(spacing: 16) {
+                                        Image(systemName: category.1)
+                                            .font(.system(size: 20, weight: .medium))
+                                            .foregroundColor(.primary)
+                                            .frame(width: 30)
+                                        
+                                        Text(category.0)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.primary)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 16)
+                                    .background(Color(.systemBackground))
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if index < categories.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 62)
+                                }
+                            }
+                        } else if selectedSegment == 0 {
                             // All exercises - with alphabetical sections
                             ForEach(validSectionKeys, id: \.self) { sectionKey in
                                 if let exercises = alphabeticalSections[sectionKey], !exercises.isEmpty {
@@ -194,8 +241,8 @@ struct AddExerciseView: View {
                             // Grouped exercises with sections
                             ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
                                 if let exercises = groupedExercises[sectionKey], !exercises.isEmpty {
-                                    // Section Header - only show if not in "By Muscle" mode or if no muscle is selected
-                                    if selectedSegment != 1 || selectedMuscle == nil {
+                                    // Section Header - only show if not in "By Muscle" mode
+                                    if selectedSegment != 1 {
                                         Text(sectionKey)
                                             .font(.headline)
                                             .foregroundColor(.primary)
