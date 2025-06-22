@@ -142,12 +142,12 @@ struct AddExerciseView: View {
                             }) {
                                 Text(muscle)
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(selectedMuscle == muscle ? .white : .primary)
+                                    .foregroundColor(selectedMuscle == muscle ? Color(.systemBackground) : .primary)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
                                     .background(
                                         RoundedRectangle(cornerRadius: 20)
-                                            .fill(selectedMuscle == muscle ? Color.accentColor : Color(.systemGray5))
+                                            .fill(selectedMuscle == muscle ? Color.primary : Color(.systemGray5))
                                     )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -194,15 +194,16 @@ struct AddExerciseView: View {
                             // Grouped exercises with sections
                             ForEach(groupedExercises.keys.sorted(), id: \.self) { sectionKey in
                                 if let exercises = groupedExercises[sectionKey], !exercises.isEmpty {
-                                    // Section Header
-                                    Text(sectionKey)
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                        // .background(Color(.systemGray6))
+                                    // Section Header - only show if not in "By Muscle" mode or if no muscle is selected
+                                    if selectedSegment != 1 || selectedMuscle == nil {
+                                        Text(sectionKey)
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 12)
                                             .background(Color(.systemGray6))
+                                    }
                                     
                                     // Section Content
                                     ForEach(exercises, id: \.id) { exercise in
