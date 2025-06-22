@@ -25,6 +25,46 @@ struct AddExerciseView: View {
         "Quads", "Hamstrings", "Calves", "Abductors", "Adductors"
     ]
     
+    // Mapping from display names to actual database bodyPart values
+    private func getDatabaseBodyPart(for displayMuscle: String) -> [String] {
+        switch displayMuscle {
+        case "Chest":
+            return ["Chest"]
+        case "Abs":
+            return ["Waist"]  // Core/abs exercises are listed as "Waist" in the database
+        case "Back":
+            return ["Back"]
+        case "Lower Back":
+            return ["Hips"]  // Lower back exercises are often categorized as "Hips" 
+        case "Trapezius":
+            return ["Back"]  // Trapezius exercises are in the "Back" category
+        case "Neck":
+            return ["Neck"]
+        case "Shoulders":
+            return ["Shoulders"]
+        case "Biceps":
+            return ["Upper Arms"]  // Biceps exercises are in "Upper Arms"
+        case "Triceps":
+            return ["Upper Arms"]  // Triceps exercises are in "Upper Arms"
+        case "Forearms":
+            return ["Forearms"]
+        case "Glutes":
+            return ["Hips"]  // Glute exercises are categorized as "Hips"
+        case "Quads":
+            return ["Thighs"]  // Quad exercises are in "Thighs"
+        case "Hamstrings":
+            return ["Thighs"]  // Hamstring exercises are in "Thighs"
+        case "Calves":
+            return ["Calves"]
+        case "Abductors":
+            return ["Thighs"]  // Abductor exercises are in "Thighs"
+        case "Adductors":
+            return ["Thighs"]  // Adductor exercises are in "Thighs"
+        default:
+            return []
+        }
+    }
+    
     // Callback to pass selected exercises back
     let onExercisesSelected: ([ExerciseData]) -> Void
     
@@ -296,8 +336,44 @@ struct AddExerciseView: View {
         // Apply muscle group filter when in "By Muscle" mode
         let muscleFiltered: [ExerciseData]
         if selectedSegment == 1, let selectedMuscle = selectedMuscle {
+            let targetBodyParts = getDatabaseBodyPart(for: selectedMuscle)
             muscleFiltered = filtered.filter { exercise in
-                exercise.muscle.localizedCaseInsensitiveContains(selectedMuscle)
+                // First check if bodyPart matches
+                let bodyPartMatches = targetBodyParts.contains { bodyPart in
+                    exercise.bodyPart.localizedCaseInsensitiveContains(bodyPart)
+                }
+                
+                // For more specific filtering, also check target muscle
+                let targetMatches: Bool
+                switch selectedMuscle {
+                case "Biceps":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Biceps")
+                case "Triceps":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Triceps")
+                case "Abs":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Rectus Abdominis") ||
+                                   exercise.target.localizedCaseInsensitiveContains("Obliques")
+                case "Glutes":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Gluteus")
+                case "Quads":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Quadriceps")
+                case "Hamstrings":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Hamstrings")
+                case "Trapezius":  
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Trapezius")
+                case "Lower Back":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Erector Spinae") ||
+                                   exercise.target.localizedCaseInsensitiveContains("Gluteus Maximus")
+                case "Abductors":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Abductor") ||
+                                   exercise.target.localizedCaseInsensitiveContains("Gluteus Medius")
+                case "Adductors":
+                    targetMatches = exercise.target.localizedCaseInsensitiveContains("Adductor")
+                default:
+                    targetMatches = bodyPartMatches
+                }
+                
+                return bodyPartMatches || targetMatches
             }
         } else {
             muscleFiltered = filtered
