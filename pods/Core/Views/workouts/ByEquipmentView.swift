@@ -40,7 +40,7 @@ struct ByEquipmentView: View {
         ("Leg Extension Machine", "legextmachine"),         // "Leg Extension" - 8+ exercises
         ("Leg Curl Machine", "legcurlmachine"),     // "Leg Curl" - 6+ exercises
         ("Calf Raise Machine", "calfraisesmachine"),             // "Calf Raise" - 10+ exercises
-        ("Row Machine", "rowmachine"),              // "Seated Row" - 5+ exercises
+        ("Row Machine", "seatedrow"),              // "Seated Row" - 5+ exercises
         ("Leg Press", "legpress"),                  // "Leg Press" - 5+ exercises
         
         // Bar Equipment (implied by exercise names)
