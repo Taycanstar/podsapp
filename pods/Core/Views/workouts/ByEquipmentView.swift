@@ -125,7 +125,7 @@ struct ByEquipmentView: View {
                                     }
                                 }
                             }
-                            .frame(width: 30, height: 30)
+                            .frame(width: 45, height: 45)
                             
                             Text(equipment.0)
                                 .font(.system(size: 16, weight: .medium))
