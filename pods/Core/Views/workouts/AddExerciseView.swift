@@ -16,6 +16,7 @@ struct AddExerciseView: View {
     @State private var selectedMuscle: String? = nil
     @State private var showingRecentlyAdded = false
     @State private var showingAddedByMe = false
+    @State private var showingByEquipment = false
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -117,6 +118,11 @@ struct AddExerciseView: View {
                 AddedByMe()
             }
         }
+        .sheet(isPresented: $showingByEquipment) {
+            NavigationView {
+                ByEquipmentView()
+            }
+        }
     }
     
     // MARK: - Content View
@@ -196,6 +202,8 @@ struct AddExerciseView: View {
                                         showingRecentlyAdded = true
                                     case "Added by Me":
                                         showingAddedByMe = true
+                                    case "By Equipment":
+                                        showingByEquipment = true
                                     default:
                                         // TODO: Navigate to other category views
                                         print("Tapped category: \(category.0)")

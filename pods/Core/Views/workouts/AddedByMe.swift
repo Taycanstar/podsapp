@@ -179,6 +179,6 @@ struct AddedByMeExerciseRow: View {
 
 #Preview {
     NavigationView {
-        AddedByMeView()
+        AddedByMe()
     }
 } 
