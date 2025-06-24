@@ -8,10 +8,15 @@ struct CameraProgressView: View {
     
     var body: some View {
         ZStack {
+            // Black background for safe areas
+            Color.black
+                .ignoresSafeArea(.all)
+            
             // Main camera view
             CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
                 dismiss()
             }
+            .ignoresSafeArea(.all)
             
             // Overlay with gallery button
             VStack {
@@ -30,8 +35,8 @@ struct CameraProgressView: View {
                             .clipShape(Circle())
                     }
                     .padding(.trailing, 20)
-                    .padding(.top, 50)
                 }
+                .padding(.top, 20)
                 
                 Spacer()
                 
@@ -51,7 +56,7 @@ struct CameraProgressView: View {
                     
                     Spacer()
                 }
-                .padding(.bottom, 100)
+                .padding(.bottom, 50)
             }
         }
         .sheet(isPresented: $showImagePicker) {
@@ -66,11 +71,22 @@ struct CustomImagePicker: UIViewControllerRepresentable {
     @Binding var selectedPhoto: UIImage?
     var sourceType: UIImagePickerController.SourceType
     var onImageSelected: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
         picker.sourceType = sourceType
+        
+        // Fix camera positioning and configuration
+        if sourceType == .camera {
+            picker.cameraDevice = .rear
+            picker.cameraCaptureMode = .photo
+            picker.cameraFlashMode = .auto
+            picker.showsCameraControls = true
+            picker.allowsEditing = false
+        }
+        
         return picker
     }
 
@@ -88,15 +104,24 @@ struct CustomImagePicker: UIViewControllerRepresentable {
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.selectedPhoto = uiImage
-                parent.onImageSelected()
+            // Dismiss the picker first
+            picker.dismiss(animated: true) {
+                // Then update the binding and call completion on main thread
+                DispatchQueue.main.async {
+                    if let uiImage = info[.originalImage] as? UIImage {
+                        self.parent.selectedPhoto = uiImage
+                    }
+                    self.parent.onImageSelected()
+                }
             }
-            picker.dismiss(animated: true)
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
+            picker.dismiss(animated: true) {
+                DispatchQueue.main.async {
+                    self.parent.onImageSelected()
+                }
+            }
         }
     }
 }
