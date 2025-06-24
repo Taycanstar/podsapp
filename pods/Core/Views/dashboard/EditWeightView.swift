@@ -62,54 +62,63 @@ struct EditWeightView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
+                    
+                    // Photo Row (only show if photo is selected)
+                    if let photo = selectedPhoto {
+                        Divider()
+                            .padding(.horizontal, 16)
+                        
+                        HStack {
+                            Text("Photo")
+                                .font(.system(size: 17))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 12) {
+                                Image(uiImage: photo)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                
+                                // Delete button
+                                Button(action: {
+                                    selectedPhoto = nil
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
                 }
                 .background(Color("iosnp"))
                 .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 20)
                 
-                // Add Photo Button
-                Button(action: {
-                    showingProgressCamera = true
-                }) {
-                    HStack {
-                        Image(systemName: "camera")
-                            .font(.system(size: 17))
-                        
-                        Text("Add Photo")
-                            .font(.system(size: 17))
+                // Add Photo Button (only show if no photo is selected)
+                if selectedPhoto == nil {
+                    Button(action: {
+                        showingProgressCamera = true
+                    }) {
+                        HStack {
+                            Image(systemName: "camera")
+                                .font(.system(size: 17))
+                            
+                            Text("Add Photo")
+                                .font(.system(size: 17))
+                        }
+                        .foregroundColor(.accentColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color("iosnp"))
+                        .cornerRadius(10)
                     }
-                    .foregroundColor(.accentColor)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color("iosnp"))
-                    .cornerRadius(10)
-                }
-                .padding(.horizontal)
-                .padding(.top, 12)
-                
-                // Display selected photo thumbnail
-                if let photo = selectedPhoto {
-                    Divider()
-                        .padding(.horizontal, 16)
-                    
-                    HStack {
-                        Text("Photo")
-                            .font(.system(size: 17))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Image(uiImage: photo)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 50, height: 50)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color("iosnp"))
-                    .cornerRadius(10)
                     .padding(.horizontal)
                     .padding(.top, 12)
                 }
