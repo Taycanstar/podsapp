@@ -46,7 +46,9 @@ struct EditHeightView: View {
                     
                     // Height Button Row
                     Button(action: {
-                        showingHeightPicker = true
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingHeightPicker.toggle()
+                        }
                     }) {
                         HStack {
                             Text("ft")
@@ -64,6 +66,35 @@ struct EditHeightView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+                    
+                    // Inline Height Picker (expands/collapses)
+                    if showingHeightPicker {
+                        Divider()
+                            .padding(.horizontal, 16)
+                        
+                        HStack(spacing: 0) {
+                            // Feet Picker
+                            Picker("Feet", selection: $selectedFeet) {
+                                ForEach(feetRange, id: \.self) { feet in
+                                    Text("\(feet) ft").tag(feet)
+                                }
+                            }
+                            .pickerStyle(WheelPickerStyle())
+                            .frame(maxWidth: .infinity)
+                            
+                            // Inches Picker
+                            Picker("Inches", selection: $selectedInches) {
+                                ForEach(inchesRange, id: \.self) { inches in
+                                    Text("\(inches) in").tag(inches)
+                                }
+                            }
+                            .pickerStyle(WheelPickerStyle())
+                            .frame(maxWidth: .infinity)
+                        }
+                        .frame(height: 150)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                    }
                 }
                 .background(Color("iosnp"))
                 .cornerRadius(10)
@@ -84,14 +115,6 @@ struct EditHeightView: View {
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
-            )
-        }
-        .sheet(isPresented: $showingHeightPicker) {
-            HeightPickerView(
-                selectedFeet: $selectedFeet,
-                selectedInches: $selectedInches,
-                feetRange: feetRange,
-                inchesRange: inchesRange
             )
         }
         .onAppear {
@@ -139,56 +162,6 @@ struct EditHeightView: View {
             case .failure(let error):
                 print("Error logging height: \(error.localizedDescription)")
             }
-        }
-    }
-}
-
-// MARK: - Height Picker View
-struct HeightPickerView: View {
-    @Environment(\.dismiss) var dismiss
-    @Binding var selectedFeet: Int
-    @Binding var selectedInches: Int
-    let feetRange: ClosedRange<Int>
-    let inchesRange: ClosedRange<Int>
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                HStack(spacing: 0) {
-                    // Feet Picker
-                    Picker("Feet", selection: $selectedFeet) {
-                        ForEach(feetRange, id: \.self) { feet in
-                            Text("\(feet) ft").tag(feet)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(maxWidth: .infinity)
-                    
-                    // Inches Picker
-                    Picker("Inches", selection: $selectedInches) {
-                        ForEach(inchesRange, id: \.self) { inches in
-                            Text("\(inches) in").tag(inches)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(maxWidth: .infinity)
-                }
-                .padding()
-                
-                Spacer()
-            }
-            .navigationTitle("Height")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    dismiss()
-                }
-                .foregroundColor(.accentColor),
-                trailing: Button("Done") {
-                    dismiss()
-                }
-                .foregroundColor(.accentColor)
-            )
         }
     }
 }
