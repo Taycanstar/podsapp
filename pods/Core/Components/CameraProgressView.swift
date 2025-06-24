@@ -5,40 +5,57 @@ struct CameraProgressView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedPhoto: UIImage?
     @State private var showImagePicker = false
-    @State private var showCamera = false
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            // Camera Button
-            Button(action: {
-                showCamera = true
-            }) {
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.primary)
-            }
-            .padding(.bottom, 20)
-            
-            // Gallery Button
-            Button(action: {
-                showImagePicker = true
-            }) {
-                Image(systemName: "photo.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.primary)
+        ZStack {
+            // Main camera view
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
+                dismiss()
             }
             
-            Spacer()
+            // Overlay with gallery button
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    // Close button
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.top, 50)
+                }
+                
+                Spacer()
+                
+                HStack {
+                    // Gallery button
+                    Button(action: {
+                        showImagePicker = true
+                    }) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding(.leading, 30)
+                    
+                    Spacer()
+                }
+                .padding(.bottom, 100)
+            }
         }
         .sheet(isPresented: $showImagePicker) {
             CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary) {
-                dismiss()
-            }
-        }
-        .sheet(isPresented: $showCamera) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
                 dismiss()
             }
         }
