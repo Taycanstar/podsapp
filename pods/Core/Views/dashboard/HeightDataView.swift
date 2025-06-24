@@ -266,7 +266,7 @@ struct HeightDataView: View {
                 .padding(.top, 20)
             
             LazyVStack(spacing: 0) {
-                ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+                ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {

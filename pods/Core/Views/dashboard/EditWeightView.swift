@@ -19,46 +19,48 @@ struct EditWeightView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Date Row
-                HStack {
-                    Text("Date")
-                        .font(.system(size: 17))
-                        .foregroundColor(.primary)
+                // Combined Date and Weight Card
+                VStack(spacing: 0) {
+                    // Date Row
+                    HStack {
+                        Text("Date")
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        DatePicker("", selection: $selectedDate, displayedComponents: [.date])
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                     
-                    Spacer()
+                    Divider()
+                        .padding(.horizontal, 16)
                     
-                    DatePicker("", selection: $selectedDate, displayedComponents: [.date])
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
+                    // Weight Input Row
+                    HStack {
+                        Text("lbs")
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("", text: $weightText)
+                            .keyboardType(.numberPad)
+                            .focused($isWeightFieldFocused)
+                            .multilineTextAlignment(.trailing)
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 20)
-                
-                // Weight Input Row
-                HStack {
-                    Text("lbs")
-                        .font(.system(size: 17))
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    TextField("", text: $weightText)
-                        .keyboardType(.numberPad)
-                        .focused($isWeightFieldFocused)
-                        .multilineTextAlignment(.trailing)
-                        .font(.system(size: 17))
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.top, 12)
                 
                 // Add Photo Button
                 Button(action: {

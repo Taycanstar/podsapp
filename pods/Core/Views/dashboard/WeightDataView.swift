@@ -253,8 +253,8 @@ struct WeightDataView: View {
                 .padding(.horizontal)
                 .padding(.top, 20)
             
-            LazyVStack(spacing: 0) {
-                ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+            LazyVStack(spacing: 12) {
+                ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
@@ -282,14 +282,10 @@ struct WeightDataView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        
-                        if index < logs.count - 1 {
-                            Divider()
-                                .padding(.leading, 16)
-                        }
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
                     }
                 }
             }
