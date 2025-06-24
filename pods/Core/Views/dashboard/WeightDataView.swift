@@ -31,7 +31,7 @@ struct WeightDataView: View {
     @State private var allLogs: [WeightLogResponse] = []
     @State private var timeframe: Timeframe = .threeMonths
     @State private var isLoading = false
-    @State private var averageWeight: Double = 0
+    @State private var currentWeight: Double = 0
     @State private var dateRangeText: String = ""
     @State private var showingEditSheet = false
     @State private var errorMessage: String? = nil
@@ -99,12 +99,12 @@ struct WeightDataView: View {
     
     private var averageWeightView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("AVERAGE")
+            Text("CURRENT")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.gray)
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(String(format: "%.1f", averageWeight))")
+                Text("\(String(format: "%.1f", currentWeight))")
                               .font(.system(size: 44, weight: .semibold, design: .rounded))
                 Text("lbs")
                     .font(.system(size: 32))
@@ -507,15 +507,17 @@ struct WeightDataView: View {
         updateAverageAndDateRange()
     }
     
-    // Update average weight display and date range text
+    // Update current weight display and date range text
     private func updateAverageAndDateRange() {
-        // For the average calculation, we'll use the filtered data
-        let weights = logs.map { $0.weightKg * 2.20462 } // Convert to lbs
-        
-        if !weights.isEmpty {
-            averageWeight = weights.reduce(0, +) / Double(weights.count)
+        // For the current weight, we'll use the most recent entry
+        if let mostRecentLog = logs.sorted(by: { log1, log2 in
+            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
+                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
+            return d1 > d2
+        }).first {
+            currentWeight = mostRecentLog.weightKg * 2.20462 // Convert to lbs
         } else {
-            averageWeight = 0
+            currentWeight = 0
         }
         
         // Update date range text based on timeframe

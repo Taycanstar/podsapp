@@ -31,7 +31,7 @@ struct HeightDataView: View {
     @State private var allLogs: [HeightLogResponse] = []
     @State private var timeframe: Timeframe = .threeMonths
     @State private var isLoading = false
-    @State private var averageHeight: Double = 0
+    @State private var currentHeight: Double = 0
     @State private var dateRangeText: String = ""
     @State private var showingEditSheet = false
     @State private var errorMessage: String? = nil
@@ -100,12 +100,12 @@ struct HeightDataView: View {
     
     private var averageHeightView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("AVERAGE")
+            Text("CURRENT")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.gray)
             
-            if averageHeight > 0 {
-                let totalInches = averageHeight / 2.54
+            if currentHeight > 0 {
+                let totalInches = currentHeight / 2.54
                 let feet = Int(totalInches / 12)
                 let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
                 
@@ -510,15 +510,17 @@ struct HeightDataView: View {
         updateAverageAndDateRange()
     }
     
-    // Update average height display and date range text
+    // Update current height display and date range text
     private func updateAverageAndDateRange() {
-        // For the average calculation, we'll use the filtered data
-        let heights = logs.map { $0.heightCm } // Heights in cm
-        
-        if !heights.isEmpty {
-            averageHeight = heights.reduce(0, +) / Double(heights.count)
+        // For the current height, we'll use the most recent entry
+        if let mostRecentLog = logs.sorted(by: { log1, log2 in
+            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
+                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
+            return d1 > d2
+        }).first {
+            currentHeight = mostRecentLog.heightCm
         } else {
-            averageHeight = 0
+            currentHeight = 0
         }
         
         // Update date range text based on timeframe
