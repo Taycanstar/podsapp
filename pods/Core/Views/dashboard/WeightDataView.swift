@@ -10,17 +10,17 @@ import Charts
 
 struct WeightDataView: View {
     enum Timeframe: String, CaseIterable {
-        case day = "D"
         case week = "W"
         case month = "M"
+        case threeMonths = "3M"
         case sixMonths = "6M"
         case year = "Y"
         
         var days: Int {
             switch self {
-            case .day: return 1
             case .week: return 7
             case .month: return 30
+            case .threeMonths: return 91
             case .sixMonths: return 182
             case .year: return 365
             }
@@ -29,7 +29,7 @@ struct WeightDataView: View {
     
     @State private var logs: [WeightLogResponse] = []
     @State private var allLogs: [WeightLogResponse] = []
-    @State private var timeframe: Timeframe = .week
+    @State private var timeframe: Timeframe = .threeMonths
     @State private var isLoading = false
     @State private var averageWeight: Double = 0
     @State private var dateRangeText: String = ""
@@ -201,12 +201,12 @@ struct WeightDataView: View {
                     AxisGridLine()
                     AxisValueLabel {
                         switch timeframe {
-                        case .day:
-                            Text(formatDate(date, format: "HH:mm"))
                         case .week:
                             Text(formatDate(date, format: "EEE"))
                         case .month:
                             Text(formatDate(date, format: "d"))
+                        case .threeMonths:
+                            Text(formatDate(date, format: "MMM"))
                         case .sixMonths:
                             Text(formatDate(date, format: "MMM"))
                         case .year:
@@ -294,15 +294,15 @@ struct WeightDataView: View {
         var result: [ChartDataPoint] = []
         
         switch timeframe {
-        case .day, .week:
-            // For day and week, show individual data points
+        case .week:
+            // For week, show individual data points
             for log in logs {
                 if let date = dateFormatter.date(from: log.dateLogged) {
                     result.append(ChartDataPoint(date: date, weightLbs: log.weightKg * 2.20462))
                 }
             }
             
-        case .month:
+        case .month, .threeMonths:
             // Group by day
             let calendar = Calendar.current
             var dayGroups: [Date: [Double]] = [:]
@@ -446,14 +446,6 @@ struct WeightDataView: View {
         let dateFormatter = DateFormatter()
         
         switch timeframe {
-        case .day:
-            if let date = logs.first?.dateLogged, let parsedDate = self.dateFormatter.date(from: date) {
-                dateFormatter.dateFormat = "MMMM d, yyyy"
-                dateRangeText = dateFormatter.string(from: parsedDate)
-            } else {
-                dateRangeText = ""
-            }
-            
         case .week:
             let today = Date()
             let weekStart = calendar.date(byAdding: .day, value: -6, to: today) ?? today
@@ -466,6 +458,15 @@ struct WeightDataView: View {
         case .month:
             dateFormatter.dateFormat = "MMMM yyyy"
             dateRangeText = dateFormatter.string(from: Date())
+            
+        case .threeMonths:
+            let now = Date()
+            let threeMonthsAgo = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+            
+            dateFormatter.dateFormat = "MMM yyyy"
+            let startText = dateFormatter.string(from: threeMonthsAgo)
+            let endText = dateFormatter.string(from: now)
+            dateRangeText = "\(startText) - \(endText)"
             
         case .sixMonths:
             let now = Date()
