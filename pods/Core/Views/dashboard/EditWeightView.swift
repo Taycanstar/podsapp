@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct EditWeightView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -15,6 +16,11 @@ struct EditWeightView: View {
     @State private var selectedDate = Date()
     @State private var weightText = ""
     @FocusState private var isWeightFieldFocused: Bool
+    @State private var selectedPhoto: UIImage? = nil
+    @State private var showingProgressCamera = false
+    @State private var image: Image? = nil
+    @State private var showImagePicker = false
+    @State private var showCamera = false
     
     var body: some View {
         NavigationView {
@@ -64,8 +70,7 @@ struct EditWeightView: View {
                 
                 // Add Photo Button
                 Button(action: {
-                    // TODO: Handle photo selection
-                    print("Add Photo tapped")
+                    showingProgressCamera = true
                 }) {
                     HStack {
                         Image(systemName: "camera")
@@ -82,6 +87,32 @@ struct EditWeightView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
+                
+                // Display selected photo thumbnail
+                if let photo = selectedPhoto {
+                    Divider()
+                        .padding(.horizontal, 16)
+                    
+                    HStack {
+                        Text("Photo")
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Image(uiImage: photo)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 50, height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color("iosnp"))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                }
                 
                 Spacer()
             }
@@ -110,6 +141,19 @@ struct EditWeightView: View {
             // Automatically focus the weight field to show numpad
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isWeightFieldFocused = true
+            }
+        }
+        .sheet(isPresented: $showingProgressCamera) {
+            CameraProgressView(selectedPhoto: $selectedPhoto)
+        }
+        .sheet(isPresented: $showImagePicker) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary) {
+                // Photo selected, no additional action needed
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
+                // Photo selected, no additional action needed
             }
         }
     }
@@ -150,6 +194,27 @@ struct EditWeightView: View {
                 
             case .failure(let error):
                 print("Error logging weight: \(error.localizedDescription)")
+            }
+        }
+        
+        if let photo = selectedPhoto, let imageData = photo.jpegData(compressionQuality: 0.8) {
+            let containerName = "your-container-name"
+            let blobName = UUID().uuidString + ".jpg"
+            NetworkManager().uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: imageData, contentType: "image/jpeg") { success, url in
+                if success, let imageUrl = url {
+                    print("Photo uploaded successfully: \(imageUrl)")
+                    // Update the database with the imageUrl
+                    NetworkManagerTwo.shared.updateWeightLogWithPhotoUrl(userEmail: email, weightKg: weightInKg, photoUrl: imageUrl) { result in
+                        switch result {
+                        case .success:
+                            print("Weight log updated with photo URL")
+                        case .failure(let error):
+                            print("Failed to update weight log with photo URL: \(error.localizedDescription)")
+                        }
+                    }
+                } else {
+                    print("Failed to upload photo")
+                }
             }
         }
     }

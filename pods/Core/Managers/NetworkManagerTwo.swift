@@ -1739,6 +1739,14 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
             }
         }.resume()
     }
+
+    func updateWeightLogWithPhotoUrl(userEmail: String, weightKg: Double, photoUrl: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        // Implement the API call to update the weight log with the photo URL
+        // This is a placeholder implementation
+        print("Updating weight log for user: \(userEmail) with photo URL: \(photoUrl)")
+        completion(.success(()))
+    }
+
 }
 
 
