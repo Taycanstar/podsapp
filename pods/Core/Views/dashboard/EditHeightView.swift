@@ -96,11 +96,17 @@ struct EditHeightView: View {
             }
             .padding()
             .navigationBarTitle("Update Height", displayMode: .inline)
-            .navigationBarItems(trailing: Button("Done") {
-                saveHeight()
-                dismiss()
-            }
-            .foregroundColor(.accentColor))
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(.accentColor),
+                trailing: Button("Done") {
+                    saveHeight()
+                    dismiss()
+                }
+                .foregroundColor(.accentColor)
+            )
         }
         .onAppear {
             // Initialize with current height if available

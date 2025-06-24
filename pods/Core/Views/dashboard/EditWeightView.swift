@@ -61,11 +61,17 @@ struct EditWeightView: View {
             }
             .padding()
             .navigationBarTitle("Update Weight", displayMode: .inline)
-            .navigationBarItems(trailing: Button("Done") {
-                saveWeight()
-                dismiss()
-            }
-            .foregroundColor(.accentColor))
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(.accentColor),
+                trailing: Button("Done") {
+                    saveWeight()
+                    dismiss()
+                }
+                .foregroundColor(.accentColor)
+            )
         }
         .onAppear {
             // Initialize with current weight if available
