@@ -57,7 +57,7 @@ struct EditWeightView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
-                .background(Color(.systemGray6))
+                .background(Color("iosnp"))
                 .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 20)
@@ -77,7 +77,7 @@ struct EditWeightView: View {
                     .foregroundColor(.accentColor)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
+                    .background(Color("iosnp"))
                     .cornerRadius(10)
                 }
                 .padding(.horizontal)
@@ -85,6 +85,7 @@ struct EditWeightView: View {
                 
                 Spacer()
             }
+            .background(Color("iosbg"))
             .navigationBarTitle("Weight", displayMode: .inline)
             .navigationBarItems(
                 leading: Button("Cancel") {

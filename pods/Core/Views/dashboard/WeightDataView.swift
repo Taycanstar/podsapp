@@ -253,39 +253,44 @@ struct WeightDataView: View {
                 .padding(.horizontal)
                 .padding(.top, 20)
             
-            LazyVStack(spacing: 12) {
+            LazyVStack(spacing: 0) {
                 ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                // Weight in lbs
-                                let weightLbs = log.weightKg * 2.20462
+                        VStack(spacing: 0) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    // Weight in lbs
+                                    let weightLbs = log.weightKg * 2.20462
+                                    
+                                    Text("\(Int(weightLbs.rounded())) lbs")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                    
+                                    Text(formatDateForHistory(date))
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.secondary)
+                                }
                                 
-                                Text("\(Int(weightLbs.rounded())) lbs")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
+                                Spacer()
                                 
-                                Text(formatDateForHistory(date))
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
+                                // Camera button for weight entries
+                                Button(action: {
+                                    // TODO: Handle camera action
+                                    print("Camera tapped for weight entry")
+                                }) {
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.secondary)
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                             
-                            Spacer()
-                            
-                            // Camera button for weight entries
-                            Button(action: {
-                                // TODO: Handle camera action
-                                print("Camera tapped for weight entry")
-                            }) {
-                                Image(systemName: "camera")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.secondary)
+                            if index < logs.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
                     }
                 }
             }
