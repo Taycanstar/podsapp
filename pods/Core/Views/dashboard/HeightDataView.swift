@@ -259,7 +259,8 @@ struct HeightDataView: View {
     private var historyView: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("History")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.title)
+                     .fontWeight(.bold)
                 .foregroundColor(.primary)
                 .padding(.horizontal)
                 .padding(.top, 20)
@@ -296,6 +297,7 @@ struct HeightDataView: View {
                     }
                 }
             }
+            .padding(.bottom, 100) // Add bottom padding for tab bar
         }
     }
     

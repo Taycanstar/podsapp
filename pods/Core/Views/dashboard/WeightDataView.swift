@@ -249,6 +249,7 @@ struct WeightDataView: View {
             Text("History")
                 .font(.title)
                 .foregroundColor(.primary)
+                .fontWeight(.bold)
                 .padding(.horizontal)
                 .padding(.top, 20)
             
@@ -292,6 +293,7 @@ struct WeightDataView: View {
                     }
                 }
             }
+            .padding(.bottom, 100) // Add bottom padding for tab bar
         }
     }
     

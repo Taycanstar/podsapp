@@ -12,91 +12,117 @@ struct EditWeightView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
     
-    @State private var unitSelection = 0 // 0 = Imperial, 1 = Metric
-    @State private var selectedWeight: Double = 160 // Default in pounds
-    
-    // Computed property for convenience
-    private var isImperial: Bool {
-        return unitSelection == 0
-    }
+    @State private var selectedDate = Date()
+    @State private var weightText = ""
+    @FocusState private var isWeightFieldFocused: Bool
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Imperial/Metric Segmented Control
-                Picker("Unit System", selection: $unitSelection) {
-                    Text("Imperial").tag(0)
-                    Text("Metric").tag(1)
+                // Date Row
+                HStack {
+                    Text("Date")
+                        .font(.system(size: 17))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    DatePicker("", selection: $selectedDate, displayedComponents: [.date])
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
                 }
-                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 20)
-                .padding(.bottom, 40)
-                .onChange(of: unitSelection) { _ in
-                    // Convert weight when switching between imperial and metric
-                    if isImperial {
-                        // Convert kg to lbs
-                        selectedWeight = selectedWeight * 2.20462
-                    } else {
-                        // Convert lbs to kg
-                        selectedWeight = selectedWeight / 2.20462
-                    }
+                
+                // Weight Input Row
+                HStack {
+                    Text("lbs")
+                        .font(.system(size: 17))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    TextField("", text: $weightText)
+                        .keyboardType(.numberPad)
+                        .focused($isWeightFieldFocused)
+                        .multilineTextAlignment(.trailing)
+                        .font(.system(size: 17))
+                        .foregroundColor(.primary)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .padding(.top, 12)
                 
-                // Weight display
-                Text(String(format: "%.1f %@", selectedWeight, isImperial ? "lbs" : "kg"))
-                    .font(.system(size: 44, weight: .bold))
-                    .foregroundColor(.primary)
-                    .padding(.bottom, 24)
-                
-                // Weight ruler picker
-                WeightRulerView2(
-                    selectedWeight: $selectedWeight,
-                    range: isImperial ? 50.0...500.0 : 20.0...220.0,
-                    step: 0.1
-                )
-                .frame(height: 80)
+                // Add Photo Button
+                Button(action: {
+                    // TODO: Handle photo selection
+                    print("Add Photo tapped")
+                }) {
+                    HStack {
+                        Image(systemName: "camera")
+                            .font(.system(size: 17))
+                        
+                        Text("Add Photo")
+                            .font(.system(size: 17))
+                    }
+                    .foregroundColor(.accentColor)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
                 
                 Spacer()
             }
-            .padding()
-            .navigationBarTitle("Update Weight", displayMode: .inline)
+            .navigationBarTitle("Weight", displayMode: .inline)
             .navigationBarItems(
                 leading: Button("Cancel") {
                     dismiss()
                 }
                 .foregroundColor(.accentColor),
-                trailing: Button("Done") {
+                trailing: Button("Add") {
                     saveWeight()
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
+                .disabled(weightText.isEmpty)
             )
         }
         .onAppear {
             // Initialize with current weight if available
             if vm.weight > 0 {
-                if isImperial {
-                    selectedWeight = vm.weight * 2.20462 // Convert kg to lbs
-                } else {
-                    selectedWeight = vm.weight
-                }
+                let weightLbs = vm.weight * 2.20462
+                weightText = String(Int(weightLbs.rounded()))
+            }
+            
+            // Automatically focus the weight field to show numpad
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isWeightFieldFocused = true
             }
         }
     }
     
     private func saveWeight() {
-        // Convert to kg for storage if in imperial
-        let weightInKg = isImperial ? selectedWeight / 2.20462 : selectedWeight
+        guard let weightLbs = Double(weightText) else {
+            print("Error: Invalid weight value")
+            return
+        }
+        
+        // Convert pounds to kg for storage
+        let weightInKg = weightLbs / 2.20462
         
         // Save to UserDefaults
-        if isImperial {
-            UserDefaults.standard.set(selectedWeight, forKey: "weightPounds")
-            UserDefaults.standard.set(weightInKg, forKey: "weightKilograms")
-        } else {
-            UserDefaults.standard.set(selectedWeight, forKey: "weightKilograms")
-            UserDefaults.standard.set(selectedWeight * 2.20462, forKey: "weightPounds")
-        }
+        UserDefaults.standard.set(weightLbs, forKey: "weightPounds")
+        UserDefaults.standard.set(weightInKg, forKey: "weightKilograms")
         
         // Update the viewModel
         vm.weight = weightInKg
