@@ -143,7 +143,7 @@ struct EditWeightView: View {
                 isWeightFieldFocused = true
             }
         }
-        .sheet(isPresented: $showingProgressCamera) {
+        .fullScreenCover(isPresented: $showingProgressCamera) {
             CameraProgressView(selectedPhoto: $selectedPhoto)
         }
         .sheet(isPresented: $showImagePicker) {
