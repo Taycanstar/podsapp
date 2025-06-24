@@ -59,6 +59,7 @@ struct WeightDataView: View {
                     errorView(message: error)
                 } else {
                     chartView
+                    historyView
                 }
                 
                 Spacer()
@@ -243,6 +244,57 @@ struct WeightDataView: View {
         }
     }
     
+    private var historyView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("History")
+                .font(.title)
+                .foregroundColor(.primary)
+                .padding(.horizontal)
+                .padding(.top, 20)
+            
+            LazyVStack(spacing: 0) {
+                ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                // Weight in lbs
+                                let weightLbs = log.weightKg * 2.20462
+                                
+                                Text("\(Int(weightLbs.rounded())) lbs")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Text(formatDateForHistory(date))
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            // Camera button for weight entries
+                            Button(action: {
+                                // TODO: Handle camera action
+                                print("Camera tapped for weight entry")
+                            }) {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        
+                        if index < logs.count - 1 {
+                            Divider()
+                                .padding(.leading, 16)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -285,6 +337,28 @@ struct WeightDataView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+    
+    // Helper function to format dates for history section
+    private func formatDateForHistory(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo <= 7 {
+            // Within a week - show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: date)
+        } else {
+            // Older than a week - show date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d/yy"
+            return formatter.string(from: date)
+        }
     }
     
     // Group logs based on timeframe

@@ -60,6 +60,7 @@ struct HeightDataView: View {
                     errorView(message: error)
                 } else {
                     chartView
+                    historyView
                 }
                 
                 Spacer()
@@ -255,6 +256,49 @@ struct HeightDataView: View {
         }
     }
     
+    private var historyView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("History")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.primary)
+                .padding(.horizontal)
+                .padding(.top, 20)
+            
+            LazyVStack(spacing: 0) {
+                ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                // Height in feet and inches
+                                let totalInches = log.heightCm / 2.54
+                                let feet = Int(totalInches / 12)
+                                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+                                
+                                Text("\(feet)' \(inches)\"")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Text(formatDateForHistory(date))
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        
+                        if index < logs.count - 1 {
+                            Divider()
+                                .padding(.leading, 16)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -297,6 +341,28 @@ struct HeightDataView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+    
+    // Helper function to format dates for history section
+    private func formatDateForHistory(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo <= 7 {
+            // Within a week - show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: date)
+        } else {
+            // Older than a week - show date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d/yy"
+            return formatter.string(from: date)
+        }
     }
     
     // Group logs based on timeframe
