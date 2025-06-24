@@ -12,108 +12,91 @@ struct EditHeightView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
     
-    @State private var unitSelection = 0 // 0 = Imperial, 1 = Metric
-    
-    // Imperial measurements
+    @State private var selectedDate = Date()
     @State private var selectedFeet = 5
     @State private var selectedInches = 9
-    
-    // Metric measurements
-    @State private var selectedCentimeters = 175
+    @State private var showingHeightPicker = false
     
     // Available ranges
     let feetRange = 2...8
     let inchesRange = 0...11
-    let centimetersRange = 100...250
-    
-    // Computed property for convenience
-    private var isImperial: Bool {
-        return unitSelection == 0
-    }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Imperial/Metric Segmented Control
-                Picker("Unit System", selection: $unitSelection) {
-                    Text("Imperial").tag(0)
-                    Text("Metric").tag(1)
+                // Combined Date and Height Card
+                VStack(spacing: 0) {
+                    // Date Row
+                    HStack {
+                        Text("Date")
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        DatePicker("", selection: $selectedDate, displayedComponents: [.date])
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    
+                    Divider()
+                        .padding(.horizontal, 16)
+                    
+                    // Height Button Row
+                    Button(action: {
+                        showingHeightPicker = true
+                    }) {
+                        HStack {
+                            Text("ft")
+                                .font(.system(size: 17))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Text("\(selectedFeet)' \(selectedInches)\"")
+                                .font(.system(size: 17))
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .pickerStyle(SegmentedPickerStyle())
+                .background(Color("iosnp"))
+                .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 20)
-                .padding(.bottom, 40)
-                .onChange(of: unitSelection) { _ in
-                    if isImperial {
-                        // Convert from metric to imperial
-                        let totalInches = Double(selectedCentimeters) / 2.54
-                        selectedFeet = Int(totalInches / 12)
-                        selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                    } else {
-                        // Convert from imperial to metric
-                        let totalInches = (selectedFeet * 12) + selectedInches
-                        selectedCentimeters = Int(Double(totalInches) * 2.54)
-                    }
-                }
-                
-                // Height section
-                VStack(alignment: .center, spacing: 20) {
-                    Text("Height")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    if isImperial {
-                        // Imperial height pickers (feet and inches)
-                        HStack(spacing: 10) {
-                            // Feet picker
-                            ScrollViewPicker(
-                                selection: $selectedFeet,
-                                range: feetRange,
-                                suffix: "ft"
-                            )
-                            .frame(width: 100, height: 200)
-                            
-                            // Inches picker
-                            ScrollViewPicker(
-                                selection: $selectedInches,
-                                range: inchesRange,
-                                suffix: "in"
-                            )
-                            .frame(width: 100, height: 200)
-                        }
-                    } else {
-                        // Metric height picker (centimeters)
-                        ScrollViewPicker(
-                            selection: $selectedCentimeters,
-                            range: centimetersRange,
-                            suffix: "cm"
-                        )
-                        .frame(width: 100, height: 200)
-                    }
-                }
                 
                 Spacer()
             }
-            .padding()
-            .navigationBarTitle("Update Height", displayMode: .inline)
+            .background(Color("iosbg"))
+            .navigationBarTitle("Height", displayMode: .inline)
             .navigationBarItems(
                 leading: Button("Cancel") {
                     dismiss()
                 }
                 .foregroundColor(.accentColor),
-                trailing: Button("Done") {
+                trailing: Button("Add") {
                     saveHeight()
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
             )
         }
+        .sheet(isPresented: $showingHeightPicker) {
+            HeightPickerView(
+                selectedFeet: $selectedFeet,
+                selectedInches: $selectedInches,
+                feetRange: feetRange,
+                inchesRange: inchesRange
+            )
+        }
         .onAppear {
             // Initialize with current height if available
             if vm.height > 0 {
-                // Set metric value
-                selectedCentimeters = Int(vm.height)
-                
                 // Calculate imperial values
                 let totalInches = vm.height / 2.54
                 selectedFeet = Int(totalInches / 12)
@@ -123,29 +106,14 @@ struct EditHeightView: View {
     }
     
     private func saveHeight() {
-        var heightInCm: Double
-        
-        if isImperial {
-            // Convert imperial to metric
-            let totalInches = (selectedFeet * 12) + selectedInches
-            heightInCm = Double(totalInches) * 2.54
-        } else {
-            // Already in metric
-            heightInCm = Double(selectedCentimeters)
-        }
+        // Convert imperial to metric
+        let totalInches = (selectedFeet * 12) + selectedInches
+        let heightInCm = Double(totalInches) * 2.54
         
         // Save to UserDefaults
-        UserDefaults.standard.set(isImperial, forKey: "isImperial")
-        
-        if isImperial {
-            UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
-            UserDefaults.standard.set(selectedInches, forKey: "heightInches")
-            UserDefaults.standard.set(heightInCm, forKey: "heightCentimeters")
-        } else {
-            UserDefaults.standard.set(selectedCentimeters, forKey: "heightCentimeters")
-            UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
-            UserDefaults.standard.set(selectedInches, forKey: "heightInches")
-        }
+        UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
+        UserDefaults.standard.set(selectedInches, forKey: "heightInches")
+        UserDefaults.standard.set(heightInCm, forKey: "heightCentimeters")
         
         // Update the viewModel
         vm.height = heightInCm
@@ -171,6 +139,56 @@ struct EditHeightView: View {
             case .failure(let error):
                 print("Error logging height: \(error.localizedDescription)")
             }
+        }
+    }
+}
+
+// MARK: - Height Picker View
+struct HeightPickerView: View {
+    @Environment(\.dismiss) var dismiss
+    @Binding var selectedFeet: Int
+    @Binding var selectedInches: Int
+    let feetRange: ClosedRange<Int>
+    let inchesRange: ClosedRange<Int>
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                HStack(spacing: 0) {
+                    // Feet Picker
+                    Picker("Feet", selection: $selectedFeet) {
+                        ForEach(feetRange, id: \.self) { feet in
+                            Text("\(feet) ft").tag(feet)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(maxWidth: .infinity)
+                    
+                    // Inches Picker
+                    Picker("Inches", selection: $selectedInches) {
+                        ForEach(inchesRange, id: \.self) { inches in
+                            Text("\(inches) in").tag(inches)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(maxWidth: .infinity)
+                }
+                .padding()
+                
+                Spacer()
+            }
+            .navigationTitle("Height")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(.accentColor),
+                trailing: Button("Done") {
+                    dismiss()
+                }
+                .foregroundColor(.accentColor)
+            )
         }
     }
 }
