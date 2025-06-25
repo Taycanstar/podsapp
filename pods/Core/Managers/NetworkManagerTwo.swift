@@ -866,6 +866,7 @@ class NetworkManagerTwo {
         userEmail: String,
         weightKg: Double,
         notes: String = "Logged from dashboard",
+        photoUrl: String? = nil,
         completion: @escaping (Result<WeightLogResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/log-weight/"
@@ -879,11 +880,16 @@ class NetworkManagerTwo {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "user_email": userEmail,
             "weight_kg": weightKg,
             "notes": notes
         ]
+        
+        // Add photo URL if provided
+        if let photoUrl = photoUrl {
+            parameters["photo_url"] = photoUrl
+        }
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
@@ -1741,10 +1747,69 @@ class NetworkManagerTwo {
     }
 
     func updateWeightLogWithPhotoUrl(userEmail: String, weightKg: Double, photoUrl: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        // Implement the API call to update the weight log with the photo URL
-        // This is a placeholder implementation
-        print("Updating weight log for user: \(userEmail) with photo URL: \(photoUrl)")
-        completion(.success(()))
+        let urlString = "\(baseUrl)/update-weight-log-photo/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let requestBody: [String: Any] = [
+            "user_email": userEmail,
+            "weight_kg": weightKg,
+            "photo_url": photoUrl
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating weight log for user: \(userEmail) with photo URL: \(photoUrl)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Check for success response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let success = json["success"] as? Bool, success {
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated weight log with photo")
+                    completion(.success(()))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+            }
+        }.resume()
     }
 
 }

@@ -187,12 +187,59 @@ struct EditWeightView: View {
         // Update the viewModel
         vm.weight = weightInKg
         
-        // Call API to log weight using NetworkManagerTwo
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             print("Error: No user email found")
             return
         }
         
+        // If there's a photo, upload it first, then create weight log with photo URL
+        if let photo = selectedPhoto, let imageData = photo.jpegData(compressionQuality: 0.8) {
+            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+                print("Error: BLOB_CONTAINER not configured")
+                return
+            }
+            
+            let blobName = UUID().uuidString + ".jpg"
+            NetworkManager().uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: imageData, contentType: "image/jpeg") { success, url in
+                if success, let imageUrl = url {
+                    print("Photo uploaded successfully: \(imageUrl)")
+                    
+                    // Now create the weight log with the photo URL
+                    self.createWeightLogWithPhoto(email: email, weightInKg: weightInKg, photoUrl: imageUrl)
+                } else {
+                    print("Failed to upload photo")
+                    // Still create weight log without photo
+                    self.createWeightLogWithoutPhoto(email: email, weightInKg: weightInKg)
+                }
+            }
+        } else {
+            // No photo, create weight log directly
+            createWeightLogWithoutPhoto(email: email, weightInKg: weightInKg)
+        }
+    }
+    
+    private func createWeightLogWithPhoto(email: String, weightInKg: Double, photoUrl: String) {
+        // Use the updated logWeight function that accepts photo URL
+        NetworkManagerTwo.shared.logWeight(
+            userEmail: email,
+            weightKg: weightInKg,
+            notes: "Logged from dashboard",
+            photoUrl: photoUrl
+        ) { result in
+            switch result {
+            case .success(let response):
+                print("Weight successfully logged with photo: \(response.weightKg) kg")
+                
+                // Post notification to refresh health data
+                NotificationCenter.default.post(name: Notification.Name("WeightLoggedNotification"), object: nil)
+                
+            case .failure(let error):
+                print("Error logging weight with photo: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func createWeightLogWithoutPhoto(email: String, weightInKg: Double) {
         NetworkManagerTwo.shared.logWeight(
             userEmail: email,
             weightKg: weightInKg,
@@ -207,31 +254,6 @@ struct EditWeightView: View {
                 
             case .failure(let error):
                 print("Error logging weight: \(error.localizedDescription)")
-            }
-        }
-        
-        if let photo = selectedPhoto, let imageData = photo.jpegData(compressionQuality: 0.8) {
-            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-                print("Error: BLOB_CONTAINER not configured")
-                return
-            }
-            
-            let blobName = UUID().uuidString + ".jpg"
-            NetworkManager().uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: imageData, contentType: "image/jpeg") { success, url in
-                if success, let imageUrl = url {
-                    print("Photo uploaded successfully: \(imageUrl)")
-                    // Update the database with the imageUrl
-                    NetworkManagerTwo.shared.updateWeightLogWithPhotoUrl(userEmail: email, weightKg: weightInKg, photoUrl: imageUrl) { result in
-                        switch result {
-                        case .success:
-                            print("Weight log updated with photo URL")
-                        case .failure(let error):
-                            print("Failed to update weight log with photo URL: \(error.localizedDescription)")
-                        }
-                    }
-                } else {
-                    print("Failed to upload photo")
-                }
             }
         }
     }
