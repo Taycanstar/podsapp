@@ -20,41 +20,10 @@ struct CameraProgressView: View {
             
             // Overlay with gallery button
             VStack {
-                HStack {
-                    // Flash button (left side - for alignment reference)
-                    Button(action: {
-                        // Flash toggle functionality could be added here
-                    }) {
-                        Image(systemName: "bolt.slash")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                    }
-                    .padding(.leading, 20)
-                    
-                    Spacer()
-                    
-                    // Close button (right side - aligned with flash)
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                    }
-                    .padding(.trailing, 20)
-                }
-                .padding(.top, 20)
-                
                 Spacer()
                 
                 HStack {
-                    // Gallery button (image icon instead of cancel)
+                    // Gallery button (positioned higher, above native cancel button)
                     Button(action: {
                         showImagePicker = true
                     }) {
@@ -69,7 +38,7 @@ struct CameraProgressView: View {
                     
                     Spacer()
                 }
-                .padding(.bottom, 50)
+                .padding(.bottom, 120) // Higher position to sit above native controls
             }
         }
         .sheet(isPresented: $showImagePicker) {

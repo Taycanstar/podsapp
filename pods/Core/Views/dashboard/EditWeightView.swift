@@ -207,7 +207,11 @@ struct EditWeightView: View {
         }
         
         if let photo = selectedPhoto, let imageData = photo.jpegData(compressionQuality: 0.8) {
-            let containerName = "your-container-name"
+            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+                print("Error: BLOB_CONTAINER not configured")
+                return
+            }
+            
             let blobName = UUID().uuidString + ".jpg"
             NetworkManager().uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: imageData, contentType: "image/jpeg") { success, url in
                 if success, let imageUrl = url {
