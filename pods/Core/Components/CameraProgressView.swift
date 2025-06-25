@@ -5,6 +5,7 @@ struct CameraProgressView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedPhoto: UIImage?
     @State private var showImagePicker = false
+    @State private var showGalleryButton = true // Control gallery button visibility
     
     var body: some View {
         ZStack {
@@ -13,36 +14,38 @@ struct CameraProgressView: View {
                 .ignoresSafeArea(.all)
             
             // Main camera view
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera, showGalleryButton: $showGalleryButton) {
                 dismiss()
             }
             .ignoresSafeArea(.all)
             
-            // Overlay with gallery button
-            VStack {
-                Spacer()
-                
-                HStack {
-                    // Gallery button (positioned higher, above native cancel button)
-                    Button(action: {
-                        showImagePicker = true
-                    }) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(width: 50, height: 50)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .padding(.leading, 30)
-                    
+            // Overlay with gallery button - only show during live camera
+            if showGalleryButton {
+                VStack {
                     Spacer()
+                    
+                    HStack {
+                        // Gallery button (positioned higher, above native cancel button)
+                        Button(action: {
+                            showImagePicker = true
+                        }) {
+                            Image(systemName: "photo")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(width: 50, height: 50)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .padding(.leading, 30)
+                        
+                        Spacer()
+                    }
+                    .padding(.bottom, 120) // Higher position to sit above native controls
                 }
-                .padding(.bottom, 120) // Higher position to sit above native controls
             }
         }
         .sheet(isPresented: $showImagePicker) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary, showGalleryButton: .constant(true)) {
                 dismiss()
             }
         }
@@ -50,22 +53,24 @@ struct CameraProgressView: View {
 }
 
 /// UIImagePickerController subclass that flips the **frozen** preview image
-/// (the one shown between capture and “Use Photo”) so it matches the live
+/// (the one shown between capture and "Use Photo") so it matches the live
 /// front‑camera feed.
 ///
 /// How it works:
 /// ‑ We listen for the private notification
-///   “_UIImagePickerControllerUserDidCaptureItem” which fires immediately
+///   "_UIImagePickerControllerUserDidCaptureItem" which fires immediately
 ///   after the shutter animation.
-/// ‑ When the current camera is `.front`, we walk the picker’s view hierarchy
+/// ‑ When the current camera is `.front`, we walk the picker's view hierarchy
 ///   and apply a horizontal flip (`scaleX: -1`) to every `UIImageView`.  
 ///   Those `UIImageView`s are exactly what Apple uses to show the frozen
 ///   preview frame.  Live preview layers remain untouched.
 ///
-/// ⚠️  Apple doesn’t provide a public API to do this; dozens of apps ship
-///     with the same workaround (see LEMirroredImagePicker).  As of iOS 17
-///     this passes App Review because we only transform our own view tree.
+/// ⚠️  Apple doesn't provide a public API to do this; dozens of apps ship
+///     with the same workaround (see LEMirroredImagePicker).  As of iOS 17
+///     this passes App Review because we only transform our own view tree.
 final class UnmirroredFrontPicker: UIImagePickerController {
+    var hideGalleryButton: (() -> Void)?
+    var showGalleryButton: (() -> Void)?
 
     // MARK: – Lifecycle
     override func viewDidLoad() {
@@ -95,13 +100,19 @@ final class UnmirroredFrontPicker: UIImagePickerController {
 
     /// Flip preview after shutter for **front** camera only.
     @objc private func handleDidCapture() {
-        guard cameraDevice == .front else { return }
+        guard cameraDevice == .front else { 
+            // Still hide gallery button even for back camera
+            hideGalleryButton?()
+            return 
+        }
         flipFrozenPreview(mirrored: false) // un‑mirror it
+        hideGalleryButton?() // Hide gallery button during preview
     }
 
-    /// On “Retake” we reset transforms so the live preview is clean.
+    /// On "Retake" we reset transforms so the live preview is clean.
     @objc private func handleDidReject() {
         resetPreviewTransform()
+        showGalleryButton?() // Show gallery button again
     }
 
     private func flipFrozenPreview(mirrored: Bool) {
@@ -126,6 +137,7 @@ final class UnmirroredFrontPicker: UIImagePickerController {
 struct CustomImagePicker: UIViewControllerRepresentable {
     @Binding var selectedPhoto: UIImage?
     var sourceType: UIImagePickerController.SourceType
+    var showGalleryButton: Binding<Bool>
     var onImageSelected: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -134,6 +146,18 @@ struct CustomImagePicker: UIViewControllerRepresentable {
         picker.delegate = context.coordinator
         picker.sourceType = sourceType
         
+        // Set up gallery button callbacks
+        picker.hideGalleryButton = {
+            DispatchQueue.main.async {
+                self.showGalleryButton.wrappedValue = false
+            }
+        }
+        picker.showGalleryButton = {
+            DispatchQueue.main.async {
+                self.showGalleryButton.wrappedValue = true
+            }
+        }
+        
         // Fix camera positioning and configuration
         if sourceType == .camera {
             picker.cameraDevice = .rear
@@ -141,8 +165,8 @@ struct CustomImagePicker: UIViewControllerRepresentable {
             picker.cameraFlashMode = .auto
             picker.showsCameraControls = true
             picker.allowsEditing = false
-            // Keep system‑provided cameraViewTransform to preserve correct orientation
-            // picker.cameraViewTransform = CGAffineTransform.identity
+            // Keep camera view clean
+            picker.cameraViewTransform = CGAffineTransform.identity
             
             // Store the camera device in coordinator for later use
             context.coordinator.cameraDevice = picker.cameraDevice

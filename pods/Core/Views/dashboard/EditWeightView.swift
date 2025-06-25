@@ -156,12 +156,12 @@ struct EditWeightView: View {
             CameraProgressView(selectedPhoto: $selectedPhoto)
         }
         .sheet(isPresented: $showImagePicker) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary, showGalleryButton: .constant(true)) {
                 // Photo selected, no additional action needed
             }
         }
         .sheet(isPresented: $showCamera) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera, showGalleryButton: .constant(true)) {
                 // Photo selected, no additional action needed
             }
         }
