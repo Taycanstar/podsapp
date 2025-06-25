@@ -43,6 +43,7 @@ final class DayLogsViewModel: ObservableObject {
   // Navigation properties
   @Published var navigateToEditHeight: Bool = false
   @Published var navigateToEditWeight: Bool = false
+  @Published var navigateToWeightData: Bool = false
 
   private let repo = LogRepository()
   private(set) var email = ""

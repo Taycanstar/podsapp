@@ -390,7 +390,14 @@ private var remainingCal: Double { vm.remainingCalories }
             .sheet(isPresented: $showLogFlowSheet) {
                 LogFlowContainerView()
             }
-
+            .background(
+                NavigationLink(
+                    destination: WeightDataView(),
+                    isActive: $vm.navigateToWeightData,
+                    label: { EmptyView() }
+                )
+                .hidden()
+            )
         }
         .navigationViewStyle(.stack)
     }
@@ -1178,7 +1185,12 @@ private extension DashboardView {
                     .foregroundColor(.purple)
             }
             .sheet(isPresented: $vm.navigateToEditWeight) {
-                EditWeightView()
+                EditWeightView(onWeightSaved: {
+                    // Navigate to WeightDataView after saving weight
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        vm.navigateToWeightData = true
+                    }
+                })
             }
         }
         .frame(maxWidth: .infinity)

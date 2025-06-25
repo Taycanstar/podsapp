@@ -22,6 +22,9 @@ struct EditWeightView: View {
     @State private var showImagePicker = false
     @State private var showCamera = false
     
+    // Completion handler to navigate after saving
+    var onWeightSaved: (() -> Void)?
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -135,6 +138,7 @@ struct EditWeightView: View {
                 trailing: Button("Add") {
                     saveWeight()
                     dismiss()
+                    onWeightSaved?()
                 }
                 .foregroundColor(.accentColor)
                 .disabled(weightText.isEmpty)

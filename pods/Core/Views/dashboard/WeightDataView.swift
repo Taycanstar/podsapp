@@ -146,14 +146,14 @@ struct WeightDataView: View {
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
                 
-                // Mask the line so it doesn’t show through the hollow point
+                // Mask the line so it doesn't show through the hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
                     y: .value("Weight", dataPoint.weightLbs)
                 )
                 .symbol(.circle)
                 .symbolSize(CGSize(width: 12, height: 12))        // slightly larger
-                .foregroundStyle(Color(UIColor.systemBackground))  // background‑colored fill
+                .foregroundStyle(Color(UIColor.systemBackground))  // background-colored fill
 
                 // Outlined hollow point
                 PointMark(
@@ -273,14 +273,33 @@ struct WeightDataView: View {
                                 
                                 Spacer()
                                 
-                                // Camera button for weight entries
-                                Button(action: {
-                                    // TODO: Handle camera action
-                                    print("Camera tapped for weight entry")
-                                }) {
-                                    Image(systemName: "camera")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.secondary)
+                                // Show photo thumbnail if available, otherwise show camera icon
+                                if let photoUrl = log.photo, !photoUrl.isEmpty {
+                                    // Photo thumbnail
+                                    AsyncImage(url: URL(string: photoUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .overlay(
+                                                ProgressView()
+                                                    .scaleEffect(0.8)
+                                            )
+                                    }
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    // Camera button for weight entries without photos
+                                    Button(action: {
+                                        // TODO: Handle camera action to add photo to existing log
+                                        print("Camera tapped for weight entry without photo")
+                                    }) {
+                                        Image(systemName: "camera")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
