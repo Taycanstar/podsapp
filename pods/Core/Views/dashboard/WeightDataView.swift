@@ -54,19 +54,21 @@ struct WeightDataView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                timeframePickerView
-                averageWeightView
-                
-                if let error = errorMessage {
-                    errorView(message: error)
-                } else {
-                    chartView
-                    historyView
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    timeframePickerView
+                    averageWeightView
+                    
+                    if let error = errorMessage {
+                        errorView(message: error)
+                    } else {
+                        chartView
+                        historyView
+                    }
+                    
+                    Spacer()
                 }
-                
-                Spacer()
             }
             
             // Compare footer (only show when in compare mode)
@@ -122,23 +124,28 @@ struct WeightDataView: View {
     }
     
     private var compareFooter: some View {
-        VStack {
+        VStack(spacing: 0) {
             Divider()
+                .background(Color.gray.opacity(0.3))
             
             Button(action: {
                 if selectedLogsForComparison.count == 2 {
                     showingCompareView = true
                 }
             }) {
-                Text("Compare Photos")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(selectedLogsForComparison.count == 2 ? .primary : .secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                HStack {
+                    Spacer()
+                    Text("Compare Photos")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(selectedLogsForComparison.count == 2 ? .primary : .secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 16)
             }
             .disabled(selectedLogsForComparison.count != 2)
         }
         .background(Color(UIColor.systemBackground))
+        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: -1)
     }
     
     private var timeframePickerView: some View {
@@ -394,7 +401,7 @@ struct WeightDataView: View {
                     }
                 }
             }
-            .padding(.bottom, 100) // Add bottom padding for tab bar
+            .padding(.bottom, isCompareMode ? 20 : 100) // Add bottom padding for tab bar or footer
         }
     }
     
