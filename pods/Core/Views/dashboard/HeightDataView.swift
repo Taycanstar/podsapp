@@ -37,6 +37,7 @@ struct HeightDataView: View {
     @State private var errorMessage: String? = nil
     @State private var selectedDataPoint: ChartDataPoint? = nil
     @State private var isChartTapped = false
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -72,6 +73,7 @@ struct HeightDataView: View {
         })
         .onAppear {
             loadAllLogs()
+            isTabBarVisible.wrappedValue = false
         }
         .sheet(isPresented: $showingEditSheet) {
             EditHeightView()

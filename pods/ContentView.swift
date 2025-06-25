@@ -127,8 +127,10 @@ struct ContentView: View {
             checkAndResumeOnboarding()
         }
                     
-                    CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
-                        .ignoresSafeArea(.keyboard)
+                    if isTabBarVisible {
+                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
+                            .ignoresSafeArea(.keyboard)
+                    }
                 }
                 .ignoresSafeArea(.keyboard)
 

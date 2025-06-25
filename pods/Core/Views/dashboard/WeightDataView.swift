@@ -37,6 +37,10 @@ struct WeightDataView: View {
     @State private var errorMessage: String? = nil
     @State private var selectedDataPoint: ChartDataPoint? = nil
     @State private var isChartTapped = false
+    @State private var isCompareMode = false
+    @State private var selectedLogsForComparison: Set<Int> = []
+    @State private var showingCompareView = false
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -64,6 +68,11 @@ struct WeightDataView: View {
                 
                 Spacer()
             }
+            
+            // Compare footer (only show when in compare mode)
+            if isCompareMode {
+                compareFooter
+            }
         }
         .navigationTitle("Weight")
         .navigationBarItems(trailing: Button("Add Data") {
@@ -71,6 +80,7 @@ struct WeightDataView: View {
         })
         .onAppear {
             loadAllLogs()
+            isTabBarVisible.wrappedValue = false
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh data when a new weight is logged
@@ -83,9 +93,53 @@ struct WeightDataView: View {
                     loadAllLogs()
                 }
         }
+        .sheet(isPresented: $showingCompareView) {
+            CompareWeightLogsView(selectedLogIds: Array(selectedLogsForComparison))
+        }
     }
     
     // MARK: - View Components
+    
+    private var compareButton: some View {
+        Button(action: {
+            if isCompareMode {
+                // Cancel compare mode
+                isCompareMode = false
+                selectedLogsForComparison.removeAll()
+            } else {
+                // Enter compare mode
+                isCompareMode = true
+            }
+        }) {
+            Text(isCompareMode ? "Cancel" : "Compare")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color("iosnp"))
+                .clipShape(Capsule())
+        }
+    }
+    
+    private var compareFooter: some View {
+        VStack {
+            Divider()
+            
+            Button(action: {
+                if selectedLogsForComparison.count == 2 {
+                    showingCompareView = true
+                }
+            }) {
+                Text("Compare Photos")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(selectedLogsForComparison.count == 2 ? .primary : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .disabled(selectedLogsForComparison.count != 2)
+        }
+        .background(Color(UIColor.systemBackground))
+    }
     
     private var timeframePickerView: some View {
         Picker("Timeframe", selection: $timeframe) {
@@ -250,18 +304,35 @@ struct WeightDataView: View {
     
     private var historyView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("History")
-                .font(.title)
-                .foregroundColor(.primary)
-                .fontWeight(.bold)
-                .padding(.horizontal)
-                .padding(.top, 20)
+            HStack {
+                Text("History")
+                    .font(.title)
+                    .foregroundColor(.primary)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                compareButton
+            }
+            .padding(.horizontal)
+            .padding(.top, 20)
             
             LazyVStack(spacing: 0) {
                 ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
                         VStack(spacing: 0) {
                             HStack {
+                                // Selection indicator (only show in compare mode)
+                                if isCompareMode {
+                                    Button(action: {
+                                        toggleLogSelection(log.id)
+                                    }) {
+                                        Image(systemName: selectedLogsForComparison.contains(log.id) ? "checkmark.circle.fill" : "circle")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(selectedLogsForComparison.contains(log.id) ? .accentColor : .secondary)
+                                    }
+                                }
+                                
                                 VStack(alignment: .leading, spacing: 4) {
                                     // Weight in lbs
                                     let weightLbs = log.weightKg * 2.20462
@@ -308,6 +379,12 @@ struct WeightDataView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if isCompareMode {
+                                    toggleLogSelection(log.id)
+                                }
+                            }
                             
                             if index < logs.count - 1 {
                                 Divider()
@@ -357,6 +434,14 @@ struct WeightDataView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func toggleLogSelection(_ logId: Int) {
+        if selectedLogsForComparison.contains(logId) {
+            selectedLogsForComparison.remove(logId)
+        } else if selectedLogsForComparison.count < 2 {
+            selectedLogsForComparison.insert(logId)
+        }
+    }
     
     // Helper function to format dates
     private func formatDate(_ date: Date, format: String) -> String {
