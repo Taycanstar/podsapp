@@ -15,6 +15,7 @@ struct WeightLogResponse: Codable {
     let weightKg: Double
     let dateLogged: String
     let notes: String
+    let photo: String?
 }
 
 // MARK: - Weight Logs Response

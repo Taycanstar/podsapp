@@ -61,12 +61,14 @@ struct WeightLogResponse: Codable {
     let weightKg: Double
     let dateLogged: String
     let notes: String?
+    let photo: String?
     
     enum CodingKeys: String, CodingKey {
         case id
         case weightKg = "weight_kg"
         case dateLogged = "date_logged"
         case notes
+        case photo
     }
 }
 
