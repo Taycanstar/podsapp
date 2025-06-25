@@ -72,6 +72,10 @@ struct WeightDataView: View {
         .onAppear {
             loadAllLogs()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
+            // Refresh data when a new weight is logged
+            refreshDataFromNetwork()
+        }
         .sheet(isPresented: $showingEditSheet) {
             EditWeightView()
                 .onDisappear {
