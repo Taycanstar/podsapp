@@ -21,9 +21,22 @@ struct CameraProgressView: View {
             // Overlay with gallery button
             VStack {
                 HStack {
+                    // Flash button (left side - for alignment reference)
+                    Button(action: {
+                        // Flash toggle functionality could be added here
+                    }) {
+                        Image(systemName: "bolt.slash")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                    }
+                    .padding(.leading, 20)
+                    
                     Spacer()
                     
-                    // Close button
+                    // Close button (right side - aligned with flash)
                     Button(action: {
                         dismiss()
                     }) {
@@ -41,11 +54,11 @@ struct CameraProgressView: View {
                 Spacer()
                 
                 HStack {
-                    // Gallery button
+                    // Gallery button (image icon instead of cancel)
                     Button(action: {
                         showImagePicker = true
                     }) {
-                        Image(systemName: "photo.on.rectangle")
+                        Image(systemName: "photo")
                             .font(.system(size: 24, weight: .medium))
                             .foregroundColor(.white)
                             .frame(width: 50, height: 50)
@@ -85,6 +98,8 @@ struct CustomImagePicker: UIViewControllerRepresentable {
             picker.cameraFlashMode = .auto
             picker.showsCameraControls = true
             picker.allowsEditing = false
+            // Allow different aspect ratios
+            picker.cameraViewTransform = CGAffineTransform.identity
         }
         
         return picker

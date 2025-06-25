@@ -76,20 +76,20 @@ struct EditWeightView: View {
                             Spacer()
                             
                             HStack(spacing: 12) {
+                                // Delete button (minus circle to the left)
+                                Button(action: {
+                                    selectedPhoto = nil
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.red)
+                                }
+                                
                                 Image(uiImage: photo)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 50, height: 50)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                                
-                                // Delete button
-                                Button(action: {
-                                    selectedPhoto = nil
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.red)
-                                }
                             }
                         }
                         .padding(.horizontal, 16)
