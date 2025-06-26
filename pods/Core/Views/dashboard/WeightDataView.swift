@@ -118,7 +118,7 @@ struct WeightDataView: View {
                 .foregroundColor(.primary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color("iosnp"))
+                .background(Color("iosbtn"))
                 .clipShape(Capsule())
         }
     }
@@ -136,8 +136,8 @@ struct WeightDataView: View {
                 HStack {
                     Spacer()
                     Text("Compare Photos")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(selectedLogsForComparison.count == 2 ? .primary : .secondary)
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(selectedLogsForComparison.count == 2 ? .accentColor : .secondary)
                     Spacer()
                 }
                 .padding(.vertical, 16)
