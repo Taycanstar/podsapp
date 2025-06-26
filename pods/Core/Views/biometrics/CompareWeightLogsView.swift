@@ -67,7 +67,9 @@ struct CompareWeightLogsView: View {
     private var viewModeControls: some View {
         HStack(spacing: 20) {
             Button(action: {
-                viewMode = .sideBySide
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    viewMode = .sideBySide
+                }
             }) {
                 Image(systemName: "square.split.2x1")
                     .font(.system(size: 24))
@@ -75,7 +77,9 @@ struct CompareWeightLogsView: View {
             }
             
             Button(action: {
-                viewMode = .beforeAfter
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    viewMode = .beforeAfter
+                }
             }) {
                 Image(systemName: "square.lefthalf.filled")
                     .font(.system(size: 24))
@@ -106,19 +110,6 @@ struct CompareWeightLogsView: View {
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: geometry.size.width / 2)
                                     .clipped()
-                                    .overlay(
-                                        // Add fade effect on the right edge of first photo and left edge of second photo
-                                        LinearGradient(
-                                            gradient: Gradient(stops: [
-                                                .init(color: Color.clear, location: index == 0 ? 0.0 : 0.9),
-                                                .init(color: Color.black.opacity(0.3), location: index == 0 ? 0.9 : 1.0),
-                                                .init(color: Color.clear, location: 1.0)
-                                            ]),
-                                            startPoint: index == 0 ? .leading : .trailing,
-                                            endPoint: index == 0 ? .trailing : .leading
-                                        )
-                                        .blendMode(.multiply)
-                                    )
                             } placeholder: {
                                 Rectangle()
                                     .fill(Color.gray.opacity(0.3))
@@ -144,17 +135,21 @@ struct CompareWeightLogsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             
-            // Weight and date info for both photos
+            // Weight and date info for both photos with before/after labels
             HStack(spacing: 0) {
-                ForEach(selectedLogs.sorted(by: { log1, log2 in
+                ForEach(Array(selectedLogs.sorted(by: { log1, log2 in
                     // Sort by date - older first
                     guard let date1 = dateFormatter.date(from: log1.dateLogged),
                           let date2 = dateFormatter.date(from: log2.dateLogged) else {
                         return false
                     }
                     return date1 < date2
-                }), id: \.id) { log in
+                }).enumerated()), id: \.element.id) { index, log in
                     VStack(spacing: 4) {
+                        Text(index == 0 ? "Before" : "After")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
                         Text("\(Int((log.weightKg * 2.20462).rounded())) lbs")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.primary)
@@ -186,9 +181,9 @@ struct CompareWeightLogsView: View {
                 })
                 
                 ZStack {
-                    // Background (older photo)
-                    if let oldLog = sortedLogs.first,
-                       let photoUrl = oldLog.photo, !photoUrl.isEmpty {
+                    // Background (newer photo - shows on the right side)
+                    if let newLog = sortedLogs.last,
+                       let photoUrl = newLog.photo, !photoUrl.isEmpty {
                         AsyncImage(url: URL(string: photoUrl)) { image in
                             image
                                 .resizable()
@@ -205,9 +200,9 @@ struct CompareWeightLogsView: View {
                         }
                     }
                     
-                    // Foreground (newer photo) with mask
-                    if let newLog = sortedLogs.last,
-                       let photoUrl = newLog.photo, !photoUrl.isEmpty {
+                    // Foreground (older photo - reveals from left) with mask
+                    if let oldLog = sortedLogs.first,
+                       let photoUrl = oldLog.photo, !photoUrl.isEmpty {
                         AsyncImage(url: URL(string: photoUrl)) { image in
                             image
                                 .resizable()
@@ -215,15 +210,19 @@ struct CompareWeightLogsView: View {
                                 .frame(width: geometry.size.width, height: geometry.size.height)
                                 .clipped()
                                 .mask(
-                                    Rectangle()
-                                        .frame(width: geometry.size.width * sliderPosition)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    HStack(spacing: 0) {
+                                        Rectangle()
+                                            .frame(width: geometry.size.width * sliderPosition)
+                                        Spacer()
+                                    }
                                 )
                         } placeholder: {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: geometry.size.width * sliderPosition)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            HStack(spacing: 0) {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: geometry.size.width * sliderPosition)
+                                Spacer()
+                            }
                         }
                     }
                     
@@ -258,8 +257,8 @@ struct CompareWeightLogsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             
-            // Weight and date info
-            HStack {
+            // Dynamic weight and date info based on which photo is more visible
+            VStack(spacing: 4) {
                 let sortedLogs = selectedLogs.sorted(by: { log1, log2 in
                     // Sort by date - older first
                     guard let date1 = dateFormatter.date(from: log1.dateLogged),
@@ -269,47 +268,23 @@ struct CompareWeightLogsView: View {
                     return date1 < date2
                 })
                 
-                // Before (older)
-                VStack(spacing: 4) {
-                    Text("Before")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    if let oldLog = sortedLogs.first {
-                        Text("\(Int((oldLog.weightKg * 2.20462).rounded())) lbs")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        if let date = dateFormatter.date(from: oldLog.dateLogged) {
-                            Text(formatDate(date))
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
+                // Show info for the more visible photo (sliderPosition > 0.5 means older photo is more visible)
+                let dominantLog = sliderPosition > 0.5 ? sortedLogs.first : sortedLogs.last
                 
-                // After (newer)
-                VStack(spacing: 4) {
-                    Text("After")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                if let log = dominantLog {
+                    Text("\(Int((log.weightKg * 2.20462).rounded())) lbs")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.primary)
                     
-                    if let newLog = sortedLogs.last {
-                        Text("\(Int((newLog.weightKg * 2.20462).rounded())) lbs")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        if let date = dateFormatter.date(from: newLog.dateLogged) {
-                            Text(formatDate(date))
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        Text(formatDate(date))
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
                     }
                 }
-                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal)
+            .animation(.easeInOut(duration: 0.2), value: sliderPosition > 0.5)
         }
     }
     
