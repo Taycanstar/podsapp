@@ -103,7 +103,8 @@ struct WeightDataView: View {
                 }
         }
         .sheet(isPresented: $showingCompareView) {
-            CompareWeightLogsView(selectedLogIds: Array(selectedLogsForComparison))
+            let selectedLogs = logs.filter { selectedLogsForComparison.contains($0.id) }
+            CompareWeightLogsView(selectedLogs: selectedLogs)
         }
         .sheet(item: $selectedLogForEdit) { log in
             UpdateEditWeightView(weightLog: log)
@@ -420,6 +421,13 @@ struct WeightDataView: View {
                                     .padding(.leading, 16)
                             }
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleteWeightLog(log)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -469,6 +477,23 @@ struct WeightDataView: View {
             selectedLogsForComparison.remove(logId)
         } else if selectedLogsForComparison.count < 2 {
             selectedLogsForComparison.insert(logId)
+        }
+    }
+    
+    private func deleteWeightLog(_ log: WeightLogResponse) {
+        NetworkManagerTwo.shared.deleteWeightLog(logId: log.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Weight log deleted successfully via swipe")
+                    // Post notification to refresh the weight data view
+                    NotificationCenter.default.post(name: Notification.Name("WeightLogDeletedNotification"), object: nil)
+                    
+                case .failure(let error):
+                    print("❌ Error deleting weight log via swipe: \(error)")
+                    // TODO: Show error alert to user
+                }
+            }
         }
     }
     

@@ -9,9 +9,7 @@ import SwiftUI
 
 struct CompareWeightLogsView: View {
     @Environment(\.dismiss) private var dismiss
-    let selectedLogIds: [Int]
-    @State private var selectedLogs: [WeightLogResponse] = []
-    @State private var isLoading = true
+    let selectedLogs: [WeightLogResponse]
     @State private var viewMode: ViewMode = .sideBySide
     @State private var sliderPosition: CGFloat = 0.5 // For before/after slider (0.0 = old photo, 1.0 = new photo)
     
@@ -29,10 +27,7 @@ struct CompareWeightLogsView: View {
     var body: some View {
         NavigationView {
             VStack {
-                if isLoading {
-                    ProgressView("Loading comparison...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if selectedLogs.count == 2 {
+                if selectedLogs.count == 2 {
                     VStack(spacing: 20) {
                         // View mode controls
                         viewModeControls
@@ -58,9 +53,6 @@ struct CompareWeightLogsView: View {
             .navigationBarItems(trailing: Button("Done") {
                 dismiss()
             })
-        }
-        .onAppear {
-            loadSelectedLogs()
         }
     }
     
@@ -288,26 +280,7 @@ struct CompareWeightLogsView: View {
         }
     }
     
-    private func loadSelectedLogs() {
-        // For now, we'll fetch all logs and filter by the selected IDs
-        // In a real implementation, you might want to fetch specific logs by ID
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            isLoading = false
-            return
-        }
-        
-        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    self.selectedLogs = response.logs.filter { selectedLogIds.contains($0.id) }
-                case .failure:
-                    self.selectedLogs = []
-                }
-                self.isLoading = false
-            }
-        }
-    }
+
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -317,5 +290,5 @@ struct CompareWeightLogsView: View {
 }
 
 #Preview {
-    CompareWeightLogsView(selectedLogIds: [1, 2])
+    CompareWeightLogsView(selectedLogs: [])
 }

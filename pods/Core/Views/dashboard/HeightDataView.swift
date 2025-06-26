@@ -303,6 +303,13 @@ struct HeightDataView: View {
                         .onTapGesture {
                             selectedLogForEdit = log
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleteHeightLog(log)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                         
                         if index < logs.count - 1 {
                             Divider()
@@ -378,6 +385,23 @@ struct HeightDataView: View {
             let formatter = DateFormatter()
             formatter.dateFormat = "M/d/yy"
             return formatter.string(from: date)
+        }
+    }
+    
+    private func deleteHeightLog(_ log: HeightLogResponse) {
+        NetworkManagerTwo.shared.deleteHeightLog(logId: log.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Height log deleted successfully via swipe")
+                    // Post notification to refresh the height data view
+                    NotificationCenter.default.post(name: Notification.Name("HeightLogDeletedNotification"), object: nil)
+                    
+                case .failure(let error):
+                    print("❌ Error deleting height log via swipe: \(error)")
+                    // TODO: Show error alert to user
+                }
+            }
         }
     }
     
