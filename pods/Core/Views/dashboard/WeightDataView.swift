@@ -40,6 +40,9 @@ struct WeightDataView: View {
     @State private var isCompareMode = false
     @State private var selectedLogsForComparison: Set<Int> = []
     @State private var showingCompareView = false
+    @State private var selectedLogForEdit: WeightLogResponse? = nil
+    @State private var showingFullScreenPhoto = false
+    @State private var fullScreenPhotoUrl: String = ""
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     private let dateFormatter: ISO8601DateFormatter = {
@@ -88,6 +91,10 @@ struct WeightDataView: View {
             // Refresh data when a new weight is logged
             refreshDataFromNetwork()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogDeletedNotification"))) { _ in
+            // Refresh data when a weight log is deleted
+            refreshDataFromNetwork()
+        }
         .sheet(isPresented: $showingEditSheet) {
             EditWeightView()
                 .onDisappear {
@@ -97,6 +104,12 @@ struct WeightDataView: View {
         }
         .sheet(isPresented: $showingCompareView) {
             CompareWeightLogsView(selectedLogIds: Array(selectedLogsForComparison))
+        }
+        .sheet(item: $selectedLogForEdit) { log in
+            UpdateEditWeightView(weightLog: log)
+        }
+        .fullScreenCover(isPresented: $showingFullScreenPhoto) {
+            FullScreenPhotoView(photoUrl: fullScreenPhotoUrl)
         }
     }
     
@@ -357,30 +370,37 @@ struct WeightDataView: View {
                                 
                                 // Show photo thumbnail if available, otherwise show camera icon
                                 if let photoUrl = log.photo, !photoUrl.isEmpty {
-                                    // Photo thumbnail
-                                    AsyncImage(url: URL(string: photoUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                    } placeholder: {
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .overlay(
-                                                ProgressView()
-                                                    .scaleEffect(0.8)
-                                            )
-                                    }
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                } else {
-                                    // Camera button for weight entries without photos
+                                    // Photo thumbnail - tap to view full screen
                                     Button(action: {
-                                        // TODO: Handle camera action to add photo to existing log
-                                        print("Camera tapped for weight entry without photo")
+                                        fullScreenPhotoUrl = photoUrl
+                                        showingFullScreenPhoto = true
+                                    }) {
+                                        AsyncImage(url: URL(string: photoUrl)) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .overlay(
+                                                    ProgressView()
+                                                        .scaleEffect(0.8)
+                                                )
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                } else {
+                                    // Camera button for weight entries without photos - opens edit view
+                                    Button(action: {
+                                        selectedLogForEdit = log
                                     }) {
                                         Image(systemName: "camera")
                                             .font(.system(size: 20))
                                             .foregroundColor(.secondary)
+                                            .frame(width: 40, height: 40)
+                                            .background(Color.gray.opacity(0.1))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
                                 }
                             }
@@ -390,6 +410,8 @@ struct WeightDataView: View {
                             .onTapGesture {
                                 if isCompareMode {
                                     toggleLogSelection(log.id)
+                                } else {
+                                    selectedLogForEdit = log
                                 }
                             }
                             

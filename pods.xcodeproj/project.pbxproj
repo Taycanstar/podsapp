@@ -28,6 +28,8 @@
 		363068C92E089EF800F2D4EC /* ByEquipmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068C82E089EF800F2D4EC /* ByEquipmentView.swift */; };
 		363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068CA2E0B571000F2D4EC /* CameraProgressView.swift */; };
 		363068CF2E0CA7A100F2D4EC /* CompareWeightLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068CE2E0CA7A100F2D4EC /* CompareWeightLogsView.swift */; };
+		363068D12E0CEBDB00F2D4EC /* UpdateEditWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D02E0CEBDB00F2D4EC /* UpdateEditWeightView.swift */; };
+		363068D32E0CEBF000F2D4EC /* UpdateEditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D22E0CEBF000F2D4EC /* UpdateEditHeightView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -271,6 +273,8 @@
 		363068C82E089EF800F2D4EC /* ByEquipmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ByEquipmentView.swift; sourceTree = "<group>"; };
 		363068CA2E0B571000F2D4EC /* CameraProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraProgressView.swift; sourceTree = "<group>"; };
 		363068CE2E0CA7A100F2D4EC /* CompareWeightLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareWeightLogsView.swift; sourceTree = "<group>"; };
+		363068D02E0CEBDB00F2D4EC /* UpdateEditWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateEditWeightView.swift; sourceTree = "<group>"; };
+		363068D22E0CEBF000F2D4EC /* UpdateEditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateEditHeightView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -532,6 +536,8 @@
 			isa = PBXGroup;
 			children = (
 				363068CE2E0CA7A100F2D4EC /* CompareWeightLogsView.swift */,
+				363068D02E0CEBDB00F2D4EC /* UpdateEditWeightView.swift */,
+				363068D22E0CEBF000F2D4EC /* UpdateEditHeightView.swift */,
 			);
 			path = biometrics;
 			sourceTree = "<group>";
@@ -1310,6 +1316,7 @@
 				36ED35E52DDE52FF00D174FB /* LogExistingView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
+				363068D32E0CEBF000F2D4EC /* UpdateEditHeightView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,
@@ -1385,6 +1392,7 @@
 				36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
+				363068D12E0CEBDB00F2D4EC /* UpdateEditWeightView.swift in Sources */,
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
 				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,

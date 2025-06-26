@@ -37,6 +37,7 @@ struct HeightDataView: View {
     @State private var errorMessage: String? = nil
     @State private var selectedDataPoint: ChartDataPoint? = nil
     @State private var isChartTapped = false
+    @State private var selectedLogForEdit: HeightLogResponse? = nil
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     private let dateFormatter: ISO8601DateFormatter = {
@@ -75,12 +76,19 @@ struct HeightDataView: View {
             loadAllLogs()
             isTabBarVisible.wrappedValue = false
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HeightLogDeletedNotification"))) { _ in
+            // Refresh data when a height log is deleted
+            refreshDataFromNetwork()
+        }
         .sheet(isPresented: $showingEditSheet) {
             EditHeightView()
                 .onDisappear {
                     // Refresh data when the edit sheet is dismissed
                     loadAllLogs()
                 }
+        }
+        .sheet(item: $selectedLogForEdit) { log in
+            UpdateEditHeightView(heightLog: log)
         }
     }
     
@@ -291,6 +299,10 @@ struct HeightDataView: View {
                         .padding(.horizontal)
                         .padding(.vertical, 12)
                         .background(Color(.systemBackground))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedLogForEdit = log
+                        }
                         
                         if index < logs.count - 1 {
                             Divider()

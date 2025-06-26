@@ -57,7 +57,7 @@ struct EditWeightView: View {
                         Spacer()
                         
                         TextField("", text: $weightText)
-                            .keyboardType(.numberPad)
+                            .keyboardType(.decimalPad)
                             .focused($isWeightFieldFocused)
                             .multilineTextAlignment(.trailing)
                             .font(.system(size: 17))

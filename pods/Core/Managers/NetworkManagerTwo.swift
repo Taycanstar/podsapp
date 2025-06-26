@@ -1812,6 +1812,116 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Delete Logs
+    
+    /// Delete a weight log by ID
+    /// - Parameters:
+    ///   - logId: ID of the weight log to delete
+    ///   - completion: Result callback indicating success or error
+    func deleteWeightLog(logId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
+            completion(.failure(NetworkError.serverError(message: "No user email found")))
+            return
+        }
+        
+        var urlComponents = URLComponents(string: "\(baseUrl)/delete-weight-log/\(logId)/")
+        urlComponents?.queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+        
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        print("🗑️ Deleting weight log with ID: \(logId)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error deleting weight log: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 204 {
+                DispatchQueue.main.async {
+                    print("✅ Successfully deleted weight log")
+                    completion(.success(()))
+                }
+            } else {
+                print("❌ Failed to delete weight log. Status code: \(httpResponse.statusCode)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Delete a height log by ID
+    /// - Parameters:
+    ///   - logId: ID of the height log to delete
+    ///   - completion: Result callback indicating success or error
+    func deleteHeightLog(logId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
+            completion(.failure(NetworkError.serverError(message: "No user email found")))
+            return
+        }
+        
+        var urlComponents = URLComponents(string: "\(baseUrl)/delete-height-log/\(logId)/")
+        urlComponents?.queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+        
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        print("🗑️ Deleting height log with ID: \(logId)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error deleting height log: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 204 {
+                DispatchQueue.main.async {
+                    print("✅ Successfully deleted height log")
+                    completion(.success(()))
+                }
+            } else {
+                print("❌ Failed to delete height log. Status code: \(httpResponse.statusCode)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+            }
+        }.resume()
+    }
+
 }
 
 

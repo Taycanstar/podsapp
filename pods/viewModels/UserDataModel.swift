@@ -41,7 +41,7 @@ struct LogsByDateResponse: Codable {
 // MARK: - Height and Weight Log Responses
 
 /// Response from logging a height measurement
-struct HeightLogResponse: Codable {
+struct HeightLogResponse: Codable, Identifiable {
     let id: Int
     let heightCm: Double
     let dateLogged: String
@@ -56,7 +56,7 @@ struct HeightLogResponse: Codable {
 }
 
 /// Response from logging a weight measurement
-struct WeightLogResponse: Codable {
+struct WeightLogResponse: Codable, Identifiable {
     let id: Int
     let weightKg: Double
     let dateLogged: String
