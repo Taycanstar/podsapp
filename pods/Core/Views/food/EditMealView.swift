@@ -15,6 +15,9 @@ struct EditMealView: View {
     @Binding var path: NavigationPath
     @Binding var selectedFoods: [Food]
     
+    // Add local navigation path for this view
+    @State private var localPath = NavigationPath()
+    
     // Add callback for when Done is tapped and meal is saved successfully
     var onSave: (() -> Void)?
     
@@ -46,11 +49,7 @@ struct EditMealView: View {
     // Add a state for error handling
     @State private var showingError = false
     
-    // Add a state variable to track when the add items sheet is being shown
-    @State private var isShowingAddItems = false
-    
-    // Add a state variable to store the food count before showing the sheet
-    @State private var foodCountBeforeSheet = 0
+
     
     // MARK: - Computed Properties
     private var isDoneButtonDisabled: Bool {
@@ -110,37 +109,54 @@ struct EditMealView: View {
 
     // MARK: - Body
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 16) {
-                mealDetailsSection
-                mealItemsSection
-                // directionsSection
-                
-                Spacer().frame(height: 40) // extra bottom space
+        NavigationStack(path: $localPath) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    mealDetailsSection
+                    mealItemsSection
+                    // directionsSection
+                    
+                    Spacer().frame(height: 40) // extra bottom space
+                }
+                .padding(.top, 16)
             }
-            .padding(.top, 16)
+            .background(Color("iosbg"))
+            .navigationDestination(for: FoodNavigationDestination.self) { destination in
+                switch destination {
+                case .addFoodToMeal:
+                    AddFoodView(
+                        path: $localPath,
+                        selectedFoods: $selectedFoods,
+                        mode: .addToMeal
+                    )
+                default:
+                    EmptyView()
+                }
+            }
         }
-        .background(Color("iosbg"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Edit Recipe")
-                    .fontWeight(.semibold)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    saveUpdatedMeal()
+            // Only show toolbar when we're not navigating to another view
+            if localPath.isEmpty {
+                ToolbarItem(placement: .principal) {
+                    Text("Edit Recipe")
+                        .fontWeight(.semibold)
                 }
-                .disabled(isDoneButtonDisabled)
-                .fontWeight(.semibold)
-            }
-            
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "xmark")
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        saveUpdatedMeal()
+                    }
+                    .disabled(isDoneButtonDisabled)
+                    .fontWeight(.semibold)
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                    }
                 }
             }
             
@@ -193,45 +209,7 @@ struct EditMealView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
-        // Add sheet for food selection
-        .sheet(isPresented: $isShowingAddItems, onDismiss: {
-            // Handle sheet dismiss
-            let newCount = selectedFoods.count
-            print("📝 Sheet dismissed, food count: \(newCount), previous count: \(foodCountBeforeSheet)")
-            if newCount > foodCountBeforeSheet {
-                print("📈 Items were added: \(newCount - foodCountBeforeSheet) new items")
-                hasChanges = true
-                // Print each food in the array for debugging
-                print("📋 Current foods in EditMealView:")
-                for (index, food) in selectedFoods.enumerated() {
-                    print("  \(index+1). \(food.displayName)")
-                }
-            }
-        }) {
-            NavigationView {
-                LogFood(
-                    selectedTab: .constant(0),  // Default to first tab
-                    selectedMeal: .constant(mealTime),  // Use current meal time
-                    path: $path,
-                    mode: .addToMeal,
-                    selectedFoods: $selectedFoods,  // Direct binding to selectedFoods
-                    onItemAdded: { food in
-                        // This callback is called when an item is added
-                        print("✅ onItemAdded callback triggered - closing LogFood sheet")
-                        // Force update to ensure changes are reflected
-                        let updatedFoods = selectedFoods
-                        print("📊 EditMealView has \(updatedFoods.count) foods after item added")
-                        // We'll dismiss the sheet and mark that changes were made
-                        isShowingAddItems = false
-                        hasChanges = true
-                    }
-                )
-                .navigationBarTitle("Add Item to Meal", displayMode: .inline)
-                .navigationBarItems(leading: Button("Cancel") {
-                    isShowingAddItems = false
-                })
-            }
-        }
+
 
     }
     
@@ -466,7 +444,7 @@ struct EditMealView: View {
             }
             
             Button {
-                path.append(FoodNavigationDestination.addFoodToMeal)
+                localPath.append(FoodNavigationDestination.addFoodToMeal)
             } label: {
                 Text("Add item to recipe")
                     .foregroundColor(.accentColor)
