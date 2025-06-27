@@ -303,10 +303,10 @@ struct HeightDataView: View {
                         .onTapGesture {
                             selectedLogForEdit = log
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
+                        .contextMenu {
+                            Button(role: .destructive, action: {
                                 deleteHeightLog(log)
-                            } label: {
+                            }) {
                                 Label("Delete", systemImage: "trash")
                             }
                         }

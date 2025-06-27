@@ -240,20 +240,37 @@ struct UpdateEditWeightView: View {
 
 struct FullScreenPhotoView: View {
     @Environment(\.dismiss) var dismiss
-    let photoUrl: String
+    let photoUrl: String?
+    let preloadedImage: UIImage?
+    
+    init(photoUrl: String) {
+        self.photoUrl = photoUrl
+        self.preloadedImage = nil
+    }
+    
+    init(preloadedImage: UIImage) {
+        self.photoUrl = nil
+        self.preloadedImage = preloadedImage
+    }
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            AsyncImage(url: URL(string: photoUrl)) { image in
-                image
+            if let preloadedImage = preloadedImage {
+                Image(uiImage: preloadedImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-            } placeholder: {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .tint(.white)
+            } else if let photoUrl = photoUrl {
+                AsyncImage(url: URL(string: photoUrl)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } placeholder: {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                }
             }
             
             VStack {

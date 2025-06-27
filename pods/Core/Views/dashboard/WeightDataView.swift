@@ -43,6 +43,8 @@ struct WeightDataView: View {
     @State private var selectedLogForEdit: WeightLogResponse? = nil
     @State private var showingFullScreenPhoto = false
     @State private var fullScreenPhotoUrl: String = ""
+    @State private var fullScreenImage: UIImage? = nil
+    @State private var loadedImages: [String: UIImage] = [:]
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     private let dateFormatter: ISO8601DateFormatter = {
@@ -58,20 +60,21 @@ struct WeightDataView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    timeframePickerView
-                    averageWeightView
-                    
-                    if let error = errorMessage {
-                        errorView(message: error)
-                    } else {
-                        chartView
-                        historyView
-                    }
-                    
-                    Spacer()
+            // Fixed header content that doesn't scroll
+            VStack(spacing: 10) {
+                timeframePickerView
+                averageWeightView
+                
+                if let error = errorMessage {
+                    errorView(message: error)
+                } else {
+                    chartView
                 }
+            }
+            
+            // History section as a proper List
+            if !logs.isEmpty && errorMessage == nil {
+                historyListView
             }
             
             // Compare footer (only show when in compare mode)
@@ -110,7 +113,11 @@ struct WeightDataView: View {
             UpdateEditWeightView(weightLog: log)
         }
         .fullScreenCover(isPresented: $showingFullScreenPhoto) {
-            FullScreenPhotoView(photoUrl: fullScreenPhotoUrl)
+            if let fullScreenImage = fullScreenImage {
+                FullScreenPhotoView(preloadedImage: fullScreenImage)
+            } else if !fullScreenPhotoUrl.isEmpty {
+                FullScreenPhotoView(photoUrl: fullScreenPhotoUrl)
+            }
         }
     }
     
@@ -323,8 +330,9 @@ struct WeightDataView: View {
         }
     }
     
-    private var historyView: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var historyListView: some View {
+        VStack(spacing: 0) {
+            // Header
             HStack {
                 Text("History")
                     .font(.title)
@@ -336,102 +344,50 @@ struct WeightDataView: View {
                 compareButton
             }
             .padding(.horizontal)
-            .padding(.top, 20)
+            .padding(.vertical, 16)
+            .background(Color(UIColor.systemBackground))
             
-            LazyVStack(spacing: 0) {
-                ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
+            // List with swipe-to-delete
+            List {
+                ForEach(logs.reversed(), id: \.id) { log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
-                        VStack(spacing: 0) {
-                            HStack {
-                                // Selection indicator (only show in compare mode)
-                                if isCompareMode {
-                                    Button(action: {
-                                        toggleLogSelection(log.id)
-                                    }) {
-                                        Image(systemName: selectedLogsForComparison.contains(log.id) ? "checkmark.circle.fill" : "circle")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(selectedLogsForComparison.contains(log.id) ? .accentColor : .secondary)
-                                    }
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    // Weight in lbs
-                                    let weightLbs = log.weightKg * 2.20462
-                                    
-                                    Text("\(Int(weightLbs.rounded())) lbs")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(formatDateForHistory(date))
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                // Show photo thumbnail if available, otherwise show camera icon
-                                if let photoUrl = log.photo, !photoUrl.isEmpty {
-                                    // Photo thumbnail - tap to view full screen
-                                    Button(action: {
-                                        fullScreenPhotoUrl = photoUrl
-                                        showingFullScreenPhoto = true
-                                    }) {
-                                        AsyncImage(url: URL(string: photoUrl)) { image in
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        } placeholder: {
-                                            Rectangle()
-                                                .fill(Color.gray.opacity(0.3))
-                                                .overlay(
-                                                    ProgressView()
-                                                        .scaleEffect(0.8)
-                                                )
-                                        }
-                                        .frame(width: 40, height: 40)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    }
+                        WeightLogRowView(
+                            log: log,
+                            date: date,
+                            isCompareMode: isCompareMode,
+                            isSelected: selectedLogsForComparison.contains(log.id),
+                            loadedImages: loadedImages,
+                            onToggleSelection: { toggleLogSelection(log.id) },
+                            onPhotoTap: { photoUrl in
+                                if let cachedImage = loadedImages[photoUrl] {
+                                    fullScreenImage = cachedImage
+                                    fullScreenPhotoUrl = ""
                                 } else {
-                                    // Camera button for weight entries without photos - opens edit view
-                                    Button(action: {
-                                        selectedLogForEdit = log
-                                    }) {
-                                        Image(systemName: "camera")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.secondary)
-                                            .frame(width: 40, height: 40)
-                                            .background(Color.gray.opacity(0.1))
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    }
+                                    fullScreenPhotoUrl = photoUrl
+                                    fullScreenImage = nil
                                 }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                                showingFullScreenPhoto = true
+                            },
+                            onCameraTap: { selectedLogForEdit = log },
+                            onRowTap: {
                                 if isCompareMode {
                                     toggleLogSelection(log.id)
                                 } else {
                                     selectedLogForEdit = log
                                 }
+                            },
+                            onImageLoaded: { url, image in
+                                loadedImages[url] = image
                             }
-                            
-                            if index < logs.count - 1 {
-                                Divider()
-                                    .padding(.leading, 16)
-                            }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleteWeightLog(log)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
                     }
                 }
+                .onDelete(perform: deleteItems)
             }
-            .padding(.bottom, isCompareMode ? 20 : 100) // Add bottom padding for tab bar or footer
+            .listStyle(PlainListStyle())
+            .environment(\.defaultMinListRowHeight, 0)
         }
     }
     
@@ -477,6 +433,14 @@ struct WeightDataView: View {
             selectedLogsForComparison.remove(logId)
         } else if selectedLogsForComparison.count < 2 {
             selectedLogsForComparison.insert(logId)
+        }
+    }
+    
+    private func deleteItems(offsets: IndexSet) {
+        let reversedLogs = logs.reversed()
+        for index in offsets {
+            let logToDelete = Array(reversedLogs)[index]
+            deleteWeightLog(logToDelete)
         }
     }
     
@@ -844,6 +808,111 @@ struct WeightDataView: View {
     private func getDateRange() -> (Date?, Date?) {
         let sortedPoints = groupedLogsForChart().sorted { $0.date < $1.date }
         return (sortedPoints.first?.date, sortedPoints.last?.date)
+    }
+}
+
+// MARK: - WeightLogRowView Component
+struct WeightLogRowView: View {
+    let log: WeightLogResponse
+    let date: Date
+    let isCompareMode: Bool
+    let isSelected: Bool
+    let loadedImages: [String: UIImage]
+    let onToggleSelection: () -> Void
+    let onPhotoTap: (String) -> Void
+    let onCameraTap: () -> Void
+    let onRowTap: () -> Void
+    let onImageLoaded: (String, UIImage) -> Void
+    
+    private func formatDateForHistory(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo <= 7 {
+            // Within a week - show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: date)
+        } else {
+            // Older than a week - show date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d/yy"
+            return formatter.string(from: date)
+        }
+    }
+    
+    var body: some View {
+        HStack {
+            // Selection indicator (only show in compare mode)
+            if isCompareMode {
+                Button(action: onToggleSelection) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                // Weight in lbs
+                let weightLbs = log.weightKg * 2.20462
+                
+                Text("\(Int(weightLbs.rounded())) lbs")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Text(formatDateForHistory(date))
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Show photo thumbnail if available, otherwise show camera icon
+            if let photoUrl = log.photo, !photoUrl.isEmpty {
+                // Photo thumbnail - tap to view full screen
+                Button(action: { onPhotoTap(photoUrl) }) {
+                    AsyncImage(url: URL(string: photoUrl)) { image in
+                        let uiImage = ImageRenderer(content: image).uiImage
+                        if let uiImage = uiImage {
+                            DispatchQueue.main.async {
+                                onImageLoaded(photoUrl, uiImage)
+                            }
+                        }
+                        return image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            )
+                    }
+                    .frame(width: 40, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            } else {
+                // Camera button for weight entries without photos - opens edit view
+                Button(action: onCameraTap) {
+                    Image(systemName: "camera")
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+                        .frame(width: 40, height: 40)
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onRowTap)
+        .background(Color(UIColor.systemBackground))
     }
 }
 

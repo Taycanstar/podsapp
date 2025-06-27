@@ -31,12 +31,15 @@ struct CompareWeightLogsView: View {
                     VStack(spacing: 20) {
                         // View mode controls
                         viewModeControls
+                            .zIndex(1) // Ensure controls are on top
                         
                         // Comparison content based on selected mode
                         if viewMode == .sideBySide {
                             sideBySideView
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         } else {
                             beforeAfterView
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         }
                         
                         Spacer()
@@ -58,25 +61,53 @@ struct CompareWeightLogsView: View {
     
     private var viewModeControls: some View {
         HStack(spacing: 20) {
+            // Side-by-Side Button with enhanced tappable area
             Button(action: {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     viewMode = .sideBySide
                 }
             }) {
-                Image(systemName: "square.split.2x1")
-                    .font(.system(size: 24))
-                    .foregroundColor(viewMode == .sideBySide ? .accentColor : .secondary)
+                ZStack {
+                    // Larger invisible tappable area
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 50, height: 50)
+                    
+                    // Visual content
+                    Image(systemName: "square.split.2x1")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(viewMode == .sideBySide ? .accentColor : .secondary)
+                }
+                .frame(width: 50, height: 50)
+                .background(viewMode == .sideBySide ? Color.accentColor.opacity(0.1) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .contentShape(Rectangle()) // Ensures entire frame is tappable
             }
+            .buttonStyle(PlainButtonStyle())
             
+            // Before/After Button
             Button(action: {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     viewMode = .beforeAfter
                 }
             }) {
-                Image(systemName: "square.lefthalf.filled")
-                    .font(.system(size: 24))
-                    .foregroundColor(viewMode == .beforeAfter ? .accentColor : .secondary)
+                ZStack {
+                    // Larger invisible tappable area
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 50, height: 50)
+                    
+                    // Visual content
+                    Image(systemName: "square.lefthalf.filled")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(viewMode == .beforeAfter ? .accentColor : .secondary)
+                }
+                .frame(width: 50, height: 50)
+                .background(viewMode == .beforeAfter ? Color.accentColor.opacity(0.1) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .contentShape(Rectangle()) // Ensures entire frame is tappable
             }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal)
     }
