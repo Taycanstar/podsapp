@@ -53,21 +53,72 @@ struct HeightDataView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+        // Single List containing everything for smooth scrolling
+        List {
+            // Header content as list sections
+            Section {
                 timeframePickerView
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                
                 averageHeightView
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 
                 if let error = errorMessage {
                     errorView(message: error)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 } else {
                     chartView
-                    historyView
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+            
+            // History section
+            if !logs.isEmpty && errorMessage == nil {
+                Section {
+                    // History header
+                    HStack {
+                        Text("History")
+                            .font(.title)
+                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
                 
-                Spacer()
+                // History logs with swipe-to-delete
+                ForEach(logs.reversed(), id: \.id) { log in
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        HeightLogRowView(
+                            log: log,
+                            date: date,
+                            onRowTap: {
+                                selectedLogForEdit = log
+                            }
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                    }
+                }
+                .onDelete(perform: deleteItems)
             }
         }
+        .listStyle(PlainListStyle())
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationTitle("Height")
         .navigationBarItems(trailing: Button("Add Data") {
             showingEditSheet = true
@@ -135,6 +186,7 @@ struct HeightDataView: View {
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
         .padding(.top, 10)
     }
@@ -269,61 +321,7 @@ struct HeightDataView: View {
         }
     }
     
-    private var historyView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("History")
-                .font(.title)
-                     .fontWeight(.bold)
-                .foregroundColor(.primary)
-                .padding(.horizontal)
-                .padding(.top, 20)
-            
-            LazyVStack(spacing: 0) {
-                ForEach(Array(logs.reversed().enumerated()), id: \.offset) { index, log in
-                    if let date = dateFormatter.date(from: log.dateLogged) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                // Height in feet and inches
-                                let totalInches = log.heightCm / 2.54
-                                let feet = Int(totalInches / 12)
-                                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                                
-                                Text("\(feet)' \(inches)\"")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                                
-                                Text(formatDateForHistory(date))
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedLogForEdit = log
-                        }
-                        .contextMenu {
-                            Button(role: .destructive, action: {
-                                deleteHeightLog(log)
-                            }) {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        
-                        if index < logs.count - 1 {
-                            Divider()
-                                .padding(.leading, 16)
-                        }
-                    }
-                }
-            }
-            .padding(.bottom, 100) // Add bottom padding for tab bar
-        }
-    }
+
     
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
@@ -388,6 +386,14 @@ struct HeightDataView: View {
             let formatter = DateFormatter()
             formatter.dateFormat = "M/d/yy"
             return formatter.string(from: date)
+        }
+    }
+    
+    private func deleteItems(offsets: IndexSet) {
+        let reversedLogs = logs.reversed()
+        for index in offsets {
+            let logToDelete = Array(reversedLogs)[index]
+            deleteHeightLog(logToDelete)
         }
     }
     
@@ -726,6 +732,59 @@ struct HeightDataView: View {
     private func getDateRange() -> (Date?, Date?) {
         let sortedPoints = groupedLogsForChart().sorted { $0.date < $1.date }
         return (sortedPoints.first?.date, sortedPoints.last?.date)
+    }
+}
+
+// MARK: - HeightLogRowView Component
+struct HeightLogRowView: View {
+    let log: HeightLogResponse
+    let date: Date
+    let onRowTap: () -> Void
+    
+    private func formatDateForHistory(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo <= 7 {
+            // Within a week - show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: date)
+        } else {
+            // Older than a week - show date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d/yy"
+            return formatter.string(from: date)
+        }
+    }
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                // Height in feet and inches
+                let totalInches = log.heightCm / 2.54
+                let feet = Int(totalInches / 12)
+                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+                
+                Text("\(feet)' \(inches)\"")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Text(formatDateForHistory(date))
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onRowTap)
+        .background(Color(UIColor.systemBackground))
     }
 }
 
