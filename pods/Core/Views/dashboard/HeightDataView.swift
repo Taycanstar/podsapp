@@ -76,6 +76,9 @@ struct HeightDataView: View {
             loadAllLogs()
             isTabBarVisible.wrappedValue = false
         }
+        .onDisappear {
+            isTabBarVisible.wrappedValue = true
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HeightLogDeletedNotification"))) { _ in
             // Refresh data when a height log is deleted
             refreshDataFromNetwork()

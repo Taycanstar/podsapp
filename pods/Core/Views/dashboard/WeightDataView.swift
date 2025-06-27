@@ -146,19 +146,16 @@ struct WeightDataView: View {
                 .onDelete(perform: deleteItems)
             }
             
-            // Compare footer (only show when in compare mode)
-            if isCompareMode {
-                Section {
-                    compareFooter
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
+        .safeAreaInset(edge: .bottom) {
+            // Compare footer (only show when in compare mode)
+            if isCompareMode {
+                compareFooter
+            }
+        }
         .navigationTitle("Weight")
         .navigationBarItems(trailing: Button("Add Data") {
             showingEditSheet = true
@@ -166,6 +163,9 @@ struct WeightDataView: View {
         .onAppear {
             loadAllLogs()
             isTabBarVisible.wrappedValue = false
+        }
+        .onDisappear {
+            isTabBarVisible.wrappedValue = true
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh data when a new weight is logged
@@ -894,27 +894,57 @@ struct WeightLogRowView: View {
             if let photoUrl = log.photo, !photoUrl.isEmpty {
                 // Photo thumbnail - tap to view full screen
                 Button(action: { onPhotoTap(photoUrl) }) {
-                    AsyncImage(url: URL(string: photoUrl)) { image in
-                        let uiImage = ImageRenderer(content: image).uiImage
-                        if let uiImage = uiImage {
-                            DispatchQueue.main.async {
-                                onImageLoaded(photoUrl, uiImage)
-                            }
-                        }
-                        return image
+                    if let cachedImage = loadedImages[photoUrl] {
+                        // Use cached image if available
+                        Image(uiImage: cachedImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            )
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        // Load image asynchronously
+                        AsyncImage(url: URL(string: photoUrl)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .onAppear {
+                                        // Convert SwiftUI Image to UIImage for caching
+                                        Task {
+                                            if let data = try? await URLSession.shared.data(from: URL(string: photoUrl)!).0,
+                                               let uiImage = UIImage(data: data) {
+                                                DispatchQueue.main.async {
+                                                    onImageLoaded(photoUrl, uiImage)
+                                                }
+                                            }
+                                        }
+                                    }
+                            case .failure(_):
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        Image(systemName: "photo")
+                                            .foregroundColor(.secondary)
+                                    )
+                            case .empty:
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    )
+                            @unknown default:
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                            }
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    .frame(width: 40, height: 40)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 // Camera button for weight entries without photos - opens edit view
                 Button(action: onCameraTap) {
@@ -925,6 +955,8 @@ struct WeightLogRowView: View {
                         .background(Color.gray.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         // .padding(.horizontal, 16)
