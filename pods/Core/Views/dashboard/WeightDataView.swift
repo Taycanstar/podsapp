@@ -59,29 +59,106 @@ struct WeightDataView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Fixed header content that doesn't scroll
-            VStack(spacing: 10) {
+        // Single List containing everything for smooth scrolling
+        List {
+            // Header content as list sections
+            Section {
                 timeframePickerView
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                
                 averageWeightView
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 
                 if let error = errorMessage {
                     errorView(message: error)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 } else {
                     chartView
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             }
             
-            // History section as a proper List
+            // History section
             if !logs.isEmpty && errorMessage == nil {
-                historyListView
+                Section {
+                    // History header
+                    HStack {
+                        Text("History")
+                            .font(.title)
+                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
+                        
+                        Spacer()
+                        
+                        compareButton
+                    }
+                    .padding(.horizontal)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+                
+                // History logs with swipe-to-delete
+                ForEach(logs.reversed(), id: \.id) { log in
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        WeightLogRowView(
+                            log: log,
+                            date: date,
+                            isCompareMode: isCompareMode,
+                            isSelected: selectedLogsForComparison.contains(log.id),
+                            loadedImages: loadedImages,
+                            onToggleSelection: { toggleLogSelection(log.id) },
+                            onPhotoTap: { photoUrl in
+                                if let cachedImage = loadedImages[photoUrl] {
+                                    fullScreenImage = cachedImage
+                                    fullScreenPhotoUrl = ""
+                                } else {
+                                    fullScreenPhotoUrl = photoUrl
+                                    fullScreenImage = nil
+                                }
+                                showingFullScreenPhoto = true
+                            },
+                            onCameraTap: { selectedLogForEdit = log },
+                            onRowTap: {
+                                if isCompareMode {
+                                    toggleLogSelection(log.id)
+                                } else {
+                                    selectedLogForEdit = log
+                                }
+                            },
+                            onImageLoaded: { url, image in
+                                loadedImages[url] = image
+                            }
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                    }
+                }
+                .onDelete(perform: deleteItems)
             }
             
             // Compare footer (only show when in compare mode)
             if isCompareMode {
-                compareFooter
+                Section {
+                    compareFooter
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
             }
         }
+        .listStyle(PlainListStyle())
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationTitle("Weight")
         .navigationBarItems(trailing: Button("Add Data") {
             showingEditSheet = true
@@ -201,6 +278,7 @@ struct WeightDataView: View {
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
         .padding(.top, 10)
     }
@@ -330,66 +408,7 @@ struct WeightDataView: View {
         }
     }
     
-    private var historyListView: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("History")
-                    .font(.title)
-                    .foregroundColor(.primary)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                compareButton
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 16)
-            .background(Color(UIColor.systemBackground))
-            
-            // List with swipe-to-delete
-            List {
-                ForEach(logs.reversed(), id: \.id) { log in
-                    if let date = dateFormatter.date(from: log.dateLogged) {
-                        WeightLogRowView(
-                            log: log,
-                            date: date,
-                            isCompareMode: isCompareMode,
-                            isSelected: selectedLogsForComparison.contains(log.id),
-                            loadedImages: loadedImages,
-                            onToggleSelection: { toggleLogSelection(log.id) },
-                            onPhotoTap: { photoUrl in
-                                if let cachedImage = loadedImages[photoUrl] {
-                                    fullScreenImage = cachedImage
-                                    fullScreenPhotoUrl = ""
-                                } else {
-                                    fullScreenPhotoUrl = photoUrl
-                                    fullScreenImage = nil
-                                }
-                                showingFullScreenPhoto = true
-                            },
-                            onCameraTap: { selectedLogForEdit = log },
-                            onRowTap: {
-                                if isCompareMode {
-                                    toggleLogSelection(log.id)
-                                } else {
-                                    selectedLogForEdit = log
-                                }
-                            },
-                            onImageLoaded: { url, image in
-                                loadedImages[url] = image
-                            }
-                        )
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .listStyle(PlainListStyle())
-            .environment(\.defaultMinListRowHeight, 0)
-        }
-    }
+
     
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
