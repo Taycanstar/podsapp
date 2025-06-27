@@ -99,17 +99,25 @@ struct HeightDataView: View {
                 }
                 
                 // History logs with swipe-to-delete
-                ForEach(logs.reversed(), id: \.id) { log in
+                ForEach(Array(logs.reversed().enumerated()), id: \.element.id) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
-                        HeightLogRowView(
-                            log: log,
-                            date: date,
-                            onRowTap: {
-                                selectedLogForEdit = log
+                        VStack(spacing: 0) {
+                            HeightLogRowView(
+                                log: log,
+                                date: date,
+                                onRowTap: {
+                                    selectedLogForEdit = log
+                                }
+                            )
+                            
+                            // Add divider except for the last item
+                            if index < logs.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
                             }
-                        )
+                        }
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                     }
                 }
@@ -175,7 +183,7 @@ struct HeightDataView: View {
                 
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(feet)' \(inches)\"")
-                        .font(.system(size: 44, weight: .semibold, design: .rounded))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
                 }
             } else {
                 Text("No data")
@@ -781,6 +789,7 @@ struct HeightLogRowView: View {
             
             Spacer()
         }
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onRowTap)

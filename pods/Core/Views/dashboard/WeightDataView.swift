@@ -107,39 +107,47 @@ struct WeightDataView: View {
                 }
                 
                 // History logs with swipe-to-delete
-                ForEach(logs.reversed(), id: \.id) { log in
+                ForEach(Array(logs.reversed().enumerated()), id: \.element.id) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
-                        WeightLogRowView(
-                            log: log,
-                            date: date,
-                            isCompareMode: isCompareMode,
-                            isSelected: selectedLogsForComparison.contains(log.id),
-                            loadedImages: loadedImages,
-                            onToggleSelection: { toggleLogSelection(log.id) },
-                            onPhotoTap: { photoUrl in
-                                if let cachedImage = loadedImages[photoUrl] {
-                                    fullScreenImage = cachedImage
-                                    fullScreenPhotoUrl = ""
-                                } else {
-                                    fullScreenPhotoUrl = photoUrl
-                                    fullScreenImage = nil
+                        VStack(spacing: 0) {
+                            WeightLogRowView(
+                                log: log,
+                                date: date,
+                                isCompareMode: isCompareMode,
+                                isSelected: selectedLogsForComparison.contains(log.id),
+                                loadedImages: loadedImages,
+                                onToggleSelection: { toggleLogSelection(log.id) },
+                                onPhotoTap: { photoUrl in
+                                    if let cachedImage = loadedImages[photoUrl] {
+                                        fullScreenImage = cachedImage
+                                        fullScreenPhotoUrl = ""
+                                    } else {
+                                        fullScreenPhotoUrl = photoUrl
+                                        fullScreenImage = nil
+                                    }
+                                    showingFullScreenPhoto = true
+                                },
+                                onCameraTap: { selectedLogForEdit = log },
+                                onRowTap: {
+                                    if isCompareMode {
+                                        toggleLogSelection(log.id)
+                                    } else {
+                                        selectedLogForEdit = log
+                                    }
+                                },
+                                onImageLoaded: { url, image in
+                                    loadedImages[url] = image
                                 }
-                                showingFullScreenPhoto = true
-                            },
-                            onCameraTap: { selectedLogForEdit = log },
-                            onRowTap: {
-                                if isCompareMode {
-                                    toggleLogSelection(log.id)
-                                } else {
-                                    selectedLogForEdit = log
-                                }
-                            },
-                            onImageLoaded: { url, image in
-                                loadedImages[url] = image
+                            )
+                            
+                            // Add divider except for the last item
+                            if index < logs.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
                             }
-                        )
+                        }
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                     }
                 }
@@ -959,7 +967,7 @@ struct WeightLogRowView: View {
                 .contentShape(RoundedRectangle(cornerRadius: 8))
             }
         }
-        // .padding(.horizontal, 16)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onRowTap)
