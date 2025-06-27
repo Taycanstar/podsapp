@@ -191,7 +191,7 @@ struct WeightDataView: View {
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(String(format: "%.1f", currentWeight))")
-                              .font(.system(size: 44, weight: .semibold, design: .rounded))
+                              .font(.system(size: 28, weight: .semibold, design: .rounded))
                 Text("lbs")
                     .font(.system(size: 32))
                     .foregroundColor(.gray)
