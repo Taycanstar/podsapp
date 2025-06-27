@@ -31,6 +31,10 @@ struct WeightDataView: View {
     @State private var allLogs: [WeightLogResponse] = []
     @State private var timeframe: Timeframe = .threeMonths
     @State private var isLoading = false
+    @State private var isLoadingMore = false
+    @State private var hasMoreLogs = true
+    @State private var currentPage = 1
+    private let pageSize = 20
     @State private var currentWeight: Double = 0
     @State private var dateRangeText: String = ""
     @State private var showingEditSheet = false
@@ -87,7 +91,7 @@ struct WeightDataView: View {
             }
             
             // History section
-            if !logs.isEmpty && errorMessage == nil {
+            if !allLogs.isEmpty && errorMessage == nil {
                 Section {
                     // History header
                     HStack {
@@ -106,8 +110,8 @@ struct WeightDataView: View {
                     .listRowSeparator(.hidden)
                 }
                 
-                // History logs with swipe-to-delete
-                ForEach(Array(logs.reversed().enumerated()), id: \.element.id) { index, log in
+                // History logs with swipe-to-delete and pagination
+                ForEach(Array(allLogs.reversed().enumerated()), id: \.element.id) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
                         VStack(spacing: 0) {
                             WeightLogRowView(
@@ -139,9 +143,15 @@ struct WeightDataView: View {
                                     loadedImages[url] = image
                                 }
                             )
+                            .onAppear {
+                                // Load more logs when approaching the end of the list
+                                if index >= allLogs.count - 5 && hasMoreLogs && !isLoadingMore {
+                                    loadMoreLogs()
+                                }
+                            }
                             
                             // Add divider except for the last item
-                            if index < logs.count - 1 {
+                            if index < allLogs.count - 1 {
                                 Divider()
                                     .padding(.leading, 16)
                             }
@@ -152,6 +162,23 @@ struct WeightDataView: View {
                     }
                 }
                 .onDelete(perform: deleteItems)
+                
+                // Loading indicator for pagination
+                if isLoadingMore && hasMoreLogs {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading more...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
             }
             
         }
@@ -169,7 +196,7 @@ struct WeightDataView: View {
             showingEditSheet = true
         })
         .onAppear {
-            loadAllLogs()
+            loadInitialLogs()
             isTabBarVisible.wrappedValue = false
         }
         .onDisappear {
@@ -177,31 +204,31 @@ struct WeightDataView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh data when a new weight is logged
-            refreshDataFromNetwork()
+            refreshFromNetwork()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogDeletedNotification"))) { _ in
             // Refresh data when a weight log is deleted
-            refreshDataFromNetwork()
+            refreshFromNetwork()
         }
         .sheet(isPresented: $showingEditSheet) {
             EditWeightView()
                 .onDisappear {
                     // Refresh data when the edit sheet is dismissed
-                    loadAllLogs()
+                    loadInitialLogs()
                 }
         }
         .sheet(isPresented: $showingCompareView) {
-            let selectedLogs = logs.filter { selectedLogsForComparison.contains($0.id) }
+            let selectedLogs = allLogs.filter { selectedLogsForComparison.contains($0.id) }
             CompareWeightLogsView(selectedLogs: selectedLogs)
         }
         .sheet(item: $selectedLogForEdit) { log in
             UpdateEditWeightView(weightLog: log)
         }
         .fullScreenCover(isPresented: $showingFullScreenPhoto) {
-            if let fullScreenImage = fullScreenImage {
-                FullScreenPhotoView(preloadedImage: fullScreenImage)
-            } else if !fullScreenPhotoUrl.isEmpty {
+            if !fullScreenPhotoUrl.isEmpty {
                 FullScreenPhotoView(photoUrl: fullScreenPhotoUrl)
+            } else if let image = fullScreenImage {
+                FullScreenPhotoView(preloadedImage: image)
             }
         }
     }
@@ -434,7 +461,7 @@ struct WeightDataView: View {
                 .foregroundColor(.secondary)
             
             Button(action: {
-                loadAllLogs()
+                loadInitialLogs()
             }) {
                 Text("Try Again")
                     .fontWeight(.medium)
@@ -464,7 +491,7 @@ struct WeightDataView: View {
     }
     
     private func deleteItems(offsets: IndexSet) {
-        let reversedLogs = logs.reversed()
+        let reversedLogs = allLogs.reversed()
         for index in offsets {
             let logToDelete = Array(reversedLogs)[index]
             deleteWeightLog(logToDelete)
@@ -716,87 +743,139 @@ struct WeightDataView: View {
         }
     }
     
-    // Load all logs and then filter for the selected timeframe
-    private func loadAllLogs() {
-        isLoading = true
+    // Load initial logs with pagination
+    private func loadInitialLogs() {
+        // Reset pagination state
+        currentPage = 1
+        hasMoreLogs = true
         
-        // If we have initialAllLogs, use them directly
-        if !allLogs.isEmpty {
+        // If we have initialAllLogs passed to the view, use them
+        if !self.allLogs.isEmpty {
             DispatchQueue.main.async {
-                self.isLoading = false
                 self.filterLogs()
-                
                 // Still refresh in background for most up-to-date data
-                self.refreshDataFromNetwork()
+                self.loadMoreLogs(refresh: true)
             }
             return
         }
         
-        // First check if preloaded data exists in UserDefaults
-        if let preloadedData = UserDefaults.standard.data(forKey: "preloadedWeightLogs"),
-           let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: preloadedData) {
+        // Clear existing logs
+        allLogs = []
+        
+        // Try to load cached data first
+        loadCachedLogs()
+        
+        // Load first page from network
+        loadMoreLogs(refresh: true)
+    }
+    
+    // Load cached logs from UserDefaults
+    private func loadCachedLogs() {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+        
+        if let cachedData = UserDefaults.standard.data(forKey: "weightLogs_\(userEmail)_page_1"),
+           let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: cachedData) {
             
             DispatchQueue.main.async {
-                self.isLoading = false
                 self.allLogs = response.logs.sorted { log1, log2 in
                     guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
                           let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
                     return d1 < d2
                 }
-                
+                self.hasMoreLogs = response.totalCount > response.logs.count
                 self.filterLogs()
-                
-                // Refresh in background for most up-to-date data
-                self.refreshDataFromNetwork()
             }
-            return
         }
-        
-        // If no preloaded data, load from network
-        refreshDataFromNetwork()
     }
     
-    // Fetch fresh data from the network
-    private func refreshDataFromNetwork() {
+    // Cache logs to UserDefaults
+    private func cacheLogs(_ response: WeightLogsResponse, forPage page: Int) {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+        
+        if let encodedData = try? JSONEncoder().encode(response) {
+            UserDefaults.standard.set(encodedData, forKey: "weightLogs_\(userEmail)_page_\(page)")
+        }
+    }
+    
+    // Load more logs with pagination
+    private func loadMoreLogs(refresh: Bool = false) {
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            isLoading = false
             errorMessage = "No user email found. Please sign in again."
             return
         }
         
-        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            self.isLoading = false
-            
-            switch result {
-            case .success(let response):
-                DispatchQueue.main.async {
+        // Prevent multiple simultaneous requests
+        if isLoadingMore && !refresh { return }
+        
+        let pageToLoad = refresh ? 1 : currentPage
+        
+        if refresh {
+            isLoading = true
+        } else {
+            isLoadingMore = true
+        }
+        
+        NetworkManagerTwo.shared.fetchWeightLogs(
+            userEmail: email, 
+            limit: pageSize, 
+            offset: (pageToLoad - 1) * pageSize
+        ) { result in
+            DispatchQueue.main.async {
+                if refresh {
+                    self.isLoading = false
+                } else {
+                    self.isLoadingMore = false
+                }
+                
+                switch result {
+                case .success(let response):
                     self.errorMessage = nil
                     
-                    // Save to UserDefaults for future use
-                    if let encodedData = try? JSONEncoder().encode(response) {
-                        UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
-                    }
+                    // Cache the response
+                    self.cacheLogs(response, forPage: pageToLoad)
                     
-                    if response.logs.isEmpty {
-                        print("No weight logs found for user")
-                    } else {
+                    if refresh {
+                        // Replace all logs with new ones
                         self.allLogs = response.logs.sorted { log1, log2 in
                             guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
                                   let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
                             return d1 < d2
                         }
+                        self.currentPage = 2
+                    } else {
+                        // Append new logs, avoiding duplicates
+                        let newLogs = response.logs.filter { newLog in
+                            !self.allLogs.contains { existingLog in
+                                existingLog.id == newLog.id
+                            }
+                        }
                         
-                        self.filterLogs()
+                        let sortedNewLogs = newLogs.sorted { log1, log2 in
+                            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
+                                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
+                            return d1 < d2
+                        }
+                        
+                        self.allLogs.append(contentsOf: sortedNewLogs)
+                        self.currentPage += 1
                     }
-                }
-                
-            case .failure(let error):
-                DispatchQueue.main.async {
+                    
+                    // Update hasMoreLogs based on response
+                    self.hasMoreLogs = response.logs.count == self.pageSize
+                    
+                    self.filterLogs()
+                    
+                case .failure(let error):
                     self.errorMessage = "Failed to load weight data: \(error.localizedDescription)"
                     print("Error fetching weight logs: \(error)")
                 }
             }
         }
+    }
+    
+    // Refresh from network (for notifications)
+    private func refreshFromNetwork() {
+        loadMoreLogs(refresh: true)
     }
     
     // Helper method to find the closest data point to a tap location
