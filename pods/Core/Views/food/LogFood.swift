@@ -2308,6 +2308,7 @@ private struct SavedMealListView: View {
                     }
                     .listStyle(PlainListStyle())
                     .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
                 }
                 .frame(height: min(CGFloat(foodManager.savedMeals.count * 63), UIScreen.main.bounds.height * 0.7))
                 .cornerRadius(12)
