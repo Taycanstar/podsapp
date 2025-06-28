@@ -304,6 +304,9 @@ struct AddFoodWithScan: View {
                     if let food = combinedLog.food {
                         let createdFood = food.asFood
                         
+                        // Clear lastGeneratedFood to prevent triggering other sheets
+                        foodManager.lastGeneratedFood = nil
+                        
                         // Pass the food to parent and dismiss
                         onFoodScanned(createdFood)
                         cleanupScanningStates()
@@ -341,6 +344,9 @@ struct AddFoodWithScan: View {
                     
                     // Extract the food from the response
                     let createdFood = response.food
+                    
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
                     
                     // Pass the food to parent and dismiss
                     onFoodScanned(createdFood)

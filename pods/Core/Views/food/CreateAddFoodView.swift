@@ -531,9 +531,11 @@ struct CreateAddFoodView: View {
                 
                 switch result {
                 case .success(let createdFood):
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
+                    
                     print("✅ Food created successfully for recipe: \(createdFood.displayName)")
                     
-                    // Pass the food to parent and dismiss
                     onFoodAdded(createdFood)
                     dismiss()
                     

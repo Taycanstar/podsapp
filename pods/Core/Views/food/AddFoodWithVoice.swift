@@ -185,11 +185,15 @@ struct AddFoodWithVoice: View {
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let food):
-                    print("✅ Successfully analyzed food from voice for recipe: \(food.displayName)")
+                case .success(let createdFood):
+                    print("✅ Food created successfully from voice for recipe: \(createdFood.displayName)")
                     
-                    // Pass the food to parent
-                    onFoodVoiceAdded(food)
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
+                    
+                    // Pass the food to parent and dismiss
+                    onFoodVoiceAdded(createdFood)
+                    dismiss()
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")

@@ -346,29 +346,25 @@ struct AddFoodView: View {
                                 .padding(.horizontal)
                             
                             VStack(spacing: 0) {
-                                // First show all generated foods that are still selected
-                                ForEach(generatedFoods.filter { selectedFoodIds.contains($0.fdcId) }, id: \.id) { genFood in
-                                    FoodItem(
-                                        food: genFood,
-                                        isSelected: true,
-                                        onTap: { toggleFoodSelection(genFood) }
-                                    )
-                                    Divider()
-                                }
-                                
-                                // Show all other selected foods that aren't in generated foods
+                                let selectedGeneratedFoods = generatedFoods.filter { selectedFoodIds.contains($0.fdcId) }
                                 let otherSelectedFoods = getDisplayFoods().filter { food in
                                     selectedFoodIds.contains(food.fdcId) && 
                                     !generatedFoods.contains { genFood in genFood.fdcId == food.fdcId }
                                 }
+                                let allSelectedFoods = selectedGeneratedFoods + otherSelectedFoods
                                 
-                                ForEach(otherSelectedFoods, id: \.id) { food in
+                                // Show all selected foods with conditional dividers
+                                ForEach(Array(allSelectedFoods.enumerated()), id: \.element.id) { index, food in
                                     FoodItem(
                                         food: food,
                                         isSelected: true,
                                         onTap: { toggleFoodSelection(food) }
                                     )
-                                    Divider()
+                                    
+                                    // Only show divider if not the last item
+                                    if index < allSelectedFoods.count - 1 {
+                                        Divider()
+                                    }
                                 }
                             }
                             .background(Color("iosnp"))
@@ -398,13 +394,17 @@ struct AddFoodView: View {
                                     !generatedFoods.contains { genFood in genFood.fdcId == food.fdcId }
                                 }
                                 
-                                ForEach(unselectedFoods, id: \.id) { food in
+                                ForEach(Array(unselectedFoods.enumerated()), id: \.element.id) { index, food in
                                     FoodItem(
                                         food: food,
                                         isSelected: false,
                                         onTap: { toggleFoodSelection(food) }
                                     )
-                                    Divider()
+                                    
+                                    // Only show divider if not the last item
+                                    if index < unselectedFoods.count - 1 {
+                                        Divider()
+                                    }
                                 }
                             }
                             .background(Color("iosnp"))
