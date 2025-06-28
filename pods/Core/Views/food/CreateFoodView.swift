@@ -87,7 +87,12 @@ struct CreateFoodView: View {
             
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
-                    path.removeLast()
+                    // Check if we have a path to remove from, otherwise dismiss the sheet
+                    if !path.isEmpty {
+                        path.removeLast()
+                    } else {
+                        dismiss()
+                    }
                 }) {
                     Image(systemName: "chevron.left")
                 }
@@ -494,8 +499,12 @@ struct CreateFoodView: View {
                     // Track as recently added
                     foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                     
-                    // Navigate back
-                    path.removeLast()
+                    // Navigate back - check if we have a path to remove from, otherwise dismiss the sheet
+                    if !path.isEmpty {
+                        path.removeLast()
+                    } else {
+                        dismiss()
+                    }
                     
                 case .failure(let error):
                     errorMessage = "Failed to create food: \(error.localizedDescription)"
@@ -522,14 +531,6 @@ struct CreateFoodView: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            hideKeyboard()
-                        }
-                    }
-                }
         }
         .padding(.horizontal)
         .padding(.vertical, 16)
@@ -537,11 +538,6 @@ struct CreateFoodView: View {
 }
 
 
-extension CreateFoodView {
-    // Helper function to hide keyboard
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
+
 
 
