@@ -56,8 +56,6 @@ struct CreateAddFoodView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
-                    // AI Generation section
-                    aiGenerationCard
                     
                     // Basic food info card
                     basicInfoCard
