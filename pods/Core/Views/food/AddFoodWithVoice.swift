@@ -82,15 +82,16 @@ struct AddFoodWithVoice: View {
                             // First stop the recording if active
                             if audioRecorder.isRecording {
                                 audioRecorder.stopRecording()
-                                // Wait a short moment for the recording to finish, then dismiss and start generation
+                                // Dismiss immediately when recording stops
+                                dismiss()
+                                // Start processing in background
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    dismiss() // Dismiss immediately
-                                    createFoodFromVoice()
+                                    createFoodFromVoiceInBackground()
                                 }
                             } else if !audioRecorder.transcribedText.isEmpty {
                                 // If not recording but have transcription, dismiss and create food
-                                dismiss() // Dismiss immediately
-                                createFoodFromVoice()
+                                dismiss()
+                                createFoodFromVoiceInBackground()
                             }
                         }) {
                             Image(systemName: "checkmark")
@@ -157,10 +158,10 @@ struct AddFoodWithVoice: View {
         print("Permission denied - would show alert")
     }
     
-    private func createFoodFromVoice() {
+    private func createFoodFromVoiceInBackground() {
         // If we have transcribed text, use it immediately
         if !audioRecorder.transcribedText.isEmpty {
-            generateFoodFromTranscription()
+            generateFoodFromTranscriptionInBackground()
         } else {
             // If no transcribed text yet, wait for transcription to complete
             print("Waiting for transcription to complete...")
@@ -168,7 +169,7 @@ struct AddFoodWithVoice: View {
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if !audioRecorder.transcribedText.isEmpty {
                     timer.invalidate()
-                    generateFoodFromTranscription()
+                    generateFoodFromTranscriptionInBackground()
                 } else if !audioRecorder.isProcessing && audioRecorder.transcribedText.isEmpty {
                     // If processing is done but still no text, something went wrong
                     timer.invalidate()
@@ -178,7 +179,7 @@ struct AddFoodWithVoice: View {
         }
     }
     
-    private func generateFoodFromTranscription() {
+    private func generateFoodFromTranscriptionInBackground() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
         // Use FoodManager to generate food with AI (NOT generateMacrosWithAI)
@@ -191,9 +192,8 @@ struct AddFoodWithVoice: View {
                     // Clear lastGeneratedFood to prevent triggering other sheets
                     foodManager.lastGeneratedFood = nil
                     
-                    // Pass the food to parent and dismiss
+                    // Pass the food to parent (view already dismissed)
                     onFoodVoiceAdded(createdFood)
-                    dismiss()
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
@@ -201,6 +201,15 @@ struct AddFoodWithVoice: View {
                 }
             }
         }
+    }
+    
+    // Original method kept for compatibility but now dismisses immediately
+    private func createFoodFromVoice() {
+        // Dismiss immediately
+        dismiss()
+        
+        // Process in background
+        createFoodFromVoiceInBackground()
     }
 }
 

@@ -286,6 +286,9 @@ struct AddFoodView: View {
                                 
                                 switch result {
                                 case .success(let food):
+                                    // Clear lastGeneratedFood to prevent triggering other sheets
+                                    foodManager.lastGeneratedFood = nil
+                                    
                                     // Store the generated food
                                     generatedFoods.append(food)
                                     
