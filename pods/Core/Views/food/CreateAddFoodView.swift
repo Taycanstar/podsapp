@@ -426,6 +426,9 @@ struct CreateAddFoodView: View {
         
         isCreating = true
         
+        // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
+        
         foodManager.generateFoodWithAI(foodDescription: aiSearchText) { result in
             DispatchQueue.main.async {
                 isCreating = false
@@ -433,6 +436,9 @@ struct CreateAddFoodView: View {
                 switch result {
                 case .success(let food):
                     print("✅ Successfully generated food with AI for recipe: \(food.displayName)")
+                    
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
                     
                     // Clear the AI search text
                     aiSearchText = ""
@@ -442,6 +448,8 @@ struct CreateAddFoodView: View {
                     dismiss()
                     
                 case .failure(let error):
+                    // Clear lastGeneratedFood on error too
+                    foodManager.lastGeneratedFood = nil
                     errorMessage = "Failed to generate food: \(error.localizedDescription)"
                     showErrorAlert = true
                 }
@@ -522,6 +530,9 @@ struct CreateAddFoodView: View {
             foodNutrients: nutrients,
             foodMeasures: [foodMeasure]
         )
+        
+        // Clear lastGeneratedFood BEFORE calling createManualFood to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
         
         foodManager.createManualFood(food: food) { result in
             DispatchQueue.main.async {

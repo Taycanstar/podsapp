@@ -182,6 +182,9 @@ struct AddFoodWithVoice: View {
     private func generateFoodFromTranscriptionInBackground() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
+        // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
+        
         // Use FoodManager to generate food with AI (NOT generateMacrosWithAI)
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText) { result in
             DispatchQueue.main.async {
@@ -195,8 +198,14 @@ struct AddFoodWithVoice: View {
                     // Pass the food to parent (view already dismissed)
                     onFoodVoiceAdded(createdFood)
                     
+                    // Reset states after passing to parent (to keep loader showing until completion)
+                    foodManager.isGeneratingFood = false
+                    
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
+                    // Clear states on error
+                    foodManager.isGeneratingFood = false
+                    foodManager.lastGeneratedFood = nil
                     // Could show an alert here if needed
                 }
             }

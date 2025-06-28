@@ -279,6 +279,9 @@ struct AddFoodView: View {
                             // Set loading state to true
                             isGeneratingFood = true
                             
+                            // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
+                            foodManager.lastGeneratedFood = nil
+                            
                             // Generate food with AI
                             foodManager.generateFoodWithAI(foodDescription: searchText) { result in
                                 // Set loading state to false

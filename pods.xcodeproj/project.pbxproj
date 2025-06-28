@@ -33,6 +33,7 @@
 		363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */; };
 		363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */; };
 		363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */; };
+		363068DB2E1098B800F2D4EC /* ConfirmAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -281,6 +282,7 @@
 		363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodWithVoice.swift; sourceTree = "<group>"; };
 		363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodWithScan.swift; sourceTree = "<group>"; };
 		363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAddFoodView.swift; sourceTree = "<group>"; };
+		363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmAddFoodView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -886,6 +888,7 @@
 				363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */,
 				363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */,
 				363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */,
+				363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1405,6 +1408,7 @@
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
 				363068D12E0CEBDB00F2D4EC /* UpdateEditWeightView.swift in Sources */,
+				363068DB2E1098B800F2D4EC /* ConfirmAddFoodView.swift in Sources */,
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
 				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,

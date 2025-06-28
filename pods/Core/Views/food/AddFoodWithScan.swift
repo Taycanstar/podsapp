@@ -27,6 +27,10 @@ struct AddFoodWithScan: View {
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
     
+    // State for confirmation sheet
+    @State private var scannedFoodForConfirmation: Food? = nil
+    @State private var showConfirmationSheet = false
+    
     var body: some View {
         ZStack {
             // Camera view (or error overlay)
@@ -101,11 +105,10 @@ struct AddFoodWithScan: View {
                             print("📸 Auto-capturing photo for barcode recipe: \(barcode)")
                             takePhoto()
                             
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                // Dismiss immediately and start processing
-                                dismiss()
-                                processBarcodeForRecipe(barcode)
-                            }
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            // For barcode, DON'T dismiss - keep view open to show confirmation sheet
+                            processBarcodeForRecipe(barcode)
+                        }
                         }
                     }
                 )
@@ -253,6 +256,22 @@ struct AddFoodWithScan: View {
             }
         ))
         .navigationBarHidden(true)
+        .sheet(isPresented: $showConfirmationSheet, onDismiss: {
+            // Clean up scanning states when confirmation sheet is dismissed
+            cleanupScanningStates()
+            // Dismiss the parent AddFoodWithScan view when confirmation sheet closes
+            dismiss()
+        }) {
+            if let food = scannedFoodForConfirmation {
+                ConfirmAddFoodView(food: food) { confirmedFood in
+                    // Pass the confirmed food to parent
+                    onFoodScanned(confirmedFood)
+                    // Clear the confirmation state
+                    scannedFoodForConfirmation = nil
+                    // Note: dismiss() will be called in onDismiss above
+                }
+            }
+        }
     }
     
     // MARK: - Helper Functions
@@ -292,6 +311,9 @@ struct AddFoodWithScan: View {
         foodManager.loadingMessage = "Analyzing image for recipe..."
         foodManager.uploadProgress = 0.1
         
+        // Clear lastGeneratedFood BEFORE calling analyzeFoodImage to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
+        
         // Use FoodManager to analyze the image (same as FoodScannerView)
         foodManager.analyzeFoodImage(
             image: image,
@@ -310,18 +332,20 @@ struct AddFoodWithScan: View {
                         // Clear lastGeneratedFood to prevent triggering other sheets
                         foodManager.lastGeneratedFood = nil
                         
-                        // Pass the food to parent
+                        // Pass the food to parent (view already dismissed)
                         onFoodScanned(createdFood)
+                        
+                        // Reset scanning states AFTER passing to parent
+                        cleanupScanningStates()
                     } else {
                         print("❌ No food found in analysis result")
+                        cleanupScanningStates()
                     }
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
+                    cleanupScanningStates()
                 }
-                
-                // Reset scanning states
-                cleanupScanningStates()
             }
         }
     }
@@ -332,6 +356,9 @@ struct AddFoodWithScan: View {
         foodManager.isGeneratingFood = true
         foodManager.loadingMessage = "Processing barcode for recipe..."
         foodManager.uploadProgress = 0.2
+        
+        // Clear lastGeneratedFood BEFORE calling lookupFoodByBarcode to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
         
         // Use NetworkManagerTwo to lookup barcode for creation (not logging)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
@@ -351,15 +378,17 @@ struct AddFoodWithScan: View {
                     // Clear lastGeneratedFood to prevent triggering other sheets
                     foodManager.lastGeneratedFood = nil
                     
-                    // Pass the food to parent
-                    onFoodScanned(createdFood)
+                    // Show confirmation sheet instead of directly adding (BARCODE ONLY)
+                    // DON'T clean up scanning states yet - keep loader showing during confirmation
+                    scannedFoodForConfirmation = createdFood
+                    showConfirmationSheet = true
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
+                    // Reset scanning states and dismiss on error
+                    cleanupScanningStates()
+                    dismiss()
                 }
-                
-                // Reset scanning states
-                cleanupScanningStates()
             }
         }
     }

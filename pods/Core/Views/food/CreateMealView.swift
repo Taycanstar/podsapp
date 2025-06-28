@@ -312,7 +312,7 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                         }
                     }
                     .listRowBackground(Color("iosnp"))
-                    .listRowSeparator(index == aggregatedFoods.count - 1 ? .hidden : .visible)
+                    .listRowSeparator(index == 0 || index == aggregatedFoods.count - 1 ? .hidden : .visible)
                 }
                 .onDelete { indexSet in
                     // 3) Remove *all* items in selectedFoods that belong to the tapped row
