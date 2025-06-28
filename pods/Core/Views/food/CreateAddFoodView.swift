@@ -1,18 +1,18 @@
 //
-//  CreateFoodView.swift
+//  CreateAddFoodView.swift
 //  Pods
 //
-//  Created by Dimi Nunez on 4/8/25.
+//  Created by Dimi Nunez on 5/17/25.
 //
 
 import SwiftUI
 
-struct CreateFoodView: View {
+struct CreateAddFoodView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
-    @EnvironmentObject private var viewModel: OnboardingViewModel
     
-    @Binding var path: NavigationPath
+    // Completion closure to pass created food back to parent
+    var onFoodAdded: (Food) -> Void
     
     // Basic food info
     @State private var title: String = ""
@@ -49,122 +49,155 @@ struct CreateFoodView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
     
-
+    // AI generation section
+    @State private var aiSearchText: String = ""
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Basic food info card
-                basicInfoCard
-                
-                // Nutrition facts section
-                nutritionFactsCard
-                
-                // Additional nutrients section (collapsible)
-                if showMoreNutrients {
-                    additionalNutrientsCard
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // AI Generation section
+                    aiGenerationCard
+                    
+                    // Basic food info card
+                    basicInfoCard
+                    
+                    // Nutrition facts section
+                    nutritionFactsCard
+                    
+                    // Additional nutrients section (collapsible)
+                    if showMoreNutrients {
+                        additionalNutrientsCard
+                    }
+                    
+                    Spacer().frame(height: 40) // extra bottom space
+                }
+                .padding(.top, 16)
+            }
+            .background(Color("iosbg"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Add Food")
+                        .font(.headline)
                 }
                 
-                Spacer().frame(height: 40) // extra bottom space
-            }
-            .padding(.top, 16)
-        }
-        .background(Color("iosbg"))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Create Food")
-                    .font(.headline)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: createFood) {
-                    Text("Create")
-                        .fontWeight(.semibold)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: createFood) {
+                        Text("Add")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(title.isEmpty || calories.isEmpty || isCreating)
                 }
-                .disabled(title.isEmpty || calories.isEmpty || isCreating)
-            }
-            
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    path.removeLast()
-                }) {
-                    Image(systemName: "chevron.left")
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
                 }
             }
-            
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
+            .alert(isPresented: $showErrorAlert) {
+                Alert(
+                    title: Text("Error"),
+                    message: Text(errorMessage),
+                    dismissButton: .default(Text("OK"))
+                )
             }
-        }
-        .navigationBarBackButtonHidden(true)
-        .alert(isPresented: $showErrorAlert) {
-            Alert(
-                title: Text("Error"),
-                message: Text(errorMessage),
-                dismissButton: .default(Text("OK"))
+            .overlay(
+                Group {
+                    if isCreating {
+                        Color.black.opacity(0.4)
+                            .edgesIgnoringSafeArea(.all)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(1.5)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            )
+                    }
+                }
             )
         }
-        .overlay(
-            Group {
-                if isCreating {
-                    Color.black.opacity(0.4)
-                        .edgesIgnoringSafeArea(.all)
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        )
-                }
-            }
-        )
-
     }
     
-    // MARK: - Card Views
+    // MARK: - AI Generation Card
+    private var aiGenerationCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Generate")
+                .font(.title2)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+            
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color("iosnp"))
+                
+                VStack(spacing: 0) {
+                    TextField("Describe your food (e.g., 'grilled chicken breast')", text: $aiSearchText)
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                    
+                    Divider()
+                        .padding(.leading, 16)
+                    
+                    Button(action: generateFoodWithAI) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(.accentColor)
+                            Text("Generate Food with AI")
+                                .foregroundColor(.accentColor)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                    }
+                    .disabled(aiSearchText.isEmpty || isCreating)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+    
+    // MARK: - Card Views (reusing from CreateFoodView)
     private var basicInfoCard: some View {
         ZStack(alignment: .top) {
-            // Background with rounded corners
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color("iosnp"))
             
-            // Content
             VStack(spacing: 0) {
-                // Title
                 TextField("Title", text: $title)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                     .padding(.vertical, 16)
                 
-                // Divider
                 Divider()
                     .padding(.leading, 16)
                 
-                // Brand
                 TextField("Brand (optional)", text: $brand)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                     .padding(.vertical, 16)
                 
-                // Divider
                 Divider()
                     .padding(.leading, 16)
                 
-                // Serving Size Row - single text field
                 TextField("Serving Size (e.g., 1 cup, 2 tbsp)", text: $servingSize)
                     .keyboardType(.asciiCapable)
                     .textFieldStyle(.plain)
                     .padding(.horizontal)
                     .padding(.vertical, 16)
                 
-                // Divider
                 Divider()
                     .padding(.leading, 16)
                 
-                // Number of Servings
                 numberOfServingsRow
             }
         }
@@ -179,87 +212,82 @@ struct CreateFoodView: View {
                 .padding(.horizontal)
             
             ZStack(alignment: .top) {
-                // Background with rounded corners
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color("iosnp"))
                 
-                // Content
                 VStack(spacing: 0) {
-                    // Calories (required)
                     TextField("Calories*", text: $calories)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
                         .padding(.vertical, 16)
                     
-                    // Divider
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Protein
                     TextField("Protein (g)", text: $protein)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
                         .padding(.vertical, 16)
                     
-                    // Divider
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Carbs
                     TextField("Carbs (g)", text: $carbs)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
                         .padding(.vertical, 16)
                     
-                    // Divider
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Fat
-                    TextField("Total Fat (g)", text: $fat)
+                    TextField("Fat (g)", text: $fat)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
                         .padding(.horizontal)
                         .padding(.vertical, 16)
-                }
-            }
-            .padding(.horizontal)
-            
-            // Show More Nutrients button
-            Button(action: {
-                withAnimation {
-                    showMoreNutrients.toggle()
-                }
-            }) {
-                HStack {
-                    Text(showMoreNutrients ? "Hide Additional Nutrients" : "Show More Nutrients")
-                        .foregroundColor(.accentColor)
                     
-                    Image(systemName: showMoreNutrients ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.accentColor)
+                    Divider()
+                        .padding(.leading, 16)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showMoreNutrients.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Text(showMoreNutrients ? "Show Less" : "Show More")
+                                .foregroundColor(.accentColor)
+                            
+                            Spacer()
+                            
+                            Image(systemName: showMoreNutrients ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(.accentColor)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 14)
-                .background(Color("iosnp"))
-                .cornerRadius(12)
             }
             .padding(.horizontal)
         }
     }
     
     private var additionalNutrientsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Additional Nutrients")
+                .font(.title2)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+            
             ZStack(alignment: .top) {
-                // Background with rounded corners
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color("iosnp"))
                 
-                // Content
                 VStack(spacing: 0) {
-                    // Saturated Fat
                     TextField("Saturated Fat (g)", text: $saturatedFat)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -269,7 +297,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Polyunsaturated Fat
                     TextField("Polyunsaturated Fat (g)", text: $polyunsaturatedFat)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -279,7 +306,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Monounsaturated Fat
                     TextField("Monounsaturated Fat (g)", text: $monounsaturatedFat)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -289,7 +315,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Trans Fat
                     TextField("Trans Fat (g)", text: $transFat)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -299,7 +324,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Cholesterol
                     TextField("Cholesterol (mg)", text: $cholesterol)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -309,7 +333,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Sodium
                     TextField("Sodium (mg)", text: $sodium)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -319,7 +342,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Potassium
                     TextField("Potassium (mg)", text: $potassium)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -329,7 +351,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Sugar
                     TextField("Sugar (g)", text: $sugar)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -339,7 +360,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Fiber
                     TextField("Fiber (g)", text: $fiber)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -349,7 +369,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Vitamin A
                     TextField("Vitamin A (%)", text: $vitaminA)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -359,7 +378,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Vitamin C
                     TextField("Vitamin C (%)", text: $vitaminC)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -369,7 +387,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Calcium
                     TextField("Calcium (%)", text: $calcium)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -379,7 +396,6 @@ struct CreateFoodView: View {
                     Divider()
                         .padding(.leading, 16)
                     
-                    // Iron
                     TextField("Iron (%)", text: $iron)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.plain)
@@ -392,7 +408,49 @@ struct CreateFoodView: View {
         .transition(.opacity)
     }
     
-    // Function to create the food
+    private var numberOfServingsRow: some View {
+        HStack {
+            Text("Number of Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 16)
+    }
+    
+    // MARK: - Functions
+    private func generateFoodWithAI() {
+        guard !aiSearchText.isEmpty else { return }
+        
+        isCreating = true
+        
+        foodManager.generateFoodWithAI(foodDescription: aiSearchText) { result in
+            DispatchQueue.main.async {
+                isCreating = false
+                
+                switch result {
+                case .success(let food):
+                    print("✅ Successfully generated food with AI for recipe: \(food.displayName)")
+                    
+                    // Clear the AI search text
+                    aiSearchText = ""
+                    
+                    // Pass the food to parent and dismiss
+                    onFoodAdded(food)
+                    dismiss()
+                    
+                case .failure(let error):
+                    errorMessage = "Failed to generate food: \(error.localizedDescription)"
+                    showErrorAlert = true
+                }
+            }
+        }
+    }
+    
     private func createFood() {
         guard !title.isEmpty, !calories.isEmpty else {
             errorMessage = "Title and calories are required"
@@ -406,13 +464,10 @@ struct CreateFoodView: View {
             return
         }
         
-        // Mark as creating
         isCreating = true
         
-        // Format serving text
         let servingText = servingSize.isEmpty ? "1 serving" : servingSize
         
-        // Create a list of nutrients
         var nutrients: [Nutrient] = [
             Nutrient(nutrientName: "Energy", value: caloriesValue, unitName: "kcal")
         ]
@@ -445,23 +500,20 @@ struct CreateFoodView: View {
         addNutrientIfPresent(name: "Calcium", value: calcium, unit: "%", to: &nutrients)
         addNutrientIfPresent(name: "Iron", value: iron, unit: "%", to: &nutrients)
         
-        // Extract serving unit if possible (default to "serving")
         let servingUnit = "serving"
         
-        // Create food measure
         let foodMeasure = FoodMeasure(
             disseminationText: servingText,
-            gramWeight: 100.0, // Default gram weight
+            gramWeight: 100.0,
             id: 1,
             modifier: servingText,
             measureUnitName: servingUnit,
             rank: 1
         )
         
-        // Create the food object
         let brandText = brand.isEmpty ? nil : brand
         let food = Food(
-            fdcId: Int.random(in: 1000000..<9999999), // Generate a random ID
+            fdcId: Int.random(in: 1000000..<9999999),
             description: title,
             brandOwner: brandText,
             brandName: brandText,
@@ -473,29 +525,17 @@ struct CreateFoodView: View {
             foodMeasures: [foodMeasure]
         )
         
-        // Use the API to create the food manually
         foodManager.createManualFood(food: food) { result in
             DispatchQueue.main.async {
                 isCreating = false
                 
                 switch result {
                 case .success(let createdFood):
-                    print("Food created successfully: \(createdFood.displayName)")
+                    print("✅ Food created successfully for recipe: \(createdFood.displayName)")
                     
-                    // Show success toast via the food manager
-                    foodManager.lastGeneratedFood = createdFood
-                    foodManager.showFoodGenerationSuccess = true
-                    
-                    // Hide toast after delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        foodManager.showFoodGenerationSuccess = false
-                    }
-                    
-                    // Track as recently added
-                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                    
-                    // Navigate back
-                    path.removeLast()
+                    // Pass the food to parent and dismiss
+                    onFoodAdded(createdFood)
+                    dismiss()
                     
                 case .failure(let error):
                     errorMessage = "Failed to create food: \(error.localizedDescription)"
@@ -505,35 +545,15 @@ struct CreateFoodView: View {
         }
     }
     
-    // Helper to add optional nutrients
     private func addNutrientIfPresent(name: String, value: String, unit: String, to nutrients: inout [Nutrient]) {
         if let doubleValue = Double(value), doubleValue > 0 {
             nutrients.append(Nutrient(nutrientName: name, value: doubleValue, unitName: unit))
         }
     }
-    
-    // Modify the Number of Servings row to use TextField
-    private var numberOfServingsRow: some View {
-        HStack {
-            Text("Number of Servings")
-                .foregroundColor(.primary)
-            Spacer()
-            TextField("Servings", value: $numberOfServings, format: .number)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 80)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 16)
-    }
 }
 
-
-extension CreateFoodView {
-    // Helper function to hide keyboard
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+#Preview {
+    CreateAddFoodView { food in
+        print("Food added: \(food.displayName)")
     }
 }
-
-

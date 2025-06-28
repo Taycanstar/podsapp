@@ -30,6 +30,9 @@
 		363068CF2E0CA7A100F2D4EC /* CompareWeightLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068CE2E0CA7A100F2D4EC /* CompareWeightLogsView.swift */; };
 		363068D12E0CEBDB00F2D4EC /* UpdateEditWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D02E0CEBDB00F2D4EC /* UpdateEditWeightView.swift */; };
 		363068D32E0CEBF000F2D4EC /* UpdateEditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D22E0CEBF000F2D4EC /* UpdateEditHeightView.swift */; };
+		363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */; };
+		363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */; };
+		363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -275,6 +278,9 @@
 		363068CE2E0CA7A100F2D4EC /* CompareWeightLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareWeightLogsView.swift; sourceTree = "<group>"; };
 		363068D02E0CEBDB00F2D4EC /* UpdateEditWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateEditWeightView.swift; sourceTree = "<group>"; };
 		363068D22E0CEBF000F2D4EC /* UpdateEditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateEditHeightView.swift; sourceTree = "<group>"; };
+		363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodWithVoice.swift; sourceTree = "<group>"; };
+		363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodWithScan.swift; sourceTree = "<group>"; };
+		363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAddFoodView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -877,6 +883,9 @@
 				36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */,
 				3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */,
 				3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */,
+				363068D42E1078EB00F2D4EC /* AddFoodWithVoice.swift */,
+				363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */,
+				363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */,
 			);
 			path = food;
 			sourceTree = "<group>";
@@ -1230,6 +1239,7 @@
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
+				363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */,
 				36ED35D92DDE527600D174FB /* TapPlusView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
 				36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */,
@@ -1295,6 +1305,7 @@
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				363068C72E089D2A00F2D4EC /* AddedByMe.swift in Sources */,
 				36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */,
+				363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */,
 				363068C52E085D9200F2D4EC /* RecentlyAddedView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
 				3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */,
@@ -1382,6 +1393,7 @@
 				36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */,
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
+				363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,

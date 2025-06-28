@@ -64,7 +64,7 @@ struct AddFoodView: View {
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
     @State private var showCreateFood = false
-    @State private var initialUserFoodsCount = 0
+
     
     let foodTabs: [AddFoodTab] = [.all, .myFoods]
     
@@ -109,9 +109,6 @@ struct AddFoodView: View {
                 }
             }
             .onAppear {
-            
-           
-                
                 // Initialize selected food IDs
                 for food in selectedFoods {
                     selectedFoodIds.insert(food.fdcId)
@@ -123,8 +120,8 @@ struct AddFoodView: View {
                     activateSearch = true
                 }
                 
-                // Store initial food count to detect new foods
-                initialUserFoodsCount = foodManager.userFoods.count
+                // Force refresh user foods
+                foodManager.loadUserFoods(refresh: true)
             }
 
             .navigationBarTitleDisplayMode(.inline)
@@ -153,23 +150,37 @@ struct AddFoodView: View {
             .background(
                 SearchActivator(isActivated: $activateSearch)
             )
-            .fullScreenCover(isPresented: $showCreateFoodWithVoice, onDismiss: {
-                checkForNewlyCreatedFoods()
-            }) {
-                CreateFoodWithVoice()
-            }
-            .fullScreenCover(isPresented: $showCreateFoodWithScan, onDismiss: {
-                checkForNewlyCreatedFoods()
-            }) {
-                CreateFoodWithScan()
-            }
-            .sheet(isPresented: $showCreateFood, onDismiss: {
-                checkForNewlyCreatedFoods()
-            }) {
-                NavigationView {
-                    CreateFoodView(path: .constant(NavigationPath()))
+            .fullScreenCover(isPresented: $showCreateFoodWithVoice) {
+                AddFoodWithVoice { createdFood in
+                    // Add the created food to the selected foods and mark as selected
+                    generatedFoods.append(createdFood)
+                    selectedFoodIds.insert(createdFood.fdcId)
+                    
+                    // Track as recently added
+                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                 }
             }
+            .fullScreenCover(isPresented: $showCreateFoodWithScan) {
+                AddFoodWithScan { createdFood in
+                    // Add the created food to the selected foods and mark as selected
+                    generatedFoods.append(createdFood)
+                    selectedFoodIds.insert(createdFood.fdcId)
+                    
+                    // Track as recently added
+                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                }
+            }
+            .sheet(isPresented: $showCreateFood) {
+                CreateAddFoodView { createdFood in
+                    // Add the created food to the selected foods and mark as selected
+                    generatedFoods.append(createdFood)
+                    selectedFoodIds.insert(createdFood.fdcId)
+                    
+                    // Track as recently added
+                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                }
+            }
+
             .alert("Error", isPresented: $showErrorAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
@@ -201,43 +212,43 @@ struct AddFoodView: View {
                 VStack(spacing: 12) {
                     // Show Create Food dropdown when there's no search text
                     if searchText.isEmpty && !isGeneratingFood {
-                        Menu {
-                            Button(action: {
-                                print("Tapped Manual Create Food")
-                                HapticFeedback.generateLigth()
-                                showCreateFood = true
-                            }) {
-                                HStack {
-                                    Text("Enter Manually")
-                                    Spacer()
-                                    Image(systemName: "square.and.pencil")
-                                }
+                                            Menu {
+                        Button(action: {
+                            print("Tapped Manual Create Food for Recipe")
+                            HapticFeedback.generateLigth()
+                            showCreateFood = true
+                        }) {
+                            HStack {
+                                Text("Enter Manually")
+                                Spacer()
+                                Image(systemName: "square.and.pencil")
                             }
-                            
-                            Button(action: {
-                                print("Tapped Voice Create Food")
-                                HapticFeedback.generateLigth()
-                                showCreateFoodWithVoice = true
-                            }) {
-                                HStack {
-                                    Text("Describe with Voice")
-                                    Spacer()
-                                    Image(systemName: "waveform")
-                                }
+                        }
+                        
+                        Button(action: {
+                            print("Tapped Voice Create Food for Recipe")
+                            HapticFeedback.generateLigth()
+                            showCreateFoodWithVoice = true
+                        }) {
+                            HStack {
+                                Text("Describe with Voice")
+                                Spacer()
+                                Image(systemName: "waveform")
                             }
-                            
-                            Button(action: {
-                                print("Tapped Scan Create Food")
-                                HapticFeedback.generateLigth()
-                                showCreateFoodWithScan = true
-                            }) {
-                                HStack {
-                                    Text("Scan Food")
-                                    Spacer()
-                                    Image(systemName: "barcode.viewfinder")
-                                }
+                        }
+                        
+                        Button(action: {
+                            print("Tapped Scan Create Food for Recipe")
+                            HapticFeedback.generateLigth()
+                            showCreateFoodWithScan = true
+                        }) {
+                            HStack {
+                                Text("Scan Food")
+                                Spacer()
+                                Image(systemName: "barcode.viewfinder")
                             }
-                        } label: {
+                        }
+                    } label: {
                             HStack(spacing: 6) {
                                 Spacer()
                                 Image(systemName: "plus.circle.fill")
@@ -284,6 +295,9 @@ struct AddFoodView: View {
                                     // Track as recently added
                                     foodManager.trackRecentlyAdded(foodId: food.fdcId)
                                     
+                                    // Clear the search text after successful generation
+                                    searchText = ""
+                                    
                                 case .failure(let error):
                                     // Show error alert
                                     if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
@@ -318,7 +332,7 @@ struct AddFoodView: View {
                     }
                     
                     // Show food generation loading card if generating
-                    if isGeneratingFood {
+                    if isGeneratingFood || foodManager.isGeneratingFood {
                         FoodGenerationCard()
                             .padding(.horizontal)
                             .transition(.opacity)
@@ -532,28 +546,7 @@ struct AddFoodView: View {
         HapticFeedback.generate()
     }
     
-    private func checkForNewlyCreatedFoods() {
-        // Check if new foods were added to userFoods
-        let currentCount = foodManager.userFoods.count
-        if currentCount > initialUserFoodsCount {
-            // Get the newly added foods (assuming they're at the beginning of the array)
-            let newFoodsCount = currentCount - initialUserFoodsCount
-            let newFoods = Array(foodManager.userFoods.prefix(newFoodsCount))
-            
-            // Handle each newly created food
-            for createdFood in newFoods {
-                // Add to generated foods and mark as selected
-                generatedFoods.append(createdFood)
-                selectedFoodIds.insert(createdFood.fdcId)
-                
-                // Track as recently added
-                foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-            }
-            
-            // Update the initial count
-            initialUserFoodsCount = currentCount
-        }
-    }
+
     
     // Add function to handle the Done button
     // This will add all selected foods to the meal when Done is tapped
@@ -681,5 +674,4 @@ private struct TabButton: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
 
