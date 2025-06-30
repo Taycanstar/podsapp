@@ -51,6 +51,9 @@ struct ConfirmLogView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
     
+    // Focus state for auto-focusing the servings field
+    @FocusState private var isServingsFocused: Bool
+    
     // New properties for barcode flow
     @State private var isBarcodeFood: Bool = false
     @State private var originalFood: Food? = nil
@@ -295,6 +298,12 @@ struct ConfirmLogView: View {
                 }
             }
         )
+        .onAppear {
+            // Auto-focus the servings field when the view appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isServingsFocused = true
+            }
+        }
 
     }
     
@@ -353,6 +362,7 @@ struct ConfirmLogView: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
+                .focused($isServingsFocused)
                 .onChange(of: numberOfServings) { _ in
                     updateNutritionValues()
                 }
