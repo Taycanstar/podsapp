@@ -188,36 +188,17 @@ struct ConfirmAddFoodView: View {
                 
                 // Number of servings
                 HStack {
-                    Text("Servings")
+                    Text("Number of Servings")
                         .foregroundColor(.primary)
                         .frame(width: 120, alignment: .leading)
                     
-                    HStack {
-                        Button(action: {
-                            if numberOfServings > 0.5 {
-                                numberOfServings -= 0.5
-                            }
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(.accentColor)
-                                .font(.title2)
-                        }
-                        .disabled(numberOfServings <= 0.5)
-                        
-                        Text("\(numberOfServings, specifier: "%.1f")")
-                            .font(.headline)
-                            .frame(minWidth: 50)
-                        
-                        Button(action: {
-                            numberOfServings += 0.5
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.accentColor)
-                                .font(.title2)
-                        }
-                    }
-                    
                     Spacer()
+                    
+                    TextField("Servings", value: $numberOfServings, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
             }
         }
