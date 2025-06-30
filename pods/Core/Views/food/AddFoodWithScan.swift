@@ -27,10 +27,6 @@ struct AddFoodWithScan: View {
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
     
-    // State for confirmation sheet
-    @State private var scannedFoodForConfirmation: Food? = nil
-    @State private var showConfirmationSheet = false
-    
     var body: some View {
         ZStack {
             // Camera view (or error overlay)
@@ -106,7 +102,8 @@ struct AddFoodWithScan: View {
                             takePhoto()
                             
                                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            // For barcode, DON'T dismiss - keep view open to show confirmation sheet
+                            // Dismiss immediately and start processing (same as CreateFoodWithScan)
+                            dismiss()
                             processBarcodeForRecipe(barcode)
                         }
                         }
@@ -229,6 +226,10 @@ struct AddFoodWithScan: View {
             foodManager.isScanningFood = true
             foodManager.scannedImage = nil
             
+            // Reset processing states
+            isProcessingBarcode = false
+            lastProcessedBarcode = nil
+            
             // Check camera permission
             checkCameraPermission()
         }
@@ -247,7 +248,7 @@ struct AddFoodWithScan: View {
                         DispatchQueue.main.async {
                             self.selectedImage = image
                             self.isGalleryImageLoaded = true
-                            // Dismiss immediately and start analysis
+                        // Dismiss immediately and start analysis
                             self.dismiss()
                             self.analyzeImageForRecipe(image)
                         }
@@ -256,22 +257,6 @@ struct AddFoodWithScan: View {
             }
         ))
         .navigationBarHidden(true)
-        .sheet(isPresented: $showConfirmationSheet, onDismiss: {
-            // Clean up scanning states when confirmation sheet is dismissed
-            cleanupScanningStates()
-            // Dismiss the parent AddFoodWithScan view when confirmation sheet closes
-            dismiss()
-        }) {
-            if let food = scannedFoodForConfirmation {
-                ConfirmAddFoodView(food: food) { confirmedFood in
-                    // Pass the confirmed food to parent
-                    onFoodScanned(confirmedFood)
-                    // Clear the confirmation state
-                    scannedFoodForConfirmation = nil
-                    // Note: dismiss() will be called in onDismiss above
-                }
-            }
-        }
     }
     
     // MARK: - Helper Functions
@@ -378,13 +363,19 @@ struct AddFoodWithScan: View {
                     // Clear lastGeneratedFood to prevent triggering other sheets
                     foodManager.lastGeneratedFood = nil
                     
-                    // Show confirmation sheet instead of directly adding (BARCODE ONLY)
-                    // DON'T clean up scanning states yet - keep loader showing during confirmation
-                    scannedFoodForConfirmation = createdFood
-                    showConfirmationSheet = true
+                    // CRITICAL: Reset isProcessingBarcode to allow future scans
+                    isProcessingBarcode = false
+                    
+                    // Reset scanning states
+                    cleanupScanningStates()
+                    
+                    // Pass food to parent for confirmation (view already dismissed)
+                    onFoodScanned(createdFood)
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
+                    // CRITICAL: Reset isProcessingBarcode on error too
+                    isProcessingBarcode = false
                     // Reset scanning states and dismiss on error
                     cleanupScanningStates()
                     dismiss()
@@ -399,6 +390,10 @@ struct AddFoodWithScan: View {
         foodManager.scannedImage = nil
         foodManager.loadingMessage = ""
         foodManager.uploadProgress = 0.0
+        
+        // Reset barcode processing states
+        isProcessingBarcode = false
+        lastProcessedBarcode = nil
     }
 }
 

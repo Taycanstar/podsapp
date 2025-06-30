@@ -64,6 +64,10 @@ struct AddFoodView: View {
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
     @State private var showCreateFood = false
+    
+    // Confirmation sheet for scanned foods
+    @State private var scannedFoodForConfirmation: Food? = nil
+    @State private var showConfirmationSheet = false
 
     
     let foodTabs: [AddFoodTab] = [.all, .myFoods]
@@ -150,24 +154,30 @@ struct AddFoodView: View {
             .background(
                 SearchActivator(isActivated: $activateSearch)
             )
-            .fullScreenCover(isPresented: $showCreateFoodWithVoice) {
+            .sheet(isPresented: $showCreateFoodWithVoice) {
                 AddFoodWithVoice { createdFood in
-                    // Add the created food to the selected foods and mark as selected
-                    generatedFoods.append(createdFood)
-                    selectedFoodIds.insert(createdFood.fdcId)
+                    print("🔍 DEBUG: AddFoodWithVoice completion called with food: \(createdFood.displayName)")
                     
-                    // Track as recently added
-                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                    // Use a slight delay to ensure the sheet has properly dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Store the food for confirmation
+                        scannedFoodForConfirmation = createdFood
+                        showConfirmationSheet = true
+                        print("🔍 DEBUG: Set showConfirmationSheet = true for food: \(createdFood.displayName)")
+                    }
                 }
             }
-            .fullScreenCover(isPresented: $showCreateFoodWithScan) {
+            .sheet(isPresented: $showCreateFoodWithScan) {
                 AddFoodWithScan { createdFood in
-                    // Add the created food to the selected foods and mark as selected
-                    generatedFoods.append(createdFood)
-                    selectedFoodIds.insert(createdFood.fdcId)
+                    print("🔍 DEBUG: AddFoodWithScan completion called with food: \(createdFood.displayName)")
                     
-                    // Track as recently added
-                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                    // Use a slight delay to ensure the sheet has properly dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Store the food for confirmation
+                        scannedFoodForConfirmation = createdFood
+                        showConfirmationSheet = true
+                        print("🔍 DEBUG: Set showConfirmationSheet = true for food: \(createdFood.displayName)")
+                    }
                 }
             }
             .sheet(isPresented: $showCreateFood) {
@@ -185,6 +195,26 @@ struct AddFoodView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .sheet(isPresented: $showConfirmationSheet) {
+                if let food = scannedFoodForConfirmation {
+             
+                    ConfirmAddFoodView(food: food) { confirmedFood in
+                        print("🔍 DEBUG: Food confirmed: \(confirmedFood.displayName)")
+                        // Add the confirmed food to the selected foods and mark as selected
+                        generatedFoods.append(confirmedFood)
+                        selectedFoodIds.insert(confirmedFood.fdcId)
+                        
+                        // Track as recently added
+                        foodManager.trackRecentlyAdded(foodId: confirmedFood.fdcId)
+                        
+                        // Clear the confirmation state
+                        scannedFoodForConfirmation = nil
+                    }
+                } else {
+         
+                    Text("Error: No food to confirm")
+                }
             }
         }
     }
