@@ -233,8 +233,9 @@ struct AddFoodWithScan: View {
             checkCameraPermission()
         }
         .onDisappear {
-            // Clean up when view disappears
-            cleanupScanningStates()
+            // Reset local processing states only (not foodManager scanning states)
+            isProcessingBarcode = false
+            lastProcessedBarcode = nil
         }
         .photosPicker(isPresented: $showPhotosPicker, selection: Binding<PhotosPickerItem?>(
             get: { nil },

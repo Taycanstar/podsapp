@@ -182,6 +182,12 @@ struct AddFoodWithVoice: View {
     private func generateFoodFromTranscriptionInBackground() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
+        // Set scanning state to show loader card
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.loadingMessage = "Generating food from voice..."
+        foodManager.uploadProgress = 0.3
+        
         // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
         foodManager.lastGeneratedFood = nil
         
