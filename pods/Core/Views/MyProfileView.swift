@@ -11,17 +11,17 @@ import Charts
 struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
     @State private var showProfileSettings = false
-    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color("iosbg2").edgesIgnoringSafeArea(.all)
                 
-                if viewModel.isLoadingProfile {
+                if onboarding.isLoadingProfile {
                     ProgressView("Loading profile...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.profileError {
+                } else if let error = onboarding.profileError {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 50))
@@ -36,36 +36,16 @@ struct MyProfileView: View {
                             .foregroundColor(.secondary)
                         
                         Button("Try Again") {
-                            viewModel.fetchProfileData()
+                            Task {
+                                await onboarding.fetchProfileData()
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                     }
                     .padding()
-                } else if let profile = viewModel.profileData {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            profileHeaderView(profile: profile)
-                            
-                            profileStatsView(profile: profile)
-                            
-                            caloriesTrendView(profile: profile)
-                            
-                            nutritionGoalsView(profile: profile)
-                        }
-                        .padding()
-                    }
                 } else {
-                    // Show basic profile info from viewModel even if full profile data isn't loaded
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            basicProfileHeaderView()
-                            
-                            Text("Loading additional profile data...")
-                                .foregroundColor(.secondary)
-                                .padding()
-                        }
-                        .padding()
-                    }
+                    // Use our new unified content view
+                    profileContentView
                 }
             }
             .navigationTitle("Profile")
@@ -89,7 +69,7 @@ struct MyProfileView: View {
         }
         .onAppear {
             // Refresh profile data if needed (will check staleness automatically)
-            viewModel.refreshProfileDataIfNeeded()
+            onboarding.refreshProfileDataIfNeeded()
         }
     }
     
@@ -98,28 +78,28 @@ struct MyProfileView: View {
             // Profile Picture Circle
             ZStack {
                 Circle()
-                    .fill(Color(viewModel.profileColor.isEmpty ? "purple" : viewModel.profileColor))
+                    .fill(Color(onboarding.profileColor.isEmpty ? "purple" : onboarding.profileColor))
                     .frame(width: 100, height: 100)
                 
                 // Show initials as fallback for basic view
-                Text(viewModel.profileInitial.isEmpty ? "U" : viewModel.profileInitial)
+                Text(onboarding.profileInitial.isEmpty ? "U" : onboarding.profileInitial)
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.white)
             }
             
             // Basic User Info
             VStack(spacing: 8) {
-                Text(viewModel.username.isEmpty ? "User" : viewModel.username)
+                Text(onboarding.username.isEmpty ? "User" : onboarding.username)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                 
-                Text("@\(viewModel.username.isEmpty ? "username" : viewModel.username)")
+                Text("@\(onboarding.username.isEmpty ? "username" : onboarding.username)")
                     .font(.body)
                     .foregroundColor(.secondary)
                 
-                if !viewModel.email.isEmpty {
-                    Text(viewModel.email)
+                if !onboarding.email.isEmpty {
+                    Text(onboarding.email)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -130,50 +110,57 @@ struct MyProfileView: View {
         .cornerRadius(16)
     }
     
-    private func profileHeaderView(profile: ProfileDataResponse) -> some View {
+    private func profileHeaderView() -> some View {
         VStack(spacing: 16) {
             // Profile Picture with photo support
             ZStack {
                 Circle()
-                    .fill(Color(profile.profileColor))
+                    .fill(Color(onboarding.profileData?.profileColor ?? onboarding.profileColor))
                     .frame(width: 80, height: 80)
                 
-                if profile.profilePhoto == "pfp" {
-                    // Use asset image
-                    Image("pfp")
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
-                } else if !profile.profilePhoto.isEmpty {
-                    // Use URL image
-                    AsyncImage(url: URL(string: profile.profilePhoto)) { image in
-                        image
+                if let profileData = onboarding.profileData {
+                    if profileData.profilePhoto == "pfp" {
+                        // Use asset image
+                        Image("pfp")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        // Show initials while loading
-                        Text(profile.profileInitial)
+                            .frame(width: 80, height: 80)
+                            .clipShape(Circle())
+                    } else if !profileData.profilePhoto.isEmpty {
+                        // Use URL image
+                        AsyncImage(url: URL(string: profileData.profilePhoto)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            // Show initials while loading
+                            Text(profileData.profileInitial)
+                                .font(.system(size: 32, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                    } else {
+                        // Fallback to initials
+                        Text(profileData.profileInitial)
                             .font(.system(size: 32, weight: .semibold))
                             .foregroundColor(.white)
                     }
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
                 } else {
-                    // Fallback to initials
-                    Text(profile.profileInitial)
+                    // Show basic initials while profile data loads
+                    Text(onboarding.profileInitial.isEmpty ? "U" : onboarding.profileInitial)
                         .font(.system(size: 32, weight: .semibold))
                         .foregroundColor(.white)
                 }
             }
             
             VStack(spacing: 4) {
-                Text(profile.username)
+                Text(onboarding.profileData?.username ?? onboarding.username)
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                 
-                Text(profile.email)
+                Text(onboarding.profileData?.email ?? onboarding.email)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -181,74 +168,9 @@ struct MyProfileView: View {
         .padding(.vertical)
     }
     
-    private func profileStatsView(profile: ProfileDataResponse) -> some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("Current Stats")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            
-            HStack(spacing: 20) {
-                // Weight Card
-                VStack(spacing: 8) {
-                    Image(systemName: "scalemass")
-                        .font(.system(size: 24))
-                        .foregroundColor(.blue)
-                    
-                    if let weightLbs = profile.currentWeightLbs {
-                        Text("\(Int(weightLbs.rounded())) lbs")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                    } else {
-                        Text("No data")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("Weight")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color("iosfit"))
-                .cornerRadius(12)
-                
-                // Height Card
-                VStack(spacing: 8) {
-                    Image(systemName: "ruler")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                    
-                    if let heightFeet = profile.heightFeet, let heightInches = profile.heightInches {
-                        Text("\(heightFeet)'\(heightInches)\"")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                    } else if let heightCm = profile.heightCm {
-                        Text("\(Int(heightCm)) cm")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                    } else {
-                        Text("No data")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("Height")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color("iosfit"))
-                .cornerRadius(12)
-            }
-        }
-    }
+
     
-    private func caloriesTrendView(profile: ProfileDataResponse) -> some View {
+    private func caloriesTrendView(profileData: ProfileDataResponse) -> some View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -256,17 +178,17 @@ struct MyProfileView: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("\(profile.daysLogged) of \(profile.totalDays) days logged")
+                    Text("\(profileData.daysLogged) of \(profileData.totalDays) days logged")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 Spacer()
             }
             
-            if !profile.calorieTrend3Weeks.isEmpty {
+            if !profileData.calorieTrend3Weeks.isEmpty {
                 // Chart
                 Chart {
-                    ForEach(Array(profile.calorieTrend3Weeks.enumerated()), id: \.offset) { index, day in
+                    ForEach(Array(profileData.calorieTrend3Weeks.enumerated()), id: \.offset) { index, day in
                         LineMark(
                             x: .value("Day", index),
                             y: .value("Calories", day.calories)
@@ -286,20 +208,20 @@ struct MyProfileView: View {
                     }
                     
                     // Average line
-                    if profile.averageCaloriesActiveDays > 0 {
-                        RuleMark(y: .value("Average", profile.averageCaloriesActiveDays))
+                    if profileData.averageCaloriesActiveDays > 0 {
+                        RuleMark(y: .value("Average", profileData.averageCaloriesActiveDays))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                             .foregroundStyle(Color.orange.opacity(0.7))
                     }
                 }
                 .frame(height: 150)
-                .chartYScale(domain: 0...max(3000, profile.calorieTrend3Weeks.map(\.calories).max() ?? 2000))
+                .chartYScale(domain: 0...max(3000, profileData.calorieTrend3Weeks.map(\.calories).max() ?? 2000))
                 .chartXAxis {
                     AxisMarks(preset: .aligned, position: .bottom) { value in
                         AxisValueLabel {
                             if let index = value.as(Int.self),
-                               index >= 0 && index < profile.calorieTrend3Weeks.count {
-                                let day = profile.calorieTrend3Weeks[index]
+                               index >= 0 && index < profileData.calorieTrend3Weeks.count {
+                                let day = profileData.calorieTrend3Weeks[index]
                                 if let date = Calendar.current.date(from: DateComponents(year: Int(day.date.prefix(4)), 
                                                                                        month: Int(day.date.dropFirst(5).prefix(2)), 
                                                                                        day: Int(day.date.suffix(2)))) {
@@ -317,7 +239,7 @@ struct MyProfileView: View {
                         Text("Average (all days)")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("\(Int(profile.averageDailyCalories)) cal")
+                        Text("\(Int(profileData.averageDailyCalories)) cal")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
@@ -328,7 +250,7 @@ struct MyProfileView: View {
                         Text("Average (logged days)")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("\(Int(profile.averageCaloriesActiveDays)) cal")
+                        Text("\(Int(profileData.averageCaloriesActiveDays)) cal")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.orange)
@@ -347,7 +269,7 @@ struct MyProfileView: View {
         .cornerRadius(12)
     }
     
-    private func nutritionGoalsView(profile: ProfileDataResponse) -> some View {
+    private func nutritionGoalsView(profileData: ProfileDataResponse) -> some View {
         VStack(spacing: 16) {
             HStack {
                 Text("Nutrition Goals")
@@ -357,10 +279,10 @@ struct MyProfileView: View {
             }
             
             VStack(spacing: 12) {
-                goalRow(title: "Calories", value: Int(profile.calorieGoal), unit: "cal", color: .blue)
-                goalRow(title: "Protein", value: Int(profile.proteinGoal), unit: "g", color: .red)
-                goalRow(title: "Carbs", value: Int(profile.carbsGoal), unit: "g", color: .orange)
-                goalRow(title: "Fat", value: Int(profile.fatGoal), unit: "g", color: .yellow)
+                goalRow(title: "Calories", value: Int(profileData.calorieGoal), unit: "cal", color: .blue)
+                goalRow(title: "Protein", value: Int(profileData.proteinGoal), unit: "g", color: .red)
+                goalRow(title: "Carbs", value: Int(profileData.carbsGoal), unit: "g", color: .orange)
+                goalRow(title: "Fat", value: Int(profileData.fatGoal), unit: "g", color: .yellow)
             }
         }
         .padding()
@@ -387,7 +309,143 @@ struct MyProfileView: View {
         }
     }
     
-
+    private var profileContentView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 24) {
+                // Profile header
+                profileHeaderView()
+                
+                // Weight card (matching the user's example design)
+                if let profileData = onboarding.profileData {
+                    weightCardView(profileData: profileData)
+                } else if onboarding.isLoadingProfile {
+                    // Loading state
+                    VStack(spacing: 16) {
+                        HStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 100, height: 20)
+                            Spacer()
+                        }
+                        HStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 80, height: 32)
+                            Spacer()
+                        }
+                    }
+                    .padding()
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                } else {
+                    // Error or no data state
+                    VStack(spacing: 8) {
+                        Text("Unable to load profile data")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        
+                        Button("Retry") {
+                            Task {
+                                await onboarding.fetchProfileData()
+                            }
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                    }
+                    .padding()
+                    .background(Color("iosfit"))
+                    .cornerRadius(12)
+                }
+                
+                // 3-week calorie trend
+                if let profileData = onboarding.profileData {
+                    caloriesTrendView(profileData: profileData)
+                }
+                
+                // Nutrition goals
+                if let profileData = onboarding.profileData {
+                    nutritionGoalsView(profileData: profileData)
+                }
+                
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal)
+        }
+    }
+    
+    private func weightCardView(profileData: ProfileDataResponse) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("WEIGHT")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.gray)
+            
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if let weightLbs = profileData.currentWeightLbs {
+                    Text("\(String(format: "%.1f", weightLbs))")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("lbs")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray)
+                } else if let weightKg = profileData.currentWeightKg {
+                    // Fallback to kg if lbs not available
+                    let weightLbs = weightKg * 2.20462
+                    Text("\(String(format: "%.1f", weightLbs))")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("lbs")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray)
+                } else {
+                    Text("No data")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if let weightDate = profileData.weightDate {
+                Text("Last updated: \(formatDateString(weightDate))")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            } else if profileData.currentWeightKg == nil && profileData.currentWeightLbs == nil {
+                Text("Add your first weight entry")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                
+                Button("Add Weight") {
+                    // TODO: Navigate to add weight view
+                    print("TODO: Navigate to add weight")
+                }
+                .font(.system(size: 14))
+                .foregroundColor(.accentColor)
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color("iosfit"))
+        .cornerRadius(12)
+        .onAppear {
+            // Debug: Print weight data
+            print("🏋️ Weight Debug:")
+            print("  - currentWeightKg: \(profileData.currentWeightKg?.description ?? "nil")")
+            print("  - currentWeightLbs: \(profileData.currentWeightLbs?.description ?? "nil")")
+            print("  - weightDate: \(profileData.weightDate ?? "nil")")
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func formatDateString(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .none
+            return displayFormatter.string(from: date)
+        }
+        return dateString
+    }
 }
 
 // MARK: - Extensions
