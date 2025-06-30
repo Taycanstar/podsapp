@@ -216,9 +216,8 @@ struct AddFoodWithScan: View {
                         }
                     }
                     
-                    Spacer().frame(height: 40)
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, 50)
             }
         }
         .onAppear {
@@ -318,18 +317,16 @@ struct AddFoodWithScan: View {
                         foodManager.lastGeneratedFood = nil
                         
                         // Pass the food to parent (view already dismissed)
+                        // Note: Don't cleanup scanning states here - let parent handle it
                         onFoodScanned(createdFood)
-                        
-                        // Reset scanning states AFTER passing to parent
-                        cleanupScanningStates()
                     } else {
                         print("❌ No food found in analysis result")
-                        cleanupScanningStates()
+                        // Note: Don't cleanup here - parent will handle it
                     }
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
-                    cleanupScanningStates()
+                    // Note: Don't cleanup here - parent will handle it
                 }
             }
         }
@@ -366,19 +363,15 @@ struct AddFoodWithScan: View {
                     // CRITICAL: Reset isProcessingBarcode to allow future scans
                     isProcessingBarcode = false
                     
-                    // Reset scanning states
-                    cleanupScanningStates()
-                    
                     // Pass food to parent for confirmation (view already dismissed)
+                    // Note: Don't cleanup scanning states here - let parent handle it
                     onFoodScanned(createdFood)
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
                     // CRITICAL: Reset isProcessingBarcode on error too
                     isProcessingBarcode = false
-                    // Reset scanning states and dismiss on error
-                    cleanupScanningStates()
-                    dismiss()
+                    // Note: Don't cleanup scanning states here - parent will handle it
                 }
             }
         }

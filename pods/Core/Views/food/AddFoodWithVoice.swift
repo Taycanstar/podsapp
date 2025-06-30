@@ -196,17 +196,14 @@ struct AddFoodWithVoice: View {
                     foodManager.lastGeneratedFood = nil
                     
                     // Pass the food to parent (view already dismissed)
+                    // Note: Don't cleanup scanning states here - let parent handle it
                     onFoodVoiceAdded(createdFood)
-                    
-                    // Reset states after passing to parent (to keep loader showing until completion)
-                    foodManager.isGeneratingFood = false
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
-                    // Clear states on error
-                    foodManager.isGeneratingFood = false
+                    // Clear lastGeneratedFood on error
                     foodManager.lastGeneratedFood = nil
-                    // Could show an alert here if needed
+                    // Note: Don't cleanup scanning states here - let parent handle it
                 }
             }
         }

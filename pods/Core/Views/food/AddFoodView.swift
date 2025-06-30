@@ -196,9 +196,15 @@ struct AddFoodView: View {
             } message: {
                 Text(errorMessage)
             }
-            .sheet(isPresented: $showConfirmationSheet) {
+                        .sheet(isPresented: $showConfirmationSheet, onDismiss: {
+                // Clean up scanning states if sheet is dismissed without confirming
+                if scannedFoodForConfirmation != nil {
+                    cleanupScanningStates()
+                    scannedFoodForConfirmation = nil
+                }
+            }) {
                 if let food = scannedFoodForConfirmation {
-             
+              
                     ConfirmAddFoodView(food: food) { confirmedFood in
                         print("🔍 DEBUG: Food confirmed: \(confirmedFood.displayName)")
                         // Add the confirmed food to the selected foods and mark as selected
@@ -210,9 +216,12 @@ struct AddFoodView: View {
                         
                         // Clear the confirmation state
                         scannedFoodForConfirmation = nil
+                        
+                        // Clean up scanning states now that confirmation is complete
+                        cleanupScanningStates()
                     }
                 } else {
-         
+          
                     Text("Error: No food to confirm")
                 }
             }
@@ -459,6 +468,15 @@ struct AddFoodView: View {
     }
     
     // MARK: - Helper Functions
+    
+    private func cleanupScanningStates() {
+        foodManager.isScanningFood = false
+        foodManager.isGeneratingFood = false
+        foodManager.scannedImage = nil
+        foodManager.loadingMessage = ""
+        foodManager.uploadProgress = 0.0
+    }
+    
     private func searchFoods() async {
         guard !searchText.isEmpty else {
             searchResults = []
