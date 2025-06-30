@@ -125,7 +125,7 @@ struct ConfirmAddFoodView: View {
                             ProgressView()
                                 .scaleEffect(0.8)
                         } else {
-                            Text("Add to Recipe")
+                            Text("Add")
                                 .fontWeight(.semibold)
                         }
                     }
