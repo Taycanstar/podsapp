@@ -1248,6 +1248,9 @@ private extension DashboardView {
         
         // Preload weight and height logs for the current user
         preloadHealthData()
+        
+        // Refresh profile data if needed
+        onboarding.refreshProfileDataIfNeeded()
     }
     
     /// Preload health data logs so they're available when navigating to detail views

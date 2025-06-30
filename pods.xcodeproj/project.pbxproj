@@ -34,6 +34,7 @@
 		363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */; };
 		363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */; };
 		363068DB2E1098B800F2D4EC /* ConfirmAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */; };
+		363068DD2E132EE400F2D4EC /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DC2E132EE400F2D4EC /* MyProfileView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -283,6 +284,7 @@
 		363068D62E1078F900F2D4EC /* AddFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFoodWithScan.swift; sourceTree = "<group>"; };
 		363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAddFoodView.swift; sourceTree = "<group>"; };
 		363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmAddFoodView.swift; sourceTree = "<group>"; };
+		363068DC2E132EE400F2D4EC /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -706,6 +708,7 @@
 				363201362C97812B00BC1815 /* MyTeamMembersView.swift */,
 				36ED35D12DDBD4EC00D174FB /* ManageGoalsView.swift */,
 				36ED35D32DDBD5DC00D174FB /* UpdateWeight.swift */,
+				363068DC2E132EE400F2D4EC /* MyProfileView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1314,6 +1317,7 @@
 				3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
+				363068DD2E132EE400F2D4EC /* MyProfileView.swift in Sources */,
 				36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */,
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,

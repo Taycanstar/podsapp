@@ -46,7 +46,7 @@ struct CustomTabBar: View {
 
                 //    Spacer() 
 
-                    TabBarButton(iconName: "ellipsis.circle", label: "More", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
+                    TabBarButton(iconName: "person", label: "Profile", isSelected: selectedTab == 4, iconSize: 16) { selectedTab = 4 }
                         .foregroundColor(selectedTab == 4 ? selectedIconColor : .gray)
 
                 }

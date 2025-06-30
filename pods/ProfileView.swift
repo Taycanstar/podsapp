@@ -15,7 +15,6 @@ struct ProfileView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingMail = false
     @Binding var isAuthenticated: Bool
-    @Binding var showTourView: Bool
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
     var body: some View {

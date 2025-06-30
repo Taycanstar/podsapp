@@ -1128,6 +1128,60 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Profile Data
+    
+    /// Fetch comprehensive profile data for a user
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - completion: Result callback with profile data or error
+    func fetchProfileData(
+        userEmail: String,
+        completion: @escaping (Result<ProfileDataResponse, Error>) -> Void
+    ) {
+        var components = URLComponents(string: "\(baseUrl)/get-profile-data/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail)
+        ]
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        print("📊 Fetching profile data for user: \(userEmail)")
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
+                return
+            }
+            do {
+                let decoder = JSONDecoder()
+                // Use snake_case conversion since we have explicit CodingKeys
+                
+                let response = try decoder.decode(ProfileDataResponse.self, from: data)
+                DispatchQueue.main.async { 
+                    print("✅ Successfully fetched profile data for: \(response.username)")
+                    completion(.success(response)) 
+                }
+            } catch {
+                print("❌ Error decoding ProfileDataResponse: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
     // MARK: - Nutrition Goals
 
     /// Update a user's nutrition goals

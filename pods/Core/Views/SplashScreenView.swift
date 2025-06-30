@@ -100,6 +100,9 @@ struct SplashScreenView: View {
         // Preload health data logs for detail views (background task)
         preloadHealthDataLogs(userEmail: userEmail)
         
+        // Fetch profile data for the user (background task)
+        onboarding.refreshProfileDataIfNeeded()
+        
         print("🚀 SplashScreenView - Data preload initiated")
     }
     

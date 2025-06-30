@@ -104,7 +104,15 @@ class OnboardingViewModel: ObservableObject {
     @Published var serverOnboardingCompleted: Bool = false
     
     // Add this property with the others
-    @Published var isShowingOnboarding: Bool = false
+    @Published var isShowingOnboarding = false
+    
+    // MARK: - Profile Data
+    @Published var profileData: ProfileDataResponse?
+    @Published var isLoadingProfile = false
+    @Published var profileError: String?
+    
+    // MARK: - Server Communication
+    private let networkManager = NetworkManagerTwo.shared
     
     // Computed property to get current progress
     var progress: CGFloat {
@@ -304,5 +312,81 @@ class OnboardingViewModel: ObservableObject {
     func updateActiveWorkspace(workspaceId: Int) {
         self.activeWorkspaceId = workspaceId
         UserDefaults.standard.set(workspaceId, forKey: "activeWorkspaceId")
+    }
+    
+    // MARK: - Profile Data Methods
+    
+    /// Fetch comprehensive profile data for the current user
+    func fetchProfileData() {
+        guard !email.isEmpty else {
+            profileError = "No user email available"
+            return
+        }
+        
+        isLoadingProfile = true
+        profileError = nil
+        
+        networkManager.fetchProfileData(userEmail: email) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoadingProfile = false
+                
+                switch result {
+                case .success(let data):
+                    self?.profileData = data
+                    self?.updateLocalUserData(from: data)
+                    // Mark the fetch timestamp
+                    UserDefaults.standard.set(Date(), forKey: "lastProfileDataFetch")
+                case .failure(let error):
+                    self?.profileError = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    /// Update local user data from profile response
+    private func updateLocalUserData(from profileData: ProfileDataResponse) {
+        // Update OnboardingViewModel properties
+        if username != profileData.username {
+            username = profileData.username
+            UserDefaults.standard.set(profileData.username, forKey: "username")
+        }
+        
+        if profileInitial != profileData.profileInitial {
+            profileInitial = profileData.profileInitial
+            UserDefaults.standard.set(profileData.profileInitial, forKey: "profileInitial")
+        }
+        
+        if profileColor != profileData.profileColor {
+            profileColor = profileData.profileColor
+            UserDefaults.standard.set(profileData.profileColor, forKey: "profileColor")
+        }
+        
+        // Save additional profile data to UserDefaults
+        if let weightLbs = profileData.currentWeightLbs {
+            UserDefaults.standard.set(weightLbs, forKey: "currentWeightLbs")
+        }
+        
+        UserDefaults.standard.set(profileData.calorieGoal, forKey: "calorieGoal")
+        UserDefaults.standard.set(profileData.proteinGoal, forKey: "proteinGoal")
+        UserDefaults.standard.set(profileData.carbsGoal, forKey: "carbsGoal")
+        UserDefaults.standard.set(profileData.fatGoal, forKey: "fatGoal")
+        
+        UserDefaults.standard.synchronize()
+    }
+    
+    /// Refresh profile data if it's stale (older than 5 minutes)
+    func refreshProfileDataIfNeeded() {
+        // Only fetch if we don't have data or if it's been a while
+        if profileData == nil || isProfileDataStale() {
+            fetchProfileData()
+        }
+    }
+    
+    private func isProfileDataStale() -> Bool {
+        // Check if profile data was fetched more than 5 minutes ago
+        if let lastFetch = UserDefaults.standard.object(forKey: "lastProfileDataFetch") as? Date {
+            return Date().timeIntervalSince(lastFetch) > 300 // 5 minutes
+        }
+        return true
     }
 }

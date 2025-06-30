@@ -129,3 +129,56 @@ enum HealthTimeframe: String, CaseIterable {
     }
 }
 
+// MARK: - Profile Data Models
+
+struct CalorieTrendDay: Codable {
+    let date: String
+    let calories: Double
+}
+
+struct ProfileDataResponse: Codable {
+    let email: String
+    let username: String
+    let profilePhoto: String  // URL or "pfp" for asset
+    let profileInitial: String
+    let profileColor: String
+    let heightCm: Double?
+    let heightFeet: Int?
+    let heightInches: Int?
+    let currentWeightKg: Double?
+    let currentWeightLbs: Double?
+    let weightDate: String?
+    let calorieTrend3Weeks: [CalorieTrendDay]
+    let averageDailyCalories: Double
+    let averageCaloriesActiveDays: Double
+    let daysLogged: Int
+    let totalDays: Int
+    let calorieGoal: Double
+    let proteinGoal: Double
+    let carbsGoal: Double
+    let fatGoal: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case email
+        case username
+        case profilePhoto = "profile_photo"
+        case profileInitial = "profile_initial"
+        case profileColor = "profile_color"
+        case heightCm = "height_cm"
+        case heightFeet = "height_feet"
+        case heightInches = "height_inches"
+        case currentWeightKg = "current_weight_kg"
+        case currentWeightLbs = "current_weight_lbs"
+        case weightDate = "weight_date"
+        case calorieTrend3Weeks = "calorie_trend_3_weeks"
+        case averageDailyCalories = "average_daily_calories"
+        case averageCaloriesActiveDays = "average_calories_active_days"
+        case daysLogged = "days_logged"
+        case totalDays = "total_days"
+        case calorieGoal = "calorie_goal"
+        case proteinGoal = "protein_goal"
+        case carbsGoal = "carbs_goal"
+        case fatGoal = "fat_goal"
+    }
+}
+

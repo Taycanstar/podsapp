@@ -91,7 +91,8 @@ struct ContentView: View {
                            case 3:
                                FriendsView()
                             case 4:
-                                ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
+                                // ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
+                                MyProfileView(isAuthenticated: $isAuthenticated)
                             default:
                                 EmptyView()
                             }
