@@ -147,154 +147,180 @@ struct ConfirmAddFoodView: View {
     // MARK: - Subviews
     
     private var basicInfoCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Food Information")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
+        ZStack(alignment: .top) {
+            // Background with rounded corners
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color("iosnp"))
             
-            VStack(spacing: 12) {
+            // Content
+            VStack(spacing: 0) {
                 // Food name
-                HStack {
-                    Text("Food Name")
-                        .foregroundColor(.primary)
-                        .frame(width: 120, alignment: .leading)
-                    
-                    TextField("Enter food name", text: $title)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
+                TextField("Enter food name", text: $title)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 
-                // Brand
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Brand (only show if not empty)
                 if !brand.isEmpty {
                     HStack {
                         Text("Brand")
                             .foregroundColor(.primary)
-                            .frame(width: 120, alignment: .leading)
+                        
+                        Spacer()
                         
                         TextField("Brand", text: $brand)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 200)
                     }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                    
+                    // Divider
+                    Divider()
+                        .padding(.leading, 16)
                 }
                 
-                // Serving size
+                // Serving Size
                 HStack {
                     Text("Serving Size")
                         .foregroundColor(.primary)
-                        .frame(width: 120, alignment: .leading)
-                    
-                    TextField("e.g., 1 cup", text: $servingSize)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                
-                // Number of servings
-                HStack {
-                    Text("Number of Servings")
-                        .foregroundColor(.primary)
-                        .frame(width: 120, alignment: .leading)
                     
                     Spacer()
                     
-                    TextField("Servings", value: $numberOfServings, format: .number)
-                        .keyboardType(.decimalPad)
+                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
+                        .keyboardType(.asciiCapable)
+                        .textFieldStyle(.plain)
                         .multilineTextAlignment(.trailing)
-                        .frame(width: 80)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(maxWidth: 200)
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 16)
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Number of Servings
+                servingsRowView
             }
         }
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
         .padding(.horizontal)
     }
     
+    private var servingsRowView: some View {
+        HStack {
+            Text("Number of Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .onChange(of: numberOfServings) { _ in
+                    updateNutritionValues()
+                }
+        }
+        .padding()
+    }
+    
     private var nutritionFactsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Nutrition Facts")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.primary)
+                .padding(.horizontal)
             
-            VStack(spacing: 0) {
-                // Calories
-                HStack {
-                    Text("Calories")
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+            ZStack(alignment: .top) {
+                // Background with rounded corners
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color("iosnp"))
+                
+                // Content
+                VStack(spacing: 0) {
+                    // Calories
+                    HStack {
+                        Text("Calories")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $calories)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                     
-                    Spacer()
+                    // Divider
+                    Divider()
+                        .padding(.leading, 16)
                     
-                    TextField("0", text: $calories)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .frame(width: 80)
+                    // Protein
+                    HStack {
+                        Text("Protein (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $protein)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                    
+                    // Divider
+                    Divider()
+                        .padding(.leading, 16)
+                    
+                    // Carbs
+                    HStack {
+                        Text("Carbs (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $carbs)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                    
+                    // Divider
+                    Divider()
+                        .padding(.leading, 16)
+                    
+                    // Fat
+                    HStack {
+                        Text("Total Fat (g)")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $fat)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
-                
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Protein
-                HStack {
-                    Text("Protein (g)")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    TextField("0", text: $protein)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .frame(width: 80)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
-                
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Carbs
-                HStack {
-                    Text("Total Carbs (g)")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    TextField("0", text: $carbs)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .frame(width: 80)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
-                
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Fat
-                HStack {
-                    Text("Total Fat (g)")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    TextField("0", text: $fat)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .frame(width: 80)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 16)
             }
+            .padding(.horizontal)
         }
-        .padding()
-        .background(Color("iosnp"))
-        .cornerRadius(12)
-        .padding(.horizontal)
     }
     
     // MARK: - Helper Methods
