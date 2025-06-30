@@ -8,13 +8,19 @@
 import SwiftUI
 import PhotosUI
 
+enum ScanType {
+    case barcode
+    case photo
+    case gallery
+}
+
 struct AddFoodWithScan: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
     
-    // Completion closure to pass scanned food back to parent
-    var onFoodScanned: (Food) -> Void
+    // Completion closure to pass scanned food and scan type back to parent
+    var onFoodScanned: (Food, ScanType) -> Void
     
     @State private var selectedMode: FoodScannerView.ScanMode = .food
     @State private var showPhotosPicker = false
@@ -250,7 +256,7 @@ struct AddFoodWithScan: View {
                             self.isGalleryImageLoaded = true
                         // Dismiss immediately and start analysis
                             self.dismiss()
-                            self.analyzeImageForRecipe(image)
+                            self.analyzeImageForGallery(image)
                         }
                     }
                 }
@@ -319,7 +325,7 @@ struct AddFoodWithScan: View {
                         
                         // Pass the food to parent (view already dismissed)
                         // Note: Don't cleanup scanning states here - let parent handle it
-                        onFoodScanned(createdFood)
+                        onFoodScanned(createdFood, .photo)
                     } else {
                         print("❌ No food found in analysis result")
                         // Note: Don't cleanup here - parent will handle it
@@ -327,6 +333,51 @@ struct AddFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
+                    // Note: Don't cleanup here - parent will handle it
+                }
+            }
+        }
+    }
+    
+    private func analyzeImageForGallery(_ image: UIImage) {
+        // Set scanning state to show loader card
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.scannedImage = image
+        foodManager.loadingMessage = "Analyzing image from gallery..."
+        foodManager.uploadProgress = 0.1
+        
+        // Clear lastGeneratedFood BEFORE calling analyzeFoodImage to prevent triggering ConfirmFoodView sheet
+        foodManager.lastGeneratedFood = nil
+        
+        // Use FoodManager to analyze the image (same as FoodScannerView)
+        foodManager.analyzeFoodImage(
+            image: image,
+            userEmail: viewModel.email,
+            mealType: "Lunch"
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let combinedLog):
+                    print("✅ Successfully analyzed food from gallery image for recipe")
+                    
+                    // Extract the food from the combined log
+                    if let food = combinedLog.food {
+                        let createdFood = food.asFood
+                        
+                        // Clear lastGeneratedFood to prevent triggering other sheets
+                        foodManager.lastGeneratedFood = nil
+                        
+                        // Pass the food to parent (view already dismissed)
+                        // Note: Don't cleanup scanning states here - let parent handle it
+                        onFoodScanned(createdFood, .gallery)
+                    } else {
+                        print("❌ No food found in gallery analysis result")
+                        // Note: Don't cleanup here - parent will handle it
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to analyze food from gallery image: \(error)")
                     // Note: Don't cleanup here - parent will handle it
                 }
             }
@@ -366,7 +417,7 @@ struct AddFoodWithScan: View {
                     
                     // Pass food to parent for confirmation (view already dismissed)
                     // Note: Don't cleanup scanning states here - let parent handle it
-                    onFoodScanned(createdFood)
+                    onFoodScanned(createdFood, .barcode)
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
@@ -392,7 +443,7 @@ struct AddFoodWithScan: View {
 }
 
 #Preview {
-    AddFoodWithScan { food in
-        print("Food scanned: \(food.displayName)")
+    AddFoodWithScan { food, scanType in
+        print("Food scanned: \(food.displayName), scanType: \(scanType)")
     }
 }

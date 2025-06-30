@@ -33,6 +33,9 @@ struct ConfirmAddFoodView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
     
+    // Focus state for auto-focusing the servings field
+    @FocusState private var isServingsFocused: Bool
+    
     // Base nutrition values (per single serving) for dynamic calculation
     @State private var baseCalories: Double = 0
     @State private var baseProtein: Double = 0
@@ -142,6 +145,12 @@ struct ConfirmAddFoodView: View {
         .onChange(of: numberOfServings) { _, _ in
             updateNutritionValues()
         }
+        .onAppear {
+            // Auto-focus the servings field when the view appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isServingsFocused = true
+            }
+        }
     }
     
     // MARK: - Subviews
@@ -221,6 +230,7 @@ struct ConfirmAddFoodView: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
+                .focused($isServingsFocused)
                 .onChange(of: numberOfServings) { _ in
                     updateNutritionValues()
                 }
