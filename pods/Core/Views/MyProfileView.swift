@@ -92,6 +92,23 @@ struct MyProfileView: View {
             onboarding.refreshProfileDataIfNeeded()
             // Fetch weight data using the same method as DashboardView
             fetchWeightData()
+            
+            // Debug profile data
+            if let profileData = onboarding.profileData {
+                print("🏥 ===== PROFILE DATA DEBUG =====")
+                print("🏥 heightCm: \(profileData.heightCm?.description ?? "nil")")
+                print("🏥 heightFeet: \(profileData.heightFeet?.description ?? "nil")")
+                print("🏥 heightInches: \(profileData.heightInches?.description ?? "nil")")
+                print("🏥 currentWeightKg: \(profileData.currentWeightKg?.description ?? "nil")")
+                print("🏥 currentWeightLbs: \(profileData.currentWeightLbs?.description ?? "nil")")
+                print("🏥 weightDate: \(profileData.weightDate ?? "nil")")
+                print("🏥 email: \(profileData.email)")
+                print("🏥 username: \(profileData.username)")
+                print("🏥 =============================")
+            } else {
+                print("🏥 ❌ No profile data available - onboarding.profileData is nil")
+                print("🏥 ❌ This means the API call to get_profile_data failed or returned no data")
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh weight data when a new weight is logged
@@ -299,6 +316,72 @@ struct MyProfileView: View {
         .cornerRadius(12)
     }
     
+    private func bmiGaugeView(profileData: ProfileDataResponse) -> some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Body Mass Index")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+
+            ArcOne()
+            
+            // // Calculate BMI using same data source as DashboardView
+            // let bmi = calculateBMI(weightKg: vm.weight > 0 ? vm.weight : nil, heightCm: vm.height > 0 ? vm.height : nil)
+            
+            // if let bmiValue = bmi {
+            //     VStack(spacing: 20) {
+            //         BMIGaugeView(bmi: bmiValue)
+            //     }
+            //     .frame(minHeight: 180) // Give it proper space
+            // } else {
+            //     VStack(spacing: 16) {
+            //         Image(systemName: "figure.stand")
+            //             .font(.system(size: 40))
+            //             .foregroundColor(.purple.opacity(0.6))
+                    
+            //         Text("Add your height to calculate BMI")
+            //             .font(.subheadline)
+            //             .foregroundColor(.secondary)
+            //             .multilineTextAlignment(.center)
+                    
+            //         Text("Complete your profile to see your BMI gauge")
+            //             .font(.caption)
+            //             .foregroundColor(.secondary)
+            //             .multilineTextAlignment(.center)
+            //     }
+            //     .frame(height: 150)
+            // }
+        }
+        .padding()
+        .background(Color("iosfit"))
+        .cornerRadius(12)
+    }
+    
+    private func calculateBMI(weightKg: Double?, heightCm: Double?) -> Double? {
+        print("🏥 calculateBMI called with weightKg: \(weightKg?.description ?? "nil"), heightCm: \(heightCm?.description ?? "nil")")
+        
+        // Debug: Check what we have
+        if weightKg == nil && heightCm == nil {
+            print("🏥 Both weight and height are missing from profile data")
+        } else if weightKg == nil {
+            print("🏥 Weight is missing from profile data (but height exists: \(heightCm!)cm)")
+        } else if heightCm == nil {
+            print("🏥 Height is missing from profile data (but weight exists: \(weightKg!)kg)")
+        }
+        
+        guard let weight = weightKg, let height = heightCm, weight > 0, height > 0 else {
+            print("🏥 calculateBMI returning nil - missing or invalid data")
+            return nil
+        }
+        
+        let heightInMeters = height / 100.0
+        let bmi = weight / (heightInMeters * heightInMeters)
+        print("🏥 calculateBMI returning BMI: \(bmi)")
+        return bmi
+    }
+    
     private func nutritionGoalsView(profileData: ProfileDataResponse) -> some View {
         VStack(spacing: 16) {
             HStack {
@@ -347,6 +430,11 @@ struct MyProfileView: View {
                 
                 // Weight card (matching the user's example design)
                 weightCardView
+                
+                // BMI gauge
+                if let profileData = onboarding.profileData {
+                    bmiGaugeView(profileData: profileData)
+                }
                 
                 // 3-week calorie trend
                 if let profileData = onboarding.profileData {
@@ -669,6 +757,171 @@ struct MyProfileView: View {
             }
         }
     }
+}
+
+
+
+// MARK: - BMI Gauge (upright semicircle, self‑centering)
+
+struct ArcOne: View {
+    var body: some View {
+        ZStack {
+            // The semicircle arc with gradient
+            SemicircleArc()
+                .stroke(
+                    LinearGradient(
+                        stops: [
+                            Gradient.Stop(color: Color.blue, location: 0.00),
+                            Gradient.Stop(color: Color.blue, location: 0.25),
+                            Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.35),
+                            Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.65),
+                            Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 0.75),
+                            Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 1.00),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    lineWidth: 8
+                )
+            
+            // BMI value in center
+            VStack(spacing: 4) {
+                Text("BMI")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("23.2")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(.green)
+            }
+            .offset(y: -45) // Adjusted for larger arc
+        }
+        .frame(width: 320, height: 180)
+        .padding(.vertical, 20)
+    }
+}
+
+// Custom shape for semicircle arc
+struct SemicircleArc: Shape {
+    func path(in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.midX, y: rect.maxY)
+        let radius = min(rect.width, rect.height) / 2 - 4  // Adjusted for thinner stroke
+        
+        var path = Path()
+        path.addArc(
+            center: center,
+            radius: radius,
+            startAngle: .degrees(180), // Start from left (180°)
+            endAngle: .degrees(0),     // End at right (0°)
+            clockwise: false           // Draw counter-clockwise for top semicircle
+        )
+        return path
+    }
+}
+
+struct BMIGaugeView: View {
+    let bmi: Double
+    private let lineWidth: CGFloat = 14
+    
+    private var bmiColor: Color {
+        if bmi < 18.5 { return .blue }
+        if bmi < 25.0 { return .green }
+        return .red
+    }
+
+    var body: some View {
+        ZStack {
+            // Left 45° blue (underweight)
+            GaugeSlice(colour: .blue,
+                       startDeg: 180,
+                       endDeg: 135,
+                       lineWidth: lineWidth)
+            
+            // Central 90° green (normal)
+            GaugeSlice(colour: .green,
+                       startDeg: 135,
+                       endDeg: 45,
+                       lineWidth: lineWidth)
+
+            // Right 45° red (overweight)
+            GaugeSlice(colour: .red,
+                       startDeg: 45,
+                       endDeg: 0,
+                       lineWidth: lineWidth)
+            
+            // BMI value in center
+            VStack(spacing: 4) {
+                Text("BMI")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(String(format: "%.1f", bmi))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(bmiColor)
+            }
+            .offset(y: -20) // Move up to sit nicely in the arc
+            
+            // Category labels
+            GeometryReader { geometry in
+                let radius = min(geometry.size.width, geometry.size.height) / 2 - 35
+                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
+                
+                // Underweight label (left)
+                Text("Underweight")
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                    .position(x: center.x - radius * 0.7, y: center.y - radius * 0.7)
+                
+                // Normal label (top)
+                Text("Normal")
+                    .font(.caption2)
+                    .foregroundColor(.green)
+                    .position(x: center.x, y: center.y - radius * 0.9)
+                
+                // Overweight label (right)
+                Text("Overweight")
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                    .position(x: center.x + radius * 0.7, y: center.y - radius * 0.7)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 140)              // Give it proper height
+        .padding(.vertical, 20)          // Add padding for proper spacing
+    }
+}
+
+/// One coloured slice of the top semicircle.
+private struct GaugeSlice: View {
+    var colour: Color
+    var startDeg: Double  // e.g. 180
+    var endDeg:   Double  // e.g. 135
+    var lineWidth: CGFloat
+
+    var body: some View {
+        GaugeArc(startDeg: startDeg, endDeg: endDeg)
+            .stroke(colour,
+                    style: StrokeStyle(lineWidth: lineWidth,
+                                       lineCap: .butt))
+    }
+}
+
+ /// The arc path centred at the *bottom* of the view so only the top half shows.
+ private struct GaugeArc: Shape {
+     var startDeg: Double
+     var endDeg:   Double
+
+     func path(in rect: CGRect) -> Path {
+         let centre = CGPoint(x: rect.midX, y: rect.maxY)
+         let radius = min(rect.width, rect.height) / 2 - 10  // keep stroke inside
+         var p = Path()
+         p.addArc(center: centre,
+                  radius: radius,
+                  startAngle: .degrees(startDeg),
+                  endAngle: .degrees(endDeg),
+                  clockwise: false)  // Changed to counter-clockwise for proper arc direction
+         return p
+     }
 }
 
 // MARK: - Extensions
