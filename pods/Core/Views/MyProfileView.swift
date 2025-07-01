@@ -378,11 +378,16 @@ struct MyProfileView: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // Last updated or prompt
+                // Date with chevron or prompt
                 if let weightDate = weightDate {
-                    Text("Last updated: \(formatDateString(weightDate))")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Text(formatWeightLogDate(weightDate))
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
                 } else if currentWeightLbs == nil && !isLoadingWeight {
                     Text("Add your first weight entry")
                         .font(.system(size: 12))
@@ -412,8 +417,19 @@ struct MyProfileView: View {
     }
     
     private var weightTrendChart: some View {
-        Chart {
-            ForEach(Array(recentWeightLogs.enumerated().reversed()), id: \.offset) { index, log in
+        let chartData = Array(recentWeightLogs.enumerated().reversed())
+        let weights = chartData.map { $0.1.weightKg * 2.20462 }
+        
+        // Calculate a better Y-axis range to show variation
+        let minWeight = weights.min() ?? 0
+        let maxWeight = weights.max() ?? 0
+        let range = maxWeight - minWeight
+        let padding = max(range * 0.3, 2.0) // At least 2 lbs padding
+        let yAxisMin = minWeight - padding
+        let yAxisMax = maxWeight + padding
+        
+        return Chart {
+            ForEach(chartData, id: \.offset) { index, log in
                 LineMark(
                     x: .value("Day", index),
                     y: .value("Weight", log.weightKg * 2.20462)
@@ -432,12 +448,48 @@ struct MyProfileView: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
+        .chartYScale(domain: yAxisMin...yAxisMax) // Custom scale to show variation
         .chartLegend(.hidden)
         .frame(width: 80, height: 40)
         .background(Color.clear)
+        .onAppear {
+            print("🏋️ Chart Data Debug:")
+            print("  - Chart data count: \(chartData.count)")
+            print("  - Weight range: \(minWeight) to \(maxWeight) lbs")
+            print("  - Y-axis scale: \(yAxisMin) to \(yAxisMax)")
+            for (index, log) in chartData {
+                let weightLbs = log.weightKg * 2.20462
+                print("  - Chart point \(index): \(weightLbs)lbs from \(log.dateLogged)")
+            }
+        }
     }
     
     // MARK: - Helper Functions
+    
+    private func formatWeightLogDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: dateString) else {
+            return dateString
+        }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            // Today: show time like "4:19 AM"
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "h:mm a"
+            return timeFormatter.string(from: date)
+        } else if calendar.isDateInYesterday(date) {
+            // Yesterday: show "Yesterday"
+            return "Yesterday"
+        } else {
+            // Other dates: show "Jun 4" format
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM d"
+            return dateFormatter.string(from: date)
+        }
+    }
     
     private func formatDateString(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
@@ -451,17 +503,19 @@ struct MyProfileView: View {
     }
     
     private func fetchWeightData() {
-        // First try to get weight from vm (DayLogsViewModel) like DashboardView does
-        if vm.weight > 0 {
-            currentWeightLbs = vm.weight * 2.20462
-            print("🏋️ Got weight from DayLogsViewModel: \(vm.weight)kg = \(currentWeightLbs!)lbs")
-            return
-        }
-        
-        // If vm doesn't have weight, fetch from API like WeightDataView does
+        // Always fetch from API to get recent logs for the chart, even if vm has weight
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             print("❌ No user email found for weight fetch")
             return
+        }
+        
+        print("🏋️ Fetching weight data for email: \(email)")
+        print("🏋️ vm.weight value: \(vm.weight)")
+        
+        // If vm has weight, use it immediately but still fetch logs for chart
+        if vm.weight > 0 {
+            currentWeightLbs = vm.weight * 2.20462
+            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg = \(currentWeightLbs!)lbs")
         }
         
         isLoadingWeight = true
@@ -472,6 +526,14 @@ struct MyProfileView: View {
                 switch result {
                 case .success(let response):
                     self.recentWeightLogs = response.logs
+                    
+                    print("🏋️ Weight API Response:")
+                    print("  - Total logs received: \(response.logs.count)")
+                    print("  - Show chart condition (count >= 2): \(response.logs.count >= 2)")
+                    
+                    for (index, log) in response.logs.enumerated() {
+                        print("  - Log \(index + 1): \(log.weightKg)kg (\(log.weightKg * 2.20462)lbs) on \(log.dateLogged)")
+                    }
                     
                     if let mostRecentLog = response.logs.first {
                         self.currentWeightLbs = mostRecentLog.weightKg * 2.20462
