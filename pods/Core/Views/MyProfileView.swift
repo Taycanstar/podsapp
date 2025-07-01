@@ -795,7 +795,41 @@ struct ArcOne: View {
                     .foregroundColor(.green)
 
             }
-            .offset(y:  85) // Positioned in the center of the arc
+            .offset(y: 85) // Positioned in the center of the arc
+            
+            // Arc labels positioned like bent horizontal text
+            GeometryReader { geometry in
+                let radius = min(geometry.size.width, geometry.size.height) / 2 + 25
+                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
+                
+                // Normal label (straight at top - no bending needed)
+                let normalX = center.x
+                let normalY = center.y - radius
+                Text("Normal")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.green)
+                    .position(x: normalX, y: normalY)
+                
+                // Underweight label (bent to follow left curve)
+                let underweightAngle = 135.0 * .pi / 180
+                let underweightX = center.x + cos(underweightAngle) * radius
+                let underweightY = center.y - sin(underweightAngle) * radius
+                Text("Underweight")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.blue)
+                    .rotationEffect(.degrees(-45)) // Gentle rotation to follow curve
+                    .position(x: underweightX, y: underweightY)
+                
+                // Overweight label (bent to follow right curve)
+                let overweightAngle = 45.0 * .pi / 180
+                let overweightX = center.x + cos(overweightAngle) * radius
+                let overweightY = center.y - sin(overweightAngle) * radius
+                Text("Overweight")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.red)
+                    .rotationEffect(.degrees(45)) // Gentle rotation to follow curve
+                    .position(x: overweightX, y: overweightY)
+            }
         }
         .frame(width: 365, height: 215)
         .padding(.vertical, 20)
@@ -817,6 +851,37 @@ struct SemicircleArc: Shape {
             clockwise: false           // Draw counter-clockwise for top semicircle
         )
         return path
+    }
+}
+
+// Custom view for text that follows a curved path
+struct CurvedText: View {
+    let text: String
+    let radius: CGFloat
+    let angle: Double // Angle in degrees for center position
+    let center: CGPoint
+    
+    var body: some View {
+        ZStack {
+            ForEach(Array(text.enumerated()), id: \.offset) { index, character in
+                let charAngle = calculateCharacterAngle(for: index)
+                let x = center.x + cos(charAngle * .pi / 180) * radius
+                let y = center.y - sin(charAngle * .pi / 180) * radius
+                
+                Text(String(character))
+                    .font(.subheadline.weight(.medium))
+                    .rotationEffect(.degrees((charAngle - 90) * 0.3)) // Much less rotation for readability
+                    .position(x: x, y: y)
+            }
+        }
+    }
+    
+    private func calculateCharacterAngle(for index: Int) -> Double {
+        let textLength = Double(text.count)
+        let characterSpacing = 3.5 // Fine-tuned spacing
+        let totalSpread = characterSpacing * (textLength - 1)
+        let startAngle = angle + totalSpread / 2
+        return startAngle - Double(index) * characterSpacing
     }
 }
 
