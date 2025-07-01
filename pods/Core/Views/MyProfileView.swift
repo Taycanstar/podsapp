@@ -22,7 +22,6 @@ struct MyProfileView: View {
     
     // Sheet states
     @State private var showEditWeightSheet = false
-    @State private var showWeightDataView = false
     
     var body: some View {
         NavigationView {
@@ -81,20 +80,26 @@ struct MyProfileView: View {
         }
         .sheet(isPresented: $showEditWeightSheet) {
             EditWeightView(onWeightSaved: {
-                // Refresh weight data after saving
-                fetchWeightData()
+                // Refresh weight data after saving with a small delay
+                print("🏋️ Weight saved callback received")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    fetchWeightData()
+                }
             })
-        }
-        .sheet(isPresented: $showWeightDataView) {
-            NavigationView {
-                WeightDataView(initialAllLogs: recentWeightLogs)
-            }
         }
         .onAppear {
             // Refresh profile data if needed (will check staleness automatically)
             onboarding.refreshProfileDataIfNeeded()
             // Fetch weight data using the same method as DashboardView
             fetchWeightData()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
+            // Refresh weight data when a new weight is logged
+            print("🏋️ Received WeightLoggedNotification - refreshing weight data")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Small delay to allow server to update
+                fetchWeightData()
+            }
         }
     }
     
@@ -360,6 +365,13 @@ struct MyProfileView: View {
     }
     
     private var weightCardView: some View {
+        NavigationLink(destination: WeightDataView()) {
+            weightCardContent
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var weightCardContent: some View {
         VStack(spacing: 12) {
             // Top row: Weight label on left, date + chevron on right
             HStack {
@@ -440,10 +452,6 @@ struct MyProfileView: View {
         .padding()
         .background(Color("iosfit"))
         .cornerRadius(12)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            showWeightDataView = true
-        }
         .onAppear {
             // Debug: Print weight data
             print("🏋️ Weight Debug (Local State):")
@@ -466,9 +474,15 @@ struct MyProfileView: View {
         let yAxisMin = minWeight - padding
         let yAxisMax = maxWeight + padding
         
+        // Calculate X-axis domain dynamically based on actual data points
+        let spacing: Double = 0.8  // Good balance - visible lines but compact chart
+        let maxXValue = Double(chartData.count - 1) * spacing
+        let xAxisMin: Double = -0.5  // Small negative padding on left
+        let xAxisMax: Double = maxXValue + 0.5  // Small padding on right
+        
         return Chart {
             ForEach(chartData, id: \.offset) { index, log in
-                let xValue = Double(index) * 1.5  // Increase spacing between points
+                let xValue = Double(index) * spacing  // Use consistent spacing
                 
                 LineMark(
                     x: .value("Day", xValue),
@@ -498,15 +512,17 @@ struct MyProfileView: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
+        .chartXScale(domain: xAxisMin...xAxisMax) // Dynamic domain that fits all points perfectly
         .chartYScale(domain: yAxisMin...yAxisMax) // Custom scale to show variation
         .chartLegend(.hidden)
-        .frame(width: 80, height: 40)
+        .frame(width: 100, height: 40) // Proper size for good line visibility
         .background(Color.clear)
         .onAppear {
             print("🏋️ Chart Data Debug:")
             print("  - Chart data count: \(chartData.count)")
             print("  - Weight range: \(minWeight) to \(maxWeight) lbs")
             print("  - Y-axis scale: \(yAxisMin) to \(yAxisMax)")
+            print("  - X-axis scale: \(xAxisMin) to \(xAxisMax)")
             for (index, log) in chartData {
                 let weightLbs = log.weightKg * 2.20462
                 print("  - Chart point \(index): \(weightLbs)lbs from \(log.dateLogged)")
@@ -597,10 +613,13 @@ struct MyProfileView: View {
         print("🏋️ Fetching weight data for email: \(email)")
         print("🏋️ vm.weight value: \(vm.weight)")
         
+        // Store vm.weight as the preferred source of truth
+        let vmWeightLbs = vm.weight > 0 ? vm.weight * 2.20462 : nil
+        
         // If vm has weight, use it immediately but still fetch logs for chart
-        if vm.weight > 0 {
-            currentWeightLbs = vm.weight * 2.20462
-            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg = \(currentWeightLbs!)lbs")
+        if let vmWeight = vmWeightLbs {
+            currentWeightLbs = vmWeight
+            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg = \(vmWeight)lbs")
         }
         
         isLoadingWeight = true
@@ -621,18 +640,30 @@ struct MyProfileView: View {
                     }
                     
                     if let mostRecentLog = response.logs.first {
-                        self.currentWeightLbs = mostRecentLog.weightKg * 2.20462
+                        let apiWeightLbs = mostRecentLog.weightKg * 2.20462
                         self.weightDate = mostRecentLog.dateLogged
-                        print("🏋️ Got weight from API: \(mostRecentLog.weightKg)kg = \(self.currentWeightLbs!)lbs with \(response.logs.count) recent logs")
+                        
+                        // Only update currentWeightLbs if vm.weight doesn't exist or API has newer data
+                        if vmWeightLbs == nil {
+                            self.currentWeightLbs = apiWeightLbs
+                            print("🏋️ Got weight from API (no vm.weight): \(mostRecentLog.weightKg)kg = \(apiWeightLbs)lbs")
+                        } else {
+                            // Keep vm.weight as it's likely more recent (just saved)
+                            print("🏋️ Keeping vm.weight (\(vmWeightLbs!)lbs) over API weight (\(apiWeightLbs)lbs)")
+                        }
                     } else {
                         print("🏋️ No weight logs found")
-                        self.currentWeightLbs = nil
+                        if vmWeightLbs == nil {
+                            self.currentWeightLbs = nil
+                        }
                         self.weightDate = nil
                     }
                 case .failure(let error):
                     print("❌ Error fetching weight logs: \(error)")
-                    self.currentWeightLbs = nil
-                    self.weightDate = nil
+                    if vmWeightLbs == nil {
+                        self.currentWeightLbs = nil
+                        self.weightDate = nil
+                    }
                     self.recentWeightLogs = []
                 }
             }
