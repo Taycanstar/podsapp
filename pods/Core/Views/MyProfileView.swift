@@ -12,6 +12,13 @@ struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
     @State private var showProfileSettings = false
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @EnvironmentObject var vm: DayLogsViewModel  // Add this to access current weight
+    
+    // Weight data state
+    @State private var currentWeightLbs: Double? = nil
+    @State private var weightDate: String? = nil
+    @State private var isLoadingWeight = false
+    @State private var recentWeightLogs: [WeightLogResponse] = []
     
     var body: some View {
         NavigationView {
@@ -24,7 +31,7 @@ struct MyProfileView: View {
                 } else if let error = onboarding.profileError {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
+                            .font(.system(size: 40))
                             .foregroundColor(.orange)
                         
                         Text("Error Loading Profile")
@@ -70,6 +77,8 @@ struct MyProfileView: View {
         .onAppear {
             // Refresh profile data if needed (will check staleness automatically)
             onboarding.refreshProfileDataIfNeeded()
+            // Fetch weight data using the same method as DashboardView
+            fetchWeightData()
         }
     }
     
@@ -316,46 +325,7 @@ struct MyProfileView: View {
                 profileHeaderView()
                 
                 // Weight card (matching the user's example design)
-                if let profileData = onboarding.profileData {
-                    weightCardView(profileData: profileData)
-                } else if onboarding.isLoadingProfile {
-                    // Loading state
-                    VStack(spacing: 16) {
-                        HStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 100, height: 20)
-                            Spacer()
-                        }
-                        HStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 80, height: 32)
-                            Spacer()
-                        }
-                    }
-                    .padding()
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
-                } else {
-                    // Error or no data state
-                    VStack(spacing: 8) {
-                        Text("Unable to load profile data")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                        
-                        Button("Retry") {
-                            Task {
-                                await onboarding.fetchProfileData()
-                            }
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.accentColor)
-                    }
-                    .padding()
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
-                }
+                weightCardView
                 
                 // 3-week calorie trend
                 if let profileData = onboarding.profileData {
@@ -373,65 +343,98 @@ struct MyProfileView: View {
         }
     }
     
-    private func weightCardView(profileData: ProfileDataResponse) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("WEIGHT")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.gray)
-            
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                if let weightLbs = profileData.currentWeightLbs {
-                    Text("\(String(format: "%.1f", weightLbs))")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("lbs")
-                        .font(.system(size: 18))
-                        .foregroundColor(.gray)
-                } else if let weightKg = profileData.currentWeightKg {
-                    // Fallback to kg if lbs not available
-                    let weightLbs = weightKg * 2.20462
-                    Text("\(String(format: "%.1f", weightLbs))")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("lbs")
-                        .font(.system(size: 18))
-                        .foregroundColor(.gray)
+    private var weightCardView: some View {
+        HStack(spacing: 16) {
+            // Left side - Weight info
+            VStack(alignment: .leading, spacing: 4) {
+                // Title with icon and label like DashboardView
+                HStack(spacing: 4) {
+                    Image(systemName: "scalemass")
+                        .foregroundColor(.purple)
+                        .font(.system(size: 16))
+                    Text("Weight")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.purple)
+                }
+                
+                Spacer()
+                
+                // Weight value
+                if isLoadingWeight {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else if let weightLbs = currentWeightLbs {
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text("\(String(format: "%.1f", weightLbs))")
+                            .font(.system(size: 26, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text(" lbs")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                 } else {
                     Text("No data")
                         .font(.system(size: 18))
                         .foregroundColor(.secondary)
                 }
+                
+                // Last updated or prompt
+                if let weightDate = weightDate {
+                    Text("Last updated: \(formatDateString(weightDate))")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else if currentWeightLbs == nil && !isLoadingWeight {
+                    Text("Add your first weight entry")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
             }
             
-            if let weightDate = profileData.weightDate {
-                Text("Last updated: \(formatDateString(weightDate))")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-            } else if profileData.currentWeightKg == nil && profileData.currentWeightLbs == nil {
-                Text("Add your first weight entry")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                
-                Button("Add Weight") {
-                    // TODO: Navigate to add weight view
-                    print("TODO: Navigate to add weight")
-                }
-                .font(.system(size: 14))
-                .foregroundColor(.accentColor)
-                .padding(.top, 4)
+            Spacer()
+            
+            // Right side - Small trend chart
+            if recentWeightLogs.count >= 2 {
+                weightTrendChart
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .padding()
         .background(Color("iosfit"))
         .cornerRadius(12)
         .onAppear {
             // Debug: Print weight data
-            print("🏋️ Weight Debug:")
-            print("  - currentWeightKg: \(profileData.currentWeightKg?.description ?? "nil")")
-            print("  - currentWeightLbs: \(profileData.currentWeightLbs?.description ?? "nil")")
-            print("  - weightDate: \(profileData.weightDate ?? "nil")")
+            print("🏋️ Weight Debug (Local State):")
+            print("  - currentWeightLbs: \(currentWeightLbs?.description ?? "nil")")
+            print("  - weightDate: \(weightDate ?? "nil")")
+            print("  - vm.weight: \(vm.weight)")
+            print("  - recentWeightLogs count: \(recentWeightLogs.count)")
         }
+    }
+    
+    private var weightTrendChart: some View {
+        Chart {
+            ForEach(Array(recentWeightLogs.enumerated().reversed()), id: \.offset) { index, log in
+                LineMark(
+                    x: .value("Day", index),
+                    y: .value("Weight", log.weightKg * 2.20462)
+                )
+                .lineStyle(StrokeStyle(lineWidth: 2))
+                .foregroundStyle(Color.purple)
+                
+                PointMark(
+                    x: .value("Day", index),
+                    y: .value("Weight", log.weightKg * 2.20462)
+                )
+                .symbol(.circle)
+                .symbolSize(CGSize(width: 4, height: 4))
+                .foregroundStyle(Color.purple)
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartLegend(.hidden)
+        .frame(width: 80, height: 40)
+        .background(Color.clear)
     }
     
     // MARK: - Helper Functions
@@ -445,6 +448,48 @@ struct MyProfileView: View {
             return displayFormatter.string(from: date)
         }
         return dateString
+    }
+    
+    private func fetchWeightData() {
+        // First try to get weight from vm (DayLogsViewModel) like DashboardView does
+        if vm.weight > 0 {
+            currentWeightLbs = vm.weight * 2.20462
+            print("🏋️ Got weight from DayLogsViewModel: \(vm.weight)kg = \(currentWeightLbs!)lbs")
+            return
+        }
+        
+        // If vm doesn't have weight, fetch from API like WeightDataView does
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            print("❌ No user email found for weight fetch")
+            return
+        }
+        
+        isLoadingWeight = true
+        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 7, offset: 0) { result in
+            DispatchQueue.main.async {
+                self.isLoadingWeight = false
+                
+                switch result {
+                case .success(let response):
+                    self.recentWeightLogs = response.logs
+                    
+                    if let mostRecentLog = response.logs.first {
+                        self.currentWeightLbs = mostRecentLog.weightKg * 2.20462
+                        self.weightDate = mostRecentLog.dateLogged
+                        print("🏋️ Got weight from API: \(mostRecentLog.weightKg)kg = \(self.currentWeightLbs!)lbs with \(response.logs.count) recent logs")
+                    } else {
+                        print("🏋️ No weight logs found")
+                        self.currentWeightLbs = nil
+                        self.weightDate = nil
+                    }
+                case .failure(let error):
+                    print("❌ Error fetching weight logs: \(error)")
+                    self.currentWeightLbs = nil
+                    self.weightDate = nil
+                    self.recentWeightLogs = []
+                }
+            }
+        }
     }
 }
 
