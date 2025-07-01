@@ -20,6 +20,10 @@ struct MyProfileView: View {
     @State private var isLoadingWeight = false
     @State private var recentWeightLogs: [WeightLogResponse] = []
     
+    // Sheet states
+    @State private var showEditWeightSheet = false
+    @State private var showWeightDataView = false
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -55,8 +59,9 @@ struct MyProfileView: View {
                     profileContentView
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -72,6 +77,17 @@ struct MyProfileView: View {
         .sheet(isPresented: $showProfileSettings) {
             NavigationView {
                 ProfileView(isAuthenticated: $isAuthenticated)
+            }
+        }
+        .sheet(isPresented: $showEditWeightSheet) {
+            EditWeightView(onWeightSaved: {
+                // Refresh weight data after saving
+                fetchWeightData()
+            })
+        }
+        .sheet(isPresented: $showWeightDataView) {
+            NavigationView {
+                WeightDataView(initialAllLogs: recentWeightLogs)
             }
         }
         .onAppear {
@@ -344,41 +360,32 @@ struct MyProfileView: View {
     }
     
     private var weightCardView: some View {
-        HStack(spacing: 16) {
-            // Left side - Weight info
-            VStack(alignment: .leading, spacing: 4) {
-                // Title with icon and label like DashboardView
-                HStack(spacing: 4) {
+        VStack(spacing: 12) {
+            // Top row: Weight label on left, date + chevron on right
+            HStack {
+                // Weight label with icon and plus button
+                HStack(spacing: 6) {
                     Image(systemName: "scalemass")
                         .foregroundColor(.purple)
                         .font(.system(size: 16))
                     Text("Weight")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.purple)
+                    
+                    // Add weight button
+                    Button(action: {
+                        showEditWeightSheet = true
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.purple)
+                            .font(.system(size: 18))
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 Spacer()
                 
-                // Weight value
-                if isLoadingWeight {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else if let weightLbs = currentWeightLbs {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text("\(String(format: "%.1f", weightLbs))")
-                            .font(.system(size: 26, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
-                        Text(" lbs")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                } else {
-                    Text("No data")
-                        .font(.system(size: 18))
-                        .foregroundColor(.secondary)
-                }
-                
-                // Date with chevron or prompt
+                // Date with chevron pushed to the right
                 if let weightDate = weightDate {
                     HStack(spacing: 4) {
                         Text(formatWeightLogDate(weightDate))
@@ -388,24 +395,55 @@ struct MyProfileView: View {
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
-                } else if currentWeightLbs == nil && !isLoadingWeight {
-                    Text("Add your first weight entry")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
                 }
             }
             
-            Spacer()
-            
-            // Right side - Small trend chart
-            if recentWeightLogs.count >= 2 {
-                weightTrendChart
+            // Bottom row: Weight value on left, chart on right
+            HStack {
+                // Left side - Weight value
+                VStack(alignment: .leading, spacing: 4) {
+                    if isLoadingWeight {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else if let weightLbs = currentWeightLbs {
+                        HStack(alignment: .firstTextBaseline, spacing: 0) {
+                            Text("\(Int(weightLbs.rounded()))")
+                                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+                            Text(" lbs")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        Text("No data")
+                            .font(.system(size: 18))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Prompt for no data case
+                    if currentWeightLbs == nil && !isLoadingWeight {
+                        Text("Add your first weight entry")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                // Right side - Chart below the date
+                if recentWeightLogs.count >= 2 {
+                    weightTrendChart
+                }
             }
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color("iosfit"))
         .cornerRadius(12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showWeightDataView = true
+        }
         .onAppear {
             // Debug: Print weight data
             print("🏋️ Weight Debug (Local State):")
@@ -430,19 +468,31 @@ struct MyProfileView: View {
         
         return Chart {
             ForEach(chartData, id: \.offset) { index, log in
+                let xValue = Double(index) * 1.5  // Increase spacing between points
+                
                 LineMark(
-                    x: .value("Day", index),
+                    x: .value("Day", xValue),
                     y: .value("Weight", log.weightKg * 2.20462)
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
                 
+                // Mask the line so it doesn't show through the hollow point
                 PointMark(
-                    x: .value("Day", index),
+                    x: .value("Day", xValue),
                     y: .value("Weight", log.weightKg * 2.20462)
                 )
                 .symbol(.circle)
-                .symbolSize(CGSize(width: 4, height: 4))
+                .symbolSize(CGSize(width: 10, height: 10))        // larger background
+                .foregroundStyle(Color("iosfit"))  // same as card background
+
+                // Outlined hollow point
+                PointMark(
+                    x: .value("Day", xValue),
+                    y: .value("Weight", log.weightKg * 2.20462)
+                )
+                .symbol(.circle.strokeBorder(lineWidth: 2))
+                .symbolSize(CGSize(width: 8, height: 8))
                 .foregroundStyle(Color.purple)
             }
         }
@@ -467,28 +517,63 @@ struct MyProfileView: View {
     // MARK: - Helper Functions
     
     private func formatWeightLogDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else {
-            return dateString
+        // Try ISO8601DateFormatter first
+        let iso8601Formatter = ISO8601DateFormatter()
+        if let date = iso8601Formatter.date(from: dateString) {
+            return formatParsedDate(date)
         }
         
+        // Try various DateFormatter patterns
+        let dateFormatters: [DateFormatter] = [
+            {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
+                return formatter
+            }(),
+            {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
+                return formatter
+            }(),
+            {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+                return formatter
+            }()
+        ]
+        
+        for formatter in dateFormatters {
+            if let date = formatter.date(from: dateString) {
+                return formatParsedDate(date)
+            }
+        }
+        
+        print("❌ Failed to parse date: \(dateString)")
+        return "Unknown date"
+    }
+    
+    private func formatParsedDate(_ date: Date) -> String {
         let calendar = Calendar.current
         let now = Date()
         
+        let result: String
         if calendar.isDateInToday(date) {
             // Today: show time like "4:19 AM"
             let timeFormatter = DateFormatter()
             timeFormatter.dateFormat = "h:mm a"
-            return timeFormatter.string(from: date)
+            result = timeFormatter.string(from: date)
         } else if calendar.isDateInYesterday(date) {
             // Yesterday: show "Yesterday"
-            return "Yesterday"
+            result = "Yesterday"
         } else {
             // Other dates: show "Jun 4" format
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "MMM d"
-            return dateFormatter.string(from: date)
+            result = dateFormatter.string(from: date)
         }
+        
+        print("📅 Date formatting: \(date) -> '\(result)'")
+        return result
     }
     
     private func formatDateString(_ dateString: String) -> String {
@@ -568,3 +653,4 @@ extension DateFormatter {
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
 }
+
