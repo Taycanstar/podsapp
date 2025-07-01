@@ -791,12 +791,13 @@ struct ArcOne: View {
                     .foregroundColor(.secondary)
                 
                 Text("23.2")
-                    .font(.system(size: 36, weight: .bold))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.green)
+
             }
-            .offset(y: -45) // Adjusted for larger arc
+            .offset(y:  85) // Positioned in the center of the arc
         }
-        .frame(width: 320, height: 180)
+        .frame(width: 365, height: 215)
         .padding(.vertical, 20)
     }
 }
