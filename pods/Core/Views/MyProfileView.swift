@@ -317,7 +317,7 @@ struct MyProfileView: View {
     }
     
     private func bmiGaugeView(profileData: ProfileDataResponse) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 2) {
             HStack {
                 Text("Body Mass Index")
                     .font(.headline)
@@ -335,7 +335,8 @@ struct MyProfileView: View {
                     .padding()
             }
         }
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .background(Color("iosfit"))
         .cornerRadius(12)
     }
@@ -768,18 +769,23 @@ struct ArcOne: View {
     var body: some View {
         VStack(spacing: 0) {
         ZStack {
-            // The semicircle arc with gradient
+            // The semicircle arc with distinct color zones
             SemicircleArc()
                 .stroke(
-                    LinearGradient(
-                        stops: [
-                            Gradient.Stop(color: Color.blue, location: 0.00),
-                            Gradient.Stop(color: Color.blue, location: 0.25),
-                            Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.35),
-                            Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.65),
-                            Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 0.75),
-                            Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 1.00),
-                        ],
+                                          LinearGradient(
+                          stops: [
+                              // Blue zone with more visibility
+                              Gradient.Stop(color: Color.blue, location: 0.00),
+                              Gradient.Stop(color: Color.blue, location: 0.25),
+                              // Gradient transition to green
+                              Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.40),
+                              // Green zone (smaller)
+                              Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.60),
+                              // Gradient transition to red
+                              Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 0.75),
+                              // Red zone with more visibility
+                              Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 1.00),
+                          ],
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
@@ -800,11 +806,11 @@ struct ArcOne: View {
                     .foregroundColor(getBMIColor())
 
             }
-            .offset(y: 50) // Aligned with the Normal label position
+            .offset(y: 20) // Aligned with the Normal label position
 
       
         }
-        .frame(width: 365, height: 200)
+        .frame(width: 380, height: 180)
         
                 // Straight labels below the gauge
         HStack {
@@ -825,7 +831,7 @@ struct ArcOne: View {
                 .foregroundColor(getBMICategory() == .overweight ? .red : .secondary)
                 }
         .padding(.horizontal, 50)
-        .padding(.top, 2)
+        .padding(.top, -10)
         }
         .padding(.vertical, 20)
      }
@@ -837,7 +843,7 @@ struct BMIIndicatorDot: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
+            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height * 0.55)
             let radius = min(geometry.size.width, geometry.size.height) / 2 - 4
             
             // Calculate angle based on BMI value
@@ -879,7 +885,7 @@ struct BMIIndicatorDot: View {
 // Custom shape for semicircle arc
 struct SemicircleArc: Shape {
     func path(in rect: CGRect) -> Path {
-        let center = CGPoint(x: rect.midX, y: rect.maxY)
+        let center = CGPoint(x: rect.midX, y: rect.height * 0.55)
         let radius = min(rect.width, rect.height) / 2 - 4  // Adjusted for thinner stroke
         
         var path = Path()
