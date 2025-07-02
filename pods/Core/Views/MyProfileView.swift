@@ -317,7 +317,7 @@ struct MyProfileView: View {
     }
     
     private func bmiGaugeView(profileData: ProfileDataResponse) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 6) {
             HStack {
                 Text("Body Mass Index")
                     .font(.headline)
@@ -766,7 +766,7 @@ struct ArcOne: View {
     }
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
         ZStack {
             // The semicircle arc with gradient
             SemicircleArc()
@@ -800,7 +800,7 @@ struct ArcOne: View {
                     .foregroundColor(getBMIColor())
 
             }
-            .offset(y: 75) // Positioned in the center of the arc
+            .offset(y: 50) // Aligned with the Normal label position
 
       
         }
@@ -825,7 +825,7 @@ struct ArcOne: View {
                 .foregroundColor(getBMICategory() == .overweight ? .red : .secondary)
                 }
         .padding(.horizontal, 50)
-        .padding(.top, 8)
+        .padding(.top, 2)
         }
         .padding(.vertical, 20)
      }
