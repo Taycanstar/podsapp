@@ -806,7 +806,7 @@ struct ArcOne: View {
                     .foregroundColor(getBMIColor())
 
             }
-            .offset(y: 20) // Aligned with the Normal label position
+            .offset(y: -10) // Moved higher up
 
       
         }
@@ -831,7 +831,7 @@ struct ArcOne: View {
                 .foregroundColor(getBMICategory() == .overweight ? .red : .secondary)
                 }
         .padding(.horizontal, 50)
-        .padding(.top, -10)
+        .padding(.top, -65)
         }
         .padding(.vertical, 20)
      }
