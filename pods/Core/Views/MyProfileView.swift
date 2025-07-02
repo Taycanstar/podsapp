@@ -742,6 +742,7 @@ struct MyProfileView: View {
 
 struct ArcOne: View {
     var body: some View {
+        VStack(spacing: 0) {
         ZStack {
             // The semicircle arc with gradient
             SemicircleArc()
@@ -761,8 +762,8 @@ struct ArcOne: View {
                     lineWidth: 8
                 )
 
-                 CircularTextView(title: "           Underweight             Normal                Overweight", radius: 230)
-                    .offset(y: 65) 
+            // BMI indicator dot on the arc
+            BMIIndicatorDot(bmiValue: 23.2) 
 
             // BMI value in center
             VStack(spacing: 4) {
@@ -780,7 +781,74 @@ struct ArcOne: View {
       
         }
         .frame(width: 365, height: 215)
+        
+        // Straight labels below the gauge
+        HStack {
+            Text("Underweight")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.blue)
+            
+            Spacer()
+            
+            Text("Normal")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.green)
+            
+            Spacer()
+            
+            Text("Overweight")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.red)
+                 }
+         .padding(.horizontal, 40)
+         .padding(.top, 10)
+        }
         .padding(.vertical, 20)
+     }
+}
+
+// BMI Indicator Dot
+struct BMIIndicatorDot: View {
+    let bmiValue: Double
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
+            let radius = min(geometry.size.width, geometry.size.height) / 2 - 4
+            
+            // Calculate angle based on BMI value
+            let angle = bmiAngleOnArc(bmi: bmiValue)
+            let x = center.x + cos(angle * .pi / 180) * radius
+            let y = center.y - sin(angle * .pi / 180) * radius
+            
+            Circle()
+                .fill(Color.white)
+                .frame(width: 16, height: 16)
+                .overlay(
+                    Circle()
+                        .stroke(Color.primary, lineWidth: 2)
+                )
+                .position(x: x, y: y)
+        }
+    }
+    
+    private func bmiAngleOnArc(bmi: Double) -> Double {
+        // BMI ranges: Underweight (<18.5), Normal (18.5-24.9), Overweight (>25)
+        // Map to arc angles: 180° (left) to 0° (right)
+        
+        if bmi < 18.5 {
+            // Underweight: 180° to 135° (blue section)
+            let progress = min(bmi / 18.5, 1.0)
+            return 180 - (progress * 45)
+        } else if bmi <= 24.9 {
+            // Normal: 135° to 45° (green section)  
+            let progress = (bmi - 18.5) / (24.9 - 18.5)
+            return 135 - (progress * 90)
+        } else {
+            // Overweight: 45° to 0° (red section)
+            let progress = min((bmi - 25) / 10, 1.0) // Cap at BMI 35
+            return 45 - (progress * 45)
+        }
     }
 }
 
@@ -881,43 +949,7 @@ extension DateFormatter {
 
 
 
-struct CircularTextView: View {
-    @State var letterWidths: [Int: Double] = [:]
-    @State var title: String
- 
-    var lettersOffset: [(offset: Int, element: Character)] {
-        return Array(title.enumerated())
-    }
-    var radius: Double
- 
-    var body: some View {
-        ZStack {
-            ForEach(lettersOffset, id: \.offset) { index, letter in
-                VStack {
-                    Text(String(letter))
-                        .font(.system(size: 13, design: .monospaced))
-                        .kerning(5)
-                        .onGeometryChange(for: Double.self) { proxy in
-                            proxy.size.width
-                        } action: { width in
-                            letterWidths[index] = width
-                        }
-                    Spacer()
-                }
-                .rotationEffect(fetchAngle(at: index))
-            }
-        }
-        .frame(width: 200, height: 200)
-        .rotationEffect(.degrees(214))
-    }
- 
-    func fetchAngle(at letterPosition: Int) -> Angle {
-        let times2pi: (Double) -> Double = { $0 * 2 * .pi }
-        let circumference = times2pi(radius)
-        let finalAngle = times2pi(letterWidths.filter { $0.key <= letterPosition }.map(\.value).reduce(0, +) / circumference)
-        return .radians(finalAngle)
-    }
-}
+
 
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
