@@ -317,7 +317,7 @@ struct MyProfileView: View {
     }
     
     private func bmiGaugeView(profileData: ProfileDataResponse) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             HStack {
                 Text("Body Mass Index")
                     .font(.headline)
@@ -325,9 +325,15 @@ struct MyProfileView: View {
                 Spacer()
             }
 
-            ArcOne()
-            
-  
+            if let bmi = calculateBMI(weightKg: vm.weight > 0 ? vm.weight : nil, heightCm: vm.height > 0 ? vm.height : nil) {
+                ArcOne(bmiValue: bmi)
+            } else {
+                Text("BMI calculation requires both height and weight data")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding()
+            }
         }
         .padding()
         .background(Color("iosfit"))
@@ -738,11 +744,29 @@ struct MyProfileView: View {
 
 // MARK: - BMI Gauge (upright semicircle, self‑centering)
 
-
+enum BMICategory {
+    case underweight, normal, overweight
+}
 
 struct ArcOne: View {
+    let bmiValue: Double
+    
+    private func getBMICategory() -> BMICategory {
+        if bmiValue < 18.5 { return .underweight }
+        else if bmiValue <= 24.9 { return .normal }
+        else { return .overweight }
+    }
+    
+    private func getBMIColor() -> Color {
+        switch getBMICategory() {
+        case .underweight: return .blue
+        case .normal: return .green
+        case .overweight: return .red
+        }
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 4) {
         ZStack {
             // The semicircle arc with gradient
             SemicircleArc()
@@ -763,7 +787,7 @@ struct ArcOne: View {
                 )
 
             // BMI indicator dot on the arc
-            BMIIndicatorDot(bmiValue: 23.2) 
+            BMIIndicatorDot(bmiValue: bmiValue) 
 
             // BMI value in center
             VStack(spacing: 4) {
@@ -771,37 +795,37 @@ struct ArcOne: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Text("23.2")
+                Text(String(format: "%.1f", bmiValue))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.green)
+                    .foregroundColor(getBMIColor())
 
             }
-            .offset(y: 85) // Positioned in the center of the arc
+            .offset(y: 75) // Positioned in the center of the arc
 
       
         }
-        .frame(width: 365, height: 215)
+        .frame(width: 365, height: 200)
         
-        // Straight labels below the gauge
+                // Straight labels below the gauge
         HStack {
             Text("Underweight")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(.blue)
+                .foregroundColor(getBMICategory() == .underweight ? .blue : .secondary)
             
             Spacer()
             
             Text("Normal")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(.green)
+                .foregroundColor(getBMICategory() == .normal ? .green : .secondary)
             
             Spacer()
             
             Text("Overweight")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(.red)
-                 }
-         .padding(.horizontal, 40)
-         .padding(.top, 10)
+                .foregroundColor(getBMICategory() == .overweight ? .red : .secondary)
+                }
+        .padding(.horizontal, 50)
+        .padding(.top, 8)
         }
         .padding(.vertical, 20)
      }
@@ -826,7 +850,7 @@ struct BMIIndicatorDot: View {
                 .frame(width: 16, height: 16)
                 .overlay(
                     Circle()
-                        .stroke(Color.primary, lineWidth: 2)
+                        .stroke(Color.primary, lineWidth: 1)
                 )
                 .position(x: x, y: y)
         }
