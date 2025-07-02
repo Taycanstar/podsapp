@@ -761,7 +761,8 @@ struct ArcOne: View {
                     lineWidth: 8
                 )
 
-                 CircularTextView(title: "   Underweight       Normal        Overweight         ", radius: 160)
+                 CircularTextView(title: "           Underweight             Normal                Overweight", radius: 230)
+                    .offset(y: 65) 
 
             // BMI value in center
             VStack(spacing: 4) {
