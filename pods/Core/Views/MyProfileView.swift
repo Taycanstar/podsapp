@@ -327,32 +327,7 @@ struct MyProfileView: View {
 
             ArcOne()
             
-            // // Calculate BMI using same data source as DashboardView
-            // let bmi = calculateBMI(weightKg: vm.weight > 0 ? vm.weight : nil, heightCm: vm.height > 0 ? vm.height : nil)
-            
-            // if let bmiValue = bmi {
-            //     VStack(spacing: 20) {
-            //         BMIGaugeView(bmi: bmiValue)
-            //     }
-            //     .frame(minHeight: 180) // Give it proper space
-            // } else {
-            //     VStack(spacing: 16) {
-            //         Image(systemName: "figure.stand")
-            //             .font(.system(size: 40))
-            //             .foregroundColor(.purple.opacity(0.6))
-                    
-            //         Text("Add your height to calculate BMI")
-            //             .font(.subheadline)
-            //             .foregroundColor(.secondary)
-            //             .multilineTextAlignment(.center)
-                    
-            //         Text("Complete your profile to see your BMI gauge")
-            //             .font(.caption)
-            //             .foregroundColor(.secondary)
-            //             .multilineTextAlignment(.center)
-            //     }
-            //     .frame(height: 150)
-            // }
+  
         }
         .padding()
         .background(Color("iosfit"))
@@ -763,6 +738,8 @@ struct MyProfileView: View {
 
 // MARK: - BMI Gauge (upright semicircle, self‑centering)
 
+
+
 struct ArcOne: View {
     var body: some View {
         ZStack {
@@ -783,53 +760,23 @@ struct ArcOne: View {
                     ),
                     lineWidth: 8
                 )
-            
+
+                 CircularTextView(title: "   Underweight       Normal        Overweight         ", radius: 160)
+
             // BMI value in center
             VStack(spacing: 4) {
                 Text("BMI")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Text("23.2")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.green)
 
             }
             .offset(y: 85) // Positioned in the center of the arc
-            
-            // Arc labels positioned like bent horizontal text
-            GeometryReader { geometry in
-                let radius = min(geometry.size.width, geometry.size.height) / 2 + 25
-                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
-                
-                // Normal label (straight at top - no bending needed)
-                let normalX = center.x
-                let normalY = center.y - radius
-                Text("Normal")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.green)
-                    .position(x: normalX, y: normalY)
-                
-                // Underweight label (bent to follow left curve)
-                let underweightAngle = 135.0 * .pi / 180
-                let underweightX = center.x + cos(underweightAngle) * radius
-                let underweightY = center.y - sin(underweightAngle) * radius
-                Text("Underweight")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.blue)
-                    .rotationEffect(.degrees(-45)) // Gentle rotation to follow curve
-                    .position(x: underweightX, y: underweightY)
-                
-                // Overweight label (bent to follow right curve)
-                let overweightAngle = 45.0 * .pi / 180
-                let overweightX = center.x + cos(overweightAngle) * radius
-                let overweightY = center.y - sin(overweightAngle) * radius
-                Text("Overweight")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.red)
-                    .rotationEffect(.degrees(45)) // Gentle rotation to follow curve
-                    .position(x: overweightX, y: overweightY)
-            }
+
+      
         }
         .frame(width: 365, height: 215)
         .padding(.vertical, 20)
@@ -858,7 +805,7 @@ struct SemicircleArc: Shape {
 struct CurvedText: View {
     let text: String
     let radius: CGFloat
-    let angle: Double // Angle in degrees for center position
+    let centerAngle: Double // Center angle in degrees
     let center: CGPoint
     
     var body: some View {
@@ -870,7 +817,7 @@ struct CurvedText: View {
                 
                 Text(String(character))
                     .font(.subheadline.weight(.medium))
-                    .rotationEffect(.degrees((charAngle - 90) * 0.3)) // Much less rotation for readability
+                    .rotationEffect(.degrees((charAngle - 90) * 0.1)) // VERY minimal rotation
                     .position(x: x, y: y)
             }
         }
@@ -878,84 +825,14 @@ struct CurvedText: View {
     
     private func calculateCharacterAngle(for index: Int) -> Double {
         let textLength = Double(text.count)
-        let characterSpacing = 3.5 // Fine-tuned spacing
+        let characterSpacing = 2.0 // Very tight spacing for subtle curve
         let totalSpread = characterSpacing * (textLength - 1)
-        let startAngle = angle + totalSpread / 2
+        let startAngle = centerAngle + totalSpread / 2
         return startAngle - Double(index) * characterSpacing
     }
 }
 
-struct BMIGaugeView: View {
-    let bmi: Double
-    private let lineWidth: CGFloat = 14
-    
-    private var bmiColor: Color {
-        if bmi < 18.5 { return .blue }
-        if bmi < 25.0 { return .green }
-        return .red
-    }
 
-    var body: some View {
-        ZStack {
-            // Left 45° blue (underweight)
-            GaugeSlice(colour: .blue,
-                       startDeg: 180,
-                       endDeg: 135,
-                       lineWidth: lineWidth)
-            
-            // Central 90° green (normal)
-            GaugeSlice(colour: .green,
-                       startDeg: 135,
-                       endDeg: 45,
-                       lineWidth: lineWidth)
-
-            // Right 45° red (overweight)
-            GaugeSlice(colour: .red,
-                       startDeg: 45,
-                       endDeg: 0,
-                       lineWidth: lineWidth)
-            
-            // BMI value in center
-            VStack(spacing: 4) {
-                Text("BMI")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text(String(format: "%.1f", bmi))
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(bmiColor)
-            }
-            .offset(y: -20) // Move up to sit nicely in the arc
-            
-            // Category labels
-            GeometryReader { geometry in
-                let radius = min(geometry.size.width, geometry.size.height) / 2 - 35
-                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height)
-                
-                // Underweight label (left)
-                Text("Underweight")
-                    .font(.caption2)
-                    .foregroundColor(.blue)
-                    .position(x: center.x - radius * 0.7, y: center.y - radius * 0.7)
-                
-                // Normal label (top)
-                Text("Normal")
-                    .font(.caption2)
-                    .foregroundColor(.green)
-                    .position(x: center.x, y: center.y - radius * 0.9)
-                
-                // Overweight label (right)
-                Text("Overweight")
-                    .font(.caption2)
-                    .foregroundColor(.red)
-                    .position(x: center.x + radius * 0.7, y: center.y - radius * 0.7)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 140)              // Give it proper height
-        .padding(.vertical, 20)          // Add padding for proper spacing
-    }
-}
 
 /// One coloured slice of the top semicircle.
 private struct GaugeSlice: View {
@@ -998,6 +875,47 @@ extension DateFormatter {
         formatter.dateFormat = "MMM d"
         return formatter
     }()
+}
+
+
+
+
+struct CircularTextView: View {
+    @State var letterWidths: [Int: Double] = [:]
+    @State var title: String
+ 
+    var lettersOffset: [(offset: Int, element: Character)] {
+        return Array(title.enumerated())
+    }
+    var radius: Double
+ 
+    var body: some View {
+        ZStack {
+            ForEach(lettersOffset, id: \.offset) { index, letter in
+                VStack {
+                    Text(String(letter))
+                        .font(.system(size: 13, design: .monospaced))
+                        .kerning(5)
+                        .onGeometryChange(for: Double.self) { proxy in
+                            proxy.size.width
+                        } action: { width in
+                            letterWidths[index] = width
+                        }
+                    Spacer()
+                }
+                .rotationEffect(fetchAngle(at: index))
+            }
+        }
+        .frame(width: 200, height: 200)
+        .rotationEffect(.degrees(214))
+    }
+ 
+    func fetchAngle(at letterPosition: Int) -> Angle {
+        let times2pi: (Double) -> Double = { $0 * 2 * .pi }
+        let circumference = times2pi(radius)
+        let finalAngle = times2pi(letterWidths.filter { $0.key <= letterPosition }.map(\.value).reduce(0, +) / circumference)
+        return .radians(finalAngle)
+    }
 }
 
 #Preview {
