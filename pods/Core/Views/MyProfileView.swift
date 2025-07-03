@@ -1169,6 +1169,7 @@ struct MacroSplitCardView: View {
     @Binding var selectedWeek: WeekOption
     let data: [DailyMacroSplit]
     let weeklyTotal: Double
+    @State private var selectedDay: DailyMacroSplit? = nil
     
     private func weekdayName(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -1197,6 +1198,21 @@ struct MacroSplitCardView: View {
     private var averageDailyCals: Double {
         let total = data.reduce(0) { $0 + $1.totalCals }
         return data.isEmpty ? 0 : total / Double(data.count)
+    }
+    
+    private func findClosestDay(at location: CGPoint, in geometry: GeometryProxy, chartProxy: ChartProxy) -> String? {
+        let xPosition = location.x
+        let chartWidth = geometry.size.width
+        let dayCount = data.count
+        
+        // Calculate which day was tapped based on x position
+        let dayIndex = Int((xPosition / chartWidth) * Double(dayCount))
+        let clampedIndex = max(0, min(dayIndex, dayCount - 1))
+        
+        if clampedIndex < data.count {
+            return weekdayName(for: data[clampedIndex].date)
+        }
+        return nil
     }
     
     var body: some View {
@@ -1248,7 +1264,7 @@ struct MacroSplitCardView: View {
                     )
                     .foregroundStyle(Color("darkYellow"))
                     
-                    // Protein (blue) - top layer
+                    // Protein (blue) - top layer with top corner radius only
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", dayData.fatCals + dayData.carbCals),
@@ -1256,6 +1272,62 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color.blue)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2))
+                }
+                
+                // Selection indicator
+                if let selectedDay = selectedDay {
+                    RuleMark(x: .value("Selected", weekdayName(for: selectedDay.date)))
+                        .foregroundStyle(Color.primary.opacity(0.3))
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        .annotation(position: .top, spacing: 0) {
+                            VStack(alignment: .center, spacing: 4) {
+                                Text("\(Int(selectedDay.totalCals)) cals")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 4) {
+                                        Circle().fill(Color.blue).frame(width: 6, height: 6)
+                                        Text("Protein: \(Int(selectedDay.proteinCals))")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    HStack(spacing: 4) {
+                                        Circle().fill(Color("darkYellow")).frame(width: 6, height: 6)
+                                        Text("Carbs: \(Int(selectedDay.carbCals))")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    HStack(spacing: 4) {
+                                        Circle().fill(Color.pink).frame(width: 6, height: 6)
+                                        Text("Fats: \(Int(selectedDay.fatCals))")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(8)
+                            .background(Color("iosfit"))
+                            .cornerRadius(8)
+                            .shadow(radius: 2)
+                        }
+                }
+            }
+            .chartBackground { chartProxy in
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(Color.clear)
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            // Find the closest day based on tap location
+                            if let dayName = findClosestDay(at: location, in: geometry, chartProxy: chartProxy) {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedDay = data.first { weekdayName(for: $0.date) == dayName }
+                                }
+                            }
+                        }
                 }
             }
             .chartYScale(domain: 0...maxDailyCals)
@@ -1288,9 +1360,9 @@ struct MacroSplitCardView: View {
                 HStack(spacing: 24) {
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.pink)
+                            .fill(Color.blue)
                             .frame(width: 12, height: 12)
-                        Text("Fats")
+                        Text("Protein")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -1306,9 +1378,9 @@ struct MacroSplitCardView: View {
                     
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.blue)
+                            .fill(Color.pink)
                             .frame(width: 12, height: 12)
-                        Text("Protein")
+                        Text("Fats")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
