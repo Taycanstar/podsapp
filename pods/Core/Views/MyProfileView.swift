@@ -833,7 +833,7 @@ struct ArcOne: View {
         .padding(.top, -65)
         }
         .padding(.top, 20)
-        .padding(.bottom, -15)
+        .padding(.bottom, -25)
      }
 }
 
@@ -856,7 +856,7 @@ struct BMIIndicatorDot: View {
                 .frame(width: 16, height: 16)
                 .overlay(
                     Circle()
-                        .stroke(Color.secondary, lineWidth: 1)
+                        .stroke(Color.secondary, lineWidth: 0.5)
                 )
                 .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
                 .position(x: x, y: y)
