@@ -1178,8 +1178,20 @@ struct MacroSplitCardView: View {
     
     private var maxDailyCals: Double {
         let maxCals = data.map(\.totalCals).max() ?? 1000
-        let roundedMax = ceil(maxCals / 100) * 100 // Round up to next 100
-        return max(roundedMax, 100) // Ensure minimum of 100
+        // Round up to a nice number for better chart scaling
+        if maxCals <= 1000 {
+            return 1000
+        } else if maxCals <= 2000 {
+            return 2000
+        } else if maxCals <= 3000 {
+            return 3000
+        } else if maxCals <= 4000 {
+            return 4000
+        } else if maxCals <= 5000 {
+            return 5000
+        } else {
+            return ceil(maxCals / 1000) * 1000
+        }
     }
     
     private var averageDailyCals: Double {
@@ -1218,43 +1230,39 @@ struct MacroSplitCardView: View {
             // Stacked Bar Chart
             Chart {
                 ForEach(data) { dayData in
-                    // Protein (blue) - bottom layer
+                    // Fat (pink) - bottom layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", 0),
-                        yEnd: .value("Protein", dayData.proteinCals)
+                        yEnd: .value("Fat", dayData.fatCals),
+                        width: .fixed(20)
                     )
-                    .foregroundStyle(Color.blue)
-                    .cornerRadius(2)
+                    .foregroundStyle(Color.pink)
                     
-                    // Carbs (darkYellow) - middle layer (no corner radius for connection)
+                    // Carbs (darkYellow) - middle layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
-                        yStart: .value("Start", dayData.proteinCals),
-                        yEnd: .value("Carbs", dayData.proteinCals + dayData.carbCals)
+                        yStart: .value("Start", dayData.fatCals),
+                        yEnd: .value("Carbs", dayData.fatCals + dayData.carbCals),
+                        width: .fixed(20)
                     )
                     .foregroundStyle(Color("darkYellow"))
                     
-                    // Fats (pink) - top layer
+                    // Protein (blue) - top layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
-                        yStart: .value("Start", dayData.proteinCals + dayData.carbCals),
-                        yEnd: .value("Fats", dayData.totalCals)
+                        yStart: .value("Start", dayData.fatCals + dayData.carbCals),
+                        yEnd: .value("Protein", dayData.totalCals),
+                        width: .fixed(20)
                     )
-                    .foregroundStyle(Color.pink)
-                    .cornerRadius(2)
-                }
-                
-                // Gridlines every 250 calories
-                ForEach(Array(stride(from: 250.0, through: maxDailyCals, by: 250.0)), id: \.self) { value in
-                    RuleMark(y: .value("Grid", value))
-                        .foregroundStyle(Color.gray.opacity(0.3))
-                        .lineStyle(StrokeStyle(lineWidth: 0.5, dash: [4, 4]))
+                    .foregroundStyle(Color.blue)
                 }
             }
             .chartYScale(domain: 0...maxDailyCals)
             .chartYAxis {
                 AxisMarks(values: .automatic) { value in
+                    AxisGridLine()
+                        .foregroundStyle(Color.gray.opacity(0.3))
                     AxisValueLabel {
                         if let intValue = value.as(Int.self) {
                             Text("\(intValue)")
@@ -1280,9 +1288,9 @@ struct MacroSplitCardView: View {
                 HStack(spacing: 24) {
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.blue)
+                            .fill(Color.pink)
                             .frame(width: 12, height: 12)
-                        Text("Protein")
+                        Text("Fats")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -1298,9 +1306,9 @@ struct MacroSplitCardView: View {
                     
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.pink)
+                            .fill(Color.blue)
                             .frame(width: 12, height: 12)
-                        Text("Fats")
+                        Text("Protein")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
