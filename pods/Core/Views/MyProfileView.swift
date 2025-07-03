@@ -776,13 +776,13 @@ struct ArcOne: View {
                           stops: [
                               // Blue zone with more visibility - more vibrant blue
                               Gradient.Stop(color: Color(red: 0.0, green: 0.3, blue: 1.0), location: 0.00),
-                              Gradient.Stop(color: Color(red: 0.0, green: 0.3, blue: 1.0), location: 0.25),
+                              Gradient.Stop(color: Color(red: 0.0, green: 0.3, blue: 1.0), location: 0.27),
                               // Gradient transition to green
                               Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.40),
                               // Green zone (smaller)
                               Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.60),
                               // Gradient transition to red - more vibrant red
-                              Gradient.Stop(color: Color(red: 1.0, green: 0.1, blue: 0.1), location: 0.75),
+                              Gradient.Stop(color: Color(red: 1.0, green: 0.1, blue: 0.1), location: 0.73),
                               // Red zone with more visibility - more vibrant red
                               Gradient.Stop(color: Color(red: 1.0, green: 0.1, blue: 0.1), location: 1.00),
                           ],
@@ -833,7 +833,7 @@ struct ArcOne: View {
         .padding(.top, -65)
         }
         .padding(.top, 20)
-        .padding(.bottom, -25)
+        .padding(.bottom, -35)
      }
 }
 
@@ -856,7 +856,7 @@ struct BMIIndicatorDot: View {
                 .frame(width: 16, height: 16)
                 .overlay(
                     Circle()
-                        .stroke(Color.secondary, lineWidth: 0.5)
+                        .stroke(Color.secondary, lineWidth: 0.2)
                 )
                 .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
                 .position(x: x, y: y)
