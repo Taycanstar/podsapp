@@ -25,10 +25,11 @@ enum WeekOption: CaseIterable {
 struct DailyMacroSplit: Identifiable {
     let id = UUID()
     let date: Date
+    var calories: Double  // Raw calories from backend
     var proteinCals: Double
     var carbCals: Double
     var fatCals: Double
-    var totalCals: Double { proteinCals + carbCals + fatCals }
+    var totalCals: Double { calories }  // Use raw calories, not macro calculation
 }
 
 struct MyProfileView: View {
@@ -696,6 +697,7 @@ struct MyProfileView: View {
             
             return DailyMacroSplit(
                 date: date,
+                calories: dayData.calories,  // Use raw calories from backend
                 proteinCals: dayData.proteinCals,
                 carbCals: dayData.carbCals,
                 fatCals: dayData.fatCals
@@ -1163,6 +1165,7 @@ struct MacroSplitCardView: View {
                 // Create empty data for missing days
                 weekDays.append(DailyMacroSplit(
                     date: dayDate,
+                    calories: 0,  // Add calories field for empty days
                     proteinCals: 0,
                     carbCals: 0,
                     fatCals: 0
