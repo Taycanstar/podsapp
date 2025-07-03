@@ -8,6 +8,29 @@
 import SwiftUI
 import Charts
 
+// MARK: - Macro Split Data Models
+enum WeekOption: CaseIterable {
+    case thisWeek, lastWeek, twoWeeksAgo, threeWeeksAgo
+    
+    var displayName: String {
+        switch self {
+        case .thisWeek: return "This week"
+        case .lastWeek: return "Last week"
+        case .twoWeeksAgo: return "2 wks. ago"
+        case .threeWeeksAgo: return "3 wks. ago"
+        }
+    }
+}
+
+struct DailyMacroSplit: Identifiable {
+    let id = UUID()
+    let date: Date
+    var proteinCals: Double
+    var carbCals: Double
+    var fatCals: Double
+    var totalCals: Double { proteinCals + carbCals + fatCals }
+}
+
 struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
     @State private var showProfileSettings = false
@@ -22,6 +45,11 @@ struct MyProfileView: View {
     
     // Sheet states
     @State private var showEditWeightSheet = false
+    @State private var selectedWeek: WeekOption = .thisWeek
+    
+    // Macro split data
+    @State private var macroSplitData: [WeekOption: [DailyMacroSplit]] = [:]
+    @State private var isLoadingMacros = false
     
     var body: some View {
         NavigationView {
@@ -92,6 +120,8 @@ struct MyProfileView: View {
             onboarding.refreshProfileDataIfNeeded()
             // Fetch weight data using the same method as DashboardView
             fetchWeightData()
+            // Fetch macro split data
+            fetchMacroSplitData()
             
             // Debug profile data
             if let profileData = onboarding.profileData {
@@ -418,6 +448,13 @@ struct MyProfileView: View {
                     bmiGaugeView(profileData: profileData)
                 }
                 
+                // Weekly Macronutrient Split
+                MacroSplitCardView(
+                    selectedWeek: $selectedWeek,
+                    data: macroSplitData[selectedWeek] ?? [],
+                    weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
+                )
+                
                 // 3-week calorie trend
                 if let profileData = onboarding.profileData {
                     caloriesTrendView(profileData: profileData)
@@ -598,6 +635,147 @@ struct MyProfileView: View {
                 print("  - Chart point \(index): \(weightLbs)lbs from \(log.dateLogged)")
             }
         }
+    }
+    
+    // MARK: - Macro Split Data Methods
+    
+    private func fetchMacroSplitData() {
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            print("❌ No user email found for macro data fetch")
+            return
+        }
+        
+        print("📊 Fetching macro split data for email: \(email)")
+        isLoadingMacros = true
+        
+        let calendar = Calendar.current
+        let today = Date()
+        
+        // Fetch logs for all 4 weeks
+        let weekOptions: [WeekOption] = [.thisWeek, .lastWeek, .twoWeeksAgo, .threeWeeksAgo]
+        var fetchedData: [WeekOption: [DailyMacroSplit]] = [:]
+        var completedFetches = 0
+        
+        for (index, weekOption) in weekOptions.enumerated() {
+            let weeksBack = index
+            let startOfWeek = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) ?? today
+            let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? today
+            
+            // Fetch logs for this week
+            fetchLogsForDateRange(email: email, startDate: startOfWeek, endDate: endOfWeek) { logs in
+                DispatchQueue.main.async {
+                    fetchedData[weekOption] = self.processMacroData(from: logs, for: startOfWeek)
+                    completedFetches += 1
+                    
+                    if completedFetches == weekOptions.count {
+                        self.macroSplitData = fetchedData
+                        self.isLoadingMacros = false
+                        print("📊 Macro split data loaded successfully")
+                    }
+                }
+            }
+        }
+    }
+    
+    private func fetchLogsForDateRange(email: String, startDate: Date, endDate: Date, completion: @escaping ([CombinedLog]) -> Void) {
+        let repo = LogRepository()
+        var allLogs: [CombinedLog] = []
+        var completedFetches = 0
+        let totalDays = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        
+        for dayOffset in 0..<totalDays {
+            guard let currentDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: startDate) else {
+                continue
+            }
+            
+            repo.fetchLogs(email: email, for: currentDate) { result in
+                defer {
+                    completedFetches += 1
+                    if completedFetches == totalDays {
+                        completion(allLogs)
+                    }
+                }
+                
+                switch result {
+                case .success(let response):
+                    allLogs.append(contentsOf: response.logs)
+                case .failure(let error):
+                    print("❌ Error fetching logs for \(currentDate): \(error)")
+                }
+            }
+        }
+    }
+    
+    private func processMacroData(from logs: [CombinedLog], for weekStartDate: Date) -> [DailyMacroSplit] {
+        let calendar = Calendar.current
+        var dailyData: [Date: DailyMacroSplit] = [:]
+        
+        // Initialize 7 days for the week
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStartDate) else { continue }
+            let dayStart = calendar.startOfDay(for: date)
+            dailyData[dayStart] = DailyMacroSplit(
+                date: dayStart,
+                proteinCals: 0,
+                carbCals: 0,
+                fatCals: 0
+            )
+        }
+        
+        // Process logs and aggregate by day
+        for log in logs {
+            guard let logDate = log.scheduledAt else { continue }
+            let dayStart = calendar.startOfDay(for: logDate)
+            
+            guard var dayData = dailyData[dayStart] else { continue }
+            
+            // Calculate macro calories from the log
+            var proteinGrams: Double = 0
+            var carbGrams: Double = 0
+            var fatGrams: Double = 0
+            
+            switch log.type {
+            case .food:
+                if let food = log.food {
+                    let servings = food.numberOfServings
+                    proteinGrams += (food.protein ?? 0) * servings
+                    carbGrams += (food.carbs ?? 0) * servings
+                    fatGrams += (food.fat ?? 0) * servings
+                }
+            case .meal:
+                if let meal = log.meal {
+                    proteinGrams += meal.protein ?? 0
+                    carbGrams += meal.carbs ?? 0
+                    fatGrams += meal.fat ?? 0
+                }
+            case .recipe:
+                if let recipe = log.recipe {
+                    proteinGrams += recipe.protein ?? 0
+                    carbGrams += recipe.carbs ?? 0
+                    fatGrams += recipe.fat ?? 0
+                }
+            }
+            
+            // Convert grams to calories (protein: 4 cal/g, carbs: 4 cal/g, fat: 9 cal/g)
+            let proteinCals = proteinGrams * 4
+            let carbCals = carbGrams * 4
+            let fatCals = fatGrams * 9
+            
+            dailyData[dayStart] = DailyMacroSplit(
+                date: dayStart,
+                proteinCals: (dailyData[dayStart]?.proteinCals ?? 0) + proteinCals,
+                carbCals: (dailyData[dayStart]?.carbCals ?? 0) + carbCals,
+                fatCals: (dailyData[dayStart]?.fatCals ?? 0) + fatCals
+            )
+        }
+        
+        // Return sorted array
+        return dailyData.values.sorted { $0.date < $1.date }
+    }
+    
+    private func calculateWeeklyTotal(for week: WeekOption) -> Double {
+        guard let weekData = macroSplitData[week] else { return 0 }
+        return weekData.reduce(0) { $0 + $1.totalCals }
     }
     
     // MARK: - Helper Functions
@@ -977,10 +1155,134 @@ extension DateFormatter {
     }()
 }
 
-
-
-
-
+// MARK: - Macro Split Card View
+struct MacroSplitCardView: View {
+    @Binding var selectedWeek: WeekOption
+    let data: [DailyMacroSplit]
+    let weeklyTotal: Double
+    
+    private func weekdayName(for date: Date) -> String {
+        let formatter = DateFormatter()
+        let dayIndex = Calendar.current.component(.weekday, from: date) - 1
+        return formatter.shortWeekdaySymbols[dayIndex]
+    }
+    
+    private var maxDailyCals: Double {
+        let maxCals = data.map(\.totalCals).max() ?? 1000
+        return ceil(maxCals / 250) * 250 // Round up to next 250
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Segmented Control
+            Picker("Week Selection", selection: $selectedWeek) {
+                ForEach(WeekOption.allCases, id: \.self) { week in
+                    Text(week.displayName).tag(week)
+                }
+            }
+            .pickerStyle(.segmented)
+            
+            // Total Calories Header
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("Total Calories")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text("\(Int(weeklyTotal))")
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                Text("cals")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Stacked Bar Chart
+            Chart {
+                ForEach(data) { dayData in
+                    // Protein (red) - bottom layer
+                    BarMark(
+                        x: .value("Day", weekdayName(for: dayData.date)),
+                        yStart: .value("Start", 0),
+                        yEnd: .value("Protein", dayData.proteinCals)
+                    )
+                    .foregroundStyle(Color.red)
+                    .cornerRadius(2)
+                    
+                    // Carbs (orange) - middle layer
+                    BarMark(
+                        x: .value("Day", weekdayName(for: dayData.date)),
+                        yStart: .value("Start", dayData.proteinCals),
+                        yEnd: .value("Carbs", dayData.proteinCals + dayData.carbCals)
+                    )
+                    .foregroundStyle(Color.orange)
+                    .cornerRadius(2)
+                    
+                    // Fats (blue) - top layer
+                    BarMark(
+                        x: .value("Day", weekdayName(for: dayData.date)),
+                        yStart: .value("Start", dayData.proteinCals + dayData.carbCals),
+                        yEnd: .value("Fats", dayData.totalCals)
+                    )
+                    .foregroundStyle(Color.blue)
+                    .cornerRadius(2)
+                }
+                
+                // Gridlines every 250 calories
+                ForEach(Array(stride(from: 250.0, through: maxDailyCals, by: 250.0)), id: \.self) { value in
+                    RuleMark(y: .value("Grid", value))
+                        .foregroundStyle(Color.gray.opacity(0.3))
+                        .lineStyle(StrokeStyle(lineWidth: 0.5, dash: [4, 4]))
+                }
+            }
+            .chartYScale(domain: 0...maxDailyCals)
+            .chartYAxis(.hidden)
+            .chartXAxis {
+                AxisMarks(values: .automatic) { _ in
+                    AxisValueLabel()
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 200)
+            
+            // Legend
+            HStack(spacing: 24) {
+                HStack(spacing: 4) {
+                    Text("🥩")
+                        .font(.caption)
+                    Text("Protein")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack(spacing: 4) {
+                    Text("🌾")
+                        .font(.caption)
+                    Text("Carbs")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack(spacing: 4) {
+                    Text("🫐")
+                        .font(.caption)
+                    Text("Fats")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding()
+        .background(Color("iosfit"))
+        .cornerRadius(16)
+    }
+}
 
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
