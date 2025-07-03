@@ -682,7 +682,6 @@ struct MyProfileView: View {
             return
         }
         
-        let calendar = Calendar.current
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
@@ -711,8 +710,20 @@ struct MyProfileView: View {
         let today = Date()
         
         for dayData in dailyMacros {
-            let weeksAgo = calendar.dateComponents([.weekOfYear], from: dayData.date, to: today).weekOfYear ?? 0
-            
+            // Use the start of each week (Sun‑Sat, local timezone) so we count whole
+            // weeks consistently and avoid off‑by‑one issues for Fri/Sat.
+            var calendar = Calendar.current
+            calendar.timeZone = TimeZone.current
+
+            guard
+                let startOfTodayWeek = calendar.dateInterval(of: .weekOfYear, for: today)?.start,
+                let startOfDayWeek   = calendar.dateInterval(of: .weekOfYear, for: dayData.date)?.start
+            else { return }
+
+            let weeksAgo = calendar.dateComponents([.weekOfYear],
+                                                   from: startOfDayWeek,
+                                                   to: startOfTodayWeek).weekOfYear ?? 0
+
             let weekOption: WeekOption
             switch weeksAgo {
             case 0:
