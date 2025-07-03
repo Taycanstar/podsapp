@@ -658,7 +658,8 @@ struct MyProfileView: View {
         
         for (index, weekOption) in weekOptions.enumerated() {
             let weeksBack = index
-            let startOfWeek = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) ?? today
+            let targetDate = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) ?? today
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: targetDate)?.start ?? targetDate
             let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? today
             
             // Fetch logs for this week
@@ -681,10 +682,14 @@ struct MyProfileView: View {
         let repo = LogRepository()
         var allLogs: [CombinedLog] = []
         var completedFetches = 0
-        let totalDays = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        
+        // Calculate week start (Sunday) and ensure we get 7 days
+        let calendar = Calendar.current
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: startDate)?.start ?? startDate
+        let totalDays = 7
         
         for dayOffset in 0..<totalDays {
-            guard let currentDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: startDate) else {
+            guard let currentDate = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) else {
                 continue
             }
             
@@ -710,9 +715,12 @@ struct MyProfileView: View {
         let calendar = Calendar.current
         var dailyData: [Date: DailyMacroSplit] = [:]
         
-        // Initialize 7 days for the week
+        // Ensure we start from Sunday for the week
+        let actualWeekStart = calendar.dateInterval(of: .weekOfYear, for: weekStartDate)?.start ?? weekStartDate
+        
+        // Initialize 7 days for the week starting from Sunday
         for dayOffset in 0..<7 {
-            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStartDate) else { continue }
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: actualWeekStart) else { continue }
             let dayStart = calendar.startOfDay(for: date)
             dailyData[dayStart] = DailyMacroSplit(
                 date: dayStart,
@@ -775,7 +783,8 @@ struct MyProfileView: View {
     
     private func calculateWeeklyTotal(for week: WeekOption) -> Double {
         guard let weekData = macroSplitData[week] else { return 0 }
-        return weekData.reduce(0) { $0 + $1.totalCals }
+        let total = weekData.reduce(0) { $0 + $1.totalCals }
+        return weekData.isEmpty ? 0 : total / Double(weekData.count)
     }
     
     // MARK: - Helper Functions
@@ -1169,7 +1178,13 @@ struct MacroSplitCardView: View {
     
     private var maxDailyCals: Double {
         let maxCals = data.map(\.totalCals).max() ?? 1000
-        return ceil(maxCals / 250) * 250 // Round up to next 250
+        let roundedMax = ceil(maxCals / 100) * 100 // Round up to next 100
+        return max(roundedMax, 100) // Ensure minimum of 100
+    }
+    
+    private var averageDailyCals: Double {
+        let total = data.reduce(0) { $0 + $1.totalCals }
+        return data.isEmpty ? 0 : total / Double(data.count)
     }
     
     var body: some View {
@@ -1182,16 +1197,16 @@ struct MacroSplitCardView: View {
             }
             .pickerStyle(.segmented)
             
-            // Total Calories Header
+            // Average Daily Calories Header
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("Total Calories")
+                Text("Average Daily Calories")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                Text("\(Int(weeklyTotal))")
+                Text("\(Int(averageDailyCals))")
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundColor(.primary)
                 
@@ -1203,31 +1218,30 @@ struct MacroSplitCardView: View {
             // Stacked Bar Chart
             Chart {
                 ForEach(data) { dayData in
-                    // Protein (red) - bottom layer
+                    // Protein (blue) - bottom layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", 0),
                         yEnd: .value("Protein", dayData.proteinCals)
                     )
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(Color.blue)
                     .cornerRadius(2)
                     
-                    // Carbs (orange) - middle layer
+                    // Carbs (darkYellow) - middle layer (no corner radius for connection)
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", dayData.proteinCals),
                         yEnd: .value("Carbs", dayData.proteinCals + dayData.carbCals)
                     )
-                    .foregroundStyle(Color.orange)
-                    .cornerRadius(2)
+                    .foregroundStyle(Color("darkYellow"))
                     
-                    // Fats (blue) - top layer
+                    // Fats (pink) - top layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", dayData.proteinCals + dayData.carbCals),
                         yEnd: .value("Fats", dayData.totalCals)
                     )
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color.pink)
                     .cornerRadius(2)
                 }
                 
@@ -1239,7 +1253,17 @@ struct MacroSplitCardView: View {
                 }
             }
             .chartYScale(domain: 0...maxDailyCals)
-            .chartYAxis(.hidden)
+            .chartYAxis {
+                AxisMarks(values: .automatic) { value in
+                    AxisValueLabel {
+                        if let intValue = value.as(Int.self) {
+                            Text("\(intValue)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
             .chartXAxis {
                 AxisMarks(values: .automatic) { _ in
                     AxisValueLabel()
@@ -1249,30 +1273,37 @@ struct MacroSplitCardView: View {
             }
             .frame(height: 200)
             
-            // Legend
-            HStack(spacing: 24) {
-                HStack(spacing: 4) {
-                    Text("🥩")
-                        .font(.caption)
-                    Text("Protein")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+            // Legend - Centered
+            HStack {
+                Spacer()
                 
-                HStack(spacing: 4) {
-                    Text("🌾")
-                        .font(.caption)
-                    Text("Carbs")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack(spacing: 4) {
-                    Text("🫐")
-                        .font(.caption)
-                    Text("Fats")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                HStack(spacing: 24) {
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.blue)
+                            .frame(width: 12, height: 12)
+                        Text("Protein")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color("darkYellow"))
+                            .frame(width: 12, height: 12)
+                        Text("Carbs")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.pink)
+                            .frame(width: 12, height: 12)
+                        Text("Fats")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
