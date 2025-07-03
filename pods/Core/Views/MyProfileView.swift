@@ -760,9 +760,9 @@ struct ArcOne: View {
     
     private func getBMIColor() -> Color {
         switch getBMICategory() {
-        case .underweight: return .blue
-        case .normal: return .green
-        case .overweight: return .red
+        case .underweight: return Color(red: 0.0, green: 0.3, blue: 1.0)
+        case .normal: return Color(red: 0.2, green: 0.78, blue: 0.35)
+        case .overweight: return Color(red: 1.0, green: 0.1, blue: 0.1)
         }
     }
     
@@ -774,17 +774,17 @@ struct ArcOne: View {
                 .stroke(
                                           LinearGradient(
                           stops: [
-                              // Blue zone with more visibility
-                              Gradient.Stop(color: Color.blue, location: 0.00),
-                              Gradient.Stop(color: Color.blue, location: 0.25),
+                              // Blue zone with more visibility - more vibrant blue
+                              Gradient.Stop(color: Color(red: 0.0, green: 0.3, blue: 1.0), location: 0.00),
+                              Gradient.Stop(color: Color(red: 0.0, green: 0.3, blue: 1.0), location: 0.25),
                               // Gradient transition to green
                               Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.40),
                               // Green zone (smaller)
                               Gradient.Stop(color: Color(red: 0.2, green: 0.78, blue: 0.35), location: 0.60),
-                              // Gradient transition to red
-                              Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 0.75),
-                              // Red zone with more visibility
-                              Gradient.Stop(color: Color(red: 1, green: 0.23, blue: 0.19), location: 1.00),
+                              // Gradient transition to red - more vibrant red
+                              Gradient.Stop(color: Color(red: 1.0, green: 0.1, blue: 0.1), location: 0.75),
+                              // Red zone with more visibility - more vibrant red
+                              Gradient.Stop(color: Color(red: 1.0, green: 0.1, blue: 0.1), location: 1.00),
                           ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -816,24 +816,24 @@ struct ArcOne: View {
         HStack {
             Text("Underweight")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(getBMICategory() == .underweight ? .blue : .secondary)
-            
-            Spacer()
+                .foregroundColor(getBMICategory() == .underweight ? Color(red: 0.0, green: 0.3, blue: 1.0) : .secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             
             Text("Normal")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(getBMICategory() == .normal ? .green : .secondary)
-            
-            Spacer()
+                .foregroundColor(getBMICategory() == .normal ? Color(red: 0.2, green: 0.78, blue: 0.35) : .secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
             
             Text("Overweight")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(getBMICategory() == .overweight ? .red : .secondary)
+                .foregroundColor(getBMICategory() == .overweight ? Color(red: 1.0, green: 0.1, blue: 0.1) : .secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 }
         .padding(.horizontal, 50)
         .padding(.top, -65)
         }
-        .padding(.vertical, 20)
+        .padding(.top, 20)
+        .padding(.bottom, -15)
      }
 }
 
@@ -856,8 +856,9 @@ struct BMIIndicatorDot: View {
                 .frame(width: 16, height: 16)
                 .overlay(
                     Circle()
-                        .stroke(Color.primary, lineWidth: 1)
+                        .stroke(Color.secondary, lineWidth: 1)
                 )
+                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
                 .position(x: x, y: y)
         }
     }
