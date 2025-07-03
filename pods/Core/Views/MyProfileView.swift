@@ -1254,8 +1254,8 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color.pink)
-                    .clipShape(Rectangle())
-                    
+                    .cornerRadius(0)
+
                     // Carbs (darkYellow) - middle layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
@@ -1264,9 +1264,9 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color("darkYellow"))
-                    .clipShape(Rectangle())
-                    
-                    // Protein (blue) - top layer with top corner radius only
+                    .cornerRadius(0)
+
+                    // Protein (blue) - top layer
                     BarMark(
                         x: .value("Day", weekdayName(for: dayData.date)),
                         yStart: .value("Start", dayData.fatCals + dayData.carbCals),
@@ -1274,9 +1274,9 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color.blue)
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2))
+                    .cornerRadius(0)
                 }
-                
+
                 // Selection indicator
                 if let selectedDay = selectedDay {
                     RuleMark(x: .value("Selected", weekdayName(for: selectedDay.date)))
@@ -1288,7 +1288,7 @@ struct MacroSplitCardView: View {
                                     .font(.caption)
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
-                                
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.blue).frame(width: 6, height: 6)
@@ -1358,7 +1358,7 @@ struct MacroSplitCardView: View {
             // Legend - Centered
             HStack {
                 Spacer()
-                
+
                 HStack(spacing: 24) {
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
@@ -1368,7 +1368,7 @@ struct MacroSplitCardView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color("darkYellow"))
@@ -1377,7 +1377,7 @@ struct MacroSplitCardView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color.pink)
@@ -1387,7 +1387,7 @@ struct MacroSplitCardView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Spacer()
             }
         }
@@ -1396,6 +1396,9 @@ struct MacroSplitCardView: View {
         .cornerRadius(16)
     }
 }
+
+// Remove any BarMark .clipShape(UnevenRoundedRectangle(...)) in MacroSplitCardView (if present)
+
 
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
