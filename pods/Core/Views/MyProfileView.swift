@@ -1254,6 +1254,7 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color.pink)
+                    .clipShape(Rectangle())
                     
                     // Carbs (darkYellow) - middle layer
                     BarMark(
@@ -1263,6 +1264,7 @@ struct MacroSplitCardView: View {
                         width: .fixed(20)
                     )
                     .foregroundStyle(Color("darkYellow"))
+                    .clipShape(Rectangle())
                     
                     // Protein (blue) - top layer with top corner radius only
                     BarMark(
@@ -1302,7 +1304,7 @@ struct MacroSplitCardView: View {
                                     }
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.pink).frame(width: 6, height: 6)
-                                        Text("Fats: \(Int(selectedDay.fatCals))")
+                                        Text("Fat: \(Int(selectedDay.fatCals))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
@@ -1380,7 +1382,7 @@ struct MacroSplitCardView: View {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color.pink)
                             .frame(width: 12, height: 12)
-                        Text("Fats")
+                        Text("Fat")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
