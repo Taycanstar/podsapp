@@ -730,7 +730,7 @@ struct MyProfileView: View {
             processedData[weekOption]?.append(dayData)
         }
         
-        // Sort each week's data by date
+        // Sort each week's data by date to ensure proper chronological order
         for weekOption in processedData.keys {
             processedData[weekOption]?.sort { $0.date < $1.date }
         }
@@ -1129,14 +1129,62 @@ struct MacroSplitCardView: View {
     let weeklyTotal: Double
     @State private var selectedDay: DailyMacroSplit? = nil
     
+    // Create complete week data with all 7 days (Sunday to Saturday)
+    private var completeWeekData: [DailyMacroSplit] {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1 // Sunday = 1
+        let today = Date()
+        
+        // Calculate the start of the week for the selected week option
+        let weeksBack: Int
+        switch selectedWeek {
+        case .thisWeek: weeksBack = 0
+        case .lastWeek: weeksBack = 1  
+        case .twoWeeksAgo: weeksBack = 2
+        case .threeWeeksAgo: weeksBack = 3
+        }
+        
+        // Get the start of the target week (Sunday)
+        let targetWeekStart = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) ?? today
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: targetWeekStart)?.start ?? targetWeekStart
+        
+        // Create all 7 days of the week
+        var weekDays: [DailyMacroSplit] = []
+        
+        for dayOffset in 0..<7 {
+            let dayDate = calendar.date(byAdding: .day, value: dayOffset, to: startOfWeek) ?? startOfWeek
+            
+            // Find existing data for this day
+            if let existingData = data.first(where: { 
+                calendar.isDate($0.date, inSameDayAs: dayDate) 
+            }) {
+                weekDays.append(existingData)
+            } else {
+                // Create empty data for missing days
+                weekDays.append(DailyMacroSplit(
+                    date: dayDate,
+                    proteinCals: 0,
+                    carbCals: 0,
+                    fatCals: 0
+                ))
+            }
+        }
+        
+        return weekDays
+    }
+    
     private func weekdayName(for date: Date) -> String {
         let formatter = DateFormatter()
-        let dayIndex = Calendar.current.component(.weekday, from: date) - 1
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1 // Sunday = 1
+        formatter.calendar = calendar
+        
+        let dayIndex = calendar.component(.weekday, from: date) - 1
         return formatter.shortWeekdaySymbols[dayIndex]
     }
     
     private var maxDailyCals: Double {
-        let maxCals = data.map(\.totalCals).max() ?? 1000
+        let maxCals = completeWeekData.map(\.totalCals).max() ?? 1000
         // Round up to a nice number for better chart scaling
         if maxCals <= 1000 {
             return 1000
@@ -1154,24 +1202,13 @@ struct MacroSplitCardView: View {
     }
     
     private var averageDailyCals: Double {
-        let total = data.reduce(0) { $0 + $1.totalCals }
-        return data.isEmpty ? 0 : total / Double(data.count)
+        // Only count days with actual data (non-zero calories) for average
+        let daysWithData = completeWeekData.filter { $0.totalCals > 0 }
+        let total = daysWithData.reduce(0) { $0 + $1.totalCals }
+        return daysWithData.isEmpty ? 0 : total / Double(daysWithData.count)
     }
     
-    private func findClosestDay(at location: CGPoint, in geometry: GeometryProxy, chartProxy: ChartProxy) -> String? {
-        let xPosition = location.x
-        let chartWidth = geometry.size.width
-        let dayCount = data.count
-        
-        // Calculate which day was tapped based on x position
-        let dayIndex = Int((xPosition / chartWidth) * Double(dayCount))
-        let clampedIndex = max(0, min(dayIndex, dayCount - 1))
-        
-        if clampedIndex < data.count {
-            return weekdayName(for: data[clampedIndex].date)
-        }
-        return nil
-    }
+
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -1203,10 +1240,12 @@ struct MacroSplitCardView: View {
             
             // Stacked Bar Chart
             Chart {
-                ForEach(data) { dayData in
+                ForEach(Array(completeWeekData.enumerated()), id: \.element.id) { index, dayData in
+                    let dayName = weekdayName(for: dayData.date)
+                    
                     // Fat (pink) - bottom layer
                     BarMark(
-                        x: .value("Day", weekdayName(for: dayData.date)),
+                        x: .value("Day", dayName),
                         yStart: .value("Start", 0),
                         yEnd: .value("Fat", dayData.fatCals),
                         width: .fixed(20)
@@ -1216,7 +1255,7 @@ struct MacroSplitCardView: View {
 
                     // Carbs (darkYellow) - middle layer
                     BarMark(
-                        x: .value("Day", weekdayName(for: dayData.date)),
+                        x: .value("Day", dayName),
                         yStart: .value("Start", dayData.fatCals),
                         yEnd: .value("Carbs", dayData.fatCals + dayData.carbCals),
                         width: .fixed(20)
@@ -1226,7 +1265,7 @@ struct MacroSplitCardView: View {
 
                     // Protein (blue) - top layer
                     BarMark(
-                        x: .value("Day", weekdayName(for: dayData.date)),
+                        x: .value("Day", dayName),
                         yStart: .value("Start", dayData.fatCals + dayData.carbCals),
                         yEnd: .value("Protein", dayData.totalCals),
                         width: .fixed(20)
@@ -1284,18 +1323,18 @@ struct MacroSplitCardView: View {
                                     // Ensure the touch is inside the plot area
                                     guard plotFrame.contains(value.location) else { return }
 
-                                                                         // X position relative to the plot area
-                                     let relativeX = value.location.x - plotFrame.minX
-                                     let dayWidth  = plotFrame.width / CGFloat(max(data.count, 1))
-                                     let index     = Int(relativeX / max(dayWidth, 1))
-                                     let clamped   = max(0, min(index, data.count - 1))
+                                    // X position relative to the plot area
+                                    let relativeX = value.location.x - plotFrame.minX
+                                    let dayWidth  = plotFrame.width / CGFloat(max(completeWeekData.count, 1))
+                                    let index     = Int(relativeX / max(dayWidth, 1))
+                                    let clamped   = max(0, min(index, completeWeekData.count - 1))
  
-                                     // Safety check to prevent index out of range
-                                     guard !data.isEmpty && clamped < data.count else { return }
+                                    // Safety check to prevent index out of range
+                                    guard !completeWeekData.isEmpty && clamped < completeWeekData.count else { return }
  
-                                     withAnimation(.easeInOut(duration: 0.15)) {
-                                         selectedDay = data[clamped]
-                                     }
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        selectedDay = completeWeekData[clamped]
+                                    }
                                 }
                                 .onEnded { _ in
                                     // Optional: keep the selection, or clear it when touch ends
