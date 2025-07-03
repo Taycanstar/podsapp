@@ -51,6 +51,7 @@ struct MyProfileView: View {
     // Macro split data
     @State private var macroSplitData: [WeekOption: [DailyMacroSplit]] = [:]
     @State private var isLoadingMacros = false
+    @State private var selectedDay: DailyMacroSplit? = nil
     
     var body: some View {
         NavigationView {
@@ -1245,7 +1246,8 @@ struct MacroSplitCardView: View {
             Chart {
                 ForEach(Array(completeWeekData.enumerated()), id: \.element.id) { index, dayData in
                     let dayName = weekdayName(for: dayData.date)
-                    
+                    let isFocused = selectedDay?.id == dayData.id
+                    let dimmedOpacity = selectedDay == nil || isFocused ? 1.0 : 0.3
                     // Fat (pink) - bottom layer
                     BarMark(
                         x: .value("Day", dayName),
@@ -1255,6 +1257,7 @@ struct MacroSplitCardView: View {
                     )
                     .foregroundStyle(Color.pink)
                     .cornerRadius(0)
+                    .opacity(dimmedOpacity)
 
                     // Carbs (darkYellow) - middle layer
                     BarMark(
@@ -1265,6 +1268,7 @@ struct MacroSplitCardView: View {
                     )
                     .foregroundStyle(Color("darkYellow"))
                     .cornerRadius(0)
+                    .opacity(dimmedOpacity)
 
                     // Protein (blue) - top layer
                     BarMark(
@@ -1275,6 +1279,7 @@ struct MacroSplitCardView: View {
                     )
                     .foregroundStyle(Color.blue)
                     .cornerRadius(0)
+                    .opacity(dimmedOpacity)
                     // Tooltip annotation when this bar is selected
                     .annotation(position: .top, alignment: .center, spacing: 0) {
                         if selectedDay?.id == dayData.id {
@@ -1315,7 +1320,6 @@ struct MacroSplitCardView: View {
             }
             .chartOverlay { proxy in
                 GeometryReader { geo in
-                    // Transparent layer that captures taps / drags inside the plot area
                     Rectangle()
                         .fill(Color.clear)
                         .contentShape(Rectangle())
@@ -1323,24 +1327,21 @@ struct MacroSplitCardView: View {
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
                                     let plotFrame = geo[proxy.plotAreaFrame]
-                                    // Ensure the touch is inside the plot area
                                     guard plotFrame.contains(value.location) else { return }
-
-                                    // X position relative to the plot area
                                     let relativeX = value.location.x - plotFrame.minX
                                     let dayWidth  = plotFrame.width / CGFloat(max(completeWeekData.count, 1))
                                     let index     = Int(relativeX / max(dayWidth, 1))
                                     let clamped   = max(0, min(index, completeWeekData.count - 1))
- 
-                                    // Safety check to prevent index out of range
                                     guard !completeWeekData.isEmpty && clamped < completeWeekData.count else { return }
- 
                                     withAnimation(.easeInOut(duration: 0.15)) {
                                         selectedDay = completeWeekData[clamped]
                                     }
                                 }
                                 .onEnded { _ in
-                                    // Optional: keep the selection, or clear it when touch ends
+                                    // Remove focus on release
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        selectedDay = nil
+                                    }
                                 }
                         )
                 }
