@@ -1275,16 +1275,11 @@ struct MacroSplitCardView: View {
                     )
                     .foregroundStyle(Color.blue)
                     .cornerRadius(0)
-                }
-
-                // Selection indicator
-                if let selectedDay = selectedDay {
-                    RuleMark(x: .value("Selected", weekdayName(for: selectedDay.date)))
-                        .foregroundStyle(Color.primary.opacity(0.3))
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .annotation(position: .top, spacing: 0) {
+                    // Tooltip annotation when this bar is selected
+                    .annotation(position: .top, alignment: .center, spacing: 0) {
+                        if selectedDay?.id == dayData.id {
                             VStack(alignment: .center, spacing: 4) {
-                                Text("\(Int(selectedDay.totalCals)) cals")
+                                Text("\(Int(dayData.totalCals)) cals")
                                     .font(.caption)
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
@@ -1292,19 +1287,19 @@ struct MacroSplitCardView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.blue).frame(width: 6, height: 6)
-                                        Text("Protein: \(Int(selectedDay.proteinCals))")
+                                        Text("Protein: \(Int(dayData.proteinCals))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
                                     HStack(spacing: 4) {
                                         Circle().fill(Color("darkYellow")).frame(width: 6, height: 6)
-                                        Text("Carbs: \(Int(selectedDay.carbCals))")
+                                        Text("Carbs: \(Int(dayData.carbCals))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.pink).frame(width: 6, height: 6)
-                                        Text("Fat: \(Int(selectedDay.fatCals))")
+                                        Text("Fat: \(Int(dayData.fatCals))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
@@ -1315,21 +1310,36 @@ struct MacroSplitCardView: View {
                             .cornerRadius(8)
                             .shadow(radius: 2)
                         }
+                    }
                 }
             }
-            .chartBackground { chartProxy in
-                GeometryReader { geometry in
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    // Transparent layer that captures taps / drags inside the plot area
                     Rectangle()
                         .fill(Color.clear)
                         .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            // Find the closest day based on tap location
-                            if let dayName = findClosestDay(at: location, in: geometry, chartProxy: chartProxy) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedDay = data.first { weekdayName(for: $0.date) == dayName }
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let plotFrame = geo[proxy.plotAreaFrame]
+                                    // Ensure the touch is inside the plot area
+                                    guard plotFrame.contains(value.location) else { return }
+
+                                    // X position relative to the plot area
+                                    let relativeX = value.location.x - plotFrame.minX
+                                    let dayWidth  = plotFrame.width / CGFloat(max(data.count, 1))
+                                    let index     = Int(relativeX / max(dayWidth, 1))
+                                    let clamped   = max(0, min(index, data.count - 1))
+
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        selectedDay = data[clamped]
+                                    }
                                 }
-                            }
-                        }
+                                .onEnded { _ in
+                                    // Optional: keep the selection, or clear it when touch ends
+                                }
+                        )
                 }
             }
             .chartYScale(domain: 0...maxDailyCals)
