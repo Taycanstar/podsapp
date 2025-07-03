@@ -136,6 +136,27 @@ struct CalorieTrendDay: Codable {
     let calories: Double
 }
 
+struct MacroDataDay: Codable {
+    let date: String
+    let calories: Double
+    let proteinCals: Double
+    let carbCals: Double
+    let fatCals: Double
+    let proteinGrams: Double
+    let carbGrams: Double
+    let fatGrams: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case date, calories
+        case proteinCals = "protein_cals"
+        case carbCals = "carb_cals"
+        case fatCals = "fat_cals"
+        case proteinGrams = "protein_grams"
+        case carbGrams = "carb_grams"
+        case fatGrams = "fat_grams"
+    }
+}
+
 struct ProfileDataResponse: Codable {
     let email: String
     let username: String
@@ -149,6 +170,7 @@ struct ProfileDataResponse: Codable {
     let currentWeightLbs: Double?
     let weightDate: String?
     let calorieTrend3Weeks: [CalorieTrendDay]
+    let macroData3Weeks: [MacroDataDay]?  // Optional macro breakdown data
     let averageDailyCalories: Double
     let averageCaloriesActiveDays: Double
     let daysLogged: Int
@@ -171,6 +193,7 @@ struct ProfileDataResponse: Codable {
         case currentWeightLbs = "current_weight_lbs"
         case weightDate = "weight_date"
         case calorieTrend3Weeks = "calorie_trend_3_weeks"
+        case macroData3Weeks = "macro_data_3_weeks"
         case averageDailyCalories = "average_daily_calories"
         case averageCaloriesActiveDays = "average_calories_active_days"
         case daysLogged = "days_logged"

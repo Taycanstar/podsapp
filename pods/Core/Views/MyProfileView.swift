@@ -645,140 +645,98 @@ struct MyProfileView: View {
             return
         }
         
-        print("📊 Fetching macro split data for email: \(email)")
+        print("📊 Fetching macro split data using profile data for email: \(email)")
         isLoadingMacros = true
         
-        let calendar = Calendar.current
-        let today = Date()
+        // Get user's timezone offset
+        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
         
-        // Fetch logs for all 4 weeks
-        let weekOptions: [WeekOption] = [.thisWeek, .lastWeek, .twoWeeksAgo, .threeWeeksAgo]
-        var fetchedData: [WeekOption: [DailyMacroSplit]] = [:]
-        var completedFetches = 0
-        
-        for (index, weekOption) in weekOptions.enumerated() {
-            let weeksBack = index
-            let targetDate = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) ?? today
-            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: targetDate)?.start ?? targetDate
-            let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? today
-            
-            // Fetch logs for this week
-            fetchLogsForDateRange(email: email, startDate: startOfWeek, endDate: endOfWeek) { logs in
-                DispatchQueue.main.async {
-                    fetchedData[weekOption] = self.processMacroData(from: logs, for: startOfWeek)
-                    completedFetches += 1
-                    
-                    if completedFetches == weekOptions.count {
-                        self.macroSplitData = fetchedData
-                        self.isLoadingMacros = false
-                        print("📊 Macro split data loaded successfully")
-                    }
-                }
-            }
-        }
-    }
-    
-    private func fetchLogsForDateRange(email: String, startDate: Date, endDate: Date, completion: @escaping ([CombinedLog]) -> Void) {
-        let repo = LogRepository()
-        var allLogs: [CombinedLog] = []
-        var completedFetches = 0
-        
-        // Calculate week start (Sunday) and ensure we get 7 days
-        let calendar = Calendar.current
-        let weekStart = calendar.dateInterval(of: .weekOfYear, for: startDate)?.start ?? startDate
-        let totalDays = 7
-        
-        for dayOffset in 0..<totalDays {
-            guard let currentDate = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) else {
-                continue
-            }
-            
-            repo.fetchLogs(email: email, for: currentDate) { result in
-                defer {
-                    completedFetches += 1
-                    if completedFetches == totalDays {
-                        completion(allLogs)
-                    }
-                }
+        // Fetch profile data with timezone offset to get macro data
+        NetworkManagerTwo.shared.fetchProfileData(
+            userEmail: email,
+            timezoneOffset: timezoneOffset
+        ) { result in
+            DispatchQueue.main.async {
+                isLoadingMacros = false
                 
                 switch result {
-                case .success(let response):
-                    allLogs.append(contentsOf: response.logs)
+                case .success(let profileData):
+                    print("✅ Successfully fetched profile data with macro info")
+                    processProfileMacroData(profileData)
+                    
                 case .failure(let error):
-                    print("❌ Error fetching logs for \(currentDate): \(error)")
+                    print("❌ Error fetching profile data: \(error)")
+                    // Fallback to empty data
+                    macroSplitData = [:]
                 }
             }
         }
     }
     
-    private func processMacroData(from logs: [CombinedLog], for weekStartDate: Date) -> [DailyMacroSplit] {
-        let calendar = Calendar.current
-        var dailyData: [Date: DailyMacroSplit] = [:]
-        
-        // Ensure we start from Sunday for the week
-        let actualWeekStart = calendar.dateInterval(of: .weekOfYear, for: weekStartDate)?.start ?? weekStartDate
-        
-        // Initialize 7 days for the week starting from Sunday
-        for dayOffset in 0..<7 {
-            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: actualWeekStart) else { continue }
-            let dayStart = calendar.startOfDay(for: date)
-            dailyData[dayStart] = DailyMacroSplit(
-                date: dayStart,
-                proteinCals: 0,
-                carbCals: 0,
-                fatCals: 0
-            )
+    private func processProfileMacroData(_ profileData: ProfileDataResponse) {
+        guard let macroData = profileData.macroData3Weeks else {
+            print("❌ No macro data in profile response")
+            macroSplitData = [:]
+            return
         }
         
-        // Process logs and aggregate by day
-        for log in logs {
-            guard let logDate = log.scheduledAt else { continue }
-            let dayStart = calendar.startOfDay(for: logDate)
-            
-            guard var dayData = dailyData[dayStart] else { continue }
-            
-            // Calculate macro calories from the log
-            var proteinGrams: Double = 0
-            var carbGrams: Double = 0
-            var fatGrams: Double = 0
-            
-            switch log.type {
-            case .food:
-                if let food = log.food {
-                    let servings = food.numberOfServings
-                    proteinGrams += (food.protein ?? 0) * servings
-                    carbGrams += (food.carbs ?? 0) * servings
-                    fatGrams += (food.fat ?? 0) * servings
-                }
-            case .meal:
-                if let meal = log.meal {
-                    proteinGrams += meal.protein ?? 0
-                    carbGrams += meal.carbs ?? 0
-                    fatGrams += meal.fat ?? 0
-                }
-            case .recipe:
-                if let recipe = log.recipe {
-                    proteinGrams += recipe.protein ?? 0
-                    carbGrams += recipe.carbs ?? 0
-                    fatGrams += recipe.fat ?? 0
-                }
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Convert API response to our local data structure
+        var processedData: [WeekOption: [DailyMacroSplit]] = [:]
+        
+        // Parse the macro data and group by weeks
+        let dailyMacros = macroData.compactMap { dayData -> DailyMacroSplit? in
+            guard let date = dateFormatter.date(from: dayData.date) else {
+                print("❌ Failed to parse date: \(dayData.date)")
+                return nil
             }
             
-            // Convert grams to calories (protein: 4 cal/g, carbs: 4 cal/g, fat: 9 cal/g)
-            let proteinCals = proteinGrams * 4
-            let carbCals = carbGrams * 4
-            let fatCals = fatGrams * 9
-            
-            dailyData[dayStart] = DailyMacroSplit(
-                date: dayStart,
-                proteinCals: (dailyData[dayStart]?.proteinCals ?? 0) + proteinCals,
-                carbCals: (dailyData[dayStart]?.carbCals ?? 0) + carbCals,
-                fatCals: (dailyData[dayStart]?.fatCals ?? 0) + fatCals
+            return DailyMacroSplit(
+                date: date,
+                proteinCals: dayData.proteinCals,
+                carbCals: dayData.carbCals,
+                fatCals: dayData.fatCals
             )
+        }.sorted { $0.date < $1.date }
+        
+        print("📊 Processing \(dailyMacros.count) days of macro data from profile")
+        
+        // Group by weeks relative to today
+        let today = Date()
+        
+        for dayData in dailyMacros {
+            let weeksAgo = calendar.dateComponents([.weekOfYear], from: dayData.date, to: today).weekOfYear ?? 0
+            
+            let weekOption: WeekOption
+            switch weeksAgo {
+            case 0:
+                weekOption = .thisWeek
+            case 1:
+                weekOption = .lastWeek
+            case 2:
+                weekOption = .twoWeeksAgo
+            case 3...:
+                weekOption = .threeWeeksAgo
+            default:
+                continue // Skip future dates
+            }
+            
+            if processedData[weekOption] == nil {
+                processedData[weekOption] = []
+            }
+            processedData[weekOption]?.append(dayData)
         }
         
-        // Return sorted array
-        return dailyData.values.sorted { $0.date < $1.date }
+        // Sort each week's data by date
+        for weekOption in processedData.keys {
+            processedData[weekOption]?.sort { $0.date < $1.date }
+        }
+        
+        macroSplitData = processedData
+        print("✅ Processed macro data into weeks: \(processedData.keys.count) weeks available")
     }
     
     private func calculateWeeklyTotal(for week: WeekOption) -> Double {
@@ -1326,15 +1284,18 @@ struct MacroSplitCardView: View {
                                     // Ensure the touch is inside the plot area
                                     guard plotFrame.contains(value.location) else { return }
 
-                                    // X position relative to the plot area
-                                    let relativeX = value.location.x - plotFrame.minX
-                                    let dayWidth  = plotFrame.width / CGFloat(max(data.count, 1))
-                                    let index     = Int(relativeX / max(dayWidth, 1))
-                                    let clamped   = max(0, min(index, data.count - 1))
-
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        selectedDay = data[clamped]
-                                    }
+                                                                         // X position relative to the plot area
+                                     let relativeX = value.location.x - plotFrame.minX
+                                     let dayWidth  = plotFrame.width / CGFloat(max(data.count, 1))
+                                     let index     = Int(relativeX / max(dayWidth, 1))
+                                     let clamped   = max(0, min(index, data.count - 1))
+ 
+                                     // Safety check to prevent index out of range
+                                     guard !data.isEmpty && clamped < data.count else { return }
+ 
+                                     withAnimation(.easeInOut(duration: 0.15)) {
+                                         selectedDay = data[clamped]
+                                     }
                                 }
                                 .onEnded { _ in
                                     // Optional: keep the selection, or clear it when touch ends
@@ -1360,7 +1321,7 @@ struct MacroSplitCardView: View {
                 AxisMarks(values: .automatic) { _ in
                     AxisValueLabel()
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .frame(height: 200)

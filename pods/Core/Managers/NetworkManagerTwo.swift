@@ -1133,14 +1133,17 @@ class NetworkManagerTwo {
     /// Fetch comprehensive profile data for a user
     /// - Parameters:
     ///   - userEmail: User's email address
+    ///   - timezoneOffset: User's timezone offset in minutes
     ///   - completion: Result callback with profile data or error
     func fetchProfileData(
         userEmail: String,
+        timezoneOffset: Int = 0,
         completion: @escaping (Result<ProfileDataResponse, Error>) -> Void
     ) {
         var components = URLComponents(string: "\(baseUrl)/get-profile-data/")!
         components.queryItems = [
-            URLQueryItem(name: "user_email", value: userEmail)
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "timezone_offset", value: String(timezoneOffset))
         ]
         guard let url = components.url else {
             completion(.failure(NetworkError.invalidURL))
