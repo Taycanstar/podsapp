@@ -29,6 +29,9 @@ struct DailyMacroSplit: Identifiable {
     var proteinCals: Double
     var carbCals: Double
     var fatCals: Double
+    var proteinGrams: Double
+    var carbGrams: Double
+    var fatGrams: Double
     var totalCals: Double { calories }  // Use raw calories, not macro calculation
 }
 
@@ -700,7 +703,10 @@ struct MyProfileView: View {
                 calories: dayData.calories,  // Use raw calories from backend
                 proteinCals: dayData.proteinCals,
                 carbCals: dayData.carbCals,
-                fatCals: dayData.fatCals
+                fatCals: dayData.fatCals,
+                proteinGrams: dayData.proteinGrams,
+                carbGrams: dayData.carbGrams,
+                fatGrams: dayData.fatGrams
             )
         }.sorted { $0.date < $1.date }
         
@@ -1180,7 +1186,10 @@ struct MacroSplitCardView: View {
                     calories: 0,  // Add calories field for empty days
                     proteinCals: 0,
                     carbCals: 0,
-                    fatCals: 0
+                    fatCals: 0,
+                    proteinGrams: 0,
+                    carbGrams: 0,
+                    fatGrams: 0
                 ))
             }
         }
@@ -1303,19 +1312,19 @@ struct MacroSplitCardView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.blue).frame(width: 6, height: 6)
-                                        Text("Protein: \(Int(dayData.proteinCals))")
+                                        Text("Protein: \(Int(dayData.proteinGrams))g")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
                                     HStack(spacing: 4) {
                                         Circle().fill(Color("darkYellow")).frame(width: 6, height: 6)
-                                        Text("Carbs: \(Int(dayData.carbCals))")
+                                        Text("Carbs: \(Int(dayData.carbGrams))g")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
                                     HStack(spacing: 4) {
                                         Circle().fill(Color.pink).frame(width: 6, height: 6)
-                                        Text("Fat: \(Int(dayData.fatCals))")
+                                        Text("Fat: \(Int(dayData.fatGrams))g")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
