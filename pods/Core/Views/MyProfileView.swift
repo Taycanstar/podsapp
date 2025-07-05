@@ -37,7 +37,6 @@ struct DailyMacroSplit: Identifiable {
 
 struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
-    @State private var showProfileSettings = false
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var vm: DayLogsViewModel  // Add this to access current weight
     
@@ -50,6 +49,8 @@ struct MyProfileView: View {
     // Sheet states
     @State private var showEditWeightSheet = false
     @State private var selectedWeek: WeekOption = .thisWeek
+    @State private var showEditProfile = false
+    @State private var showProfileSettings = false
     
     // Macro split data
     @State private var macroSplitData: [WeekOption: [DailyMacroSplit]] = [:]
@@ -93,7 +94,6 @@ struct MyProfileView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -106,11 +106,6 @@ struct MyProfileView: View {
                 }
             }
         }
-        .sheet(isPresented: $showProfileSettings) {
-            NavigationView {
-                ProfileView(isAuthenticated: $isAuthenticated)
-            }
-        }
         .sheet(isPresented: $showEditWeightSheet) {
             EditWeightView(onWeightSaved: {
                 // Refresh weight data after saving with a small delay
@@ -119,6 +114,11 @@ struct MyProfileView: View {
                     fetchWeightData()
                 }
             })
+        }
+        .sheet(isPresented: $showProfileSettings) {
+            NavigationView {
+                ProfileView(isAuthenticated: $isAuthenticated)
+            }
         }
         .onAppear {
             // Debug: Check what we have
@@ -204,11 +204,7 @@ struct MyProfileView: View {
                     .font(.body)
                     .foregroundColor(.secondary)
                 
-                if !onboarding.email.isEmpty {
-                    Text(onboarding.email)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+
             }
         }
         .padding()
@@ -260,15 +256,30 @@ struct MyProfileView: View {
                 }
             }
             
-            VStack(spacing: 4) {
+            VStack(spacing: 8) {
+                // Name (larger, bold)
                 Text(onboarding.profileData?.username ?? onboarding.username)
                     .font(.title2)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                     .foregroundColor(.primary)
                 
-                Text(onboarding.profileData?.email ?? onboarding.email)
-                    .font(.subheadline)
+                // Username below name (smaller, secondary)
+                Text("@\(onboarding.profileData?.username ?? onboarding.username)")
+                    .font(.body)
                     .foregroundColor(.secondary)
+                
+                // Edit button - fully rounded
+                NavigationLink(destination: EditMyProfileView(isAuthenticated: $isAuthenticated)) {
+                    Text("Edit")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
+                        .background(Color("iosfit"))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.top, 4)
             }
         }
         .padding(.vertical)

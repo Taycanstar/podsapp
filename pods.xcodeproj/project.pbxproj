@@ -35,6 +35,7 @@
 		363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */; };
 		363068DB2E1098B800F2D4EC /* ConfirmAddFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */; };
 		363068DD2E132EE400F2D4EC /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DC2E132EE400F2D4EC /* MyProfileView.swift */; };
+		363068E02E19E3F400F2D4EC /* EditMyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363068DF2E19E3F400F2D4EC /* EditMyProfileView.swift */; };
 		363201332C96257100BC1815 /* TeamInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201322C96257100BC1815 /* TeamInfoView.swift */; };
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
@@ -285,6 +286,7 @@
 		363068D82E107A6500F2D4EC /* CreateAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAddFoodView.swift; sourceTree = "<group>"; };
 		363068DA2E1098B800F2D4EC /* ConfirmAddFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmAddFoodView.swift; sourceTree = "<group>"; };
 		363068DC2E132EE400F2D4EC /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
+		363068DF2E19E3F400F2D4EC /* EditMyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMyProfileView.swift; sourceTree = "<group>"; };
 		363201322C96257100BC1815 /* TeamInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamInfoView.swift; sourceTree = "<group>"; };
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
@@ -552,6 +554,14 @@
 			path = biometrics;
 			sourceTree = "<group>";
 		};
+		363068DE2E19E3DA00F2D4EC /* profile */ = {
+			isa = PBXGroup;
+			children = (
+				363068DF2E19E3F400F2D4EC /* EditMyProfileView.swift */,
+			);
+			path = profile;
+			sourceTree = "<group>";
+		};
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
@@ -671,6 +681,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				363068DE2E19E3DA00F2D4EC /* profile */,
 				363068CD2E0CA78200F2D4EC /* biometrics */,
 				3662A54D2DFDE02100847487 /* workouts */,
 				36ED35D72DDE502000D174FB /* helperViews */,
@@ -1404,6 +1415,7 @@
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
+				363068E02E19E3F400F2D4EC /* EditMyProfileView.swift in Sources */,
 				3662A54F2DFDE03700847487 /* LogWorkoutView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
