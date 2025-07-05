@@ -1261,15 +1261,18 @@ private extension DashboardView {
         
         // Preload profile data for instant MyProfileView loading
         let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+        print("🚀 DashboardView - Starting profile data preload for: \(email)")
+        print("🕐 DashboardView.preloadHealthData - Using timezone offset: \(timezoneOffset) minutes")
         NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let profileData):
                     // Store in onboarding for MyProfileView to use
                     onboarding.profileData = profileData
-                    print("✅ Preloaded profile data for instant MyProfileView loading")
+                    print("✅ DashboardView - Preloaded profile data for \(profileData.email) - stored in onboarding.profileData")
+                    print("✅ DashboardView - Preload success with timezone offset: \(timezoneOffset)")
                 case .failure(let error):
-                    print("❌ Error preloading profile data: \(error)")
+                    print("❌ DashboardView - Error preloading profile data: \(error)")
                 }
             }
         }

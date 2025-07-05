@@ -121,13 +121,42 @@ struct MyProfileView: View {
             })
         }
         .onAppear {
-            // Clear any cached profile data to ensure fresh data
-            onboarding.profileData = nil
-            UserDefaults.standard.removeObject(forKey: "lastProfileDataFetch")
+            // Debug: Check what we have
+            print("🔍 MyProfileView onAppear - Debug info:")
+            print("  - onboarding.email: '\(onboarding.email)'")
+            let userDefaultsEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+            print("  - UserDefaults userEmail: '\(userDefaultsEmail)'")
+            if let profileData = onboarding.profileData {
+                print("  - onboarding.profileData exists for: '\(profileData.email)'")
+                print("  - Email match (onboarding): \(profileData.email == onboarding.email)")
+                print("  - Email match (UserDefaults): \(profileData.email == userDefaultsEmail)")
+            } else {
+                print("  - onboarding.profileData is nil")
+            }
             
-            // Always fetch fresh profile data
-            print("🔄 MyProfileView - Fetching fresh profile data")
-            onboarding.fetchProfileData()
+            // Check if we have fresh preloaded profile data from DashboardView
+            // Use the same email source as DashboardView (UserDefaults)
+            if let profileData = onboarding.profileData, profileData.email == userDefaultsEmail {
+                print("✅ Using fresh preloaded profile data for \(profileData.email) - instant loading!")
+                // Process the existing profile data
+                processProfileData()
+            } else {
+                // More detailed debugging for the failure case
+                if let profileData = onboarding.profileData {
+                    print("⚠️ Preloaded profile data is for wrong user:")
+                    print("  - profileData.email: '\(profileData.email)'")
+                    print("  - userDefaultsEmail: '\(userDefaultsEmail)'")
+                    print("  - Are they equal? \(profileData.email == userDefaultsEmail)")
+                    print("  - profileData.email.count: \(profileData.email.count)")
+                    print("  - userDefaultsEmail.count: \(userDefaultsEmail.count)")
+                    print("  - profileData.email bytes: \(Array(profileData.email.utf8))")
+                    print("  - userDefaultsEmail bytes: \(Array(userDefaultsEmail.utf8))")
+                } else {
+                    print("⏳ No preloaded data - fetching fresh profile data")
+                }
+                // Fetch fresh profile data if not preloaded or wrong user
+                onboarding.fetchProfileData()
+            }
             
             // Always fetch weight data and process macro split data
             fetchWeightData()
@@ -549,16 +578,25 @@ struct MyProfileView: View {
     // MARK: - Macro Split Data Methods
     
     private func fetchMacroSplitData() {
+        // First check if we have preloaded profile data with macro info
+        if let profileData = onboarding.profileData, profileData.macroData3Weeks != nil {
+            print("📊 Using preloaded macro data from profile - no API call needed!")
+            processProfileMacroData(profileData)
+            return
+        }
+        
+        // Fallback: fetch fresh data if no preloaded macro data available
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             print("❌ No user email found for macro data fetch")
             return
         }
         
-        print("📊 Fetching macro split data using profile data for email: \(email)")
+        print("📊 No preloaded macro data - fetching fresh profile data for email: \(email)")
         isLoadingMacros = true
         
         // Get user's timezone offset
         let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+        print("🕐 MyProfileView.fetchMacroSplitData - Using timezone offset: \(timezoneOffset) minutes")
         
         // Fetch profile data with timezone offset to get macro data
         NetworkManagerTwo.shared.fetchProfileData(
@@ -571,6 +609,7 @@ struct MyProfileView: View {
                 switch result {
                 case .success(let profileData):
                     print("✅ Successfully fetched profile data with macro info")
+                    print("✅ MyProfileView.fetchMacroSplitData - Success with timezone offset: \(timezoneOffset)")
                     processProfileMacroData(profileData)
                     
                 case .failure(let error):

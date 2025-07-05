@@ -326,7 +326,11 @@ class OnboardingViewModel: ObservableObject {
         isLoadingProfile = true
         profileError = nil
         
-        networkManager.fetchProfileData(userEmail: email) { [weak self] result in
+        // CRITICAL FIX: Use correct timezone offset instead of defaulting to 0
+        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+        print("🕐 OnboardingViewModel.fetchProfileData - Using timezone offset: \(timezoneOffset) minutes")
+        
+        networkManager.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoadingProfile = false
                 
@@ -334,9 +338,11 @@ class OnboardingViewModel: ObservableObject {
                 case .success(let data):
                     self?.profileData = data
                     self?.updateLocalUserData(from: data)
+                    print("✅ OnboardingViewModel.fetchProfileData - Success with timezone offset: \(timezoneOffset)")
                     // No cache timestamp - always fetch fresh data
                 case .failure(let error):
                     self?.profileError = error.localizedDescription
+                    print("❌ OnboardingViewModel.fetchProfileData - Error: \(error)")
                 }
             }
         }
