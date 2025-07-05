@@ -170,6 +170,13 @@ struct MyProfileView: View {
                 fetchWeightData()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LogsChangedNotification"))) { _ in
+            // Refresh profile data when logs change (food added/removed/updated)
+            print("🔄 MyProfileView received LogsChangedNotification - refreshing profile data")
+            Task {
+                await onboarding.fetchProfileData()
+            }
+        }
     }
     
     private func basicProfileHeaderView() -> some View {

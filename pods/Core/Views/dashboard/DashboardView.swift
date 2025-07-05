@@ -375,8 +375,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
-                // Refresh health data when permissions are granted
-                healthViewModel.reloadHealthData(for: vm.selectedDate)
+                print("📊 Health data available - reloading dashboard")
+                vm.loadLogs(for: vm.selectedDate)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LogsChangedNotification"))) { _ in
+                print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
+                refreshPreloadedProfileData()
             }
             .onChange(of: onboarding.onboardingCompleted) { _, isCompleted in
                 // CRITICAL: Show log flow after onboarding is completed (if user hasn't seen it yet)
@@ -1300,6 +1304,33 @@ private extension DashboardView {
                 }
             case .failure(let error):
                 print("Error preloading height logs: \(error)")
+            }
+        }
+        
+        // Refresh preloaded profile data when logs change
+        refreshPreloadedProfileData()
+    }
+    
+    /// Refresh preloaded profile data when logs change
+    private func refreshPreloadedProfileData() {
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            return
+        }
+        
+        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+        print("🔄 DashboardView - Refreshing profile data for: \(email)")
+        print("🕐 DashboardView.refreshPreloadedProfileData - Using timezone offset: \(timezoneOffset) minutes")
+        NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let profileData):
+                    // Update the preloaded profile data
+                    onboarding.profileData = profileData
+                    print("✅ DashboardView - Refreshed profile data for \(profileData.email)")
+                    print("✅ DashboardView - Refresh success with timezone offset: \(timezoneOffset)")
+                case .failure(let error):
+                    print("❌ DashboardView - Error refreshing profile data: \(error)")
+                }
             }
         }
     }

@@ -122,6 +122,9 @@ func addPending(_ log: CombinedLog) {
 
     }
   }
+  
+  // Trigger profile data refresh since logs changed
+  triggerProfileDataRefresh()
 }
 
 
@@ -212,6 +215,13 @@ func loadLogs(for date: Date) {
       remainingCalories = max(0, calorieGoal - totalCalories)
     }
 
+    // MARK: - Profile Data Refresh
+    
+    /// Trigger refresh of preloaded profile data whenever logs change
+    private func triggerProfileDataRefresh() {
+        NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
+    }
+
     func removeLog(_ logToRemove: CombinedLog) {
         // Remove from the main logs array
         logs.removeAll { $0.id == logToRemove.id }
@@ -230,6 +240,9 @@ func loadLogs(for date: Date) {
         }
         // Recalculate totals after removal
         recalculateTotals()
+        
+        // Trigger profile data refresh since logs changed
+        triggerProfileDataRefresh()
     }
 
     func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -303,6 +316,9 @@ func loadLogs(for date: Date) {
                         // Recalculate totals for current day
                         self.recalculateTotals()
                     }
+                    
+                    // Trigger profile data refresh since logs changed
+                    self.triggerProfileDataRefresh()
                     completion(.success(()))
                 case .failure(let error):
                     completion(.failure(error))
