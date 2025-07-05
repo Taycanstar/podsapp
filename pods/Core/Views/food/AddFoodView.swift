@@ -423,7 +423,7 @@ struct AddFoodView: View {
                                     
                                     // Only show divider if not the last item
                                     if index < allSelectedFoods.count - 1 {
-                                        Divider()
+                                    Divider()
                                     }
                                 }
                             }
@@ -463,7 +463,7 @@ struct AddFoodView: View {
                                     
                                     // Only show divider if not the last item
                                     if index < unselectedFoods.count - 1 {
-                                        Divider()
+                                    Divider()
                                     }
                                 }
                             }

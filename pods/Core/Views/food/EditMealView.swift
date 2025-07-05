@@ -49,7 +49,7 @@ struct EditMealView: View {
     // Add a state for error handling
     @State private var showingError = false
     
-
+    
     
     // MARK: - Computed Properties
     private var isDoneButtonDisabled: Bool {
@@ -110,17 +110,17 @@ struct EditMealView: View {
     // MARK: - Body
     var body: some View {
         NavigationStack(path: $localPath) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    mealDetailsSection
-                    mealItemsSection
-                    // directionsSection
-                    
-                    Spacer().frame(height: 40) // extra bottom space
-                }
-                .padding(.top, 16)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                mealDetailsSection
+                mealItemsSection
+                // directionsSection
+                
+                Spacer().frame(height: 40) // extra bottom space
             }
-            .background(Color("iosbg"))
+            .padding(.top, 16)
+        }
+        .background(Color("iosbg"))
             .navigationDestination(for: FoodNavigationDestination.self) { destination in
                 switch destination {
                 case .addFoodToMeal:
@@ -138,24 +138,24 @@ struct EditMealView: View {
         .toolbar {
             // Only show toolbar when we're not navigating to another view
             if localPath.isEmpty {
-                ToolbarItem(placement: .principal) {
-                    Text("Edit Recipe")
-                        .fontWeight(.semibold)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        saveUpdatedMeal()
-                    }
-                    .disabled(isDoneButtonDisabled)
+            ToolbarItem(placement: .principal) {
+                Text("Edit Recipe")
                     .fontWeight(.semibold)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    saveUpdatedMeal()
                 }
-                
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark")
+                .disabled(isDoneButtonDisabled)
+                .fontWeight(.semibold)
+            }
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
                     }
                 }
             }

@@ -32,7 +32,7 @@ struct DailyMacroSplit: Identifiable {
     var proteinGrams: Double
     var carbGrams: Double
     var fatGrams: Double
-    var totalCals: Double { calories }  // Use raw calories, not macro calculation
+    var totalCals: Double { calories }  // Use raw calories from backend
 }
 
 struct MyProfileView: View {
@@ -252,104 +252,7 @@ struct MyProfileView: View {
     
 
     
-    private func caloriesTrendView(profileData: ProfileDataResponse) -> some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("3-Week Calorie Intake")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("\(profileData.daysLogged) of \(profileData.totalDays) days logged")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-            
-            if !profileData.calorieTrend3Weeks.isEmpty {
-                // Chart
-                Chart {
-                    ForEach(Array(profileData.calorieTrend3Weeks.enumerated()), id: \.offset) { index, day in
-                        LineMark(
-                            x: .value("Day", index),
-                            y: .value("Calories", day.calories)
-                        )
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .foregroundStyle(Color.purple)
-                        
-                        if day.calories > 0 {
-                            PointMark(
-                                x: .value("Day", index),
-                                y: .value("Calories", day.calories)
-                            )
-                            .symbol(.circle)
-                            .symbolSize(CGSize(width: 6, height: 6))
-                            .foregroundStyle(Color.purple)
-                        }
-                    }
-                    
-                    // Average line
-                    if profileData.averageCaloriesActiveDays > 0 {
-                        RuleMark(y: .value("Average", profileData.averageCaloriesActiveDays))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                            .foregroundStyle(Color.orange.opacity(0.7))
-                    }
-                }
-                .frame(height: 150)
-                .chartYScale(domain: 0...max(3000, profileData.calorieTrend3Weeks.map(\.calories).max() ?? 2000))
-                .chartXAxis {
-                    AxisMarks(preset: .aligned, position: .bottom) { value in
-                        AxisValueLabel {
-                            if let index = value.as(Int.self),
-                               index >= 0 && index < profileData.calorieTrend3Weeks.count {
-                                let day = profileData.calorieTrend3Weeks[index]
-                                if let date = Calendar.current.date(from: DateComponents(year: Int(day.date.prefix(4)), 
-                                                                                       month: Int(day.date.dropFirst(5).prefix(2)), 
-                                                                                       day: Int(day.date.suffix(2)))) {
-                                    Text(DateFormatter.dayFormatter.string(from: date))
-                                        .font(.caption2)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Stats row
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Average (all days)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\(Int(profileData.averageDailyCalories)) cal")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Average (logged days)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\(Int(profileData.averageCaloriesActiveDays)) cal")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.orange)
-                    }
-                }
-                .padding(.top, 8)
-            } else {
-                Text("No calorie data available")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(height: 100)
-            }
-        }
-        .padding()
-        .background(Color("iosfit"))
-        .cornerRadius(12)
-    }
+
     
     private func bmiGaugeView(profileData: ProfileDataResponse) -> some View {
         VStack(spacing: 2) {
@@ -400,43 +303,62 @@ struct MyProfileView: View {
     }
     
     private func nutritionGoalsView(profileData: ProfileDataResponse) -> some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("Nutrition Goals")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
+        NavigationLink(destination: GoalProgress()) {
+            VStack(spacing: 16) {
+                HStack {
+                    Text("Daily Nutrition Goal")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                
+                // Use the same layout as dashboard macros card
+                VStack(spacing: 16) {
+                    macroRow(left:  ("Calories", profileData.calorieGoal,  "flame.fill",    Color("brightOrange")),
+                            right: ("Protein",  profileData.proteinGoal,   "fish",        .blue))
+                    macroRow(left:  ("Carbs",     profileData.carbsGoal,   "laurel.leading", Color("darkYellow")),
+                            right: ("Fat",       profileData.fatGoal,      "drop.fill",     .pink))
+                }
             }
-            
-            VStack(spacing: 12) {
-                goalRow(title: "Calories", value: Int(profileData.calorieGoal), unit: "cal", color: .blue)
-                goalRow(title: "Protein", value: Int(profileData.proteinGoal), unit: "g", color: .red)
-                goalRow(title: "Carbs", value: Int(profileData.carbsGoal), unit: "g", color: .orange)
-                goalRow(title: "Fat", value: Int(profileData.fatGoal), unit: "g", color: .yellow)
-            }
+            .padding()
+            .background(Color("iosfit"))
+            .cornerRadius(12)
         }
-        .padding()
-        .background(Color("iosfit"))
-        .cornerRadius(12)
+        .buttonStyle(PlainButtonStyle())
     }
     
-    private func goalRow(title: String, value: Int, unit: String, color: Color) -> some View {
-        HStack {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
-            
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            Text("\(value) \(unit)")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
+    @ViewBuilder
+    private func macroRow(left: (String, Double, String, Color),
+                          right: (String, Double, String, Color)) -> some View {
+        HStack(spacing: 0) {
+            macroCell(title: left.0, value: left.1,
+                      sf: left.2, colour: left.3)
+            macroCell(title: right.0, value: right.1,
+                      sf: right.2, colour: right.3)
         }
+    }
+    
+    @ViewBuilder
+    private func macroCell(title: String, value: Double,
+                           sf: String, colour: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle().fill(colour.opacity(0.2))
+                        .frame(width: 40, height: 40)
+                Image(systemName: sf).foregroundColor(colour)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title).font(.system(size: 16))
+                Text("\(Int(value))\(title == "Calories" ? "" : "g")")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(colour)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
     }
     
     private var profileContentView: some View {
@@ -459,12 +381,6 @@ struct MyProfileView: View {
                     data: macroSplitData[selectedWeek] ?? [],
                     weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
                 )
-                
-                // 3-week calorie trend
-                if let profileData = onboarding.profileData {
-                    caloriesTrendView(profileData: profileData)
-                }
-                
                 // Nutrition goals
                 if let profileData = onboarding.profileData {
                     nutritionGoalsView(profileData: profileData)
