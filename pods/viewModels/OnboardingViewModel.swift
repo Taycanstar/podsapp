@@ -334,8 +334,7 @@ class OnboardingViewModel: ObservableObject {
                 case .success(let data):
                     self?.profileData = data
                     self?.updateLocalUserData(from: data)
-                    // Mark the fetch timestamp
-                    UserDefaults.standard.set(Date(), forKey: "lastProfileDataFetch")
+                    // No cache timestamp - always fetch fresh data
                 case .failure(let error):
                     self?.profileError = error.localizedDescription
                 }
@@ -345,33 +344,12 @@ class OnboardingViewModel: ObservableObject {
     
     /// Update local user data from profile response
     private func updateLocalUserData(from profileData: ProfileDataResponse) {
-        // Update OnboardingViewModel properties
-        if username != profileData.username {
-            username = profileData.username
-            UserDefaults.standard.set(profileData.username, forKey: "username")
-        }
+        // Update OnboardingViewModel properties (in memory only, no UserDefaults caching)
+        username = profileData.username
+        profileInitial = profileData.profileInitial
+        profileColor = profileData.profileColor
         
-        if profileInitial != profileData.profileInitial {
-            profileInitial = profileData.profileInitial
-            UserDefaults.standard.set(profileData.profileInitial, forKey: "profileInitial")
-        }
-        
-        if profileColor != profileData.profileColor {
-            profileColor = profileData.profileColor
-            UserDefaults.standard.set(profileData.profileColor, forKey: "profileColor")
-        }
-        
-        // Save additional profile data to UserDefaults
-        if let weightLbs = profileData.currentWeightLbs {
-            UserDefaults.standard.set(weightLbs, forKey: "currentWeightLbs")
-        }
-        
-        UserDefaults.standard.set(profileData.calorieGoal, forKey: "calorieGoal")
-        UserDefaults.standard.set(profileData.proteinGoal, forKey: "proteinGoal")
-        UserDefaults.standard.set(profileData.carbsGoal, forKey: "carbsGoal")
-        UserDefaults.standard.set(profileData.fatGoal, forKey: "fatGoal")
-        
-        UserDefaults.standard.synchronize()
+        // No UserDefaults caching - always use fresh data from server
     }
     
     /// Refresh profile data if it's stale (older than 5 minutes)

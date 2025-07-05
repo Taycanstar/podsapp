@@ -1259,6 +1259,21 @@ private extension DashboardView {
             return
         }
         
+        // Preload profile data for instant MyProfileView loading
+        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+        NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let profileData):
+                    // Store in onboarding for MyProfileView to use
+                    onboarding.profileData = profileData
+                    print("✅ Preloaded profile data for instant MyProfileView loading")
+                case .failure(let error):
+                    print("❌ Error preloading profile data: \(error)")
+                }
+            }
+        }
+        
         // Preload weight logs
         NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
             switch result {

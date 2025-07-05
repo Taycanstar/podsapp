@@ -121,29 +121,17 @@ struct MyProfileView: View {
             })
         }
         .onAppear {
-            // Refresh profile data if needed (will check staleness automatically)
-            onboarding.refreshProfileDataIfNeeded()
-            // Fetch weight data using the same method as DashboardView
-            fetchWeightData()
-            // Fetch macro split data
-            fetchMacroSplitData()
+            // Clear any cached profile data to ensure fresh data
+            onboarding.profileData = nil
+            UserDefaults.standard.removeObject(forKey: "lastProfileDataFetch")
             
-            // Debug profile data
-            if let profileData = onboarding.profileData {
-                print("🏥 ===== PROFILE DATA DEBUG =====")
-                print("🏥 heightCm: \(profileData.heightCm?.description ?? "nil")")
-                print("🏥 heightFeet: \(profileData.heightFeet?.description ?? "nil")")
-                print("🏥 heightInches: \(profileData.heightInches?.description ?? "nil")")
-                print("🏥 currentWeightKg: \(profileData.currentWeightKg?.description ?? "nil")")
-                print("🏥 currentWeightLbs: \(profileData.currentWeightLbs?.description ?? "nil")")
-                print("🏥 weightDate: \(profileData.weightDate ?? "nil")")
-                print("🏥 email: \(profileData.email)")
-                print("🏥 username: \(profileData.username)")
-                print("🏥 =============================")
-            } else {
-                print("🏥 ❌ No profile data available - onboarding.profileData is nil")
-                print("🏥 ❌ This means the API call to get_profile_data failed or returned no data")
-            }
+            // Always fetch fresh profile data
+            print("🔄 MyProfileView - Fetching fresh profile data")
+            onboarding.fetchProfileData()
+            
+            // Always fetch weight data and process macro split data
+            fetchWeightData()
+            fetchMacroSplitData()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh weight data when a new weight is logged
@@ -682,6 +670,25 @@ struct MyProfileView: View {
     }
     
     // MARK: - Helper Functions
+    
+    private func processProfileData() {
+        guard let profileData = onboarding.profileData else { return }
+        
+        // Process macro data if available
+        processProfileMacroData(profileData)
+        
+        // Update weight/height from profile data
+        if let weightKg = profileData.currentWeightKg, weightKg > 0 {
+            vm.weight = weightKg
+            currentWeightLbs = weightKg * 2.20462
+        }
+        
+        if let heightCm = profileData.heightCm, heightCm > 0 {
+            vm.height = heightCm
+        }
+        
+        print("✅ Processed preloaded profile data - weight: \(vm.weight)kg, height: \(vm.height)cm")
+    }
     
     private func formatWeightLogDate(_ dateString: String) -> String {
         // Try ISO8601DateFormatter first
