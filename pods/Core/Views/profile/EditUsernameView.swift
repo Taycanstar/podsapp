@@ -30,7 +30,10 @@ struct EditUsernameView: View {
                     .autocorrectionDisabled()
                     .disabled(isLoading)
                 
-                Text("Your username can contain letters, numbers, underscores, and hyphens")
+                Text("Your username can contain letters, numbers, underscores, and periods.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    Text("Your can change your username once every 30 days.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
