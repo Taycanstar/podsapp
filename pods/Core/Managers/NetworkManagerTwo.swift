@@ -42,6 +42,26 @@ class NetworkManagerTwo {
         let error: String
     }
     
+    struct UsernameEligibilityResponse: Codable {
+        let canChangeUsername: Bool
+        let daysRemaining: Int
+        let currentUsername: String
+        let lastChanged: String?
+        
+        enum CodingKeys: String, CodingKey {
+            case canChangeUsername = "can_change_username"
+            case daysRemaining = "days_remaining"
+            case currentUsername = "current_username"
+            case lastChanged = "last_changed"
+        }
+    }
+    
+    struct UsernameAvailabilityResponse: Codable {
+        let available: Bool
+        let username: String?
+        let error: String?
+    }
+    
     // MARK: - Barcode Lookup
     
     /// Look up food by barcode (UPC/EAN code)
@@ -2106,15 +2126,17 @@ class NetworkManagerTwo {
                 return
             }
             
-            // Check for success response
+            // Check for success response (backend returns message and username on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let success = json["success"] as? Bool, success {
+               let message = json["message"] as? String,
+               let username = json["username"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated username")
+                    print("✅ Successfully updated username to: \(username) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
+                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
@@ -2186,6 +2208,136 @@ class NetworkManagerTwo {
             } else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Check if user can change username and get remaining cooldown days
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - completion: Result callback with eligibility information or error
+    func checkUsernameEligibility(email: String, completion: @escaping (Result<UsernameEligibilityResponse, Error>) -> Void) {
+        guard let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseUrl)/check-username-eligibility/?email=\(encodedEmail)") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        print("🔄 Checking username eligibility for user: \(email)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                do {
+                    let eligibilityResponse = try JSONDecoder().decode(UsernameEligibilityResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        print("✅ Username eligibility check successful. Can change: \(eligibilityResponse.canChangeUsername), Days remaining: \(eligibilityResponse.daysRemaining)")
+                        completion(.success(eligibilityResponse))
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        print("❌ Failed to decode username eligibility response: \(error)")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            } else {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: "Failed to check username eligibility")))
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    /// Check if a username is available (not taken by another user)
+    /// - Parameters:
+    ///   - username: Username to check
+    ///   - email: Current user's email address
+    ///   - completion: Result callback with availability information or error
+    func checkUsernameAvailability(username: String, email: String, completion: @escaping (Result<UsernameAvailabilityResponse, Error>) -> Void) {
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseUrl)/check-username-availability/?username=\(encodedUsername)&email=\(encodedEmail)") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                do {
+                    let availabilityResponse = try JSONDecoder().decode(UsernameAvailabilityResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        completion(.success(availabilityResponse))
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            } else {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: "Failed to check username availability")))
+                    }
                 }
             }
         }.resume()
