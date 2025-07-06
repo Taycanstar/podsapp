@@ -159,26 +159,26 @@ struct MacroDataDay: Codable {
 
 struct ProfileDataResponse: Codable {
     let email: String
-    let username: String
-    let profilePhoto: String  // URL or "pfp" for asset
+    var username: String
+    var profilePhoto: String  // URL or "pfp" for asset
     let profileInitial: String
     let profileColor: String
-    let heightCm: Double?
-    let heightFeet: Int?
-    let heightInches: Int?
-    let currentWeightKg: Double?
-    let currentWeightLbs: Double?
-    let weightDate: String?
-    let calorieTrend3Weeks: [CalorieTrendDay]
-    let macroData3Weeks: [MacroDataDay]?  // Optional macro breakdown data
-    let averageDailyCalories: Double
-    let averageCaloriesActiveDays: Double
-    let daysLogged: Int
-    let totalDays: Int
-    let calorieGoal: Double
-    let proteinGoal: Double
-    let carbsGoal: Double
-    let fatGoal: Double
+    var heightCm: Double?
+    var heightFeet: Int?
+    var heightInches: Int?
+    var currentWeightKg: Double?
+    var currentWeightLbs: Double?
+    var weightDate: String?
+    var calorieTrend3Weeks: [CalorieTrendDay]
+    var macroData3Weeks: [MacroDataDay]?  // Optional macro breakdown data
+    var averageDailyCalories: Double
+    var averageCaloriesActiveDays: Double
+    var daysLogged: Int
+    var totalDays: Int
+    var calorieGoal: Double
+    var proteinGoal: Double
+    var carbsGoal: Double
+    var fatGoal: Double
     
     enum CodingKeys: String, CodingKey {
         case email

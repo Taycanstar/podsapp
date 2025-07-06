@@ -15,6 +15,8 @@ struct EditMyProfileView: View {
     @State private var name: String = ""
     @State private var username: String = ""
     @State private var showingActionSheet = false
+    @State private var showEditName = false
+    @State private var showEditUsername = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -99,7 +101,7 @@ struct EditMyProfileView: View {
                     .padding(.vertical, 16)
                     .background(Color(.systemBackground))
                     .onTapGesture {
-                        // Handle name editing
+                        showEditName = true
                     }
                     
                     Divider()
@@ -124,7 +126,7 @@ struct EditMyProfileView: View {
                     .padding(.vertical, 16)
                     .background(Color(.systemBackground))
                     .onTapGesture {
-                        // Handle username editing
+                        showEditUsername = true
                     }
                 }
             }
@@ -134,17 +136,6 @@ struct EditMyProfileView: View {
         .background(Color(.systemBackground))
         .navigationTitle("Edit profile")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-            }
-        }
         .onAppear {
             // Initialize with current values
             if let profileData = onboarding.profileData {
@@ -170,6 +161,22 @@ struct EditMyProfileView: View {
                 // Cancel action
             }
         }
+        .background(
+            VStack {
+                NavigationLink(
+                    destination: EditNameView(),
+                    isActive: $showEditName,
+                    label: { EmptyView() }
+                )
+                
+                NavigationLink(
+                    destination: EditUsernameView(),
+                    isActive: $showEditUsername,
+                    label: { EmptyView() }
+                )
+            }
+            .hidden()
+        )
     }
 }
 

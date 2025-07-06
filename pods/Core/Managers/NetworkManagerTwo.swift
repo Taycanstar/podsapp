@@ -1979,6 +1979,218 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Profile Updates
+    
+    /// Update user's name
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - name: New name
+    ///   - completion: Result callback indicating success or error
+    func updateName(email: String, name: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let urlString = "\(baseUrl)/update-name/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let requestBody: [String: Any] = [
+            "email": email,
+            "name": name
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating name for user: \(email) to: \(name)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Check for success response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let success = json["success"] as? Bool, success {
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated name")
+                    completion(.success(()))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Update user's username
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - username: New username
+    ///   - completion: Result callback indicating success or error
+    func updateUsername(email: String, username: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let urlString = "\(baseUrl)/update-username/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let requestBody: [String: Any] = [
+            "email": email,
+            "username": username
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating username for user: \(email) to: \(username)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Check for success response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let success = json["success"] as? Bool, success {
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated username")
+                    completion(.success(()))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Update user's profile photo
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - photoUrl: New photo URL (can be empty to remove photo)
+    ///   - completion: Result callback indicating success or error
+    func updatePhoto(email: String, photoUrl: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let urlString = "\(baseUrl)/update-photo/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let requestBody: [String: Any] = [
+            "email": email,
+            "photo_url": photoUrl
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating photo for user: \(email) to: \(photoUrl)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Check for success response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let success = json["success"] as? Bool, success {
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated profile photo")
+                    completion(.success(()))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+            }
+        }.resume()
+    }
+
 }
 
 
