@@ -139,10 +139,10 @@ struct EditMyProfileView: View {
         .onAppear {
             // Initialize with current values
             if let profileData = onboarding.profileData {
-                name = profileData.username // Using username as name for now
+                name = profileData.name
                 username = profileData.username
             } else {
-                name = onboarding.username
+                name = onboarding.name ?? ""
                 username = onboarding.username
             }
         }

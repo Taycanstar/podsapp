@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: LocalizedError {
@@ -60,6 +60,20 @@ class NetworkManagerTwo {
         let available: Bool
         let username: String?
         let error: String?
+    }
+    
+    struct NameEligibilityResponse: Codable {
+        let canChangeName: Bool
+        let daysRemaining: Int
+        let currentName: String
+        let lastChanged: String?
+        
+        enum CodingKeys: String, CodingKey {
+            case canChangeName = "can_change_name"
+            case daysRemaining = "days_remaining"
+            case currentName = "current_name"
+            case lastChanged = "last_changed"
+        }
     }
     
     // MARK: - Barcode Lookup
@@ -2056,15 +2070,17 @@ class NetworkManagerTwo {
                 return
             }
             
-            // Check for success response
+            // Check for success response (backend returns message and name on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let success = json["success"] as? Bool, success {
+               let message = json["message"] as? String,
+               let name = json["name"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated name")
+                    print("✅ Successfully updated name to: \(name) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
+                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
@@ -2273,6 +2289,72 @@ class NetworkManagerTwo {
                 } else {
                     DispatchQueue.main.async {
                         completion(.failure(NetworkError.serverError(message: "Failed to check username eligibility")))
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    /// Check if user can change name and get remaining cooldown days
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - completion: Result callback with eligibility information or error
+    func checkNameEligibility(email: String, completion: @escaping (Result<NameEligibilityResponse, Error>) -> Void) {
+        guard let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseUrl)/check-name-eligibility/?email=\(encodedEmail)") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        print("🔄 Checking name eligibility for user: \(email)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                do {
+                    let eligibilityResponse = try JSONDecoder().decode(NameEligibilityResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        print("✅ Name eligibility check successful. Can change: \(eligibilityResponse.canChangeName), Days remaining: \(eligibilityResponse.daysRemaining)")
+                        completion(.success(eligibilityResponse))
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        print("❌ Failed to decode name eligibility response: \(error)")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                }
+            } else {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: "Failed to check name eligibility")))
                     }
                 }
             }

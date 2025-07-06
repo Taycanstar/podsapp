@@ -81,6 +81,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var onboardingCompleted: Bool = false
     @Published var email: String = ""
     @Published var region: String = ""
+    @Published var name: String = ""
     @Published var username: String = ""
     @Published var password: String = ""
     @Published var activeTeamId: Int?
@@ -351,6 +352,7 @@ class OnboardingViewModel: ObservableObject {
     /// Update local user data from profile response
     private func updateLocalUserData(from profileData: ProfileDataResponse) {
         // Update OnboardingViewModel properties (in memory only, no UserDefaults caching)
+        name = profileData.name
         username = profileData.username
         profileInitial = profileData.profileInitial
         profileColor = profileData.profileColor

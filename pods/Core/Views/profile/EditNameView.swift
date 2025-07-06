@@ -15,6 +15,8 @@ struct EditNameView: View {
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
+    @State private var canChangeName: Bool = true
+    @State private var daysRemaining: Int = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -28,9 +30,15 @@ struct EditNameView: View {
                     .cornerRadius(8)
                     .disabled(isLoading)
                 
-                Text("This is the name that will be displayed on your profile")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if canChangeName {
+                    Text("This is the name that will be displayed on your profile")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("You can change your name again in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -55,17 +63,20 @@ struct EditNameView: View {
                 Button("Save") {
                     saveName()
                 }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
-                .foregroundColor(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .accentColor)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading || !canChangeName)
+                .foregroundColor((name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !canChangeName) ? .secondary : .accentColor)
             }
         }
         .onAppear {
-            // Initialize with current name from profile data or username as fallback
+            // Initialize with current name from profile data
             if let profileData = onboarding.profileData {
-                name = profileData.username // Using username as the display name
+                name = profileData.name
             } else {
-                name = onboarding.username // Fallback to username from OnboardingViewModel
+                name = onboarding.name ?? ""
             }
+            
+            // Check name eligibility
+            checkNameEligibility()
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
@@ -101,11 +112,10 @@ struct EditNameView: View {
                 
                 switch result {
                 case .success:
-                    // Update local data - since we're using username as the display name,
-                    // update both the username in OnboardingViewModel and profile data
-                    onboarding.username = trimmedName
+                    // Update local data
+                    onboarding.name = trimmedName
                     if var profileData = onboarding.profileData {
-                        profileData.username = trimmedName
+                        profileData.name = trimmedName
                         onboarding.profileData = profileData
                     }
                     
@@ -113,8 +123,31 @@ struct EditNameView: View {
                     dismiss()
                     
                 case .failure(let error):
-                    errorMessage = error.localizedDescription
+                    if let networkError = error as? NetworkError,
+                       case .serverError(let message) = networkError {
+                        errorMessage = message
+                    } else {
+                        errorMessage = error.localizedDescription
+                    }
                     showError = true
+                }
+            }
+        }
+    }
+    
+    private func checkNameEligibility() {
+        NetworkManagerTwo.shared.checkNameEligibility(email: onboarding.email) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    canChangeName = response.canChangeName
+                    daysRemaining = response.daysRemaining
+                    
+                case .failure(let error):
+                    print("❌ Failed to check name eligibility: \(error)")
+                    // If we can't check eligibility, assume they can change (fail open)
+                    canChangeName = true
+                    daysRemaining = 0
                 }
             }
         }

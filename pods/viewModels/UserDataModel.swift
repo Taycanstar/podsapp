@@ -159,6 +159,7 @@ struct MacroDataDay: Codable {
 
 struct ProfileDataResponse: Codable {
     let email: String
+    var name: String
     var username: String
     var profilePhoto: String  // URL or "pfp" for asset
     let profileInitial: String
@@ -182,6 +183,7 @@ struct ProfileDataResponse: Codable {
     
     enum CodingKeys: String, CodingKey {
         case email
+        case name
         case username
         case profilePhoto = "profile_photo"
         case profileInitial = "profile_initial"
