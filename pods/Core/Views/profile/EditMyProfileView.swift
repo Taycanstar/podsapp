@@ -14,9 +14,13 @@ struct EditMyProfileView: View {
     
     @State private var name: String = ""
     @State private var username: String = ""
-    @State private var showingActionSheet = false
     @State private var showEditName = false
     @State private var showEditUsername = false
+    @State private var showingPhotoActionSheet = false
+    @State private var showingCamera = false
+    @State private var showingPhotoLibrary = false
+    @State private var selectedPhoto: UIImage?
+    @State private var isUploadingPhoto = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -24,14 +28,21 @@ struct EditMyProfileView: View {
             VStack(spacing: 16) {
                 // Profile Picture
                 Button(action: {
-                    showingActionSheet = true
+                    showingPhotoActionSheet = true
                 }) {
                     ZStack {
                         Circle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(width: 120, height: 120)
                         
-                        if let profileData = onboarding.profileData {
+                        // Show selected photo if available
+                        if let selectedPhoto = selectedPhoto {
+                            Image(uiImage: selectedPhoto)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                        } else if let profileData = onboarding.profileData {
                             if profileData.profilePhoto == "pfp" {
                                 // Use asset image
                                 Image("pfp")
@@ -65,13 +76,22 @@ struct EditMyProfileView: View {
                                 .font(.system(size: 60))
                                 .foregroundColor(.gray.opacity(0.6))
                         }
+                        
+                        // Loading overlay
+                        if isUploadingPhoto {
+                            Circle()
+                                .fill(Color.black.opacity(0.5))
+                                .frame(width: 120, height: 120)
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        }
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
                 
                 // Edit photo or avatar button
                 Button(action: {
-                    showingActionSheet = true
+                    showingPhotoActionSheet = true
                 }) {
                     Text("Edit photo or avatar")
                         .font(.system(size: 16, weight: .medium))
@@ -146,21 +166,32 @@ struct EditMyProfileView: View {
                 username = onboarding.username
             }
         }
-        .confirmationDialog("Change Profile Picture", isPresented: $showingActionSheet, titleVisibility: .visible) {
-            Button("Take Photo") {
-                // Handle camera action
-                print("Take Photo selected")
-            }
-            
-            Button("Upload Photo") {
-                // Handle photo library action
-                print("Upload Photo selected")
-            }
-            
-            Button("Cancel", role: .cancel) {
-                // Cancel action
+        .actionSheet(isPresented: $showingPhotoActionSheet) {
+            ActionSheet(
+                title: Text("Change Profile Photo"),
+                buttons: [
+                    .default(Text("Take Photo")) {
+                        showingCamera = true
+                    },
+                    .default(Text("Upload Photo")) {
+                        showingPhotoLibrary = true
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        .sheet(isPresented: $showingCamera) {
+            ProfileImagePicker(selectedImage: $selectedPhoto, sourceType: .camera)
+        }
+        .sheet(isPresented: $showingPhotoLibrary) {
+            ProfileImagePicker(selectedImage: $selectedPhoto, sourceType: .photoLibrary)
+        }
+        .onChange(of: selectedPhoto) { _, newPhoto in
+            if let photo = newPhoto {
+                uploadPhoto(photo)
             }
         }
+
         .background(
             VStack {
                 NavigationLink(
@@ -174,9 +205,92 @@ struct EditMyProfileView: View {
                     isActive: $showEditUsername,
                     label: { EmptyView() }
                 )
+                
+
             }
             .hidden()
         )
+    }
+    
+    private func uploadPhoto(_ photo: UIImage) {
+        guard let imageData = photo.jpegData(compressionQuality: 0.8) else {
+            print("Failed to process the selected photo")
+            return
+        }
+        
+        isUploadingPhoto = true
+        
+        // Upload photo and update profile
+        NetworkManagerTwo.shared.uploadAndUpdateProfilePhoto(
+            email: onboarding.email,
+            imageData: imageData
+        ) { result in
+            DispatchQueue.main.async {
+                isUploadingPhoto = false
+                
+                switch result {
+                case .success(let photoUrl):
+                    // Update local profile data
+                    if var profileData = onboarding.profileData {
+                        profileData.profilePhoto = photoUrl
+                        onboarding.profileData = profileData
+                    }
+                    print("✅ Profile photo updated successfully: \(photoUrl)")
+                    
+                    // Clear the selected photo since it's now saved
+                    selectedPhoto = nil
+                    
+                case .failure(let error):
+                    print("❌ Failed to update profile photo: \(error)")
+                    // Keep the selected photo visible on error so user can retry
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Profile Image Picker (specific to this view)
+struct ProfileImagePicker: UIViewControllerRepresentable {
+    @Binding var selectedImage: UIImage?
+    @Environment(\.dismiss) private var dismiss
+    
+    let sourceType: UIImagePickerController.SourceType
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        picker.allowsEditing = true
+        picker.modalPresentationStyle = .fullScreen
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ProfileImagePicker
+        
+        init(_ parent: ProfileImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let editedImage = info[.editedImage] as? UIImage {
+                parent.selectedImage = editedImage
+            } else if let originalImage = info[.originalImage] as? UIImage {
+                parent.selectedImage = originalImage
+            }
+            
+            parent.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
     }
 }
 

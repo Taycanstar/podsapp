@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+// let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors
     enum NetworkError: LocalizedError {
@@ -2214,19 +2214,67 @@ let baseUrl = "http://172.20.10.4:8000"
                 return
             }
             
-            // Check for success response
+            // Check for success response (backend returns message and photo_url on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let success = json["success"] as? Bool, success {
+               let message = json["message"] as? String,
+               let photoUrl = json["photo_url"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated profile photo")
+                    print("✅ Successfully updated profile photo to: \(photoUrl) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
+                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
         }.resume()
+    }
+    
+    /// Upload photo to Azure Blob Storage and update user's profile photo
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - imageData: Photo data to upload
+    ///   - completion: Result callback indicating success or error
+    func uploadAndUpdateProfilePhoto(email: String, imageData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+            completion(.failure(NetworkError.serverError(message: "BLOB_CONTAINER not configured")))
+            return
+        }
+        
+        let blobName = UUID().uuidString + ".jpg"
+        
+        print("🔄 Uploading profile photo to Azure Blob Storage...")
+        
+        // Use NetworkManager's uploadFileToAzureBlob method
+        NetworkManager().uploadFileToAzureBlob(
+            containerName: containerName,
+            blobName: blobName,
+            fileData: imageData,
+            contentType: "image/jpeg"
+        ) { [weak self] success, url in
+            if success, let imageUrl = url {
+                print("✅ Profile photo uploaded successfully: \(imageUrl)")
+                
+                // Now update the user's profile with the photo URL
+                self?.updatePhoto(email: email, photoUrl: imageUrl) { result in
+                    switch result {
+                    case .success:
+                        DispatchQueue.main.async {
+                            completion(.success(imageUrl))
+                        }
+                    case .failure(let error):
+                        DispatchQueue.main.async {
+                            completion(.failure(error))
+                        }
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: "Failed to upload photo to Azure Blob Storage")))
+                }
+            }
+        }
     }
     
     /// Check if user can change username and get remaining cooldown days

@@ -257,8 +257,8 @@ struct MyProfileView: View {
             }
             
             VStack(spacing: 8) {
-                // Name (larger, bold)
-                Text(onboarding.profileData?.username ?? onboarding.username)
+                // Name (larger, bold) - show name if available, fallback to username
+                Text(onboarding.profileData?.name.isEmpty == false ? onboarding.profileData!.name : (onboarding.profileData?.username ?? onboarding.username))
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
