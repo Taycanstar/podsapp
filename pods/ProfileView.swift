@@ -31,12 +31,25 @@ struct ProfileView: View {
                                 Text(viewModel.email)
                                     .foregroundColor(iconColor)
                             }
-                            HStack {
-                                Label("Username", systemImage: "person")
-                                    .foregroundColor(iconColor)
-                                Spacer()
-                                Text(viewModel.username)
-                                    .foregroundColor(iconColor)
+                            
+                            NavigationLink(destination: EditNameView()) {
+                                HStack {
+                                    Label("Name", systemImage: "person.text.rectangle")
+                                        .foregroundColor(iconColor)
+                                    Spacer()
+                                    Text(viewModel.profileData?.name.isEmpty == false ? viewModel.profileData!.name : (viewModel.name.isEmpty ? "Add name" : viewModel.name))
+                                        .foregroundColor(iconColor)
+                                }
+                            }
+                            
+                            NavigationLink(destination: EditUsernameView()) {
+                                HStack {
+                                    Label("Username", systemImage: "person")
+                                        .foregroundColor(iconColor)
+                                    Spacer()
+                                    Text(viewModel.username)
+                                        .foregroundColor(iconColor)
+                                }
                             }
                               NavigationLink(destination: ManageGoalsView()) {
                                 Label("Goals and Weight", systemImage: "scalemass")

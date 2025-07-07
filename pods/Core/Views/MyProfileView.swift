@@ -50,7 +50,6 @@ struct MyProfileView: View {
     @State private var showEditWeightSheet = false
     @State private var selectedWeek: WeekOption = .thisWeek
     @State private var showEditProfile = false
-    @State private var showProfileSettings = false
     
     // Macro split data
     @State private var macroSplitData: [WeekOption: [DailyMacroSplit]] = [:]
@@ -100,9 +99,7 @@ struct MyProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showProfileSettings = true
-                    }) {
+                    NavigationLink(destination: ProfileView(isAuthenticated: $isAuthenticated)) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 18))
                             .foregroundColor(.primary)
@@ -119,11 +116,7 @@ struct MyProfileView: View {
                 }
             })
         }
-        .sheet(isPresented: $showProfileSettings) {
-            NavigationView {
-                ProfileView(isAuthenticated: $isAuthenticated)
-            }
-        }
+        // Removed the sheet for profile settings since we're now using navigation
         .onAppear {
             // Debug: Check what we have
             print("🔍 MyProfileView onAppear - Debug info:")
