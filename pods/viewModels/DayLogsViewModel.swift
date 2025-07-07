@@ -50,11 +50,15 @@ final class DayLogsViewModel: ObservableObject {
 
   init(email: String = "") {
     self.email = email
+    // Clear any stale cached logs when initializing
+    clearPendingCache()
   }
 
   func setEmail(_ newEmail: String) {
     email = newEmail
     fetchNutritionGoals()
+    // Clear pending cache when switching users
+    clearPendingCache()
   }
 
 
@@ -132,61 +136,76 @@ func loadLogs(for date: Date) {
   selectedDate = date
   isLoading = true; error = nil
 
+  // Clear stale pending cache when switching to a different date
+  let newDateKey = Calendar.current.startOfDay(for: date)
+  let currentDateKey = Calendar.current.startOfDay(for: Date())
+  
+  // If we're switching to today from a different date, clear the cache
+  // to prevent showing stale data from previous sessions
+  if Calendar.current.isDateInToday(date) && !pendingByDate.isEmpty {
+    clearPendingCache()
+    print("[DayLogsVM] Cleared pending cache when switching to today")
+  }
+
   repo.fetchLogs(email: email, for: date) { [weak self] result in
     guard let self = self else { return }
-    self.isLoading = false
+    
+    // Ensure all @Published property updates happen on main thread
+    DispatchQueue.main.async {
+      self.isLoading = false
 
-    switch result {
-    case .success(let serverResponse):
-      let serverLogs = serverResponse.logs
-      let key = Calendar.current.startOfDay(for: date)
-      let pending = self.pendingByDate[key] ?? []
+      switch result {
+      case .success(let serverResponse):
+        let serverLogs = serverResponse.logs
+        let key = Calendar.current.startOfDay(for: date)
+        let pending = self.pendingByDate[key] ?? []
 
-      // ↓ new: drop any pending that the server also sent back
-      let dedupedPending = pending.filter { p in
-        !serverLogs.contains(where: { $0.id == p.id })
-      }
+        // ↓ new: drop any pending that the server also sent back
+        let dedupedPending = pending.filter { p in
+          !serverLogs.contains(where: { $0.id == p.id })
+        }
 
-      self.logs = dedupedPending + serverLogs
-      
-      // Update water logs from server response
-      print("🚰 DayLogsViewModel: Updating water logs. Old count: \(self.waterLogs.count), New count: \(serverResponse.waterLogs.count)")
-      for (index, log) in serverResponse.waterLogs.enumerated() {
-          print("🚰 Water log \(index): \(log.waterOz)oz at \(log.dateLogged)")
-      }
-      self.waterLogs = serverResponse.waterLogs
-      print("🚰 DayLogsViewModel: Water logs updated successfully")
-      
-      // Update height and weight from onboarding data if available
-      if let userData = serverResponse.userData {
-          self.height = userData.height_cm
-          self.weight = userData.weight_kg
-      }
-      
-      // Update goals if available
-      if let goals = serverResponse.goals {
-          self.calorieGoal = goals.calories ?? self.calorieGoal
-          self.proteinGoal = goals.protein ?? self.proteinGoal
-          self.carbsGoal = goals.carbs ?? self.carbsGoal
-          self.fatGoal = goals.fat ?? self.fatGoal
-          
-          // Store desired weight if available
-          if let desiredKg = goals.desiredWeightKg {
-              self.desiredWeightKg = desiredKg
-              // Convert kg to lbs if desiredWeightLbs is not available
-              self.desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-          } else if let desiredLbs = goals.desiredWeightLbs {
-              self.desiredWeightLbs = desiredLbs
-              // Convert lbs to kg if desiredWeightKg is not available
-              self.desiredWeightKg = desiredLbs / 2.20462
-          }
-          
-          // Recalculate remaining calories
-          self.remainingCalories = max(0, self.calorieGoal - self.totalCalories)
-      }
+        self.logs = dedupedPending + serverLogs
+        
+        // Update water logs from server response
+        print("🚰 DayLogsViewModel: Updating water logs. Old count: \(self.waterLogs.count), New count: \(serverResponse.waterLogs.count)")
+        for (index, log) in serverResponse.waterLogs.enumerated() {
+            print("🚰 Water log \(index): \(log.waterOz)oz at \(log.dateLogged)")
+        }
+        self.waterLogs = serverResponse.waterLogs
+        print("🚰 DayLogsViewModel: Water logs updated successfully")
+        
+        // Update height and weight from onboarding data if available
+        if let userData = serverResponse.userData {
+            self.height = userData.height_cm
+            self.weight = userData.weight_kg
+        }
+        
+        // Update goals if available
+        if let goals = serverResponse.goals {
+            self.calorieGoal = goals.calories ?? self.calorieGoal
+            self.proteinGoal = goals.protein ?? self.proteinGoal
+            self.carbsGoal = goals.carbs ?? self.carbsGoal
+            self.fatGoal = goals.fat ?? self.fatGoal
+            
+            // Store desired weight if available
+            if let desiredKg = goals.desiredWeightKg {
+                self.desiredWeightKg = desiredKg
+                // Convert kg to lbs if desiredWeightLbs is not available
+                self.desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+            } else if let desiredLbs = goals.desiredWeightLbs {
+                self.desiredWeightLbs = desiredLbs
+                // Convert lbs to kg if desiredWeightKg is not available
+                self.desiredWeightKg = desiredLbs / 2.20462
+            }
+            
+            // Recalculate remaining calories
+            self.remainingCalories = max(0, self.calorieGoal - self.totalCalories)
+        }
 
-    case .failure(let err):
-      self.error = err
+      case .failure(let err):
+        self.error = err
+      }
     }
   }
 }
@@ -331,4 +350,12 @@ func loadLogs(for date: Date) {
             }
         }
     }
+
+  // MARK: - Cache Management
+  
+  /// Clear the pending logs cache to prevent showing stale data
+  private func clearPendingCache() {
+    pendingByDate.removeAll()
+    print("[DayLogsVM] Cleared pending cache")
+  }
 }

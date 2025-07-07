@@ -24,6 +24,7 @@ struct ContentView: View {
     @EnvironmentObject var uploadViewModel: UploadViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
@@ -247,9 +248,31 @@ struct ContentView: View {
                 print("⚠️ App became active: Force checking onboarding status")
                 forceCheckOnboarding()
                 
+                // Reset selectedDate to today if we've been away for more than 20 minutes
+                if let lastActiveTime = UserDefaults.standard.object(forKey: "lastActiveTime") as? Date {
+                    let timeAway = Date().timeIntervalSince(lastActiveTime)
+                    let resetThreshold: TimeInterval = 20 * 60 // 20 minutes in seconds
+                    
+                    if timeAway > resetThreshold {
+                        print("🕒 App was backgrounded for \(Int(timeAway/60)) minutes - resetting to today")
+                        // Reset to today in DayLogsViewModel
+                        dayLogsVM.selectedDate = Date()
+                        // Also clear the stored time since we've reset
+                        UserDefaults.standard.removeObject(forKey: "lastActiveTime")
+                    } else {
+                        print("🕒 App was backgrounded for only \(Int(timeAway/60)) minutes - keeping current date")
+                    }
+                } else {
+                    print("🕒 No previous background time recorded")
+                }
+                
                 Task {
                     await versionManager.checkVersion()
                 }
+            } else if newPhase == .background {
+                // Store the time when app goes to background
+                UserDefaults.standard.set(Date(), forKey: "lastActiveTime")
+                print("🕒 App backgrounded at \(Date())")
             }
         }
         .onChange(of: isAuthenticated) { _, newValue in
