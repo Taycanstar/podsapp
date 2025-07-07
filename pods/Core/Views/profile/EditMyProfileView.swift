@@ -180,7 +180,7 @@ struct EditMyProfileView: View {
                 ]
             )
         }
-        .sheet(isPresented: $showingCamera) {
+        .fullScreenCover(isPresented: $showingCamera) {
             ProfileImagePicker(selectedImage: $selectedPhoto, sourceType: .camera)
         }
         .sheet(isPresented: $showingPhotoLibrary) {
