@@ -57,6 +57,9 @@ struct MyProfileView: View {
     @State private var isLoadingMacros = false
     @State private var selectedDay: DailyMacroSplit? = nil
     
+    // Pull to refresh state
+    @State private var isRefreshing = false
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -424,6 +427,9 @@ struct MyProfileView: View {
                 Spacer(minLength: 100)
             }
             .padding(.horizontal)
+        }
+        .refreshable {
+            await refreshProfileData()
         }
     }
     
@@ -883,6 +889,25 @@ struct MyProfileView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Pull to Refresh
+    
+    private func refreshProfileData() async {
+        print("🔄 Pull to refresh triggered")
+        isRefreshing = true
+        
+        // Refresh profile data
+        await onboarding.fetchProfileData()
+        
+        // Refresh weight data
+        fetchWeightData()
+        
+        // Refresh macro data
+        fetchMacroSplitData()
+        
+        isRefreshing = false
+        print("✅ Pull to refresh completed")
     }
 }
 
