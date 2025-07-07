@@ -37,6 +37,33 @@ struct DashboardView: View {
 
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
+    
+    // Reactive water intake calculation
+    private var totalWaterIntake: Double {
+        let calendar = Calendar.current
+        let selectedDay = calendar.startOfDay(for: vm.selectedDate)
+        
+        print("🚰 Calculating water intake for \(selectedDay)")
+        print("🚰 Total water logs available: \(vm.waterLogs.count)")
+        
+        let total = vm.waterLogs.compactMap { log in
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            guard let logDate = formatter.date(from: log.dateLogged) else { 
+                print("🚰 Failed to parse date: \(log.dateLogged)")
+                return nil 
+            }
+            let logDay = calendar.startOfDay(for: logDate)
+            
+            let isMatchingDay = calendar.isDate(logDay, inSameDayAs: selectedDay)
+            print("🚰 Log: \(log.waterOz)oz on \(logDay), matches selected day: \(isMatchingDay)")
+            
+            return isMatchingDay ? log.waterOz : nil
+        }.reduce(0.0) { $0 + $1 }
+        
+        print("🚰 Total water intake calculated: \(total)oz")
+        return total
+    }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
   private var calorieGoal : Double { vm.calorieGoal }
@@ -1774,7 +1801,7 @@ private extension DashboardView {
                             // Water with add button
             waterMetricCell(
                 title: "Water",
-                value: String(format: "%.0f", calculateWaterIntake()),
+                value: String(format: "%.0f", totalWaterIntake),
                 unit: "oz",
                 systemImage: "drop",
                 color: .blue

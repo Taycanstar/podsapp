@@ -257,7 +257,7 @@ struct LogFood: View {
             if foodManager.showMealToast {
                 VStack {
                     Spacer()
-                    BottomPopup(message: "Meal created")
+                    BottomPopup(message: "Recipe created")
                         .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
                 }
                 .zIndex(100)
@@ -269,7 +269,7 @@ struct LogFood: View {
             if foodManager.showMealLoggedToast {
                 VStack {
                     Spacer()
-                    BottomPopup(message: "Meal logged")
+                    BottomPopup(message: "Recipe logged")
                         .padding(.bottom, max(safeAreaInset + keyboardHeight, 22))
                 }
                 .zIndex(100)
