@@ -59,13 +59,14 @@ struct MyProfileView: View {
     
     // Pull to refresh state
     @State private var isRefreshing = false
+    @State private var hasInitiallyLoaded = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color("iosbg2").edgesIgnoringSafeArea(.all)
                 
-                if onboarding.isLoadingProfile {
+                if onboarding.isLoadingProfile && !hasInitiallyLoaded {
                     ProgressView("Loading profile...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = onboarding.profileError {
@@ -143,6 +144,7 @@ struct MyProfileView: View {
                 print("✅ Using fresh preloaded profile data for \(profileData.email) - instant loading!")
                 // Process the existing profile data
                 processProfileData()
+                hasInitiallyLoaded = true
             } else {
                 // More detailed debugging for the failure case
                 if let profileData = onboarding.profileData {
@@ -158,7 +160,10 @@ struct MyProfileView: View {
                     print("⏳ No preloaded data - fetching fresh profile data")
                 }
                 // Fetch fresh profile data if not preloaded or wrong user
-                onboarding.fetchProfileData()
+                Task {
+                    await onboarding.fetchProfileData()
+                    hasInitiallyLoaded = true
+                }
             }
             
             // Always fetch weight data and process macro split data
@@ -895,9 +900,8 @@ struct MyProfileView: View {
     
     private func refreshProfileData() async {
         print("🔄 Pull to refresh triggered")
-        isRefreshing = true
         
-        // Refresh profile data
+        // Refresh profile data (this will show the native pull-to-refresh indicator)
         await onboarding.fetchProfileData()
         
         // Refresh weight data
@@ -906,7 +910,6 @@ struct MyProfileView: View {
         // Refresh macro data
         fetchMacroSplitData()
         
-        isRefreshing = false
         print("✅ Pull to refresh completed")
     }
 }
