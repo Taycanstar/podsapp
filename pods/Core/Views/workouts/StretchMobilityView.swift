@@ -109,253 +109,40 @@ struct StretchMobilityView: View {
     }
     
     private func isStretchMobilityExercise(exercise: ExerciseData) -> Bool {
-        let equipment = exercise.equipment.lowercased()
-        let name = exercise.name.lowercased()
-        let bodyPart = exercise.bodyPart.lowercased()
-        let target = exercise.target.lowercased()
         let exerciseType = exercise.exerciseType.lowercased()
+        let name = exercise.name.lowercased()
+        let equipment = exercise.equipment.lowercased()
         
-        // Stretching and mobility equipment
-        let mobilityEquipment = [
-            "foam roller",
-            "massage ball",
-            "lacrosse ball",
-            "theraband",
-            "resistance band",
-            "yoga mat",
-            "stretching strap",
-            "mobility stick",
-            "roller",
-            "massage roller",
-            "trigger point",
-            "pvc pipe",
-            "tennis ball"
-        ]
-        
-        // Check if equipment is mobility-specific
-        for mobilityEq in mobilityEquipment {
-            if equipment.contains(mobilityEq) {
-                return true
-            }
+        // Primary filter: Exercise type is "Stretching"
+        if exerciseType == "stretching" {
+            return true
         }
         
-        // Stretching and mobility exercise names
-        let stretchMobilityNames = [
+        // Specific stretching exercise names
+        let stretchNames = [
             "stretch",
-            "stretching",
-            "mobility",
-            "flexibility",
-            "foam roll",
-            "foam rolling",
-            "massage",
-            "myofascial release",
-            "trigger point",
-            "self massage",
-            "dynamic warm",
-            "static stretch",
-            "passive stretch",
-            "active stretch",
-            "pnf stretch",
-            "range of motion",
-            "rom",
-            "hip circle",
-            "shoulder roll",
-            "neck roll",
-            "arm circle",
-            "leg swing",
+            "cat stretch",
+            "spine stretch",
             "hip flexor stretch",
-            "hamstring stretch",
-            "quad stretch",
             "calf stretch",
-            "chest stretch",
-            "shoulder stretch",
-            "back stretch",
-            "spinal twist",
-            "cat cow",
-            "child's pose",
-            "downward dog",
-            "cobra stretch",
-            "pigeon pose",
-            "figure four",
-            "butterfly stretch",
-            "seated twist",
-            "standing twist",
-            "side bend",
-            "lateral stretch",
-            "forward fold",
-            "back bend",
-            "hip opener",
-            "shoulder opener",
-            "thoracic spine",
-            "cervical spine",
-            "lumbar spine",
-            "ankle circle",
-            "wrist circle",
-            "toe touch",
-            "reach",
-            "extension",
-            "flexion",
-            "rotation",
-            "lateral flexion",
-            "abduction",
-            "adduction",
-            "internal rotation",
-            "external rotation",
-            "scapular",
-            "glute activation",
-            "hip activation",
-            "core activation",
-            "warm up",
-            "cool down",
-            "recovery",
-            "relaxation",
-            "breathing",
-            "meditation",
-            "mindfulness",
-            "yoga",
-            "pilates",
-            "tai chi",
-            "qigong",
-            "feldenkrais",
-            "alexander technique",
-            "corrective exercise",
-            "postural",
-            "alignment",
-            "balance",
-            "proprioception",
-            "neuromuscular",
-            "activation",
-            "release",
-            "decompression",
-            "mobilization",
-            "manipulation",
-            "adjustment",
-            "reset",
-            "restore",
-            "rejuvenate",
-            "rehabilitate",
-            "therapy",
-            "therapeutic"
+            "knee to chest stretch",
+            "ankle circles"
         ]
         
-        // Check if exercise name contains stretching/mobility keywords
-        for stretchName in stretchMobilityNames {
+        for stretchName in stretchNames {
             if name.contains(stretchName) {
                 return true
             }
         }
         
-        // Check body part and target for mobility indicators
-        let mobilityBodyParts = [
-            "flexibility",
-            "mobility",
-            "stretching",
-            "range of motion",
-            "recovery",
-            "warm up",
-            "cool down",
-            "therapeutic",
-            "corrective",
-            "postural",
-            "alignment",
-            "balance",
-            "proprioception",
-            "activation",
-            "release",
-            "decompression"
+        // Equipment that's primarily for stretching/mobility
+        let mobilityEquipment = [
+            "rope" // For stretching straps
         ]
         
-        for mobilityPart in mobilityBodyParts {
-            if bodyPart.contains(mobilityPart) || target.contains(mobilityPart) {
+        for mobilityEq in mobilityEquipment {
+            if equipment.contains(mobilityEq) && name.contains("stretch") {
                 return true
-            }
-        }
-        
-        // Check exercise type for stretching/mobility
-        let mobilityTypes = [
-            "stretch",
-            "stretching",
-            "mobility",
-            "flexibility",
-            "recovery",
-            "warm up",
-            "cool down",
-            "therapeutic",
-            "corrective",
-            "postural",
-            "balance",
-            "proprioception",
-            "activation",
-            "release",
-            "decompression",
-            "yoga",
-            "pilates",
-            "tai chi",
-            "qigong"
-        ]
-        
-        for mobilityType in mobilityTypes {
-            if exerciseType.contains(mobilityType) {
-                return true
-            }
-        }
-        
-        // Body weight exercises that are primarily stretching/mobility
-        if equipment == "body weight" {
-            let bodyweightMobility = [
-                "cat cow",
-                "child's pose",
-                "downward dog",
-                "cobra",
-                "pigeon",
-                "warrior",
-                "triangle",
-                "forward fold",
-                "side bend",
-                "spinal twist",
-                "seated twist",
-                "standing twist",
-                "hip circle",
-                "arm circle",
-                "leg swing",
-                "shoulder roll",
-                "neck roll",
-                "ankle circle",
-                "wrist circle",
-                "toe touch",
-                "reach",
-                "butterfly",
-                "figure four",
-                "knee to chest",
-                "hip flexor",
-                "calf raise",
-                "heel walk",
-                "toe walk",
-                "bear crawl",
-                "crab walk",
-                "lizard crawl",
-                "duck walk",
-                "lateral walk",
-                "side step",
-                "high knees",
-                "butt kickers",
-                "leg swing",
-                "arm swing",
-                "torso twist",
-                "shoulder shrug",
-                "neck stretch",
-                "eye movement",
-                "jaw exercise",
-                "breathing exercise",
-                "meditation",
-                "relaxation",
-                "mindfulness"
-            ]
-            
-            for bwMobility in bodyweightMobility {
-                if name.contains(bwMobility) {
-                    return true
-                }
             }
         }
         

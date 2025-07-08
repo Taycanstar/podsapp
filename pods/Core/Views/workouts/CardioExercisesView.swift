@@ -109,159 +109,41 @@ struct CardioExercisesView: View {
     }
     
     private func isCardioExercise(exercise: ExerciseData) -> Bool {
-        let equipment = exercise.equipment.lowercased()
-        let name = exercise.name.lowercased()
+        let exerciseType = exercise.exerciseType.lowercased()
         let bodyPart = exercise.bodyPart.lowercased()
-        let target = exercise.target.lowercased()
+        let name = exercise.name.lowercased()
         
-        // Cardio equipment
-        let cardioEquipment = [
-            "cardio machine",
-            "treadmill",
-            "stationary bike",
-            "elliptical",
-            "rowing machine",
-            "stair climber",
-            "stepper",
-            "bike",
-            "cycle",
-            "rower"
-        ]
-        
-        // Check if equipment is cardio-specific
-        for cardioEq in cardioEquipment {
-            if equipment.contains(cardioEq) {
-                return true
-            }
+        // Primary filter: Exercise type is "Aerobic"
+        if exerciseType == "aerobic" {
+            return true
         }
         
-        // Cardio exercise names
+        // Body part is "Cardio" or "Plyometrics"
+        if bodyPart == "cardio" || bodyPart == "plyometrics" {
+            return true
+        }
+        
+        // Specific cardio exercise names (only if they're not strength training)
         let cardioNames = [
-            "run",
-            "running",
-            "jog",
-            "jogging",
-            "walk",
-            "walking",
-            "sprint",
-            "sprinting",
-            "cycle",
-            "cycling",
-            "bike",
-            "biking",
-            "swim",
-            "swimming",
-            "row",
-            "rowing",
-            "jump",
-            "jumping",
-            "hop",
-            "hopping",
-            "skip",
-            "skipping",
             "burpee",
-            "burpees",
-            "jumping jack",
-            "jumping jacks",
             "mountain climber",
-            "mountain climbers",
-            "high knees",
-            "butt kickers",
-            "box jump",
-            "box jumps",
-            "plyometric",
-            "plyo",
-            "hiit",
-            "interval",
-            "aerobic",
-            "cardio",
-            "endurance",
-            "conditioning",
-            "agility",
-            "shuttle run",
-            "ladder drill",
-            "cone drill",
-            "stair climb",
-            "step up",
-            "step ups",
-            "battle rope",
-            "battle ropes",
-            "kettlebell swing",
-            "medicine ball slam",
-            "thrusters",
-            "squat jump",
-            "squat jumps",
-            "lunge jump",
-            "lunge jumps",
-            "broad jump",
-            "long jump",
-            "vertical jump",
-            "tuck jump",
-            "star jump",
-            "cross trainer",
-            "elliptical"
+            "jump squat",
+            "jumping jack",
+            "rowing",
+            "standing long jump",
+            "walking lunges"
         ]
         
-        // Check if exercise name contains cardio keywords
         for cardioName in cardioNames {
             if name.contains(cardioName) {
                 return true
             }
         }
         
-        // Check body part and target for cardio indicators
-        let cardioBodyParts = [
-            "cardio",
-            "cardiovascular",
-            "aerobic",
-            "conditioning"
-        ]
-        
-        for cardioPart in cardioBodyParts {
-            if bodyPart.contains(cardioPart) || target.contains(cardioPart) {
-                return true
-            }
-        }
-        
-        // Check exercise type for cardio
-        let exerciseType = exercise.exerciseType.lowercased()
-        if exerciseType.contains("cardio") || exerciseType.contains("aerobic") || exerciseType.contains("conditioning") {
+        // Equipment-based cardio (rowing machines, etc.)
+        let equipment = exercise.equipment.lowercased()
+        if equipment.contains("rowing machine") || equipment.contains("cardio machine") {
             return true
-        }
-        
-        // High-intensity bodyweight exercises that are primarily cardio
-        if equipment == "body weight" {
-            let bodyweightCardio = [
-                "burpee",
-                "jumping jack",
-                "mountain climber",
-                "high knees",
-                "butt kickers",
-                "squat jump",
-                "lunge jump",
-                "tuck jump",
-                "star jump",
-                "plank jack",
-                "jump squat",
-                "jump lunge",
-                "broad jump",
-                "vertical jump",
-                "lateral jump",
-                "single leg hop",
-                "double leg hop",
-                "side shuffle",
-                "bear crawl",
-                "crab walk",
-                "frog jump",
-                "split jump",
-                "scissor jump"
-            ]
-            
-            for bwCardio in bodyweightCardio {
-                if name.contains(bwCardio) {
-                    return true
-                }
-            }
         }
         
         return false

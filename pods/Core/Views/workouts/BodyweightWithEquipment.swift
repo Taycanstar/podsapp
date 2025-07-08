@@ -111,30 +111,22 @@ struct BodyweightWithEquipment: View {
     private func isBodyweightWithEquipment(exercise: ExerciseData) -> Bool {
         let equipment = exercise.equipment.lowercased()
         let name = exercise.name.lowercased()
+        let exerciseType = exercise.exerciseType.lowercased()
+        
+        // Only include strength exercises (exclude cardio and stretching)
+        if exerciseType != "strength" {
+            return false
+        }
         
         // Equipment that supports bodyweight exercises (not heavy weights)
         let bodyweightEquipment = [
             "band",
-            "resistance band",
             "stability ball",
-            "swiss ball",
             "bosu ball",
-            "suspension",
-            "trx",
+            "pull up bar",
+            "dip (parallel) bar",
             "rope",
-            "battle rope",
-            "assisted",
-            "step",
-            "platform",
-            "box",
-            "medicine ball",
-            "foam roller",
-            "elastic band",
-            "exercise ball",
-            "balance ball",
-            "parallettes",
-            "rings",
-            "gymnastic rings"
+            "medicine ball"
         ]
         
         // Check if equipment matches bodyweight-friendly equipment
@@ -144,54 +136,23 @@ struct BodyweightWithEquipment: View {
             }
         }
         
-        // Check exercise names for bodyweight equipment exercises
-        let bodyweightEquipmentNames = [
-            "band",
-            "resistance band",
-            "stability ball",
-            "swiss ball",
-            "bosu",
-            "suspension",
-            "trx",
-            "rope",
-            "battle rope",
-            "assisted",
-            "step up",
-            "box jump",
-            "medicine ball",
-            "foam roll",
-            "elastic",
-            "exercise ball",
-            "balance ball",
-            "parallettes",
-            "rings",
-            "gymnastic rings"
+        // Exclude heavy weight equipment
+        let heavyWeightEquipment = [
+            "barbell",
+            "dumbbell",
+            "kettlebell",
+            "smith",
+            "leverage",
+            "cable",
+            "flat bench",
+            "incline bench",
+            "decline bench",
+            "weighted"
         ]
         
-        for bwEquipmentName in bodyweightEquipmentNames {
-            if name.contains(bwEquipmentName) {
-                // Make sure it's not a heavy weight exercise
-                let heavyWeightKeywords = [
-                    "dumbbell",
-                    "barbell",
-                    "kettlebell",
-                    "smith",
-                    "leverage",
-                    "cable machine",
-                    "weight plate"
-                ]
-                
-                var isHeavyWeight = false
-                for heavyWeight in heavyWeightKeywords {
-                    if name.contains(heavyWeight) || equipment.contains(heavyWeight) {
-                        isHeavyWeight = true
-                        break
-                    }
-                }
-                
-                if !isHeavyWeight {
-                    return true
-                }
+        for heavyEquipment in heavyWeightEquipment {
+            if equipment.contains(heavyEquipment) {
+                return false
             }
         }
         
@@ -199,9 +160,6 @@ struct BodyweightWithEquipment: View {
         if equipment == "body weight" {
             let assistedKeywords = [
                 "assisted",
-                "band",
-                "step",
-                "box",
                 "elevated",
                 "incline",
                 "decline"
