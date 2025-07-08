@@ -24,7 +24,7 @@ struct NewSheetView: View {
         ("Log Food", "magnifyingglass"),
         ("Voice Log", "mic"),
         ("Scan Food", "barcode.viewfinder"),
-        // ("Log Workout", "dumbbell")
+        ("Log Workout", "dumbbell")
     ]
 
     var body: some View {

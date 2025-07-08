@@ -17,6 +17,8 @@ struct AddExerciseView: View {
     @State private var showingRecentlyAdded = false
     @State private var showingAddedByMe = false
     @State private var showingByEquipment = false
+    @State private var showingWeightedExercises = false
+    @State private var showingBodyweightExercises = false
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -120,7 +122,17 @@ struct AddExerciseView: View {
         }
         .sheet(isPresented: $showingByEquipment) {
             NavigationView {
-                ByEquipmentView()
+                ByEquipmentView(onExercisesSelected: onExercisesSelected)
+            }
+        }
+        .sheet(isPresented: $showingWeightedExercises) {
+            NavigationView {
+                WeightedExercisesView(onExercisesSelected: onExercisesSelected)
+            }
+        }
+        .sheet(isPresented: $showingBodyweightExercises) {
+            NavigationView {
+                BodyweightExercisesView(onExercisesSelected: onExercisesSelected)
             }
         }
     }
@@ -204,6 +216,10 @@ struct AddExerciseView: View {
                                         showingAddedByMe = true
                                     case "By Equipment":
                                         showingByEquipment = true
+                                    case "Weighted Exercises":
+                                        showingWeightedExercises = true
+                                    case "Bodyweight":
+                                        showingBodyweightExercises = true
                                     default:
                                         // TODO: Navigate to other category views
                                         print("Tapped category: \(category.0)")
