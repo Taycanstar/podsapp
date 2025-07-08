@@ -1133,6 +1133,9 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
                 seenRecipeLogIds.insert(recipeLogId)
                 isUnique = true
             }
+        case .activity:
+            // Activity logs are always unique since they come from Apple Health
+            isUnique = true
         }
         
         if isUnique {

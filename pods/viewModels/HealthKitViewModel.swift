@@ -3,7 +3,10 @@ import SwiftUI
 import HealthKit
 import Combine
 
-class HealthKitViewModel: ObservableObject {
+@MainActor
+final class HealthKitViewModel: ObservableObject {
+    static let shared = HealthKitViewModel()
+    
     // Published properties for UI binding
     @Published var isAuthorized = false
     @Published var isLoading = false
@@ -32,6 +35,19 @@ class HealthKitViewModel: ObservableObject {
     
     private let healthKitManager = HealthKitManager.shared
     private var cancellables = Set<AnyCancellable>()
+    
+    // Computed property for sleep progress
+    var sleepProgress: Double {
+        return min(sleepHours / recommendedSleepHours, 1.0)
+    }
+    
+    // Computed property for total energy burned
+    var totalEnergyBurned: Double {
+        return activeEnergy + basalEnergy
+    }
+    
+    private let healthStore = HKHealthStore()
+    private let calendar = Calendar.current
     
     // MARK: - Initialization
     
@@ -326,20 +342,102 @@ class HealthKitViewModel: ObservableObject {
         return "\(Int(sleepHours))hr \(sleepMinutes)min"
     }
     
-    // Calculate sleep progress (percentage of recommended sleep achieved)
-    var sleepProgress: Double {
-        let totalSleepHours = sleepHours + (Double(sleepMinutes) / 60)
-        return min(totalSleepHours / recommendedSleepHours, 1.0)
-    }
-    
-    // Calculate total energy expenditure (active + basal)
-    var totalEnergyBurned: Double {
-        return activeEnergy + basalEnergy
-    }
-    
     // Backward compatibility method - calls reloadHealthData with the current date
     func reloadHealthData() {
         reloadHealthData(for: currentDate)
+    }
+    
+    // MARK: - Activity Log Conversion
+    
+    /// Convert HKWorkout objects to ActivitySummary for display in logs
+    func getActivityLogs(for date: Date) -> [ActivitySummary] {
+        let calendar = Calendar.current
+        let targetWorkouts = recentWorkouts.filter { workout in
+            calendar.isDate(workout.startDate, inSameDayAs: date)
+        }
+        
+        return targetWorkouts.map { workout in
+            ActivitySummary(
+                id: workout.uuid.uuidString,
+                workoutActivityType: workoutTypeToString(workout.workoutActivityType),
+                displayName: workoutDisplayName(workout.workoutActivityType),
+                duration: workout.duration,
+                totalEnergyBurned: workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
+                totalDistance: workout.totalDistance?.doubleValue(for: .meter()),
+                startDate: workout.startDate,
+                endDate: workout.endDate
+            )
+        }
+    }
+    
+    private func workoutTypeToString(_ type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .running:
+            return "Running"
+        case .walking:
+            return "Walking"
+        case .cycling:
+            return "Cycling"
+        case .swimming:
+            return "Swimming"
+        case .hiking:
+            return "Hiking"
+        case .yoga:
+            return "Yoga"
+        case .functionalStrengthTraining:
+            return "FunctionalStrengthTraining"
+        case .traditionalStrengthTraining:
+            return "StrengthTraining"
+        case .tennis:
+            return "Tennis"
+        case .basketball:
+            return "Basketball"
+        case .soccer:
+            return "Soccer"
+        case .rowing:
+            return "Rowing"
+        case .elliptical:
+            return "Elliptical"
+        case .stairClimbing:
+            return "StairClimbing"
+        default:
+            return "Other"
+        }
+    }
+    
+    private func workoutDisplayName(_ type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .running:
+            return "Running"
+        case .walking:
+            return "Walking"
+        case .cycling:
+            return "Cycling"
+        case .swimming:
+            return "Swimming"
+        case .hiking:
+            return "Hiking"
+        case .yoga:
+            return "Yoga"
+        case .functionalStrengthTraining:
+            return "Strength Training"
+        case .traditionalStrengthTraining:
+            return "Weight Training"
+        case .tennis:
+            return "Tennis"
+        case .basketball:
+            return "Basketball"
+        case .soccer:
+            return "Soccer"
+        case .rowing:
+            return "Rowing"
+        case .elliptical:
+            return "Elliptical"
+        case .stairClimbing:
+            return "Stair Climbing"
+        default:
+            return "Workout"
+        }
     }
 } 
  

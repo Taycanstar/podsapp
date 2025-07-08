@@ -388,6 +388,79 @@ enum LogType: String, Codable {
     case food
     case meal
     case recipe
+    case activity
+}
+
+// MARK: - Activity Data Structures
+struct ActivitySummary: Codable, Identifiable {
+    let id: String
+    let workoutActivityType: String
+    let displayName: String
+    let duration: TimeInterval // in seconds
+    let totalEnergyBurned: Double? // in kcal
+    let totalDistance: Double? // in meters
+    let startDate: Date
+    let endDate: Date
+    
+    // Helper computed properties
+    var formattedDuration: String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours) hr \(minutes) min"
+        } else if minutes > 0 {
+            return "\(minutes) min"
+        } else {
+            return "< 1 min"
+        }
+    }
+    
+    var formattedDistance: String? {
+        guard let totalDistance = totalDistance, totalDistance > 0 else { return nil }
+        
+        // Convert meters to miles
+        let miles = totalDistance * 0.000621371
+        return String(format: "%.2f mi", miles)
+    }
+    
+    var isDistanceActivity: Bool {
+        let distanceActivities = ["Running", "Walking", "Cycling", "Hiking", "Swimming"]
+        return distanceActivities.contains(workoutActivityType)
+    }
+    
+    var activityIcon: String {
+        switch workoutActivityType {
+        case "Running":
+            return "figure.run"
+        case "Walking":
+            return "figure.walk"
+        case "Cycling":
+            return "bicycle"
+        case "Swimming":
+            return "figure.pool.swim"
+        case "Hiking":
+            return "figure.hiking"
+        case "Yoga":
+            return "figure.yoga"
+        case "FunctionalStrengthTraining", "StrengthTraining":
+            return "figure.strengthtraining.traditional"
+        case "Tennis":
+            return "figure.tennis"
+        case "Basketball":
+            return "figure.basketball"
+        case "Soccer":
+            return "figure.soccer"
+        case "Rowing":
+            return "figure.rowing"
+        case "Elliptical":
+            return "figure.elliptical"
+        case "StairClimbing":
+            return "figure.stairs"
+        default:
+            return "figure.mixed.cardio"
+        }
+    }
 }
 
 struct CombinedLog: Codable, Identifiable, Equatable {
@@ -413,6 +486,10 @@ struct CombinedLog: Codable, Identifiable, Equatable {
     let recipeLogId: Int?
     var recipe: RecipeSummary?
     var servingsConsumed: Int?
+    
+    // MARK: - Activity-specific properties
+    let activityId: String?
+    var activity: ActivitySummary?
     
     // MARK: - Date properties for date-based views
     var logDate: String?      // The date of the log in YYYY-MM-DD format
@@ -458,6 +535,8 @@ struct CombinedLog: Codable, Identifiable, Equatable {
             return "meal_\(mealLogId ?? 0)"
         case .recipe:
             return "recipe_\(recipeLogId ?? 0)"
+        case .activity:
+            return "activity_\(activityId ?? "unknown")"
         }
     }
     
@@ -467,6 +546,7 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         case foodLogId, food, mealType
         case mealLogId, meal, mealTime, scheduledAt
         case recipeLogId, recipe, servingsConsumed
+        case activityId, activity
         case logDate, dayOfWeek
         // This field exists in the JSON but we don't want to use it directly
         case backendId = "id" 
@@ -498,6 +578,10 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         recipeLogId = try container.decodeIfPresent(Int.self, forKey: .recipeLogId)
         recipe = try container.decodeIfPresent(RecipeSummary.self, forKey: .recipe)
         servingsConsumed = try container.decodeIfPresent(Int.self, forKey: .servingsConsumed)
+        
+        // Activity-specific properties
+        activityId = try container.decodeIfPresent(String.self, forKey: .activityId)
+        activity = try container.decodeIfPresent(ActivitySummary.self, forKey: .activity)
         
         // Date properties
         logDate = try container.decodeIfPresent(String.self, forKey: .logDate)
@@ -534,6 +618,10 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         try container.encodeIfPresent(recipe, forKey: .recipe)
         try container.encodeIfPresent(servingsConsumed, forKey: .servingsConsumed)
         
+        // Activity-specific properties
+        try container.encodeIfPresent(activityId, forKey: .activityId)
+        try container.encodeIfPresent(activity, forKey: .activity)
+        
         // Date properties
         try container.encodeIfPresent(logDate, forKey: .logDate)
         try container.encodeIfPresent(dayOfWeek, forKey: .dayOfWeek)
@@ -546,6 +634,8 @@ struct CombinedLog: Codable, Identifiable, Equatable {
             try container.encode(mealLogId, forKey: .backendId)
         case .recipe:
             try container.encode(recipeLogId, forKey: .backendId)
+        case .activity:
+            try container.encode(activityId, forKey: .backendId)
         }
     }
 }
@@ -557,6 +647,7 @@ extension CombinedLog {
          foodLogId: Int? = nil, food: LoggedFoodItem? = nil, mealType: String? = nil,
          mealLogId: Int? = nil, meal: MealSummary? = nil, mealTime: String? = nil, scheduledAt: Date? = nil,
          recipeLogId: Int? = nil, recipe: RecipeSummary? = nil, servingsConsumed: Int? = nil,
+         activityId: String? = nil, activity: ActivitySummary? = nil,
          logDate: String? = nil, dayOfWeek: String? = nil, isOptimistic: Bool = false) {
         
         self.type = type
@@ -577,6 +668,9 @@ extension CombinedLog {
         self.recipeLogId = recipeLogId
         self.recipe = recipe
         self.servingsConsumed = servingsConsumed
+        
+        self.activityId = activityId
+        self.activity = activity
         
         self.logDate = logDate
         self.dayOfWeek = dayOfWeek

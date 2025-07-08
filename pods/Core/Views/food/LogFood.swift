@@ -694,13 +694,15 @@ private struct FoodListView: View {
                                                     // If we're close to the end of the list, automatically load more
                                                     if let index = validLogs.firstIndex(where: { $0.id == log.id }),
                                                     index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
-                                                         showMinimumLoader()
+                                                         showMinimumLoader()
                                                         foodManager.loadMoreLogs()
                                                     }
                                                 }
                                             }
                                         case .recipe:
                                             EmptyView()
+                                        case .activity:
+                                            EmptyView() // Activities are not shown in LogFood view
                                         }
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
@@ -876,6 +878,8 @@ private struct FoodListView: View {
             
             case .recipe:
                 return log.recipe != nil && selectedFoodTab == .all
+            case .activity:
+                return false // Activities are not shown in LogFood view
             }
         }
     }
@@ -932,6 +936,12 @@ private struct FoodListView: View {
             case .recipe:
                 print("  • Recipe log details:")
                 print("    - Recipe log ID: \(log.recipeLogId ?? -1)")
+            case .activity:
+                print("  • Activity log details:")
+                print("    - Activity ID: \(log.activityId ?? "unknown")")
+                if let activity = log.activity {
+                    print("    - Activity name: \(activity.displayName)")
+                }
             }
             print("  • Current tab: \(selectedFoodTab)")
         }
@@ -1000,6 +1010,8 @@ private struct FoodListView: View {
                     // recipeLogId is likely already an Int
                     print("Recipe log deletion not yet implemented for ID: \(recipeLogId)")
                 }
+            case .activity:
+                print("🏃 Activity logs cannot be deleted (they come from Apple Health)")
             }
         }
     }
@@ -1578,6 +1590,8 @@ struct HistoryRow: View {
                 }
             case .recipe:
                 EmptyView()
+            case .activity:
+                EmptyView() // Activities are not shown in LogFood view
             }
         }
     }

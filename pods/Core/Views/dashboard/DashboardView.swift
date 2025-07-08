@@ -508,6 +508,13 @@ private var remainingCal: Double { vm.remainingCalories }
                     print("    - Recipe ID: \(recipe.id)")
                     print("    - Recipe title: \(recipe.title)")
                 }
+            case .activity:
+                print("  • Activity log details:")
+                print("    - Activity ID: \(log.activityId ?? "N/A")")
+                if let activity = log.activity {
+                    print("    - Activity type: \(activity.workoutActivityType)")
+                    print("    - Activity name: \(activity.displayName)")
+                }
             }
         }
         
@@ -549,6 +556,9 @@ private var remainingCal: Double { vm.remainingCalories }
                     // Note: Implement recipe log deletion if needed in FoodManager
                     print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
                 }
+            case .activity:
+                // Activity logs from Apple Health should not be deletable
+                print("🚫 Activity logs from Apple Health cannot be deleted: \(log.activityId ?? "N/A")")
             }
         }
     }
@@ -618,6 +628,8 @@ private var remainingCal: Double { vm.remainingCalories }
             
         case .recipe:
             print("📝 Recipe saving not yet implemented")
+        case .activity:
+            print("🏃 Activity logs cannot be saved (they come from Apple Health)")
         }
     }
     
@@ -666,6 +678,8 @@ private var remainingCal: Double { vm.remainingCalories }
             
         case .recipe:
             print("📝 Recipe unsaving not yet implemented")
+        case .activity:
+            print("🏃 Activity logs cannot be unsaved (they come from Apple Health)")
         }
     }
     
@@ -724,6 +738,8 @@ private var remainingCal: Double { vm.remainingCalories }
             
             HapticFeedback.generate()
             print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
+        case .activity:
+            print("🏃 Activity logs cannot be deleted (they come from Apple Health)")
         }
     }
 }
@@ -1305,6 +1321,9 @@ private extension DashboardView {
                 vm.setEmail(currentEmail)
             }
             
+            // Set up HealthKitViewModel connection
+            vm.setHealthViewModel(healthViewModel)
+            
             // Always update UserDefaults with the current user's email
             UserDefaults.standard.set(currentEmail, forKey: "userEmail")
             
@@ -1525,7 +1544,7 @@ struct LogRow: View {
                     }
             }
             Spacer(minLength: 0)
-            // Bottom row: Calories (left) and Macros (right)
+            // Bottom row: Calories (left) and Macros/Activity Info (right)
             HStack(alignment: .bottom) {
                 HStack(spacing: 6) {
                     Image(systemName: "flame.fill")
@@ -1533,43 +1552,72 @@ struct LogRow: View {
                         .foregroundColor(Color("brightOrange"))
 
                     HStack(alignment: .bottom, spacing: 1) {
-                                       Text("\(Int(log.displayCalories))")
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("cal")
-                        .font(.system(size: 14, weight: .semibold))
+                        Text("\(Int(log.displayCalories))")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("cal")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
                     }
-                    
-             
                 }
+                
                 Spacer()
-                HStack(spacing: 24) {
-                    VStack(spacing: 0) {
-                        Text("Protein")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(.blue)
-                        Text("\(Int(protein))g")
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundColor(.primary)
+                
+                // Show different info based on log type
+                if log.type == .activity {
+                    // Activity-specific info: Duration and Distance
+                    HStack(spacing: 24) {
+                        // Duration
+                        VStack(spacing: 0) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.blue)
+                            Text(log.activity?.formattedDuration ?? "0 min")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        // Distance (only for distance-based activities)
+                        if let activity = log.activity, activity.isDistanceActivity, let distance = activity.formattedDistance {
+                            VStack(spacing: 0) {
+                                Image(systemName: "location")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.green)
+                                Text(distance)
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.primary)
+                            }
+                        }
                     }
-                    VStack(spacing: 0) {
-                        Text("Carbs")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
-                        Text("\(Int(carbs))g")
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundColor(.primary)
+                } else {
+                    // Food/Meal/Recipe macros
+                    HStack(spacing: 24) {
+                        VStack(spacing: 0) {
+                            Text("Protein")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(.blue)
+                            Text("\(Int(protein))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                        VStack(spacing: 0) {
+                            Text("Carbs")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
+                            Text("\(Int(carbs))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                        VStack(spacing: 0) {
+                            Text("Fat")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(.pink)
+                            Text("\(Int(fat))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
                     }
-                    VStack(spacing: 0) {
-                        Text("Fat")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(.pink)
-                        Text("\(Int(fat))g")
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundColor(.primary)
-            }
-        }
+                }
             }
         }
         .frame(minHeight: 80)
@@ -1607,23 +1655,30 @@ struct LogRow: View {
             return log.meal?.title ?? "Meal"
         case .recipe:
             return log.recipe?.title ?? "Recipe"
+        case .activity:
+            return log.activity?.displayName ?? "Activity"
         }
     }
     
     private var mealTimeSymbol: String {
-        guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
-        
-        switch mealType {
-        case "breakfast":
-            return "sunrise.fill"
-        case "lunch":
-            return "sun.max.fill"
-        case "dinner":
-            return "moon.fill"
-        case "snacks", "snack":
-            return "popcorn.fill"
+        switch log.type {
+        case .activity:
+            return log.activity?.activityIcon ?? "figure.strengthtraining.traditional"
         default:
-            return "popcorn.fill"
+            guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
+            
+            switch mealType {
+            case "breakfast":
+                return "sunrise.fill"
+            case "lunch":
+                return "sun.max.fill"
+            case "dinner":
+                return "moon.fill"
+            case "snacks", "snack":
+                return "popcorn.fill"
+            default:
+                return "popcorn.fill"
+            }
         }
     }
     private func getTimeLabel() -> String? {
@@ -1834,10 +1889,10 @@ private extension DashboardView {
         VStack(spacing: 16) {
             // First row: Calories Burned and Water
             HStack(spacing: 0) {
-                // Total Calories Burned (Active + Basal)
+                // Active Calories Burned from Apple Health
                 healthMetricCell(
-                    title: "Total Burn",
-                    value: Int(healthViewModel.totalEnergyBurned),
+                    title: "Calories Burned",
+                    value: Int(healthViewModel.activeEnergy),
                     unit: "",
                     systemImage: "flame.fill",
                     color: Color("brightOrange")

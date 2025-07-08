@@ -47,9 +47,11 @@ final class DayLogsViewModel: ObservableObject {
 
   private let repo = LogRepository()
   private(set) var email = ""
+  private weak var healthViewModel: HealthKitViewModel?
 
-  init(email: String = "") {
+  init(email: String = "", healthViewModel: HealthKitViewModel? = nil) {
     self.email = email
+    self.healthViewModel = healthViewModel
     // Clear any stale cached logs when initializing
     clearPendingCache()
   }
@@ -59,6 +61,10 @@ final class DayLogsViewModel: ObservableObject {
     fetchNutritionGoals()
     // Clear pending cache when switching users
     clearPendingCache()
+  }
+  
+  func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
+    self.healthViewModel = healthViewModel
   }
 
 
@@ -122,8 +128,15 @@ func addPending(_ log: CombinedLog) {
     // again, guard against duplicates in the live `logs` array
     if !logs.contains(where: { $0.id == log.id }) {
       logs.insert(log, at: 0)
-            print("[DayLogsVM] logs.inserted \(log.id), logs now = \(logs.map { $0.id })")
-
+      
+      // Re-sort logs to maintain chronological order (most recent first)
+      logs.sort { log1, log2 in
+        let date1 = log1.scheduledAt ?? Date.distantPast
+        let date2 = log2.scheduledAt ?? Date.distantPast
+        return date1 > date2  // Most recent first
+      }
+      
+      print("[DayLogsVM] logs.inserted \(log.id), logs now = \(logs.map { $0.id })")
     }
   }
   
@@ -165,7 +178,18 @@ func loadLogs(for date: Date) {
           !serverLogs.contains(where: { $0.id == p.id })
         }
 
-        self.logs = dedupedPending + serverLogs
+        // Get activity logs from Apple Health
+        let activityLogs = self.getActivityLogsFromHealth(for: date)
+        
+        // Combine all logs: pending + server + activities
+        let combinedLogs = dedupedPending + serverLogs + activityLogs
+        
+        // Sort all logs by scheduledAt time (most recent first)
+        self.logs = combinedLogs.sorted { log1, log2 in
+            let date1 = log1.scheduledAt ?? Date.distantPast
+            let date2 = log2.scheduledAt ?? Date.distantPast
+            return date1 > date2  // Most recent first
+        }
         
         // Update water logs from server response
         print("🚰 DayLogsViewModel: Updating water logs. Old count: \(self.waterLogs.count), New count: \(serverResponse.waterLogs.count)")
@@ -213,7 +237,12 @@ func loadLogs(for date: Date) {
 
 
     private func recalculateTotals() {
-      totalCalories = logs.reduce(0.0) { $0 + $1.displayCalories }
+      // Only count food/meal/recipe calories for intake (exclude activities)
+      totalCalories = logs.reduce(0.0) { sum, log in
+        // Activities burn calories, they don't contribute to calorie intake
+        guard log.type != .activity else { return sum }
+        return sum + log.displayCalories
+      }
 
       totalProtein = logs.reduce(0.0) { sum, log in
         let p1 = log.food?.protein  ?? 0
@@ -355,7 +384,51 @@ func loadLogs(for date: Date) {
   
   /// Clear the pending logs cache to prevent showing stale data
   private func clearPendingCache() {
-    pendingByDate.removeAll()
-    print("[DayLogsVM] Cleared pending cache")
+      pendingByDate.removeAll()
+      print("[DayLogsVM] Cleared pending cache")
+  }
+  
+  // MARK: - Activity Log Helpers
+  
+  private func getActivityLogsFromHealth(for date: Date) -> [CombinedLog] {
+      // Get the shared HealthKitViewModel instance
+      guard let healthViewModel = getHealthKitViewModel() else {
+          print("[DayLogsVM] No HealthKitViewModel available")
+          return []
+      }
+      
+      let activities = healthViewModel.getActivityLogs(for: date)
+      
+      return activities.map { activity in
+          CombinedLog(
+              type: .activity,
+              status: "success",
+              calories: activity.totalEnergyBurned ?? 0,
+              message: activity.displayName,
+              scheduledAt: activity.startDate,
+              activityId: activity.id,
+              activity: activity,
+              logDate: formatDateForLog(activity.startDate),
+              dayOfWeek: formatDayOfWeek(activity.startDate)
+          )
+      }
+  }
+  
+  private func getHealthKitViewModel() -> HealthKitViewModel? {
+      // Try to get the HealthKitViewModel from the app's environment
+      // This is a simplified approach - in a real app, you'd inject this dependency
+      return healthViewModel ?? HealthKitViewModel.shared
+  }
+  
+  private func formatDateForLog(_ date: Date) -> String {
+      let formatter = DateFormatter()
+      formatter.dateFormat = "yyyy-MM-dd"
+      return formatter.string(from: date)
+  }
+  
+  private func formatDayOfWeek(_ date: Date) -> String {
+      let formatter = DateFormatter()
+      formatter.dateFormat = "EEEE"
+      return formatter.string(from: date)
   }
 }
