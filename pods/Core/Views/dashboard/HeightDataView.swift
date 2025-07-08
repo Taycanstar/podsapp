@@ -39,6 +39,7 @@ struct HeightDataView: View {
     @State private var isChartTapped = false
     @State private var selectedLogForEdit: HeightLogResponse? = nil
     @Environment(\.isTabBarVisible) private var isTabBarVisible
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -177,13 +178,12 @@ struct HeightDataView: View {
                 .foregroundColor(.gray)
             
             if currentHeight > 0 {
-                let totalInches = currentHeight / 2.54
-                let feet = Int(totalInches / 12)
-                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(feet)' \(inches)\"")
+                    Text(formatHeight(currentHeight))
                         .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    Text(heightUnit)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.gray)
                 }
             } else {
                 Text("No data")
@@ -221,7 +221,7 @@ struct HeightDataView: View {
             ForEach(groupedLogsForChart(), id: \.date) { dataPoint in
                 LineMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Height", dataPoint.heightCm)
+                    y: .value("Height", dataPoint.displayHeight)
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
@@ -229,7 +229,7 @@ struct HeightDataView: View {
                 // Mask the line so it doesn’t show through the hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Height", dataPoint.heightCm)
+                    y: .value("Height", dataPoint.displayHeight)
                 )
                 .symbol(.circle)
                 .symbolSize(CGSize(width: 12, height: 12))        // slightly larger mask
@@ -238,7 +238,7 @@ struct HeightDataView: View {
                 // Outlined hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Height", dataPoint.heightCm)
+                    y: .value("Height", dataPoint.displayHeight)
                 )
                 .symbol(.circle.strokeBorder(lineWidth: 2))
                 .symbolSize(CGSize(width: 10, height: 10))
@@ -253,18 +253,13 @@ struct HeightDataView: View {
                     
                 PointMark(
                     x: .value("Selected Date", selectedPoint.date),
-                    y: .value("Selected Height", selectedPoint.heightCm)
+                    y: .value("Selected Height", selectedPoint.displayHeight)
                 )
                 .symbolSize(CGSize(width: 14, height: 14))
                 .foregroundStyle(Color.purple)
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
-                        // Calculate feet and inches
-                        let totalInches = selectedPoint.heightCm / 2.54
-                        let feet = Int(totalInches / 12)
-                        let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                        
-                        Text("\(feet)' \(inches)\"")
+                        Text(formatHeight(selectedPoint.heightCm))
                             .font(.headline)
                             .foregroundColor(.primary)
                         Text(formatDate(selectedPoint.date, format: "MMM d, yyyy"))
@@ -433,7 +428,11 @@ struct HeightDataView: View {
             // For week, show individual data points
             for log in logs {
                 if let date = dateFormatter.date(from: log.dateLogged) {
-                    result.append(ChartDataPoint(date: date, heightCm: log.heightCm))
+                    result.append(ChartDataPoint(
+                        date: date, 
+                        heightCm: log.heightCm,
+                        displayHeight: getDisplayHeight(log.heightCm)
+                    ))
                 }
             }
             
@@ -454,7 +453,11 @@ struct HeightDataView: View {
             
             for (day, heights) in dayGroups {
                 let avgHeight = heights.reduce(0, +) / Double(heights.count)
-                result.append(ChartDataPoint(date: day, heightCm: avgHeight))
+                result.append(ChartDataPoint(
+                    date: day, 
+                    heightCm: avgHeight,
+                    displayHeight: getDisplayHeight(avgHeight)
+                ))
             }
             
         case .sixMonths:
@@ -481,7 +484,11 @@ struct HeightDataView: View {
             
             for (week, heights) in weekGroups {
                 let avgHeight = heights.reduce(0, +) / Double(heights.count)
-                result.append(ChartDataPoint(date: week, heightCm: avgHeight))
+                result.append(ChartDataPoint(
+                    date: week, 
+                    heightCm: avgHeight,
+                    displayHeight: getDisplayHeight(avgHeight)
+                ))
             }
             
         case .year:
@@ -505,7 +512,11 @@ struct HeightDataView: View {
             
             for (month, heights) in monthGroups {
                 let avgHeight = heights.reduce(0, +) / Double(heights.count)
-                result.append(ChartDataPoint(date: month, heightCm: avgHeight))
+                result.append(ChartDataPoint(
+                    date: month, 
+                    heightCm: avgHeight,
+                    displayHeight: getDisplayHeight(avgHeight)
+                ))
             }
         }
         
@@ -518,20 +529,32 @@ struct HeightDataView: View {
         var id: Date { date }
         let date: Date
         let heightCm: Double
+        let displayHeight: Double
     }
     
     // Calculate Y-axis range for the chart
     private func heightChartRange() -> ClosedRange<Double> {
         if logs.isEmpty {
-            return 160...190 // Default range if no data
+            // Default range based on units
+            switch viewModel.unitsSystem {
+            case .imperial:
+                return 60...75  // inches
+            case .metric:
+                return 160...190  // cm
+            }
         }
         
-        let heights = logs.compactMap { log in
-            return log.heightCm
+        let displayHeights = logs.compactMap { log in
+            return getDisplayHeight(log.heightCm)
         }
         
-        guard let minHeight = heights.min(), let maxHeight = heights.max() else {
-            return 160...190
+        guard let minHeight = displayHeights.min(), let maxHeight = displayHeights.max() else {
+            switch viewModel.unitsSystem {
+            case .imperial:
+                return 60...75
+            case .metric:
+                return 160...190
+            }
         }
         
         // Add 10% padding above and below
@@ -539,9 +562,10 @@ struct HeightDataView: View {
         let lowerBound = Swift.max(minHeight - padding, 0)
         let upperBound = maxHeight + padding
         
-        // Ensure at least 10 units of range
-        if upperBound - lowerBound < 10 {
-            return (lowerBound - 5)...(upperBound + 5)
+        // Ensure minimum range based on units
+        let minRange = viewModel.unitsSystem == .imperial ? 5.0 : 10.0
+        if upperBound - lowerBound < minRange {
+            return (lowerBound - minRange/2)...(upperBound + minRange/2)
         }
         
         return lowerBound...upperBound
@@ -741,6 +765,39 @@ struct HeightDataView: View {
         let sortedPoints = groupedLogsForChart().sorted { $0.date < $1.date }
         return (sortedPoints.first?.date, sortedPoints.last?.date)
     }
+    
+    // MARK: - Helper Functions
+    
+    // Units system helpers
+    private var heightUnit: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return ""  // For imperial, we show the units inline (e.g., "5' 9\"")
+        case .metric:
+            return "cm"
+        }
+    }
+    
+    private func formatHeight(_ heightCm: Double) -> String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            let totalInches = heightCm / 2.54
+            let feet = Int(totalInches / 12)
+            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+            return "\(feet)' \(inches)\""
+        case .metric:
+            return String(format: "%.1f", heightCm)
+        }
+    }
+    
+    private func getDisplayHeight(_ heightCm: Double) -> Double {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return heightCm / 2.54  // Convert to inches
+        case .metric:
+            return heightCm
+        }
+    }
 }
 
 // MARK: - HeightLogRowView Component
@@ -748,6 +805,19 @@ struct HeightLogRowView: View {
     let log: HeightLogResponse
     let date: Date
     let onRowTap: () -> Void
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    
+    private func formatHeightDisplay() -> String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            let totalInches = log.heightCm / 2.54
+            let feet = Int(totalInches / 12)
+            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+            return "\(feet)' \(inches)\""
+        case .metric:
+            return "\(String(format: "%.1f", log.heightCm)) cm"
+        }
+    }
     
     private func formatDateForHistory(_ date: Date) -> String {
         let calendar = Calendar.current
@@ -773,12 +843,8 @@ struct HeightLogRowView: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                // Height in feet and inches
-                let totalInches = log.heightCm / 2.54
-                let feet = Int(totalInches / 12)
-                let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                
-                Text("\(feet)' \(inches)\"")
+                // Height in appropriate units
+                Text(formatHeightDisplay())
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
                 

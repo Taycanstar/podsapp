@@ -41,7 +41,7 @@ struct MyProfileView: View {
     @EnvironmentObject var vm: DayLogsViewModel  // Add this to access current weight
     
     // Weight data state
-    @State private var currentWeightLbs: Double? = nil
+    @State private var currentWeightKg: Double? = nil
     @State private var weightDate: String? = nil
     @State private var isLoadingWeight = false
     @State private var recentWeightLogs: [WeightLogResponse] = []
@@ -484,12 +484,12 @@ struct MyProfileView: View {
                     if isLoadingWeight {
                         ProgressView()
                             .scaleEffect(0.8)
-                    } else if let weightLbs = currentWeightLbs {
+                    } else if let weightKg = currentWeightKg {
                         HStack(alignment: .firstTextBaseline, spacing: 0) {
-                            Text("\(Int(weightLbs.rounded()))")
+                            Text(formatWeight(weightKg))
                                 .font(.system(size: 26, weight: .semibold, design: .rounded))
                                 .foregroundColor(.primary)
-                            Text(" lbs")
+                            Text(" \(weightUnit)")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -500,7 +500,7 @@ struct MyProfileView: View {
                     }
                     
                     // Prompt for no data case
-                    if currentWeightLbs == nil && !isLoadingWeight {
+                    if currentWeightKg == nil && !isLoadingWeight {
                         Text("Add your first weight entry")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
@@ -522,7 +522,7 @@ struct MyProfileView: View {
         .onAppear {
             // Debug: Print weight data
             print("🏋️ Weight Debug (Local State):")
-            print("  - currentWeightLbs: \(currentWeightLbs?.description ?? "nil")")
+            print("  - currentWeightKg: \(currentWeightKg?.description ?? "nil")")
             print("  - weightDate: \(weightDate ?? "nil")")
             print("  - vm.weight: \(vm.weight)")
             print("  - recentWeightLogs count: \(recentWeightLogs.count)")
@@ -531,13 +531,14 @@ struct MyProfileView: View {
     
     private var weightTrendChart: some View {
         let chartData = Array(recentWeightLogs.enumerated().reversed())
-        let weights = chartData.map { $0.1.weightKg * 2.20462 }
+        let weights = chartData.map { getDisplayWeight($0.1.weightKg) }
         
         // Calculate a better Y-axis range to show variation
         let minWeight = weights.min() ?? 0
         let maxWeight = weights.max() ?? 0
         let range = maxWeight - minWeight
-        let padding = max(range * 0.3, 2.0) // At least 2 lbs padding
+        let defaultPadding = onboarding.unitsSystem == .imperial ? 2.0 : 1.0
+        let padding = max(range * 0.3, defaultPadding) // Different padding for different units
         let yAxisMin = minWeight - padding
         let yAxisMax = maxWeight + padding
         
@@ -553,7 +554,7 @@ struct MyProfileView: View {
                 
                 LineMark(
                     x: .value("Day", xValue),
-                    y: .value("Weight", log.weightKg * 2.20462)
+                    y: .value("Weight", getDisplayWeight(log.weightKg))
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
@@ -561,7 +562,7 @@ struct MyProfileView: View {
                 // Mask the line so it doesn't show through the hollow point
                 PointMark(
                     x: .value("Day", xValue),
-                    y: .value("Weight", log.weightKg * 2.20462)
+                    y: .value("Weight", getDisplayWeight(log.weightKg))
                 )
                 .symbol(.circle)
                 .symbolSize(CGSize(width: 10, height: 10))        // larger background
@@ -570,7 +571,7 @@ struct MyProfileView: View {
                 // Outlined hollow point
                 PointMark(
                     x: .value("Day", xValue),
-                    y: .value("Weight", log.weightKg * 2.20462)
+                    y: .value("Weight", getDisplayWeight(log.weightKg))
                 )
                 .symbol(.circle.strokeBorder(lineWidth: 2))
                 .symbolSize(CGSize(width: 8, height: 8))
@@ -591,8 +592,9 @@ struct MyProfileView: View {
             print("  - Y-axis scale: \(yAxisMin) to \(yAxisMax)")
             print("  - X-axis scale: \(xAxisMin) to \(xAxisMax)")
             for (index, log) in chartData {
-                let weightLbs = log.weightKg * 2.20462
-                print("  - Chart point \(index): \(weightLbs)lbs from \(log.dateLogged)")
+                let displayWeight = getDisplayWeight(log.weightKg)
+                let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+                print("  - Chart point \(index): \(displayWeight)\(unit) from \(log.dateLogged)")
             }
         }
     }
@@ -741,7 +743,7 @@ struct MyProfileView: View {
         // Update weight/height from profile data
         if let weightKg = profileData.currentWeightKg, weightKg > 0 {
             vm.weight = weightKg
-            currentWeightLbs = weightKg * 2.20462
+                            currentWeightKg = weightKg
         }
         
         if let heightCm = profileData.heightCm, heightCm > 0 {
@@ -832,13 +834,13 @@ struct MyProfileView: View {
         print("🏋️ Fetching weight data for email: \(email)")
         print("🏋️ vm.weight value: \(vm.weight)")
         
-        // Store vm.weight as the preferred source of truth
-        let vmWeightLbs = vm.weight > 0 ? vm.weight * 2.20462 : nil
+        // Store vm.weight as the preferred source of truth (vm.weight is already in kg)
+        let vmWeightKg = vm.weight > 0 ? vm.weight : nil
         
         // If vm has weight, use it immediately but still fetch logs for chart
-        if let vmWeight = vmWeightLbs {
-            currentWeightLbs = vmWeight
-            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg = \(vmWeight)lbs")
+        if let vmWeight = vmWeightKg {
+            currentWeightKg = vmWeight
+            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg")
         }
         
         isLoadingWeight = true
@@ -859,28 +861,27 @@ struct MyProfileView: View {
                     }
                     
                     if let mostRecentLog = response.logs.first {
-                        let apiWeightLbs = mostRecentLog.weightKg * 2.20462
                         self.weightDate = mostRecentLog.dateLogged
                         
-                        // Only update currentWeightLbs if vm.weight doesn't exist or API has newer data
-                        if vmWeightLbs == nil {
-                            self.currentWeightLbs = apiWeightLbs
-                            print("🏋️ Got weight from API (no vm.weight): \(mostRecentLog.weightKg)kg = \(apiWeightLbs)lbs")
+                        // Only update currentWeightKg if vm.weight doesn't exist or API has newer data
+                        if vmWeightKg == nil {
+                            self.currentWeightKg = mostRecentLog.weightKg
+                            print("🏋️ Got weight from API (no vm.weight): \(mostRecentLog.weightKg)kg")
                         } else {
                             // Keep vm.weight as it's likely more recent (just saved)
-                            print("🏋️ Keeping vm.weight (\(vmWeightLbs!)lbs) over API weight (\(apiWeightLbs)lbs)")
+                            print("🏋️ Keeping vm.weight (\(vmWeightKg!)kg) over API weight (\(mostRecentLog.weightKg)kg)")
                         }
                     } else {
                         print("🏋️ No weight logs found")
-                        if vmWeightLbs == nil {
-                            self.currentWeightLbs = nil
+                        if vmWeightKg == nil {
+                            self.currentWeightKg = nil
                         }
                         self.weightDate = nil
                     }
                 case .failure(let error):
                     print("❌ Error fetching weight logs: \(error)")
-                    if vmWeightLbs == nil {
-                        self.currentWeightLbs = nil
+                    if vmWeightKg == nil {
+                        self.currentWeightKg = nil
                         self.weightDate = nil
                     }
                     self.recentWeightLogs = []
@@ -1429,6 +1430,38 @@ struct MacroSplitCardView: View {
         .padding()
         .background(Color("iosfit"))
         .cornerRadius(16)
+    }
+}
+
+// MARK: - Helper Functions
+extension MyProfileView {
+    // Units system helpers
+    private var weightUnit: String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return "lbs"
+        case .metric:
+            return "kg"
+        }
+    }
+    
+    private func formatWeight(_ weightKg: Double) -> String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            let weightLbs = weightKg * 2.20462
+            return String(format: "%.0f", weightLbs)
+        case .metric:
+            return String(format: "%.1f", weightKg)
+        }
+    }
+    
+    private func getDisplayWeight(_ weightKg: Double) -> Double {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return weightKg * 2.20462
+        case .metric:
+            return weightKg
+        }
     }
 }
 

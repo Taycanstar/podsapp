@@ -95,6 +95,47 @@ private var remainingCal: Double { vm.remainingCalories }
         let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"
         return f.string(from: vm.selectedDate)
     }
+    
+    // ─── Units system helpers ──────────────────────────────────────────────
+    private var weightUnit: String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return "lb"
+        case .metric:
+            return "kg"
+        }
+    }
+    
+    private var heightUnit: String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return ""  // For imperial, we show the units inline (e.g., "5' 9\"")
+        case .metric:
+            return "cm"
+        }
+    }
+    
+    private func formatWeight(_ weightKg: Double) -> String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            let weightLbs = weightKg * 2.20462
+            return String(format: "%.0f", weightLbs)
+        case .metric:
+            return String(format: "%.1f", weightKg)
+        }
+    }
+    
+    private func formatHeight(_ heightCm: Double) -> String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            let totalInches = heightCm / 2.54
+            let feet = Int(totalInches / 12)
+            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+            return "\(feet)' \(inches)\""
+        case .metric:
+            return String(format: "%.1f", heightCm)
+        }
+    }
 
     // ────────────────────────────────────────────────────────────────────────
     // MARK: -- View body
@@ -1143,12 +1184,16 @@ private extension DashboardView {
                     }
                     Spacer()
                     if vm.height > 0 {
-                        let totalInches = vm.height / 2.54
-                        let feet = Int(totalInches / 12)
-                        let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
-                        Text("\(feet)' \(inches)\"")
-                            .font(.system(size: 26, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(formatHeight(vm.height))
+                                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+                            if !heightUnit.isEmpty {
+                                Text(heightUnit)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     } else {
                         Text("No data")
                             .font(.system(size: 26, weight: .bold, design: .rounded))
@@ -1196,12 +1241,11 @@ private extension DashboardView {
                             .foregroundColor(.purple)
                     }
                     Spacer()
-                    let weightInLbs = Int(vm.weight * 2.20462)
                     HStack(spacing: 0) {
-                        Text("\(weightInLbs)")
+                        Text(formatWeight(vm.weight))
                             .font(.system(size: 26, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
-                        Text(" lb")
+                        Text(" \(weightUnit)")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.secondary)
                     }
