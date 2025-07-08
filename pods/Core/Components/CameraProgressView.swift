@@ -100,8 +100,9 @@ final class UnmirroredFrontPicker: UIImagePickerController {
 
     /// Flip preview after shutter for **front** camera only.
     @objc private func handleDidCapture() {
-        guard cameraDevice == .front else { 
-            // Still hide gallery button even for back camera
+        // Only handle camera device when source type is camera
+        guard sourceType == .camera && cameraDevice == .front else { 
+            // Still hide gallery button even for back camera or photo library
             hideGalleryButton?()
             return 
         }
@@ -191,8 +192,13 @@ struct CustomImagePicker: UIViewControllerRepresentable {
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            // Check if front camera was used
-            self.isFrontCamera = (picker.cameraDevice == .front)
+            // Check if front camera was used - only valid for camera source type
+            if picker.sourceType == .camera {
+                self.isFrontCamera = (picker.cameraDevice == .front)
+            } else {
+                // For photo library, no front camera mirroring needed
+                self.isFrontCamera = false
+            }
             
             // Dismiss the picker first
             picker.dismiss(animated: true) {
