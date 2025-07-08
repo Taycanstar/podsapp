@@ -11,15 +11,42 @@ struct EditHeightView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     @State private var selectedDate = Date()
+    
+    // Imperial units
     @State private var selectedFeet = 5
     @State private var selectedInches = 9
+    
+    // Metric units
+    @State private var heightCmText = ""
+    @FocusState private var isHeightFieldFocused: Bool
+    
     @State private var showingHeightPicker = false
     
-    // Available ranges
+    // Available ranges for imperial
     let feetRange = 2...8
     let inchesRange = 0...11
+    
+    // Computed properties for unit display
+    private var heightUnit: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "ft"
+        case .metric:
+            return "cm"
+        }
+    }
+    
+    private var heightPlaceholder: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "Select height"
+        case .metric:
+            return "Enter height in cm"
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -44,56 +71,77 @@ struct EditHeightView: View {
                     Divider()
                         .padding(.horizontal, 16)
                     
-                    // Height Button Row
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            showingHeightPicker.toggle()
+                    // Height Input Row - Different based on units system
+                    if viewModel.unitsSystem == .imperial {
+                        // Imperial: Height Button Row with Picker
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showingHeightPicker.toggle()
+                            }
+                        }) {
+                            HStack {
+                                Text(heightUnit)
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Text("\(selectedFeet)' \(selectedInches)\"")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                         }
-                    }) {
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Inline Height Picker (expands/collapses)
+                        if showingHeightPicker {
+                            Divider()
+                                .padding(.horizontal, 16)
+                            
+                            HStack(spacing: 0) {
+                                // Feet Picker
+                                Picker("Feet", selection: $selectedFeet) {
+                                    ForEach(feetRange, id: \.self) { feet in
+                                        Text("\(feet) ft").tag(feet)
+                                    }
+                                }
+                                .pickerStyle(WheelPickerStyle())
+                                .frame(maxWidth: .infinity)
+                                
+                                // Inches Picker
+                                Picker("Inches", selection: $selectedInches) {
+                                    ForEach(inchesRange, id: \.self) { inches in
+                                        Text("\(inches) in").tag(inches)
+                                    }
+                                }
+                                .pickerStyle(WheelPickerStyle())
+                                .frame(maxWidth: .infinity)
+                            }
+                            .frame(height: 150)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+                        }
+                    } else {
+                        // Metric: Height Text Field
                         HStack {
-                            Text("ft")
+                            Text(heightUnit)
                                 .font(.system(size: 17))
                                 .foregroundColor(.primary)
                             
                             Spacer()
                             
-                            Text("\(selectedFeet)' \(selectedInches)\"")
+                            TextField("", text: $heightCmText)
+                                .keyboardType(.decimalPad)
+                                .focused($isHeightFieldFocused)
+                                .multilineTextAlignment(.trailing)
                                 .font(.system(size: 17))
                                 .foregroundColor(.primary)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    // Inline Height Picker (expands/collapses)
-                    if showingHeightPicker {
-                        Divider()
-                            .padding(.horizontal, 16)
-                        
-                        HStack(spacing: 0) {
-                            // Feet Picker
-                            Picker("Feet", selection: $selectedFeet) {
-                                ForEach(feetRange, id: \.self) { feet in
-                                    Text("\(feet) ft").tag(feet)
-                                }
-                            }
-                            .pickerStyle(WheelPickerStyle())
-                            .frame(maxWidth: .infinity)
-                            
-                            // Inches Picker
-                            Picker("Inches", selection: $selectedInches) {
-                                ForEach(inchesRange, id: \.self) { inches in
-                                    Text("\(inches) in").tag(inches)
-                                }
-                            }
-                            .pickerStyle(WheelPickerStyle())
-                            .frame(maxWidth: .infinity)
-                        }
-                        .frame(height: 150)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
                     }
                 }
                 .background(Color("iosnp"))
@@ -115,30 +163,68 @@ struct EditHeightView: View {
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
+                .disabled(viewModel.unitsSystem == .metric && heightCmText.isEmpty)
             )
         }
         .onAppear {
             // Initialize with current height if available
             if vm.height > 0 {
-                // Calculate imperial values
-                let totalInches = vm.height / 2.54
-                selectedFeet = Int(totalInches / 12)
-                selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+                switch viewModel.unitsSystem {
+                case .imperial:
+                    // Calculate imperial values
+                    let totalInches = vm.height / 2.54
+                    selectedFeet = Int(totalInches / 12)
+                    selectedInches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+                case .metric:
+                    // Display in cm
+                    heightCmText = String(format: "%.1f", vm.height)
+                }
+            }
+            
+            // Auto-focus for metric text field
+            if viewModel.unitsSystem == .metric {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isHeightFieldFocused = true
+                }
             }
         }
     }
     
     private func saveHeight() {
-        // Convert imperial to metric
-        let totalInches = (selectedFeet * 12) + selectedInches
-        let heightInCm = Double(totalInches) * 2.54
+        let heightInCm: Double
         
-        // Save to UserDefaults
-        UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
-        UserDefaults.standard.set(selectedInches, forKey: "heightInches")
+        switch viewModel.unitsSystem {
+        case .imperial:
+            // Convert imperial to metric
+            let totalInches = (selectedFeet * 12) + selectedInches
+            heightInCm = Double(totalInches) * 2.54
+            
+            // Save imperial values to UserDefaults
+            UserDefaults.standard.set(selectedFeet, forKey: "heightFeet")
+            UserDefaults.standard.set(selectedInches, forKey: "heightInches")
+            
+        case .metric:
+            // Input is already in cm
+            guard let inputHeight = Double(heightCmText) else {
+                print("Error: Invalid height value")
+                return
+            }
+            
+            heightInCm = inputHeight
+            
+            // Calculate and save imperial equivalents
+            let totalInches = heightInCm / 2.54
+            let feet = Int(totalInches / 12)
+            let inches = Int(totalInches.truncatingRemainder(dividingBy: 12).rounded())
+            
+            UserDefaults.standard.set(feet, forKey: "heightFeet")
+            UserDefaults.standard.set(inches, forKey: "heightInches")
+        }
+        
+        // Save cm value to UserDefaults
         UserDefaults.standard.set(heightInCm, forKey: "heightCentimeters")
         
-        // Update the viewModel
+        // Update the viewModel (always stored in cm)
         vm.height = heightInCm
         
         // Call API to log height using NetworkManagerTwo

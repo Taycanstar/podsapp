@@ -12,6 +12,7 @@ struct EditWeightView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var vm: DayLogsViewModel
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     @State private var selectedDate = Date()
     @State private var weightText = ""
@@ -24,6 +25,25 @@ struct EditWeightView: View {
     
     // Completion handler to navigate after saving
     var onWeightSaved: (() -> Void)?
+    
+    // Computed properties for unit display
+    private var weightUnit: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "lbs"
+        case .metric:
+            return "kg"
+        }
+    }
+    
+    private var weightPlaceholder: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "Enter weight in lbs"
+        case .metric:
+            return "Enter weight in kg"
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -50,7 +70,7 @@ struct EditWeightView: View {
                     
                     // Weight Input Row
                     HStack {
-                        Text("lbs")
+                        Text(weightUnit)
                             .font(.system(size: 17))
                             .foregroundColor(.primary)
                         
@@ -147,8 +167,13 @@ struct EditWeightView: View {
         .onAppear {
             // Initialize with current weight if available
             if vm.weight > 0 {
-                let weightLbs = vm.weight * 2.20462
-                weightText = String(Int(weightLbs.rounded()))
+                switch viewModel.unitsSystem {
+                case .imperial:
+                    let weightLbs = vm.weight * 2.20462
+                    weightText = String(format: "%.1f", weightLbs)
+                case .metric:
+                    weightText = String(format: "%.1f", vm.weight)
+                }
             }
             
             // Automatically focus the weight field to show numpad
@@ -172,19 +197,31 @@ struct EditWeightView: View {
     }
     
     private func saveWeight() {
-        guard let weightLbs = Double(weightText) else {
+        guard let inputWeight = Double(weightText) else {
             print("Error: Invalid weight value")
             return
         }
         
-        // Convert pounds to kg for storage
-        let weightInKg = weightLbs / 2.20462
+        // Convert input to kg for storage (backend always stores in kg)
+        let weightInKg: Double
+        let weightInLbs: Double
         
-        // Save to UserDefaults
-        UserDefaults.standard.set(weightLbs, forKey: "weightPounds")
+        switch viewModel.unitsSystem {
+        case .imperial:
+            // Input is in lbs, convert to kg
+            weightInKg = inputWeight / 2.20462
+            weightInLbs = inputWeight
+        case .metric:
+            // Input is in kg, convert to lbs for storage
+            weightInKg = inputWeight
+            weightInLbs = inputWeight * 2.20462
+        }
+        
+        // Save both units to UserDefaults
+        UserDefaults.standard.set(weightInLbs, forKey: "weightPounds")
         UserDefaults.standard.set(weightInKg, forKey: "weightKilograms")
         
-        // Update the viewModel
+        // Update the viewModel (always stored in kg)
         vm.weight = weightInKg
         
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {

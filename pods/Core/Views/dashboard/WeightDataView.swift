@@ -50,12 +50,42 @@ struct WeightDataView: View {
     @State private var fullScreenImage: UIImage? = nil
     @State private var loadedImages: [String: UIImage] = [:]
     @Environment(\.isTabBarVisible) private var isTabBarVisible
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+    
+    // Computed properties for unit display
+    private var weightUnit: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "lbs"
+        case .metric:
+            return "kg"
+        }
+    }
+    
+    private func formatWeight(_ weightKg: Double) -> String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            let weightLbs = weightKg * 2.20462
+            return String(format: "%.1f", weightLbs)
+        case .metric:
+            return String(format: "%.1f", weightKg)
+        }
+    }
+    
+    private func getDisplayWeight(_ weightKg: Double) -> Double {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return weightKg * 2.20462
+        case .metric:
+            return weightKg
+        }
+    }
     
     init(initialAllLogs: [WeightLogResponse] = []) {
         _allLogs = State(initialValue: initialAllLogs)
@@ -304,7 +334,7 @@ struct WeightDataView: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(String(format: "%.1f", currentWeight))")
                               .font(.system(size: 28, weight: .semibold, design: .rounded))
-                Text("lbs")
+                Text(weightUnit)
                     .font(.system(size: 32))
                     .foregroundColor(.gray)
             }
@@ -340,7 +370,7 @@ struct WeightDataView: View {
             ForEach(groupedLogsForChart(), id: \.date) { dataPoint in
                 LineMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Weight", dataPoint.weightLbs)
+                    y: .value("Weight", dataPoint.displayWeight)
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .foregroundStyle(Color.purple)
@@ -348,7 +378,7 @@ struct WeightDataView: View {
                 // Mask the line so it doesn't show through the hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Weight", dataPoint.weightLbs)
+                    y: .value("Weight", dataPoint.displayWeight)
                 )
                 .symbol(.circle)
                 .symbolSize(CGSize(width: 12, height: 12))        // slightly larger
@@ -357,7 +387,7 @@ struct WeightDataView: View {
                 // Outlined hollow point
                 PointMark(
                     x: .value("Date", dataPoint.date),
-                    y: .value("Weight", dataPoint.weightLbs)
+                    y: .value("Weight", dataPoint.displayWeight)
                 )
                 .symbol(.circle.strokeBorder(lineWidth: 2))
                 .symbolSize(CGSize(width: 10, height: 10))
@@ -372,13 +402,13 @@ struct WeightDataView: View {
                     
                 PointMark(
                     x: .value("Selected Date", selectedPoint.date),
-                    y: .value("Selected Weight", selectedPoint.weightLbs)
+                    y: .value("Selected Weight", selectedPoint.displayWeight)
                 )
                 .symbolSize(CGSize(width: 14, height: 14))
                 .foregroundStyle(Color.purple)
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
-                        Text("\(String(format: "%.1f", selectedPoint.weightLbs)) lbs")
+                        Text("\(String(format: "%.1f", selectedPoint.displayWeight)) \(weightUnit)")
                             .font(.headline)
                             .foregroundColor(.primary)
                         Text(formatDate(selectedPoint.date, format: "MMM d, yyyy"))
@@ -555,7 +585,11 @@ struct WeightDataView: View {
             // For week, show individual data points
             for log in logs {
                 if let date = dateFormatter.date(from: log.dateLogged) {
-                    result.append(ChartDataPoint(date: date, weightLbs: log.weightKg * 2.20462))
+                    result.append(ChartDataPoint(
+                        date: date, 
+                        weightKg: log.weightKg,
+                        displayWeight: getDisplayWeight(log.weightKg)
+                    ))
                 }
             }
             
@@ -564,20 +598,24 @@ struct WeightDataView: View {
             let calendar = Calendar.current
             var dayGroups: [Date: [Double]] = [:]
             
-            for log in logs {
-                if let date = dateFormatter.date(from: log.dateLogged) {
-                    let day = calendar.startOfDay(for: date)
-                    if dayGroups[day] == nil {
-                        dayGroups[day] = []
+                            for log in logs {
+                    if let date = dateFormatter.date(from: log.dateLogged) {
+                        let day = calendar.startOfDay(for: date)
+                        if dayGroups[day] == nil {
+                            dayGroups[day] = []
+                        }
+                        dayGroups[day]?.append(log.weightKg)
                     }
-                    dayGroups[day]?.append(log.weightKg * 2.20462)
                 }
-            }
-            
-            for (day, weights) in dayGroups {
-                let avgWeight = weights.reduce(0, +) / Double(weights.count)
-                result.append(ChartDataPoint(date: day, weightLbs: avgWeight))
-            }
+                
+                for (day, weights) in dayGroups {
+                    let avgWeightKg = weights.reduce(0, +) / Double(weights.count)
+                    result.append(ChartDataPoint(
+                        date: day, 
+                        weightKg: avgWeightKg,
+                        displayWeight: getDisplayWeight(avgWeightKg)
+                    ))
+                }
             
         case .sixMonths:
             // Group by week
@@ -597,13 +635,17 @@ struct WeightDataView: View {
                     if weekGroups[startOfWeek] == nil {
                         weekGroups[startOfWeek] = []
                     }
-                    weekGroups[startOfWeek]?.append(log.weightKg * 2.20462)
+                    weekGroups[startOfWeek]?.append(log.weightKg)
                 }
             }
             
             for (week, weights) in weekGroups {
-                let avgWeight = weights.reduce(0, +) / Double(weights.count)
-                result.append(ChartDataPoint(date: week, weightLbs: avgWeight))
+                let avgWeightKg = weights.reduce(0, +) / Double(weights.count)
+                result.append(ChartDataPoint(
+                    date: week, 
+                    weightKg: avgWeightKg,
+                    displayWeight: getDisplayWeight(avgWeightKg)
+                ))
             }
             
         case .year:
@@ -621,13 +663,17 @@ struct WeightDataView: View {
                     if monthGroups[firstDayOfMonth] == nil {
                         monthGroups[firstDayOfMonth] = []
                     }
-                    monthGroups[firstDayOfMonth]?.append(log.weightKg * 2.20462)
+                    monthGroups[firstDayOfMonth]?.append(log.weightKg)
                 }
             }
             
             for (month, weights) in monthGroups {
-                let avgWeight = weights.reduce(0, +) / Double(weights.count)
-                result.append(ChartDataPoint(date: month, weightLbs: avgWeight))
+                let avgWeightKg = weights.reduce(0, +) / Double(weights.count)
+                result.append(ChartDataPoint(
+                    date: month, 
+                    weightKg: avgWeightKg,
+                    displayWeight: getDisplayWeight(avgWeightKg)
+                ))
             }
         }
         
@@ -639,21 +685,33 @@ struct WeightDataView: View {
     struct ChartDataPoint: Identifiable {
         var id: Date { date }
         let date: Date
-        let weightLbs: Double
+        let weightKg: Double
+        let displayWeight: Double
     }
     
     // Calculate Y-axis range for the chart
     private func weightChartRange() -> ClosedRange<Double> {
         if logs.isEmpty {
-            return 120...180 // Default range if no data
+            // Default range based on units system
+            switch viewModel.unitsSystem {
+            case .imperial:
+                return 120...180 // lbs
+            case .metric:
+                return 50...80 // kg
+            }
         }
         
         let weights = logs.compactMap { log in
-            return log.weightKg * 2.20462 // Convert to lbs
+            return getDisplayWeight(log.weightKg)
         }
         
         guard let minWeight = weights.min(), let maxWeight = weights.max() else {
-            return 120...180
+            switch viewModel.unitsSystem {
+            case .imperial:
+                return 120...180
+            case .metric:
+                return 50...80
+            }
         }
         
         // Add 10% padding above and below
@@ -661,9 +719,11 @@ struct WeightDataView: View {
         let lowerBound = Swift.max(minWeight - padding, 0)
         let upperBound = maxWeight + padding
         
-        // Ensure at least 10 units of range
-        if upperBound - lowerBound < 10 {
-            return (lowerBound - 5)...(upperBound + 5)
+        // Ensure minimum range based on units system
+        let minRange: Double = viewModel.unitsSystem == .imperial ? 10 : 5
+        if upperBound - lowerBound < minRange {
+            let halfRange = minRange / 2
+            return (lowerBound - halfRange)...(upperBound + halfRange)
         }
         
         return lowerBound...upperBound
@@ -695,7 +755,7 @@ struct WeightDataView: View {
                   let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
             return d1 > d2
         }).first {
-            currentWeight = mostRecentLog.weightKg * 2.20462 // Convert to lbs
+            currentWeight = getDisplayWeight(mostRecentLog.weightKg)
         } else {
             currentWeight = 0
         }
@@ -929,6 +989,17 @@ struct WeightLogRowView: View {
     let onCameraTap: () -> Void
     let onRowTap: () -> Void
     let onImageLoaded: (String, UIImage) -> Void
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    
+    private func formatWeightDisplay() -> String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            let displayWeight = log.weightKg * 2.20462
+            return "\(String(format: "%.1f", displayWeight)) lbs"
+        case .metric:
+            return "\(String(format: "%.1f", log.weightKg)) kg"
+        }
+    }
     
     private func formatDateForHistory(_ date: Date) -> String {
         let calendar = Calendar.current
@@ -963,10 +1034,8 @@ struct WeightLogRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                // Weight in lbs
-                let weightLbs = log.weightKg * 2.20462
-                
-                Text("\(Int(weightLbs.rounded())) lbs")
+                // Weight in appropriate units
+                Text(formatWeightDisplay())
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
                 
