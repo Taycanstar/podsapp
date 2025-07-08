@@ -18,11 +18,9 @@ struct ProfileView: View {
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
     var body: some View {
-        
-        NavigationView {
-            ZStack {
-                formBackgroundColor.edgesIgnoringSafeArea(.all)
-                    Form {
+        ZStack {
+            formBackgroundColor.edgesIgnoringSafeArea(.all)
+                Form {
                         Section(header: Text("Account")) {
                             HStack {
                                 Label("Email", systemImage: "envelope")
@@ -125,16 +123,13 @@ struct ProfileView: View {
                     }
                     .scrollContentBackground(.hidden)
                     .padding(.bottom, 70)
-            }
-         
-            .navigationBarTitle("Settings and privacy", displayMode: .inline)
-            .sheet(isPresented: $showingMail) {
-                MailView(isPresented: self.$showingMail)
-                     }
-            .onAppear{
-                isTabBarVisible.wrappedValue = true
-            }
-            
+        }
+        .navigationBarTitle("Settings and privacy", displayMode: .inline)
+        .sheet(isPresented: $showingMail) {
+            MailView(isPresented: self.$showingMail)
+                 }
+        .onAppear{
+            isTabBarVisible.wrappedValue = true
         }
      
     }
