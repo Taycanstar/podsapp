@@ -16,6 +16,9 @@
 		361FF30B2E1D930600B7F68E /* EquipmentExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30A2E1D930600B7F68E /* EquipmentExercisesView.swift */; };
 		361FF30D2E1D96E900B7F68E /* BodyweightExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30C2E1D96E900B7F68E /* BodyweightExercisesView.swift */; };
 		361FF30F2E1D96F900B7F68E /* WeightedExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30E2E1D96F900B7F68E /* WeightedExercisesView.swift */; };
+		361FF3112E1D998F00B7F68E /* BodyweightWithEquipment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3102E1D998F00B7F68E /* BodyweightWithEquipment.swift */; };
+		361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3122E1D999C00B7F68E /* CardioExercisesView.swift */; };
+		361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3142E1D99AA00B7F68E /* StretchMobilityView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -273,6 +276,9 @@
 		361FF30A2E1D930600B7F68E /* EquipmentExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentExercisesView.swift; sourceTree = "<group>"; };
 		361FF30C2E1D96E900B7F68E /* BodyweightExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyweightExercisesView.swift; sourceTree = "<group>"; };
 		361FF30E2E1D96F900B7F68E /* WeightedExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightedExercisesView.swift; sourceTree = "<group>"; };
+		361FF3102E1D998F00B7F68E /* BodyweightWithEquipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyweightWithEquipment.swift; sourceTree = "<group>"; };
+		361FF3122E1D999C00B7F68E /* CardioExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioExercisesView.swift; sourceTree = "<group>"; };
+		361FF3142E1D99AA00B7F68E /* StretchMobilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StretchMobilityView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -635,6 +641,9 @@
 				361FF30A2E1D930600B7F68E /* EquipmentExercisesView.swift */,
 				361FF30C2E1D96E900B7F68E /* BodyweightExercisesView.swift */,
 				361FF30E2E1D96F900B7F68E /* WeightedExercisesView.swift */,
+				361FF3102E1D998F00B7F68E /* BodyweightWithEquipment.swift */,
+				361FF3122E1D999C00B7F68E /* CardioExercisesView.swift */,
+				361FF3142E1D99AA00B7F68E /* StretchMobilityView.swift */,
 			);
 			path = workouts;
 			sourceTree = "<group>";
@@ -1332,8 +1341,10 @@
 				36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */,
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
 				36ED35E92DDE532400D174FB /* GenerateMealView.swift in Sources */,
+				361FF3112E1D998F00B7F68E /* BodyweightWithEquipment.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
+				361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
 				36ED35AB2DD529D600D174FB /* HealthKitViewModel.swift in Sources */,
 				36ED35A32DD0DE6000D174FB /* DayLogsViewModel.swift in Sources */,
@@ -1403,6 +1414,7 @@
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
+				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,

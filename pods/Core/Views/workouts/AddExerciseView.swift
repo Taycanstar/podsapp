@@ -19,6 +19,9 @@ struct AddExerciseView: View {
     @State private var showingByEquipment = false
     @State private var showingWeightedExercises = false
     @State private var showingBodyweightExercises = false
+    @State private var showingBodyweightWithEquipment = false
+    @State private var showingCardioExercises = false
+    @State private var showingStretchMobility = false
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -135,6 +138,21 @@ struct AddExerciseView: View {
                 BodyweightExercisesView(onExercisesSelected: onExercisesSelected)
             }
         }
+        .sheet(isPresented: $showingBodyweightWithEquipment) {
+            NavigationView {
+                BodyweightWithEquipment(onExercisesSelected: onExercisesSelected)
+            }
+        }
+        .sheet(isPresented: $showingCardioExercises) {
+            NavigationView {
+                CardioExercisesView(onExercisesSelected: onExercisesSelected)
+            }
+        }
+        .sheet(isPresented: $showingStretchMobility) {
+            NavigationView {
+                StretchMobilityView(onExercisesSelected: onExercisesSelected)
+            }
+        }
     }
     
     // MARK: - Content View
@@ -220,6 +238,12 @@ struct AddExerciseView: View {
                                         showingWeightedExercises = true
                                     case "Bodyweight":
                                         showingBodyweightExercises = true
+                                    case "Bodyweight with Equipment":
+                                        showingBodyweightWithEquipment = true
+                                    case "Cardio":
+                                        showingCardioExercises = true
+                                    case "Stretching and Mobility":
+                                        showingStretchMobility = true
                                     default:
                                         // TODO: Navigate to other category views
                                         print("Tapped category: \(category.0)")
