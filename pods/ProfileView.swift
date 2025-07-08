@@ -74,14 +74,51 @@ struct ProfileView: View {
                         }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         
-                        Section(header: Text("Content & Display")) {
-                            
-                            NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
-                                Label("Color theme", systemImage: "moon")
-                                    .foregroundColor(iconColor)
-                            }
-                            
-                        }
+                        Section(header: Text("Preferences")) {
+                              
+                              NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
+                                  HStack {
+                                      Label("Theme", systemImage: "paintbrush")
+                                          .foregroundColor(iconColor)
+                                      Spacer()
+                                      Text(themeManager.currentTheme.rawValue)
+                                          .foregroundColor(.secondary)
+                                  }
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
+                              // Units selection row
+                              HStack {
+                                  Label("Units", systemImage: "globe")
+                                      .foregroundColor(iconColor)
+                                  Spacer()
+                                  
+                                  Menu {
+                                      ForEach(UnitsSystem.allCases, id: \.self) { unit in
+                                          Button(action: {
+                                              viewModel.unitsSystem = unit
+                                          }) {
+                                              HStack {
+                                                  Text(unit.displayName)
+                                                  if viewModel.unitsSystem == unit {
+                                                      Image(systemName: "checkmark")
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  } label: {
+                                      HStack {
+                                          Text(viewModel.unitsSystem.displayName)
+                                              .foregroundColor(.secondary)
+                                          Image(systemName: "chevron.up.chevron.down")
+                                              .font(.caption2)
+                                              .foregroundColor(.secondary)
+                                      }
+                                  }
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
+                          }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         Section(header: Text("Support & About")) {
                             Button(action: {

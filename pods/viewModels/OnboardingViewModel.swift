@@ -1,5 +1,19 @@
 import SwiftUI
 
+enum UnitsSystem: String, CaseIterable {
+    case imperial = "imperial"
+    case metric = "metric"
+    
+    var displayName: String {
+        switch self {
+        case .imperial:
+            return "Imperial"
+        case .metric:
+            return "Metric"
+        }
+    }
+}
+
 class OnboardingViewModel: ObservableObject {
     // Original enum for core navigation states
     enum OnboardingStep {
@@ -112,6 +126,14 @@ class OnboardingViewModel: ObservableObject {
     @Published var isLoadingProfile = false
     @Published var profileError: String?
     
+    // MARK: - Units System
+    @Published var unitsSystem: UnitsSystem = .imperial {
+        didSet {
+            // Save to UserDefaults whenever the value changes
+            UserDefaults.standard.set(unitsSystem.rawValue, forKey: "unitsSystem")
+        }
+    }
+    
     // MARK: - Server Communication
     private let networkManager = NetworkManagerTwo.shared
     
@@ -122,6 +144,16 @@ class OnboardingViewModel: ObservableObject {
     
     init() {
         loadOnboardingState()
+        
+        // Load units system from UserDefaults, default to imperial
+        if let savedUnitsSystem = UserDefaults.standard.string(forKey: "unitsSystem"),
+           let units = UnitsSystem(rawValue: savedUnitsSystem) {
+            self.unitsSystem = units
+        } else {
+            self.unitsSystem = .imperial
+            // Save the default value
+            UserDefaults.standard.set(UnitsSystem.imperial.rawValue, forKey: "unitsSystem")
+        }
     }
     
     // MARK: - Onboarding Flow Navigation
