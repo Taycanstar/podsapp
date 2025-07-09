@@ -10,6 +10,7 @@ import SwiftUI
 struct UpdateEditWeightView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var viewModel: OnboardingViewModel
     
     let weightLog: WeightLogResponse
     @State private var selectedDate: Date
@@ -27,16 +28,54 @@ struct UpdateEditWeightView: View {
         return formatter
     }()
     
+    // Computed properties for unit display
+    private var weightUnit: String {
+        switch viewModel.unitsSystem {
+        case .imperial:
+            return "lbs"
+        case .metric:
+            return "kg"
+        }
+    }
+    
     init(weightLog: WeightLogResponse) {
         self.weightLog = weightLog
         
-        // Initialize date from the log
-        let date = ISO8601DateFormatter().date(from: weightLog.dateLogged) ?? Date()
+        // Initialize date from the log with robust parsing
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        print("📅 UpdateEditWeightView: Parsing date from log: \(weightLog.dateLogged)")
+        
+        var date: Date
+        if let parsedDate = formatter.date(from: weightLog.dateLogged) {
+            date = parsedDate
+            print("📅 UpdateEditWeightView: Successfully parsed date: \(date)")
+        } else {
+            // Fallback: try without fractional seconds
+            let fallbackFormatter = ISO8601DateFormatter()
+            fallbackFormatter.formatOptions = [.withInternetDateTime]
+            
+            if let fallbackDate = fallbackFormatter.date(from: weightLog.dateLogged) {
+                date = fallbackDate
+                print("📅 UpdateEditWeightView: Parsed with fallback formatter: \(date)")
+            } else {
+                // Last resort: use current date
+                date = Date()
+                print("📅 UpdateEditWeightView: Failed to parse date, using current date: \(date)")
+            }
+        }
+        
         _selectedDate = State(initialValue: date)
         
-        // Initialize weight text (convert kg to lbs)
-        let weightLbs = weightLog.weightKg * 2.20462
-        _weightText = State(initialValue: String(format: "%.1f", weightLbs))
+        // Initialize weight text based on user's unit preference
+        let displayWeight: Double
+        if UserDefaults.standard.bool(forKey: "isImperial") {
+            displayWeight = weightLog.weightKg * 2.20462 // Convert to lbs
+        } else {
+            displayWeight = weightLog.weightKg // Keep in kg
+        }
+        _weightText = State(initialValue: String(format: "%.1f", displayWeight))
     }
     
     var body: some View {
@@ -64,7 +103,7 @@ struct UpdateEditWeightView: View {
                     
                     // Weight Input Row
                     HStack {
-                        Text("lbs")
+                        Text(weightUnit)
                             .font(.system(size: 17))
                             .foregroundColor(.primary)
                         
@@ -211,13 +250,21 @@ struct UpdateEditWeightView: View {
     }
     
     private func saveWeight() {
-        guard let weightLbs = Double(weightText) else {
+        guard let inputWeight = Double(weightText) else {
             print("Error: Invalid weight value")
             return
         }
         
-        // Convert pounds to kg for storage
-        let weightInKg = weightLbs / 2.20462
+        // Convert input to kg for storage based on user's unit preference
+        let weightInKg: Double
+        switch viewModel.unitsSystem {
+        case .imperial:
+            // Input is in lbs, convert to kg
+            weightInKg = inputWeight / 2.20462
+        case .metric:
+            // Input is in kg, keep as kg
+            weightInKg = inputWeight
+        }
         
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             print("Error: No user email found")
