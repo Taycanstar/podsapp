@@ -141,7 +141,7 @@ struct WeightDataView: View {
                 }
                 
                 // History logs with swipe-to-delete and pagination
-                ForEach(Array(allLogs.reversed().enumerated()), id: \.element.id) { index, log in
+                ForEach(Array(allLogs.enumerated()), id: \.element.id) { index, log in
                     if let date = dateFormatter.date(from: log.dateLogged) {
                         VStack(spacing: 0) {
                             WeightLogRowView(
@@ -741,7 +741,7 @@ struct WeightDataView: View {
         }.sorted { log1, log2 in
             guard let d1 = dateFormatter.date(from: log1.dateLogged),
                   let d2 = dateFormatter.date(from: log2.dateLogged) else { return false }
-            return d1 < d2
+            return d1 > d2
         }
         
         updateAverageAndDateRange()
@@ -749,12 +749,8 @@ struct WeightDataView: View {
     
     // Update current weight display and date range text
     private func updateAverageAndDateRange() {
-        // For the current weight, we'll use the most recent entry
-        if let mostRecentLog = logs.sorted(by: { log1, log2 in
-            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
-                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
-            return d1 > d2
-        }).first {
+        // For the current weight, we'll use the most recent entry (first since sorted newest-first)
+        if let mostRecentLog = logs.first {
             currentWeight = getDisplayWeight(mostRecentLog.weightKg)
         } else {
             currentWeight = 0
@@ -822,28 +818,24 @@ struct WeightDataView: View {
         // Clear existing logs
         allLogs = []
         
-        // Try to load cached data first
-        loadCachedLogs()
+        // Clear stale cache to prevent ghost logs
+        clearStaleCache()
         
-        // Load first page from network
+        // Load first page from network (skip cache to get fresh data)
         loadMoreLogs(refresh: true)
     }
     
-    // Load cached logs from UserDefaults
-    private func loadCachedLogs() {
+    // Clear stale cached data to prevent ghost logs
+    private func clearStaleCache() {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
         
-        if let cachedData = UserDefaults.standard.data(forKey: "weightLogs_\(userEmail)_page_1"),
-           let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: cachedData) {
-            
-            DispatchQueue.main.async {
-                self.allLogs = response.logs.sorted { log1, log2 in
-                    guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
-                          let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
-                    return d1 < d2
-                }
-                self.hasMoreLogs = response.totalCount > response.logs.count
-                self.filterLogs()
+        let userDefaults = UserDefaults.standard
+        let allKeys = userDefaults.dictionaryRepresentation().keys
+        
+        // Remove all weight log caches for this user
+        for key in allKeys {
+            if key.hasPrefix("weightLogs_\(userEmail)_") {
+                userDefaults.removeObject(forKey: key)
             }
         }
     }
@@ -895,11 +887,11 @@ struct WeightDataView: View {
                     self.cacheLogs(response, forPage: pageToLoad)
                     
                     if refresh {
-                        // Replace all logs with new ones
+                        // Replace all logs with new ones (newest first)
                         self.allLogs = response.logs.sorted { log1, log2 in
                             guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
                                   let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
-                            return d1 < d2
+                            return d1 > d2
                         }
                         self.currentPage = 2
                     } else {
@@ -913,9 +905,10 @@ struct WeightDataView: View {
                         let sortedNewLogs = newLogs.sorted { log1, log2 in
                             guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
                                   let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
-                            return d1 < d2
+                            return d1 > d2
                         }
                         
+                        // Insert older logs at the end (maintaining newest-first order)
                         self.allLogs.append(contentsOf: sortedNewLogs)
                         self.currentPage += 1
                     }
@@ -935,6 +928,7 @@ struct WeightDataView: View {
     
     // Refresh from network (for notifications)
     private func refreshFromNetwork() {
+        clearStaleCache()
         loadMoreLogs(refresh: true)
     }
     
