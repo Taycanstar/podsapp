@@ -52,22 +52,7 @@ struct CameraProgressView: View {
     }
 }
 
-/// UIImagePickerController subclass that flips the **frozen** preview image
-/// (the one shown between capture and "Use Photo") so it matches the live
-/// front‑camera feed.
-///
-/// How it works:
-/// ‑ We listen for the private notification
-///   "_UIImagePickerControllerUserDidCaptureItem" which fires immediately
-///   after the shutter animation.
-/// ‑ When the current camera is `.front`, we walk the picker's view hierarchy
-///   and apply a horizontal flip (`scaleX: -1`) to every `UIImageView`.  
-///   Those `UIImageView`s are exactly what Apple uses to show the frozen
-///   preview frame.  Live preview layers remain untouched.
-///
-/// ⚠️  Apple doesn't provide a public API to do this; dozens of apps ship
-///     with the same workaround (see LEMirroredImagePicker).  As of iOS 17
-///     this passes App Review because we only transform our own view tree.
+
 final class UnmirroredFrontPicker: UIImagePickerController {
     var hideGalleryButton: (() -> Void)?
     var showGalleryButton: (() -> Void)?
@@ -192,24 +177,19 @@ struct CustomImagePicker: UIViewControllerRepresentable {
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            // Check if front camera was used - only valid for camera source type
-            if picker.sourceType == .camera {
-                self.isFrontCamera = (picker.cameraDevice == .front)
-            } else {
-                // For photo library, no front camera mirroring needed
-                self.isFrontCamera = false
+            let usedFront = (picker.sourceType == .camera && picker.cameraDevice == .front)
+            guard let raw = info[.originalImage] as? UIImage else { return }
+
+            // 1️⃣ Update the binding *first*
+            let final = usedFront ? flipImageHorizontally(raw) : raw
+            DispatchQueue.main.async { 
+                self.parent.selectedPhoto = final 
             }
-            
-            // Dismiss the picker first
-            picker.dismiss(animated: true) {
-                // Then update the binding and call completion on main thread
-                DispatchQueue.main.async {
-                    if let uiImage = info[.originalImage] as? UIImage {
-                        // Fix front camera mirroring issue only for front camera
-                        let correctedImage = self.isFrontCamera ? self.flipImageHorizontally(uiImage) : uiImage
-                        self.parent.selectedPhoto = correctedImage
-                    }
-                    self.parent.onImageSelected()
+
+            // 2️⃣ Now close the picker, then close CameraProgressView
+            picker.dismiss(animated: true) { [parent] in
+                DispatchQueue.main.async { 
+                    parent.onImageSelected() 
                 }
             }
         }

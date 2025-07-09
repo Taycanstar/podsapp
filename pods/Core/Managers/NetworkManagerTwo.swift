@@ -1837,6 +1837,104 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    /// Update a weight log by ID with full parameters
+    /// - Parameters:
+    ///   - logId: ID of the weight log to update
+    ///   - userEmail: User's email address
+    ///   - weightKg: New weight in kilograms
+    ///   - dateLogged: New date for the log
+    ///   - notes: Notes for the log
+    ///   - photoUrl: Photo URL (optional)
+    ///   - completion: Result callback with updated weight log or error
+    func updateWeightLog(
+        logId: Int,
+        userEmail: String, 
+        weightKg: Double, 
+        dateLogged: Date,
+        notes: String?, 
+        photoUrl: String?,
+        completion: @escaping (Result<WeightLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/update-weight-log/\(logId)/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        var requestBody: [String: Any] = [
+            "user_email": userEmail,
+            "weight_kg": weightKg,
+            "date_logged": dateFormatter.string(from: dateLogged)
+        ]
+        
+        if let notes = notes {
+            requestBody["notes"] = notes
+        }
+        
+        if let photoUrl = photoUrl {
+            requestBody["photo_url"] = photoUrl
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating weight log \(logId) for user: \(userEmail)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Try to decode the updated weight log
+            do {
+                let response = try JSONDecoder().decode(WeightLogResponse.self, from: data)
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated weight log")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Failed to decode updated weight log response: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
     func updateWeightLogWithPhotoUrl(userEmail: String, weightKg: Double, photoUrl: String, completion: @escaping (Result<Void, Error>) -> Void) {
         let urlString = "\(baseUrl)/update-weight-log-photo/"
         

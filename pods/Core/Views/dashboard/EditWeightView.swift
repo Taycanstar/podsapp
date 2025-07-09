@@ -113,6 +113,8 @@ struct EditWeightView: View {
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 50, height: 50)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    // 👉 Let the user retake / choose a new photo
+                                    .onTapGesture { showingProgressCamera = true }
                             }
                         }
                         .padding(.horizontal, 16)

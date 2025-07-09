@@ -91,10 +91,33 @@ struct UpdateEditWeightView: View {
                         
                         Spacer()
                         
-                        if let photoUrl = weightLog.photo, !photoUrl.isEmpty {
-                            // Show existing photo
+                        if let newPhoto = selectedPhoto {
+                            // Show newly selected photo (prioritized over existing)
+                            HStack(spacing: 12) {
+                                // Delete button for new photo
+                                Button(action: {
+                                    selectedPhoto = nil
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.red)
+                                }
+                                
+                                // Newly selected photo with tap to retake
+                                Button(action: {
+                                    showingProgressCamera = true
+                                }) {
+                                    Image(uiImage: newPhoto)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        } else if let photoUrl = weightLog.photo, !photoUrl.isEmpty {
+                            // Show existing photo with tap to replace
                             Button(action: {
-                                showingFullScreenPhoto = true
+                                showingProgressCamera = true
                             }) {
                                 AsyncImage(url: URL(string: photoUrl)) { image in
                                     image
