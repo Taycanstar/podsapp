@@ -68,14 +68,8 @@ struct UpdateEditWeightView: View {
         
         _selectedDate = State(initialValue: date)
         
-        // Initialize weight text based on user's unit preference
-        let displayWeight: Double
-        if UserDefaults.standard.bool(forKey: "isImperial") {
-            displayWeight = weightLog.weightKg * 2.20462 // Convert to lbs
-        } else {
-            displayWeight = weightLog.weightKg // Keep in kg
-        }
-        _weightText = State(initialValue: String(format: "%.1f", displayWeight))
+        // Initialize weight text with default value (will be updated in onAppear)
+        _weightText = State(initialValue: String(format: "%.1f", weightLog.weightKg))
     }
     
     var body: some View {
@@ -246,6 +240,16 @@ struct UpdateEditWeightView: View {
             }
         } message: {
             Text("Are you sure you want to delete this weight log? This action cannot be undone.")
+        }
+        .onAppear {
+            // Update weight text based on user's unit preference
+            switch viewModel.unitsSystem {
+            case .imperial:
+                let weightLbs = weightLog.weightKg * 2.20462
+                weightText = String(format: "%.1f", weightLbs)
+            case .metric:
+                weightText = String(format: "%.1f", weightLog.weightKg)
+            }
         }
     }
     
