@@ -240,6 +240,10 @@ struct WeightDataView: View {
             // Refresh data when a weight log is deleted
             refreshFromNetwork()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogUpdatedNotification"))) { notification in
+            // Refresh data when a weight log is updated
+            refreshFromNetwork()
+        }
         .sheet(isPresented: $showingEditSheet) {
             EditWeightView()
                 .onDisappear {

@@ -224,12 +224,78 @@ struct UpdateEditWeightView: View {
             return
         }
         
-        // TODO: Implement update weight log API call
-        print("Updating weight log with ID: \(weightLog.id)")
-        print("New weight: \(weightInKg) kg")
-        print("New date: \(selectedDate)")
-        
-        dismiss()
+        // If there's a newly selected photo, upload it first
+        if let newPhoto = selectedPhoto, let imageData = newPhoto.jpegData(compressionQuality: 0.8) {
+            guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+                print("Error: BLOB_CONTAINER not configured")
+                return
+            }
+            
+            let blobName = UUID().uuidString + ".jpg"
+            NetworkManager().uploadFileToAzureBlob(containerName: containerName, blobName: blobName, fileData: imageData, contentType: "image/jpeg") { success, url in
+                if success, let imageUrl = url {
+                    print("New photo uploaded successfully: \(imageUrl)")
+                    self.updateWeightLogWithPhoto(email: email, weightInKg: weightInKg, photoUrl: imageUrl)
+                } else {
+                    print("Failed to upload new photo")
+                    // Update without new photo (keep existing photo if any)
+                    self.updateWeightLogWithoutPhoto(email: email, weightInKg: weightInKg)
+                }
+            }
+        } else {
+            // No new photo selected, update with existing photo URL
+            updateWeightLogWithoutPhoto(email: email, weightInKg: weightInKg)
+        }
+    }
+    
+    private func updateWeightLogWithPhoto(email: String, weightInKg: Double, photoUrl: String) {
+        NetworkManagerTwo.shared.updateWeightLog(
+            logId: weightLog.id,
+            userEmail: email,
+            weightKg: weightInKg,
+            dateLogged: selectedDate,
+            notes: weightLog.notes,
+            photoUrl: photoUrl
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("Weight log updated successfully with new photo: \(response.weightKg) kg")
+                    // Post notification to refresh weight data
+                    NotificationCenter.default.post(name: Notification.Name("WeightLogUpdatedNotification"), object: nil, userInfo: ["updatedLog": response])
+                    self.dismiss()
+                    
+                case .failure(let error):
+                    print("Error updating weight log with photo: \(error.localizedDescription)")
+                    // TODO: Show error alert to user
+                }
+            }
+        }
+    }
+    
+    private func updateWeightLogWithoutPhoto(email: String, weightInKg: Double) {
+        NetworkManagerTwo.shared.updateWeightLog(
+            logId: weightLog.id,
+            userEmail: email,
+            weightKg: weightInKg,
+            dateLogged: selectedDate,
+            notes: weightLog.notes,
+            photoUrl: weightLog.photo // Keep existing photo URL
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("Weight log updated successfully: \(response.weightKg) kg")
+                    // Post notification to refresh weight data
+                    NotificationCenter.default.post(name: Notification.Name("WeightLogUpdatedNotification"), object: nil, userInfo: ["updatedLog": response])
+                    self.dismiss()
+                    
+                case .failure(let error):
+                    print("Error updating weight log: \(error.localizedDescription)")
+                    // TODO: Show error alert to user
+                }
+            }
+        }
     }
     
     private func deleteWeightLog() {
