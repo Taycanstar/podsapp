@@ -291,7 +291,8 @@ struct EditRecipeView: View {
                     onItemAdded: { _ in
                         print("✅ Ingredient added -> dismiss sheet")
                         isShowingAddItems = false
-                    }
+                    },
+                    initialTab: nil
                 )
                 .navigationBarTitle("Add Ingredients", displayMode: .inline)
                 .navigationBarItems(leading: Button("Cancel") {

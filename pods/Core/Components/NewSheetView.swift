@@ -24,6 +24,7 @@ struct NewSheetView: View {
         ("Log Food", "magnifyingglass"),
         ("Voice Log", "mic"),
         ("Scan Food", "barcode.viewfinder"),
+        ("Saved Meals", "bookmark"),
         // ("Log Workout", "dumbbell")
     ]
 
@@ -105,6 +106,10 @@ struct NewSheetView: View {
                         HapticFeedback.generate()
                         isPresented = false
                         showFoodScanner = true
+                      case "Saved Meals":
+                        HapticFeedback.generate()
+                        isPresented = false
+                        viewModel.showFoodContainer(selectedMeal: selectedMeal, initialTab: "savedMeals")
                       case "Log Workout":
                         HapticFeedback.generate()
                         isPresented = false

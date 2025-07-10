@@ -101,7 +101,8 @@ struct QuickLogFood: View {
                     if !selectedFoods.contains(where: { $0.fdcId == food.fdcId }) {
                         selectedFoods.append(food)
                     }
-                }
+                },
+                initialTab: nil
             )
         }
         .alert(isPresented: Binding<Bool>(

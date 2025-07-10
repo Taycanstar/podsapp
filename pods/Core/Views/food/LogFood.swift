@@ -74,7 +74,8 @@ struct LogFood: View {
          path: Binding<NavigationPath>,
          mode: LogFoodMode = .logFood,
          selectedFoods: Binding<[Food]>,
-         onItemAdded: ((Food) -> Void)? = nil) 
+         onItemAdded: ((Food) -> Void)? = nil,
+         initialTab: String? = nil) 
     {
         _selectedTab = selectedTab
         _path = path
@@ -82,6 +83,22 @@ struct LogFood: View {
         self.mode = mode
         _selectedFoods = selectedFoods
         self.onItemAdded = onItemAdded
+        
+        // Set initial tab if provided
+        if let tabString = initialTab {
+            switch tabString {
+            case "savedMeals":
+                _selectedFoodTab = State(initialValue: .savedMeals)
+            case "meals":
+                _selectedFoodTab = State(initialValue: .meals)
+            case "foods":
+                _selectedFoodTab = State(initialValue: .foods)
+            default:
+                _selectedFoodTab = State(initialValue: .all)
+            }
+        } else {
+            _selectedFoodTab = State(initialValue: .all)
+        }
     }
     
     var body: some View {

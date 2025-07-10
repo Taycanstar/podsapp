@@ -155,6 +155,7 @@ enum FoodNavigationDestination: Hashable {
 struct FoodContainerView: View {
     @State private var path = NavigationPath()
     @State private var selectedMeal: String
+    @State private var initialFoodTab: String?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: OnboardingViewModel
     
@@ -211,6 +212,16 @@ struct FoodContainerView: View {
         }
         
         _selectedMeal = State(initialValue: initialMeal)
+        
+        // Check if an initial tab was selected from NewSheetView
+        let initialTabFromNewSheet = UserDefaults.standard.string(forKey: "initialFoodTabFromNewSheet")
+        if let tab = initialTabFromNewSheet {
+            _initialFoodTab = State(initialValue: tab)
+            // Clear the stored value so it doesn't persist for future opens
+            UserDefaults.standard.removeObject(forKey: "initialFoodTabFromNewSheet")
+        } else {
+            _initialFoodTab = State(initialValue: nil)
+        }
     }
     
     // Helper method to dismiss container and navigate to dashboard
@@ -283,7 +294,9 @@ struct FoodContainerView: View {
                 selectedMeal: $selectedMeal,
                 path: $path,
                 mode: .logFood, 
-                selectedFoods: $logFoodSelectedFoods
+                selectedFoods: $logFoodSelectedFoods,
+                onItemAdded: nil,
+                initialTab: initialFoodTab
             )
             .navigationDestination(for: FoodNavigationDestination.self) { destination in
                 switch destination {
@@ -293,7 +306,9 @@ struct FoodContainerView: View {
                         selectedMeal: $selectedMeal,
                         path: $path,
                         mode: .logFood,
-                        selectedFoods: $logFoodSelectedFoods
+                        selectedFoods: $logFoodSelectedFoods,
+                        onItemAdded: nil,
+                        initialTab: initialFoodTab
                     )
                 case .foodDetails(let food, let selectedMeal):
                     FoodDetailsView(food: food, selectedMeal: selectedMeal)
