@@ -13,6 +13,8 @@ struct CreateWorkoutView: View {
     @State private var workoutTitle: String = ""
     @State private var exercises: [WorkoutExercise] = []
     @State private var showingAddExercise = false
+    @State private var showingExerciseDetail = false
+    @State private var selectedExerciseForDetail: WorkoutExercise?
     
     // Optional workout for editing
     let workout: Workout?
@@ -105,6 +107,10 @@ struct CreateWorkoutView: View {
                                                 WorkoutExerciseRow(exercise: exercise) {
                                                     removeExercise(exercise)
                                                 }
+                                                .onTapGesture {
+                                                    selectedExerciseForDetail = exercise
+                                                    showingExerciseDetail = true
+                                                }
                                             }
                                         }
                                         .padding(.horizontal, 16)
@@ -159,6 +165,13 @@ struct CreateWorkoutView: View {
                  addExercisesToWorkout(selectedExercises)
              }
          }
+         .sheet(isPresented: $showingExerciseDetail) {
+             if let exercise = selectedExerciseForDetail {
+                 ExerciseDetailView(exercise: exercise) { updatedExercise in
+                     updateExercise(updatedExercise)
+                 }
+             }
+         }
     }
     
     private func saveWorkout() {
@@ -169,9 +182,12 @@ struct CreateWorkoutView: View {
     }
     
     private func addExercisesToWorkout(_ selectedExercises: [ExerciseData]) {
-        // Convert ExerciseData to WorkoutExercise
+        // Get user email from UserDefaults
+        let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
+        
+        // Convert ExerciseData to WorkoutExercise with recommended sets/reps
         let newExercises = selectedExercises.map { exerciseData in
-            let exercise = Exercise(
+            let exercise = LegacyExercise(
                 id: exerciseData.id,
                 name: exerciseData.name,
                 category: exerciseData.category,
@@ -179,10 +195,34 @@ struct CreateWorkoutView: View {
                 instructions: exerciseData.target
             )
             
+            // Get user's fitness goal from UserDefaults (from onboarding)
+            let fitnessGoalString = UserDefaults.standard.string(forKey: "fitness_goal") ?? "strength"
+            let fitnessGoal = FitnessGoal.from(string: fitnessGoalString)
+            
+            // Get recommended sets and reps
+            let recommendation = WorkoutRecommendationService.shared.getDefaultSetsAndReps(
+                for: exerciseData,
+                fitnessGoal: fitnessGoal
+            )
+            
+            // Create sets array with recommended values
+            var sets: [WorkoutSet] = []
+            for setNumber in 1...recommendation.sets {
+                let set = WorkoutSet(
+                    id: setNumber,
+                    reps: recommendation.reps,
+                    weight: recommendation.weight,
+                    duration: nil,
+                    distance: nil,
+                    restTime: nil
+                )
+                sets.append(set)
+            }
+            
             return WorkoutExercise(
                 id: Int.random(in: 1000...9999), // Generate random ID
                 exercise: exercise,
-                sets: [],
+                sets: sets,
                 notes: nil
             )
         }
@@ -190,13 +230,19 @@ struct CreateWorkoutView: View {
         // Add to existing exercises
         exercises.append(contentsOf: newExercises)
         
-        print("Added \(selectedExercises.count) exercises to workout")
+        print("Added \(selectedExercises.count) exercises to workout with recommended sets/reps")
         HapticFeedback.generate()
     }
     
     private func removeExercise(_ exercise: WorkoutExercise) {
         exercises.removeAll { $0.id == exercise.id }
         HapticFeedback.generate()
+    }
+    
+    private func updateExercise(_ updatedExercise: WorkoutExercise) {
+        if let index = exercises.firstIndex(where: { $0.id == updatedExercise.id }) {
+            exercises[index] = updatedExercise
+        }
     }
 }
 
@@ -240,9 +286,16 @@ struct WorkoutExerciseRow: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
                 
-                Text("\(exercise.sets.count) sets")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                // Show recommended sets and reps
+                if let firstSet = exercise.sets.first {
+                    Text("\(exercise.sets.count) sets × \(firstSet.reps ?? 0) reps")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("No sets configured")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
             }
             
             Spacer()

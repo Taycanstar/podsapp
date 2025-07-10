@@ -7,6 +7,7 @@
 import GoogleSignIn
 import SwiftUI
 import Mixpanel
+import SwiftData
 
 @main
 struct podsApp: App {
@@ -49,11 +50,12 @@ struct podsApp: App {
 //                                   if newPhase == .active {
 //                                       NetworkManager().determineUserLocation()
 //                                   }
-//                               }
-                .onAppear{
-                    NetworkManager().determineUserLocation()
-                }
-                .onOpenURL { url in
+//                                       }
+        .modelContainer(for: [UserProfile.self, Exercise.self, WorkoutSession.self, ExerciseInstance.self, SetInstance.self])
+        .onAppear{
+            NetworkManager().determineUserLocation()
+        }
+        .onOpenURL { url in
                                   deepLinkHandler.handle(url: url)
                               }
          

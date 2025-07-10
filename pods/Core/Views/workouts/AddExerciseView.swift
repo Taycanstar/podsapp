@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AddExerciseView: View {
     @Environment(\.dismiss) private var dismiss
@@ -22,6 +23,7 @@ struct AddExerciseView: View {
     @State private var showingBodyweightWithEquipment = false
     @State private var showingCardioExercises = false
     @State private var showingStretchMobility = false
+
     
     // Segmented control options
     private let segments = ["All", "By Muscle", "Categories"]
@@ -101,8 +103,10 @@ struct AddExerciseView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         let selected = exercises.filter { selectedExercises.contains($0.id) }
-                        onExercisesSelected(selected)
-                        dismiss()
+                        if !selected.isEmpty {
+                            onExercisesSelected(selected)
+                            dismiss()
+                        }
                     }
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.accentColor)
@@ -153,6 +157,7 @@ struct AddExerciseView: View {
                 StretchMobilityView(onExercisesSelected: onExercisesSelected)
             }
         }
+
     }
     
     // MARK: - Content View

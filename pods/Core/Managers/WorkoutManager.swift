@@ -8,11 +8,11 @@
 import SwiftUI
 import Foundation
 
-// MARK: - Workout Models
-struct Exercise: Codable, Identifiable, Hashable {
+// MARK: - Legacy Exercise struct for WorkoutManager compatibility
+struct LegacyExercise: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
-    let category: String? // e.g., "Chest", "Back", "Legs"
+    let category: String
     let description: String?
     let instructions: String?
     
@@ -21,7 +21,7 @@ struct Exercise: Codable, Identifiable, Hashable {
         hasher.combine(id)
     }
     
-    static func == (lhs: Exercise, rhs: Exercise) -> Bool {
+    static func == (lhs: LegacyExercise, rhs: LegacyExercise) -> Bool {
         lhs.id == rhs.id
     }
 }
@@ -46,7 +46,7 @@ struct WorkoutSet: Codable, Identifiable, Hashable {
 
 struct WorkoutExercise: Codable, Identifiable, Hashable {
     let id: Int
-    let exercise: Exercise
+    let exercise: LegacyExercise
     let sets: [WorkoutSet]
     let notes: String?
     
@@ -111,7 +111,7 @@ struct LoggedWorkout: Codable, Identifiable, Hashable {
 class WorkoutManager: ObservableObject {
     @Published var workouts: [Workout] = []
     @Published var loggedWorkouts: [LoggedWorkout] = []
-    @Published var exercises: [Exercise] = []
+    @Published var exercises: [LegacyExercise] = [] // Changed to LegacyExercise
     @Published var isLoading = false
     @Published var isLoadingWorkouts = false
     @Published var isLoadingExercises = false
