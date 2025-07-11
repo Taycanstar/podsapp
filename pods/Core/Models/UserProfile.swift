@@ -71,4 +71,23 @@ enum ExperienceLevel: String, CaseIterable, Codable {
         case .advanced: return "Advanced"
         }
     }
+    
+    var description: String {
+        switch self {
+        case .beginner:
+            return "New to fitness (0-12 months)"
+        case .intermediate:
+            return "Some experience (1-3 years)"
+        case .advanced:
+            return "Experienced (3+ years)"
+        }
+    }
+    
+    var workoutComplexity: Int {
+        switch self {
+        case .beginner: return 1
+        case .intermediate: return 2
+        case .advanced: return 3
+        }
+    }
 } 

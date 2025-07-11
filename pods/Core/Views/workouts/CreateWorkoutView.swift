@@ -175,17 +175,28 @@ struct CreateWorkoutView: View {
     }
     
     private func saveWorkout() {
-        // TODO: Implement workout saving logic
-        print("Saving workout: \(workoutTitle)")
+        // Save workout to history if exercises exist
+        if !exercises.isEmpty {
+            let duration: TimeInterval = 3600 // Default 1 hour, could be tracked with a timer
+            let notes = workoutTitle.isEmpty ? nil : workoutTitle
+            
+            // Complete the workout and save to history
+            WorkoutHistoryService.shared.completeFullWorkout(exercises, duration: duration, notes: notes)
+            
+            print("✅ Workout saved: \(workoutTitle) with \(exercises.count) exercises")
+        } else {
+            print("📝 Workout template saved: \(workoutTitle)")
+        }
+        
         HapticFeedback.generate()
         navigationPath.removeLast()
     }
     
     private func addExercisesToWorkout(_ selectedExercises: [ExerciseData]) {
-        // Get user email from UserDefaults
-        let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
+        // Initialize user profile defaults if needed
+        UserProfileService.shared.setupDefaultEquipment()
         
-        // Convert ExerciseData to WorkoutExercise with recommended sets/reps
+        // Convert ExerciseData to WorkoutExercise with smart recommendations
         let newExercises = selectedExercises.map { exerciseData in
             let exercise = LegacyExercise(
                 id: exerciseData.id,
@@ -195,15 +206,8 @@ struct CreateWorkoutView: View {
                 instructions: exerciseData.target
             )
             
-            // Get user's fitness goal from UserDefaults (from onboarding)
-            let fitnessGoalString = UserDefaults.standard.string(forKey: "fitness_goal") ?? "strength"
-            let fitnessGoal = FitnessGoal.from(string: fitnessGoalString)
-            
-            // Get recommended sets and reps
-            let recommendation = WorkoutRecommendationService.shared.getDefaultSetsAndReps(
-                for: exerciseData,
-                fitnessGoal: fitnessGoal
-            )
+            // Get smart recommendation using enhanced system
+            let recommendation = WorkoutRecommendationService.shared.getSmartRecommendation(for: exerciseData)
             
             // Create sets array with recommended values
             var sets: [WorkoutSet] = []
@@ -230,7 +234,7 @@ struct CreateWorkoutView: View {
         // Add to existing exercises
         exercises.append(contentsOf: newExercises)
         
-        print("Added \(selectedExercises.count) exercises to workout with recommended sets/reps")
+        print("🏋️ Added \(selectedExercises.count) exercises to workout using smart recommendations")
         HapticFeedback.generate()
     }
     

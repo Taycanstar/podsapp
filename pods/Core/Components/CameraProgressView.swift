@@ -179,10 +179,10 @@ struct CustomImagePicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             let usedFront = (picker.sourceType == .camera && picker.cameraDevice == .front)
             guard let raw = info[.originalImage] as? UIImage else { return }
-
+            
             // 1️⃣ Update the binding *first*
             let final = usedFront ? flipImageHorizontally(raw) : raw
-            DispatchQueue.main.async { 
+                DispatchQueue.main.async {
                 self.parent.selectedPhoto = final 
             }
 

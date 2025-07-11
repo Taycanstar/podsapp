@@ -112,8 +112,7 @@ struct WorkoutCreationView: View {
     
     private func setupWorkout() {
         // Get user profile for recommendations
-        let userProfile = UserProfileService.shared.getUserProfile(for: userEmail, context: modelContext)
-        let fitnessGoal = userProfile.fitnessGoal
+        let fitnessGoal = UserProfileService.shared.fitnessGoal
         
         // Create exercise instances with default sets/reps
         exerciseInstances = selectedExercises.enumerated().map { index, exerciseData in

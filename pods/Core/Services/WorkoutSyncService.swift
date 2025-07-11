@@ -77,9 +77,9 @@ class WorkoutSyncService {
         } catch {
             print("❌ Error fetching user profile: \(error)")
             return nil
+            }
         }
-    }
-    
+        
     // Create or update user profile
     func createOrUpdateUserProfile(email: String, fitnessGoal: FitnessGoal, experienceLevel: ExperienceLevel, context: ModelContext) {
         if let existingProfile = getUserProfile(for: email, context: context) {

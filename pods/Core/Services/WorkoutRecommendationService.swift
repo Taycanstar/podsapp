@@ -6,6 +6,27 @@ class WorkoutRecommendationService {
     
     private init() {}
     
+    // Enhanced recommendation system using user profile and performance history
+    func getSmartRecommendation(for exercise: ExerciseData) -> (sets: Int, reps: Int, weight: Double?) {
+        let userProfile = UserProfileService.shared
+        let exerciseCategory = getExerciseCategory(exercise)
+        
+        // Get base recommendation from fitness goal
+        let baseRecommendation = getDefaultSetsAndReps(for: exercise, fitnessGoal: userProfile.fitnessGoal)
+        
+        // Adjust based on experience level
+        let adjustedRecommendation = adjustForExperienceLevel(baseRecommendation, experience: userProfile.experienceLevel)
+        
+        // Check for historical performance and progressive overload
+        let smartWeight = getSmartWeight(for: exercise, baseWeight: adjustedRecommendation.weight)
+        
+        return (
+            sets: adjustedRecommendation.sets,
+            reps: adjustedRecommendation.reps,
+            weight: smartWeight
+        )
+    }
+    
     // Default sets and reps based on fitness goal and exercise category
     func getDefaultSetsAndReps(for exercise: ExerciseData, fitnessGoal: FitnessGoal) -> (sets: Int, reps: Int, weight: Double?) {
         let exerciseCategory = getExerciseCategory(exercise)
@@ -27,6 +48,166 @@ class WorkoutRecommendationService {
             return getPowerliftingRecommendation(for: exerciseCategory)
         case .sport:
             return getSportRecommendation(for: exerciseCategory)
+        }
+    }
+    
+    // MARK: - Smart Filtering & Recommendations
+    
+    func getRecommendedExercises(for muscleGroup: String, count: Int = 5) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        let allExercises = ExerciseDatabase.getAllExercises()
+        
+        // Filter by muscle group
+        let muscleExercises = allExercises.filter { exercise in
+            exercise.bodyPart.lowercased().contains(muscleGroup.lowercased()) ||
+            exercise.target.lowercased().contains(muscleGroup.lowercased())
+        }
+        
+        // Filter by available equipment
+        let availableExercises = muscleExercises.filter { exercise in
+            userProfile.canPerformExercise(exercise)
+        }
+        
+        // Filter out avoided exercises
+        let filteredExercises = availableExercises.filter { exercise in
+            !userProfile.avoidedExercises.contains(exercise.id)
+        }
+        
+        // Prioritize exercises based on user preferences and experience
+        let prioritizedExercises = prioritizeExercises(filteredExercises)
+        
+        return Array(prioritizedExercises.prefix(count))
+    }
+    
+    private func prioritizeExercises(_ exercises: [ExerciseData]) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        
+        return exercises.sorted { exercise1, exercise2 in
+            let score1 = getExerciseScore(exercise1, userProfile: userProfile)
+            let score2 = getExerciseScore(exercise2, userProfile: userProfile)
+            return score1 > score2
+        }
+    }
+    
+    private func getExerciseScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        var score = 0
+        
+        // Prefer compound movements for beginners and strength goals
+        if getExerciseCategory(exercise) == .compound {
+            score += (userProfile.experienceLevel == .beginner) ? 3 : 2
+            score += (userProfile.fitnessGoal == .strength || userProfile.fitnessGoal == .powerlifting) ? 2 : 0
+        }
+        
+        // Prefer isolation for hypertrophy goals
+        if getExerciseCategory(exercise) == .isolation && userProfile.fitnessGoal == .hypertrophy {
+            score += 2
+        }
+        
+        // Boost score for preferred exercise types
+        let exerciseType = getExerciseType(exercise)
+        if userProfile.preferredExerciseTypes.contains(exerciseType) {
+            score += 1
+        }
+        
+        // Consider historical performance (exercises user has done before get slight boost)
+        if userProfile.getExercisePerformance(exerciseId: exercise.id) != nil {
+            score += 1
+        }
+        
+        return score
+    }
+    
+    private func getExerciseType(_ exercise: ExerciseData) -> ExerciseType {
+        let category = getExerciseCategory(exercise)
+        
+        switch category {
+        case .compound:
+            return .compound
+        case .isolation:
+            return .isolation
+        case .core:
+            return .functional
+        case .cardio:
+            return .cardio
+        }
+    }
+    
+    private func adjustForExperienceLevel(_ recommendation: (sets: Int, reps: Int, weight: Double?), experience: ExperienceLevel) -> (sets: Int, reps: Int, weight: Double?) {
+        switch experience {
+        case .beginner:
+            // Beginners: slightly fewer sets, focus on form
+            return (
+                sets: max(1, recommendation.sets - 1),
+                reps: recommendation.reps,
+                weight: recommendation.weight
+            )
+        case .intermediate:
+            // Intermediate: standard recommendations
+            return recommendation
+        case .advanced:
+            // Advanced: more volume and intensity
+            return (
+                sets: recommendation.sets + 1,
+                reps: min(recommendation.reps + 2, 20), // Cap at 20 reps
+                weight: recommendation.weight
+            )
+        }
+    }
+    
+    private func getSmartWeight(for exercise: ExerciseData, baseWeight: Double?) -> Double? {
+        let userProfile = UserProfileService.shared
+        
+        // Try to get recommended weight from performance history
+        if let recommendedWeight = userProfile.getRecommendedWeight(exerciseId: exercise.id) {
+            return recommendedWeight
+        }
+        
+        // If no history, estimate based on bodyweight and exercise type
+        if baseWeight == nil {
+            return estimateStartingWeight(for: exercise)
+        }
+        
+        return baseWeight
+    }
+    
+    private func estimateStartingWeight(for exercise: ExerciseData) -> Double? {
+        let userProfile = UserProfileService.shared
+        let bodyWeight = userProfile.userWeight
+        let equipment = exercise.equipment.lowercased()
+        
+        // Only estimate for weighted exercises
+        guard equipment.contains("dumbbell") || equipment.contains("barbell") || equipment.contains("kettlebell") else {
+            return nil
+        }
+        
+        let exerciseCategory = getExerciseCategory(exercise)
+        let experienceMultiplier = getExperienceMultiplier(userProfile.experienceLevel)
+        
+        // Base percentages of bodyweight for different exercise categories
+        let basePercentage: Double
+        switch exerciseCategory {
+        case .compound:
+            if equipment.contains("barbell") {
+                basePercentage = 0.5 // 50% of bodyweight for compound barbell movements
+            } else {
+                basePercentage = 0.2 // 20% of bodyweight for compound dumbbell movements (per hand)
+            }
+        case .isolation:
+            basePercentage = 0.1 // 10% of bodyweight for isolation movements
+        case .core:
+            basePercentage = 0.05 // 5% of bodyweight for core exercises
+        case .cardio:
+            basePercentage = 0.15 // 15% of bodyweight for cardio-strength exercises
+        }
+        
+        return bodyWeight * basePercentage * experienceMultiplier
+    }
+    
+    private func getExperienceMultiplier(_ level: ExperienceLevel) -> Double {
+        switch level {
+        case .beginner: return 0.6
+        case .intermediate: return 1.0
+        case .advanced: return 1.5
         }
     }
     

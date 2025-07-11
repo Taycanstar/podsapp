@@ -52,10 +52,10 @@ struct podsApp: App {
 //                                   }
 //                                       }
         .modelContainer(for: [UserProfile.self, Exercise.self, WorkoutSession.self, ExerciseInstance.self, SetInstance.self])
-        .onAppear{
-            NetworkManager().determineUserLocation()
-        }
-        .onOpenURL { url in
+                .onAppear{
+                    NetworkManager().determineUserLocation()
+                }
+                .onOpenURL { url in
                                   deepLinkHandler.handle(url: url)
                               }
          

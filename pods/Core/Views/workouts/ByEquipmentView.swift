@@ -75,35 +75,35 @@ struct ByEquipmentView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            VStack(spacing: 0) {
-                // Background color
-                Color(.systemBackground)
-                    .ignoresSafeArea(.all)
-                    .overlay(contentView)
-            }
-            .navigationTitle("By Equipment")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.accentColor)
+        VStack(spacing: 0) {
+            // Background color
+            Color(.systemBackground)
+                .ignoresSafeArea(.all)
+                .overlay(contentView)
+        }
+        .navigationTitle("By Equipment")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.primary)
                 }
             }
-            .searchable(text: $searchText, prompt: "Search equipment")
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    dismiss()
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.accentColor)
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search equipment")
             .navigationDestination(for: EquipmentSelection.self) { selection in
                 EquipmentExercisesView(
                     equipmentName: selection.name,
