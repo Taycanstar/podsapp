@@ -13,6 +13,13 @@ class WorkoutSession {
     var notes: String?
     var totalDuration: TimeInterval?
     
+    // Sync properties
+    var createdAt: Date
+    var updatedAt: Date
+    var syncVersion: Int
+    var isDeleted: Bool
+    var needsSync: Bool
+    
     init(name: String, userEmail: String, notes: String? = nil) {
         self.id = UUID()
         self.name = name
@@ -20,6 +27,13 @@ class WorkoutSession {
         self.exercises = []
         self.userEmail = userEmail
         self.notes = notes
+        
+        // Initialize sync properties
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.syncVersion = 1
+        self.isDeleted = false
+        self.needsSync = true
     }
     
     var isCompleted: Bool {
@@ -52,6 +66,7 @@ class WorkoutSession {
         exercise.workoutSession = self
         exercise.orderIndex = exercises.count
         exercises.append(exercise)
+        markAsNeedingSync()
     }
     
     // Helper method to remove an exercise
@@ -64,12 +79,21 @@ class WorkoutSession {
         for (i, exercise) in exercises.enumerated() {
             exercise.orderIndex = i
         }
+        markAsNeedingSync()
     }
     
     // Helper method to complete the workout
     func completeWorkout() {
         completedAt = Date()
         totalDuration = duration
+        markAsNeedingSync()
+    }
+    
+    // Helper method to mark as needing sync
+    func markAsNeedingSync() {
+        updatedAt = Date()
+        syncVersion += 1
+        needsSync = true
     }
     
     // Helper method to get workout summary

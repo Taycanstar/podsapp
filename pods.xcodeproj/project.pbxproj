@@ -31,6 +31,7 @@
 		361FF32B2E2085F000B7F68E /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32A2E2085EA00B7F68E /* ExerciseDetailView.swift */; };
 		361FF32D2E21988A00B7F68E /* Equipment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32C2E21988600B7F68E /* Equipment.swift */; };
 		361FF32F2E2198D100B7F68E /* WorkoutHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */; };
+		361FF3312E21A4C600B7F68E /* WorkoutDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -303,6 +304,7 @@
 		361FF32A2E2085EA00B7F68E /* ExerciseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
 		361FF32C2E21988600B7F68E /* Equipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Equipment.swift; sourceTree = "<group>"; };
 		361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryService.swift; sourceTree = "<group>"; };
+		361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDataManager.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -634,6 +636,7 @@
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */,
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
 				363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */,
 				3642C2202B99FB0100D059B9 /* NetworkManager.swift */,
@@ -1456,6 +1459,7 @@
 				361FF3252E2065EB00B7F68E /* Exercise.swift in Sources */,
 				363AFA172D4746A900C91A14 /* PodsView.swift in Sources */,
 				36ED35A52DD5291900D174FB /* HealthKitManager.swift in Sources */,
+				361FF3312E21A4C600B7F68E /* WorkoutDataManager.swift in Sources */,
 				3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */,
 				36ED35A92DD529B600D174FB /* HealthDataDetailView.swift in Sources */,
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,

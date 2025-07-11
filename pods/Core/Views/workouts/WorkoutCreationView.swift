@@ -187,18 +187,24 @@ struct WorkoutCreationView: View {
             workoutSession.addExercise(exercise)
         }
         
-        // Save to SwiftData
-        do {
-            modelContext.insert(workoutSession)
-            try modelContext.save()
-            print("✅ Workout saved successfully")
-            WorkoutSyncService.shared.printWorkoutSummary(workoutSession)
-            saveError = nil
-            showingSaveAlert = true
-        } catch {
-            print("❌ Error saving workout: \(error)")
-            saveError = "Failed to save workout: \(error.localizedDescription)"
-            showingSaveAlert = true
+        // Save using the new sync system
+        Task {
+            do {
+                try await WorkoutDataManager.shared.saveWorkout(workoutSession)
+                
+                await MainActor.run {
+                    print("✅ Workout saved successfully with sync")
+                    WorkoutSyncService.shared.printWorkoutSummary(workoutSession)
+                    saveError = nil
+                    showingSaveAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    print("❌ Error saving workout: \(error)")
+                    saveError = "Failed to save workout: \(error.localizedDescription)"
+                    showingSaveAlert = true
+                }
+            }
         }
     }
 }
