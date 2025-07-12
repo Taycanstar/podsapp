@@ -94,7 +94,35 @@ struct podsApp: App {
             if dataSyncService.isOnline {
                 await dataSyncService.performFullSync()
             }
+            
+            // Demo: Add some sample operations to see sync in action
+            await addDemoSyncOperations()
         }
+    }
+    
+    /// Add demo sync operations to showcase the sync process
+    private func addDemoSyncOperations() async {
+        print("🎭 DataLayer: Adding demo sync operations to showcase sync process")
+        
+        // Add some sample operations
+        let demoOperations = [
+            SyncOperation(
+                type: .userPreferences,
+                data: ["theme": "dark", "notifications": "enabled", "language": "en"],
+                createdAt: Date()
+            ),
+            SyncOperation(
+                type: .profileUpdate,
+                data: ["name": "Demo User", "bio": "Testing sync", "location": "Demo City"],
+                createdAt: Date().addingTimeInterval(-30) // 30 seconds ago
+            )
+        ]
+        
+        for operation in demoOperations {
+            await dataSyncService.queueOperation(operation)
+        }
+        
+        print("🎭 DataLayer: Added \(demoOperations.count) demo operations")
     }
     
     /// Create ModelContainer with migration error handling

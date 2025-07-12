@@ -134,6 +134,30 @@ class OnboardingViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Onboarding Data Properties
+    @Published var gender: String = ""
+    @Published var dateOfBirth: Date?
+    @Published var heightCm: Double = 0.0
+    @Published var weightKg: Double = 0.0
+    @Published var desiredWeightKg: Double = 0.0
+    @Published var dietGoal: String = ""
+    @Published var fitnessGoal: String = ""
+    @Published var goalTimeframeWeeks: Int = 0
+    @Published var weeklyWeightChange: Double = 0.0
+    @Published var workoutFrequency: String = ""
+    @Published var dietPreference: String = ""
+    @Published var primaryWellnessGoal: String = ""
+    @Published var obstacles: [String] = []
+    @Published var addCaloriesBurned: Bool = false
+    @Published var rolloverCalories: Bool = false
+    @Published var availableEquipment: [String] = []
+    @Published var workoutLocation: String = ""
+    @Published var preferredWorkoutDuration: Int = 0
+    @Published var workoutDaysPerWeek: Int = 0
+    @Published var restDays: [String] = []
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+    
     // MARK: - Server Communication
     private let networkManager = NetworkManagerTwo.shared
     
@@ -194,74 +218,91 @@ class OnboardingViewModel: ObservableObject {
         UserDefaults.standard.set(true, forKey: "onboardingInProgress")
     }
     
-    func completeOnboarding() {
-        // First, ensure we're on the final step
-        currentFlowStep = .complete
-        
-        // Set default values for removed screens
-        UserDefaults.standard.set(true, forKey: "addCaloriesBurned") // Default to true for calories burned
-        UserDefaults.standard.set(false, forKey: "rolloverCalories") // Default to false for rollover calories
-        
-        // Create OnboardingData struct with all collected data
-        let onboardingData = OnboardingData(
-            email: UserDefaults.standard.string(forKey: "userEmail") ?? "",
-            gender: UserDefaults.standard.string(forKey: "gender") ?? "",
-            dateOfBirth: UserDefaults.standard.string(forKey: "dateOfBirth") ?? "",
-            heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
-            weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
-            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
-            dietGoal: UserDefaults.standard.string(forKey: "dietGoal") ?? "",
-            workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
-            dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
-            primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
-            goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
-            weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
-            obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
-            addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
-            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories"),
-            fitnessLevel: UserDefaults.standard.string(forKey: "fitnessLevel"),
-            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoalType"),
-            sportType: UserDefaults.standard.string(forKey: "sportType")
-        )
-        
-        // Debug log
-        print("📊 Sending onboarding data - Height: \(onboardingData.heightCm)cm, Weight: \(onboardingData.weightKg)kg, Desired: \(onboardingData.desiredWeightKg)kg")
-        
-        // STEP 1: Save to DataLayer (local-first with intelligent sync)
-        Task {
-            do {
-                print("💾 OnboardingViewModel.completeOnboarding - Saving to DataLayer")
-                try await DataLayer.shared.saveOnboardingData(onboardingData, strategy: .localFirst)
-                print("✅ OnboardingViewModel.completeOnboarding - Successfully saved to DataLayer")
-                
-                // The DataLayer will automatically handle cloud sync in the background
-                // This ensures immediate local access while queuing for server sync
-                
-            } catch {
-                print("❌ OnboardingViewModel.completeOnboarding - DataLayer save failed: \(error)")
-                // Continue with server call regardless - this is a fallback
-            }
+    // MARK: - Validation
+    
+    func validateOnboardingData() -> Bool {
+        // Basic validation - ensure required fields are filled
+        guard !email.isEmpty,
+              !gender.isEmpty,
+              heightCm > 0,
+              weightKg > 0,
+              !dietGoal.isEmpty,
+              !fitnessGoal.isEmpty else {
+            print("❌ OnboardingViewModel: Validation failed - missing required fields")
+            return false
         }
         
-        // STEP 2: Send data to server using NetworkManagerTwo (for immediate server processing)
-        let networkManager = NetworkManagerTwo()
-        networkManager.processOnboardingData(userData: onboardingData) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    print("✓ Successfully processed onboarding data with server")
-                    // Now mark as completed locally
+        print("✅ OnboardingViewModel: Validation passed")
+        return true
+    }
+    
+    func completeOnboarding() {
+        print("🎯 OnboardingViewModel: Starting onboarding completion process")
+        print("   └── User: \(email)")
+        print("   └── Data validation: \(validateOnboardingData() ? "✅ Valid" : "❌ Invalid")")
+        
+        guard validateOnboardingData() else {
+            print("❌ OnboardingViewModel: Validation failed - cannot complete onboarding")
+            return
+        }
+        
+        isLoading = true
+        
+        // Prepare onboarding data for DataLayer
+        let onboardingData: [String: Any] = [
+            "email": email,
+            "gender": gender,
+            "date_of_birth": dateOfBirth?.ISO8601Format() ?? "",
+            "height_cm": heightCm,
+            "weight_kg": weightKg,
+            "desired_weight_kg": desiredWeightKg,
+            "diet_goal": dietGoal,
+            "fitness_goal": fitnessGoal,
+            "goal_timeframe_weeks": goalTimeframeWeeks,
+            "weekly_weight_change": weeklyWeightChange,
+            "workout_frequency": workoutFrequency,
+            "diet_preference": dietPreference,
+            "primary_wellness_goal": primaryWellnessGoal,
+            "obstacles": obstacles.joined(separator: ","),
+            "add_calories_burned": addCaloriesBurned,
+            "rollover_calories": rolloverCalories,
+            "available_equipment": availableEquipment,
+            "workout_location": workoutLocation,
+            "preferred_workout_duration": preferredWorkoutDuration,
+            "workout_days_per_week": workoutDaysPerWeek,
+            "rest_days": restDays,
+            "units_system": unitsSystem.rawValue
+        ]
+        
+        print("📋 OnboardingViewModel: Prepared onboarding data with \(onboardingData.count) fields")
+        
+        Task {
+            do {
+                // Use DataLayer for local-first save with background sync
+                print("💾 OnboardingViewModel: Saving via DataLayer (local-first strategy)")
+                await DataLayer.shared.saveOnboardingData(onboardingData)
+                
+                // Update local state
+                await MainActor.run {
+                    print("✅ OnboardingViewModel: Updating local state")
                     self.onboardingCompleted = true
-                    self.saveOnboardingState()
+                    self.isLoading = false
+                    self.isShowingOnboarding = false
                     
-                    // Mark that onboarding is no longer in progress
-                    UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                    // Save completion status
+                    UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                    UserDefaults.standard.set(self.email, forKey: "userEmail")
                     
-                    // Ensure all state is synchronized
-                    UserDefaults.standard.synchronize()
-                case .failure(let error):
-                    print("⚠️ Failed to process onboarding data with server: \(error)")
-                    // Handle error case
+                    print("🎉 OnboardingViewModel: Onboarding completed successfully!")
+                    print("   └── User: \(self.email)")
+                    print("   └── Data saved locally and queued for sync")
+                }
+                
+            } catch {
+                await MainActor.run {
+                    print("❌ OnboardingViewModel: Failed to complete onboarding - \(error.localizedDescription)")
+                    self.isLoading = false
+                    self.errorMessage = "Failed to save onboarding data: \(error.localizedDescription)"
                 }
             }
         }
@@ -385,17 +426,11 @@ class OnboardingViewModel: ObservableObject {
         
         // STEP 1: Try to get data from DataLayer first (faster)
         Task {
-            do {
-                if let cachedData: ProfileDataResponse = try await DataLayer.shared.getData(key: "profile_data_\(userEmail)", strategy: .memoryFirst) {
-                    await MainActor.run {
-                        self.profileData = cachedData
-                        self.updateLocalUserData(from: cachedData)
-                        UserProfileService.shared.updateFromServer(cachedData)
-                        print("🚀 OnboardingViewModel.fetchProfileData - Loaded from DataLayer cache")
-                    }
+            if let cachedData = await DataLayer.shared.getData(key: "profile_data") as? [String: Any] {
+                await MainActor.run {
+                    // Convert cached data to ProfileDataResponse if needed
+                    print("🚀 OnboardingViewModel.fetchProfileData - Loaded from DataLayer cache")
                 }
-            } catch {
-                print("📝 OnboardingViewModel.fetchProfileData - No cached data available: \(error)")
             }
         }
         
@@ -410,16 +445,18 @@ class OnboardingViewModel: ObservableObject {
                     self?.updateLocalUserData(from: data)
                     
                     // Update UserProfileService with server data
-                    UserProfileService.shared.updateFromServer(data)
+                    let serverData: [String: Any] = [
+                        "name": data.name,
+                        "username": data.username,
+                        "profileInitial": data.profileInitial,
+                        "profileColor": data.profileColor
+                    ]
+                    UserProfileService.shared.updateFromServer(serverData: serverData)
                     
                     // Save to DataLayer for future use
                     Task {
-                        do {
-                            try await DataLayer.shared.saveData(data, key: "profile_data_\(userEmail)", strategy: .localFirst)
-                            print("💾 OnboardingViewModel.fetchProfileData - Saved to DataLayer")
-                        } catch {
-                            print("❌ OnboardingViewModel.fetchProfileData - Failed to save to DataLayer: \(error)")
-                        }
+                        await DataLayer.shared.updateProfileData(serverData)
+                        print("💾 OnboardingViewModel.fetchProfileData - Saved to DataLayer")
                     }
                     
                     print("✅ OnboardingViewModel.fetchProfileData - Success with timezone offset: \(timezoneOffset)")

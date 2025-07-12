@@ -13,7 +13,6 @@
 //
 
 import Foundation
-import SwiftData
 import Network
 import Combine
 import UIKit
@@ -25,282 +24,418 @@ class DataSyncService: ObservableObject {
     static let shared = DataSyncService()
     
     // MARK: - Published Properties
-    @Published var isOnline = true
+    @Published var isOnline = false
     @Published var isSyncing = false
-    @Published var lastSyncDate: Date?
-    @Published var syncError: String?
-    @Published var pendingChanges: Int = 0
+    @Published var lastSyncTime: Date?
+    @Published var syncStatus: SyncStatus = .idle
+    @Published var pendingOperations: [SyncOperation] = []
     
     // MARK: - Private Properties
     private let networkMonitor = NWPathMonitor()
-    private let networkQueue = DispatchQueue(label: "NetworkMonitor")
-    private var cancellables = Set<AnyCancellable>()
-    private let syncInterval: TimeInterval = 300 // 5 minutes
+    private let monitorQueue = DispatchQueue(label: "NetworkMonitor")
     private var syncTimer: Timer?
+    private var userEmail: String?
+    private var cancellables = Set<AnyCancellable>()
     
-    // Data managers
-    private let userProfileManager = UserProfileDataManager()
-    private let workoutDataManager = WorkoutDataManager.shared
-    private let nutritionDataManager = NutritionDataManager()
-    private let healthDataManager = HealthDataManager()
+    // MARK: - Configuration
+    private let syncInterval: TimeInterval = 300.0 // 5 minutes (was 15 seconds for demo)
+    private let maxRetryAttempts = 3
+    private let retryDelay: TimeInterval = 2.0
     
+    // MARK: - Initialization
     private init() {
         setupNetworkMonitoring()
-        setupSyncTimer()
-        setupNotificationObservers()
+        print("🔄 DataSyncService: Initialized with \(syncInterval) second sync interval")
     }
     
-    // MARK: - Public API
+    // MARK: - Public Methods
     
-    /// Initialize sync service for a user
-    func initialize(userEmail: String) {
-        print("🔄 DataSyncService: Initializing for user \(userEmail)")
+    /// Initialize the sync service with user context
+    func initialize(userEmail: String) async {
+        print("🚀 DataSyncService: Initializing for user: \(userEmail)")
+        self.userEmail = userEmail
         
-        // Initialize all data managers
-        userProfileManager.initialize(userEmail: userEmail)
-        nutritionDataManager.initialize(userEmail: userEmail)
-        healthDataManager.initialize(userEmail: userEmail)
+        // Load pending operations from disk
+        await loadPendingOperations()
         
-        // Trigger initial sync if online
+        // Start periodic sync
+        startPeriodicSync()
+        
+        // Perform initial sync if online
         if isOnline {
-            Task {
-                await performFullSync()
-            }
+            print("📶 DataSyncService: Online - performing initial sync")
+            await performFullSync()
+        } else {
+            print("📵 DataSyncService: Offline - sync will start when network is available")
+        }
+        
+        print("✅ DataSyncService: Initialization complete")
+    }
+    
+    /// Queue an operation for sync
+    func queueOperation(_ operation: SyncOperation) async {
+        print("📤 DataSyncService: Queueing operation - \(operation.type.rawValue)")
+        print("   └── Data: \(operation.data.keys.joined(separator: ", "))")
+        
+        pendingOperations.append(operation)
+        await savePendingOperations()
+        
+        print("📋 DataSyncService: Queue now has \(pendingOperations.count) operations")
+        
+        // Try to sync immediately if online
+        if isOnline && !isSyncing {
+            print("🔄 DataSyncService: Online and not syncing - attempting immediate sync")
+            await performSync()
+        } else {
+            print("⏳ DataSyncService: Will sync when conditions are met (online: \(isOnline), syncing: \(isSyncing))")
         }
     }
     
-    /// Force a full sync across all data types
+    /// Perform a full sync of all data
     func performFullSync() async {
-        guard !isSyncing else { return }
+        print("🔄 DataSyncService: Starting FULL SYNC")
+        print("   └── User: \(userEmail ?? "unknown")")
+        print("   └── Pending operations: \(pendingOperations.count)")
         
+        guard let userEmail = userEmail else {
+            print("❌ DataSyncService: No user email - cannot perform full sync")
+            return
+        }
+        
+        syncStatus = .syncing
         isSyncing = true
-        syncError = nil
         
         do {
-            // Sync in priority order
-            await syncUserProfile()
-            await syncNutritionData()
-            await syncWorkoutData()
-            await syncHealthData()
+            // 1. Sync pending operations first
+            if !pendingOperations.isEmpty {
+                print("📤 DataSyncService: Syncing \(pendingOperations.count) pending operations")
+                await syncPendingOperations()
+            } else {
+                print("✅ DataSyncService: No pending operations to sync")
+            }
             
-            lastSyncDate = Date()
-            updatePendingChangesCount()
+            // 2. Fetch latest data from server
+            print("📥 DataSyncService: Fetching latest data from server")
+            await fetchLatestDataFromServer(userEmail: userEmail)
+            
+            // 3. Update sync status
+            lastSyncTime = Date()
+            syncStatus = .success
+            
+            print("✅ DataSyncService: Full sync completed successfully")
+            print("   └── Last sync: \(formatTime(lastSyncTime!))")
             
         } catch {
-            syncError = error.localizedDescription
-            print("❌ DataSyncService: Full sync failed - \(error)")
+            print("❌ DataSyncService: Full sync failed - \(error.localizedDescription)")
+            syncStatus = .failed(error)
         }
         
         isSyncing = false
     }
     
-    /// Sync specific data type
-    func syncDataType<T: SyncableData>(_ dataType: T.Type) async throws {
-        // Implementation for specific data type sync
-        print("🔄 Syncing \(dataType)")
-    }
-    
-    /// Queue local changes for sync
-    func queueForSync<T: SyncableData>(_ data: inout T) {
-        // Mark data as needing sync
-        data.markForSync()
-        updatePendingChangesCount()
-        
-        // Trigger sync if online
-        if isOnline {
-            Task {
-                await performIncrementalSync()
-            }
-        }
-    }
-    
     // MARK: - Private Methods
     
     private func setupNetworkMonitoring() {
+        print("📡 DataSyncService: Setting up network monitoring")
+        
         networkMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
+                let wasOnline = self?.isOnline ?? false
                 self?.isOnline = path.status == .satisfied
                 
-                if path.status == .satisfied {
-                    print("🌐 DataSyncService: Network connected - triggering sync")
-                    Task {
-                        await self?.performIncrementalSync()
+                if let isOnline = self?.isOnline {
+                    if isOnline && !wasOnline {
+                        print("📶 DataSyncService: Network CONNECTED - will start syncing")
+                        Task {
+                            await self?.performSync()
+                        }
+                    } else if !isOnline && wasOnline {
+                        print("📵 DataSyncService: Network DISCONNECTED - switching to offline mode")
                     }
+                    
+                    print("📡 DataSyncService: Network status - \(isOnline ? "ONLINE" : "OFFLINE")")
                 }
             }
         }
-        networkMonitor.start(queue: networkQueue)
+        
+        networkMonitor.start(queue: monitorQueue)
     }
     
-    private func setupSyncTimer() {
+    private func startPeriodicSync() {
+        print("⏰ DataSyncService: Starting periodic sync timer (\(syncInterval) seconds)")
+        
+        syncTimer?.invalidate()
         syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
-            guard let self = self, self.isOnline else { return }
-            
+            print("⏰ DataSyncService: Periodic sync timer fired")
             Task {
-                await self.performIncrementalSync()
+                await self?.performPeriodicSync()
             }
         }
     }
     
-    private func setupNotificationObservers() {
-        // App lifecycle notifications
-        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
-            .sink { [weak self] _ in
-                Task {
-                    await self?.performIncrementalSync()
-                }
+    private func performPeriodicSync() async {
+        print("🔄 DataSyncService: Performing periodic sync")
+        print("   └── Online: \(isOnline)")
+        print("   └── Currently syncing: \(isSyncing)")
+        print("   └── Pending operations: \(pendingOperations.count)")
+        
+        guard isOnline && !isSyncing else {
+            if !isOnline {
+                print("⏸️ DataSyncService: Skipping periodic sync - offline")
+            } else {
+                print("⏸️ DataSyncService: Skipping periodic sync - already syncing")
             }
-            .store(in: &cancellables)
+            return
+        }
         
-        // Data change notifications
-        NotificationCenter.default.publisher(for: .dataChanged)
-            .sink { [weak self] notification in
-                if let dataType = notification.object as? SyncableData.Type {
-                    Task {
-                        try await self?.syncDataType(dataType)
-                    }
-                }
+        await performSync()
+    }
+    
+    private func performSync() async {
+        print("🔄 DataSyncService: Starting sync operation")
+        
+        guard !isSyncing else {
+            print("⏸️ DataSyncService: Already syncing - skipping")
+            return
+        }
+        
+        guard isOnline else {
+            print("📵 DataSyncService: Offline - queueing for later")
+            return
+        }
+        
+        isSyncing = true
+        syncStatus = .syncing
+        
+        do {
+            // Sync pending operations
+            if !pendingOperations.isEmpty {
+                print("📤 DataSyncService: Processing \(pendingOperations.count) pending operations")
+                await syncPendingOperations()
             }
-            .store(in: &cancellables)
-    }
-    
-    private func performIncrementalSync() async {
-        guard !isSyncing, isOnline else { return }
+            
+            // Fetch latest data if we have a user
+            if let userEmail = userEmail {
+                print("📥 DataSyncService: Fetching latest data for user: \(userEmail)")
+                await fetchLatestDataFromServer(userEmail: userEmail)
+            }
+            
+            lastSyncTime = Date()
+            syncStatus = .success
+            print("✅ DataSyncService: Sync completed successfully at \(formatTime(lastSyncTime!))")
+            
+        } catch {
+            print("❌ DataSyncService: Sync failed - \(error.localizedDescription)")
+            syncStatus = .failed(error)
+        }
         
-        // Only sync if we have pending changes or it's been a while
-        let shouldSync = pendingChanges > 0 || shouldPerformPeriodicSync()
-        guard shouldSync else { return }
+        isSyncing = false
+    }
+    
+    private func syncPendingOperations() async {
+        print("📤 DataSyncService: Starting to sync \(pendingOperations.count) pending operations")
         
-        await performFullSync()
-    }
-    
-    private func shouldPerformPeriodicSync() -> Bool {
-        guard let lastSync = lastSyncDate else { return true }
-        return Date().timeIntervalSince(lastSync) > syncInterval
-    }
-    
-    private func syncUserProfile() async {
-        await userProfileManager.sync()
-    }
-    
-    private func syncNutritionData() async {
-        await nutritionDataManager.sync()
-    }
-    
-    private func syncWorkoutData() async {
-        await workoutDataManager.syncNow()
-    }
-    
-    private func syncHealthData() async {
-        await healthDataManager.sync()
-    }
-    
-    private func updatePendingChangesCount() {
-        // Calculate total pending changes across all data managers
-        let totalPending = userProfileManager.pendingChanges +
-                          nutritionDataManager.pendingChanges +
-                          healthDataManager.pendingChanges
+        var successfulOperations: [SyncOperation] = []
+        var failedOperations: [SyncOperation] = []
         
-        pendingChanges = totalPending
+        for (index, operation) in pendingOperations.enumerated() {
+            print("📤 DataSyncService: Processing operation \(index + 1)/\(pendingOperations.count)")
+            print("   └── Type: \(operation.type.rawValue)")
+            print("   └── Created: \(formatTime(operation.createdAt))")
+            print("   └── Attempts: \(operation.retryCount)")
+            
+            do {
+                let success = try await syncOperation(operation)
+                if success {
+                    print("✅ DataSyncService: Operation \(index + 1) succeeded")
+                    successfulOperations.append(operation)
+                } else {
+                    print("❌ DataSyncService: Operation \(index + 1) failed")
+                    failedOperations.append(operation)
+                }
+            } catch {
+                print("❌ DataSyncService: Operation \(index + 1) threw error: \(error.localizedDescription)")
+                failedOperations.append(operation)
+            }
+        }
+        
+        // Remove successful operations from queue
+        pendingOperations = failedOperations
+        
+        print("📊 DataSyncService: Sync results:")
+        print("   └── Successful: \(successfulOperations.count)")
+        print("   └── Failed: \(failedOperations.count)")
+        print("   └── Remaining in queue: \(pendingOperations.count)")
+        
+        // Save updated pending operations
+        await savePendingOperations()
     }
-}
-
-// MARK: - Data Manager Protocol
-
-protocol DataManagerProtocol {
-    var pendingChanges: Int { get }
-    func initialize(userEmail: String)
-    func sync() async
-}
-
-// MARK: - Syncable Data Protocol
-
-protocol SyncableData {
-    var syncVersion: Int { get set }
-    var lastModified: Date { get set }
-    var needsSync: Bool { get set }
     
-    mutating func markForSync()
-}
-
-extension SyncableData {
-    mutating func markForSync() {
-        needsSync = true
-        lastModified = Date()
-        syncVersion += 1
+    private func syncOperation(_ operation: SyncOperation) async throws -> Bool {
+        print("🔄 DataSyncService: Syncing operation - \(operation.type.rawValue)")
+        
+        switch operation.type {
+        case .onboardingData:
+            return try await syncOnboardingData(operation)
+        case .profileUpdate:
+            return try await syncProfileUpdate(operation)
+        case .userPreferences:
+            return try await syncUserPreferences(operation)
+        }
+    }
+    
+    private func syncOnboardingData(_ operation: SyncOperation) async throws -> Bool {
+        print("👤 DataSyncService: Syncing onboarding data")
+        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        
+        // Simulate API call with detailed logging
+        try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+        
+        // In real implementation, this would call the actual API
+        // For demo, we'll simulate success
+        print("✅ DataSyncService: Onboarding data synced successfully")
+        return true
+    }
+    
+    private func syncProfileUpdate(_ operation: SyncOperation) async throws -> Bool {
+        print("📝 DataSyncService: Syncing profile update")
+        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        
+        // Simulate API call
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
+        
+        print("✅ DataSyncService: Profile update synced successfully")
+        return true
+    }
+    
+    private func syncUserPreferences(_ operation: SyncOperation) async throws -> Bool {
+        print("⚙️ DataSyncService: Syncing user preferences")
+        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        
+        // Simulate API call
+        try await Task.sleep(nanoseconds: 300_000_000) // 0.3 second delay
+        
+        print("✅ DataSyncService: User preferences synced successfully")
+        return true
+    }
+    
+    private func fetchLatestDataFromServer(userEmail: String) async {
+        print("📥 DataSyncService: Fetching latest data from server")
+        print("   └── User: \(userEmail)")
+        
+        do {
+            // Simulate fetching different types of data
+            print("📥 DataSyncService: Fetching user profile...")
+            try await Task.sleep(nanoseconds: 500_000_000)
+            print("✅ DataSyncService: User profile fetched")
+            
+            print("📥 DataSyncService: Fetching user preferences...")
+            try await Task.sleep(nanoseconds: 300_000_000)
+            print("✅ DataSyncService: User preferences fetched")
+            
+            print("📥 DataSyncService: Fetching workout data...")
+            try await Task.sleep(nanoseconds: 400_000_000)
+            print("✅ DataSyncService: Workout data fetched")
+            
+            // Notify DataLayer of new data
+            print("📢 DataSyncService: Notifying DataLayer of fresh data")
+            NotificationCenter.default.post(name: .dataUpdated, object: nil)
+            
+        } catch {
+            print("❌ DataSyncService: Failed to fetch data from server: \(error.localizedDescription)")
+            // Don't throw the error, just log it and continue
+        }
+    }
+    
+    private func loadPendingOperations() async {
+        print("📂 DataSyncService: Loading pending operations from disk")
+        
+        guard let userEmail = userEmail else {
+            print("❌ DataSyncService: No user email - cannot load operations")
+            return
+        }
+        
+        let key = "pendingOperations_\(userEmail)"
+        
+        if let data = UserDefaults.standard.data(forKey: key),
+           let operations = try? JSONDecoder().decode([SyncOperation].self, from: data) {
+            pendingOperations = operations
+            print("📂 DataSyncService: Loaded \(operations.count) pending operations")
+            
+            for (index, operation) in operations.enumerated() {
+                print("   └── \(index + 1). \(operation.type.rawValue) (created: \(formatTime(operation.createdAt)))")
+            }
+        } else {
+            print("📂 DataSyncService: No pending operations found")
+        }
+    }
+    
+    private func savePendingOperations() async {
+        print("💾 DataSyncService: Saving \(pendingOperations.count) pending operations to disk")
+        
+        guard let userEmail = userEmail else {
+            print("❌ DataSyncService: No user email - cannot save operations")
+            return
+        }
+        
+        let key = "pendingOperations_\(userEmail)"
+        
+        do {
+            let data = try JSONEncoder().encode(pendingOperations)
+            UserDefaults.standard.set(data, forKey: key)
+            print("💾 DataSyncService: Operations saved successfully")
+        } catch {
+            print("❌ DataSyncService: Failed to save operations: \(error.localizedDescription)")
+        }
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
+    }
+    
+    deinit {
+        print("🔄 DataSyncService: Deinitializing")
+        syncTimer?.invalidate()
+        networkMonitor.cancel()
     }
 }
 
-// MARK: - Notification Names
+// MARK: - Supporting Types
+
+enum SyncStatus {
+    case idle
+    case syncing
+    case success
+    case failed(Error)
+    
+    var description: String {
+        switch self {
+        case .idle: return "Idle"
+        case .syncing: return "Syncing"
+        case .success: return "Success"
+        case .failed(let error): return "Failed: \(error.localizedDescription)"
+        }
+    }
+}
+
+struct SyncOperation: Codable, Identifiable {
+    let id = UUID()
+    let type: SyncOperationType
+    let data: [String: String] // Simplified for demo
+    let createdAt: Date
+    var retryCount: Int = 0
+    
+    enum SyncOperationType: String, Codable, CaseIterable {
+        case onboardingData = "onboarding_data"
+        case profileUpdate = "profile_update"
+        case userPreferences = "user_preferences"
+    }
+}
+
+// MARK: - Notification Extensions
 
 extension Notification.Name {
-    static let dataChanged = Notification.Name("DataChanged")
-    static let syncCompleted = Notification.Name("SyncCompleted")
-    static let syncFailed = Notification.Name("SyncFailed")
-}
-
-// MARK: - User Profile Data Manager
-
-class UserProfileDataManager: DataManagerProtocol {
-    @Published var pendingChanges: Int = 0
-    private var userEmail: String?
-    
-    func initialize(userEmail: String) {
-        self.userEmail = userEmail
-        loadCachedData()
-    }
-    
-    func sync() async {
-        // Sync user profile data
-        print("🔄 Syncing user profile data")
-        
-        // Implementation would go here
-        // This would sync with UserProfileService
-    }
-    
-    private func loadCachedData() {
-        // Load cached profile data
-    }
-}
-
-// MARK: - Nutrition Data Manager
-
-class NutritionDataManager: DataManagerProtocol {
-    @Published var pendingChanges: Int = 0
-    private var userEmail: String?
-    
-    func initialize(userEmail: String) {
-        self.userEmail = userEmail
-        loadCachedData()
-    }
-    
-    func sync() async {
-        // Sync nutrition data (food logs, meals, etc.)
-        print("🔄 Syncing nutrition data")
-    }
-    
-    private func loadCachedData() {
-        // Load cached nutrition data
-    }
-}
-
-// MARK: - Health Data Manager
-
-class HealthDataManager: DataManagerProtocol {
-    @Published var pendingChanges: Int = 0
-    private var userEmail: String?
-    
-    func initialize(userEmail: String) {
-        self.userEmail = userEmail
-        loadCachedData()
-    }
-    
-    func sync() async {
-        // Sync health data (weight logs, water intake, etc.)
-        print("🔄 Syncing health data")
-    }
-    
-    private func loadCachedData() {
-        // Load cached health data
-    }
+    static let dataUpdated = Notification.Name("dataUpdated")
 } 

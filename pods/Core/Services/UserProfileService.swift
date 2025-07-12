@@ -24,22 +24,14 @@ class UserProfileService: ObservableObject {
     // MARK: - Server Data Integration
     
     /// Update profile data from server response
-    func updateFromServer(_ data: ProfileDataResponse) {
-        DispatchQueue.main.async {
-            self.profileData = data
-            self.lastUpdated = Date()
-            self.cacheProfileData(data)
-            
-            // Save to DataLayer for intelligent caching and sync
-            Task {
-                do {
-                    guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
-                    try await DataLayer.shared.saveData(data, key: "user_profile_\(userEmail)", strategy: .localFirst)
-                    print("💾 UserProfileService: Saved profile data to DataLayer")
-                } catch {
-                    print("❌ UserProfileService: Failed to save to DataLayer: \(error)")
-                }
-            }
+    func updateFromServer(serverData: [String: Any]) {
+        print("📝 UserProfileService: Updating profile from server data")
+        print("   └── Data keys: \(serverData.keys.joined(separator: ", "))")
+        
+        // Update DataLayer cache with server data
+        Task {
+            await DataLayer.shared.updateProfileData(serverData)
+            print("✅ UserProfileService: Profile data updated in DataLayer")
         }
     }
     
