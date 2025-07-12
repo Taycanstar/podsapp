@@ -27,6 +27,10 @@ struct podsApp: App {
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
     
+    // Initialize data architecture services
+    @StateObject private var dataLayer = DataLayer.shared
+    @StateObject private var dataSyncService = DataSyncService.shared
+    
       
 
     var body: some Scene {
@@ -45,15 +49,18 @@ struct podsApp: App {
                 .environmentObject(videoPreloader)
                 .environmentObject(subscriptionManager)
                 .environmentObject(dayLogsVM)
+                .environmentObject(dataLayer)
+                .environmentObject(dataSyncService)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {
 //                                       NetworkManager().determineUserLocation()
 //                                   }
 //                                       }
-        .modelContainer(for: [UserProfile.self, Exercise.self, WorkoutSession.self, ExerciseInstance.self, SetInstance.self])
+        .modelContainer(createModelContainer())
                 .onAppear{
                     NetworkManager().determineUserLocation()
+                    initializeDataArchitecture()
                 }
                 .onOpenURL { url in
                                   deepLinkHandler.handle(url: url)
@@ -61,6 +68,78 @@ struct podsApp: App {
          
         }
 
+    }
+    
+    // MARK: - Data Architecture Initialization
+    
+    /// Initialize data architecture services when user is authenticated
+    private func initializeDataArchitecture() {
+        // Check if user is authenticated
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), 
+              !userEmail.isEmpty else {
+            print("🔄 DataLayer: User not authenticated, skipping initialization")
+            return
+        }
+        
+        print("🚀 DataLayer: Initializing data architecture for user: \(userEmail)")
+        
+        // Initialize DataLayer with user context
+        Task {
+            await dataLayer.initialize(userEmail: userEmail)
+            await dataSyncService.initialize(userEmail: userEmail)
+            
+            print("✅ DataLayer: Successfully initialized data architecture")
+            
+            // Perform initial sync if online
+            if dataSyncService.isOnline {
+                await dataSyncService.performFullSync()
+            }
+        }
+    }
+    
+    /// Create ModelContainer with migration error handling
+    private func createModelContainer() -> ModelContainer {
+        do {
+            // Try to create the container normally
+            // Note: WorkoutSession is handled separately by WorkoutDataManager
+            return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self)
+        } catch {
+            print("⚠️ SwiftData migration failed in main app: \(error)")
+            print("🔄 Clearing existing SwiftData store and starting fresh...")
+            
+            // Clear the existing store
+            clearSwiftDataStore()
+            
+            do {
+                // Try again after clearing
+                return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self)
+            } catch {
+                print("❌ Failed to create ModelContainer even after clearing: \(error)")
+                // Create an in-memory container as last resort
+                let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+                do {
+                    return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self, configurations: configuration)
+                } catch {
+                    fatalError("Failed to create even in-memory ModelContainer: \(error)")
+                }
+            }
+        }
+    }
+    
+    /// Clear existing SwiftData store files
+    private func clearSwiftDataStore() {
+        let fileManager = FileManager.default
+        let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
+        let walURL = URL.applicationSupportDirectory.appending(path: "default.store-wal")
+        let shmURL = URL.applicationSupportDirectory.appending(path: "default.store-shm")
+        
+        // Remove store files if they exist
+        [storeURL, walURL, shmURL].forEach { url in
+            if fileManager.fileExists(atPath: url.path) {
+                try? fileManager.removeItem(at: url)
+                print("🗑️ Removed: \(url.lastPathComponent)")
+            }
+        }
     }
 }
 

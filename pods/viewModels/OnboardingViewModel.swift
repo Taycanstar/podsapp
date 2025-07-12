@@ -227,7 +227,23 @@ class OnboardingViewModel: ObservableObject {
         // Debug log
         print("📊 Sending onboarding data - Height: \(onboardingData.heightCm)cm, Weight: \(onboardingData.weightKg)kg, Desired: \(onboardingData.desiredWeightKg)kg")
         
-        // Send data to server using NetworkManagerTwo
+        // STEP 1: Save to DataLayer (local-first with intelligent sync)
+        Task {
+            do {
+                print("💾 OnboardingViewModel.completeOnboarding - Saving to DataLayer")
+                try await DataLayer.shared.saveOnboardingData(onboardingData, strategy: .localFirst)
+                print("✅ OnboardingViewModel.completeOnboarding - Successfully saved to DataLayer")
+                
+                // The DataLayer will automatically handle cloud sync in the background
+                // This ensures immediate local access while queuing for server sync
+                
+            } catch {
+                print("❌ OnboardingViewModel.completeOnboarding - DataLayer save failed: \(error)")
+                // Continue with server call regardless - this is a fallback
+            }
+        }
+        
+        // STEP 2: Send data to server using NetworkManagerTwo (for immediate server processing)
         let networkManager = NetworkManagerTwo()
         networkManager.processOnboardingData(userData: onboardingData) { result in
             DispatchQueue.main.async {
@@ -355,7 +371,7 @@ class OnboardingViewModel: ObservableObject {
     
     /// Fetch comprehensive profile data for the current user
     func fetchProfileData() {
-        guard !email.isEmpty else {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else {
             profileError = "No user email available"
             return
         }
@@ -367,7 +383,24 @@ class OnboardingViewModel: ObservableObject {
         let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
         print("🕐 OnboardingViewModel.fetchProfileData - Using timezone offset: \(timezoneOffset) minutes")
         
-        networkManager.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { [weak self] result in
+        // STEP 1: Try to get data from DataLayer first (faster)
+        Task {
+            do {
+                if let cachedData: ProfileDataResponse = try await DataLayer.shared.getData(key: "profile_data_\(userEmail)", strategy: .memoryFirst) {
+                    await MainActor.run {
+                        self.profileData = cachedData
+                        self.updateLocalUserData(from: cachedData)
+                        UserProfileService.shared.updateFromServer(cachedData)
+                        print("🚀 OnboardingViewModel.fetchProfileData - Loaded from DataLayer cache")
+                    }
+                }
+            } catch {
+                print("📝 OnboardingViewModel.fetchProfileData - No cached data available: \(error)")
+            }
+        }
+        
+        // STEP 2: Always fetch fresh data from server and update DataLayer
+        networkManager.fetchProfileData(userEmail: userEmail, timezoneOffset: timezoneOffset) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoadingProfile = false
                 
@@ -379,9 +412,19 @@ class OnboardingViewModel: ObservableObject {
                     // Update UserProfileService with server data
                     UserProfileService.shared.updateFromServer(data)
                     
+                    // Save to DataLayer for future use
+                    Task {
+                        do {
+                            try await DataLayer.shared.saveData(data, key: "profile_data_\(userEmail)", strategy: .localFirst)
+                            print("💾 OnboardingViewModel.fetchProfileData - Saved to DataLayer")
+                        } catch {
+                            print("❌ OnboardingViewModel.fetchProfileData - Failed to save to DataLayer: \(error)")
+                        }
+                    }
+                    
                     print("✅ OnboardingViewModel.fetchProfileData - Success with timezone offset: \(timezoneOffset)")
                     print("✅ Updated UserProfileService with server data")
-                    // No cache timestamp - always fetch fresh data
+                    
                 case .failure(let error):
                     self?.profileError = error.localizedDescription
                     print("❌ OnboardingViewModel.fetchProfileData - Error: \(error)")

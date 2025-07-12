@@ -88,6 +88,18 @@ class DataLayer: ObservableObject {
         }
     }
     
+    /// Save onboarding data with intelligent sync
+    func saveOnboardingData(_ data: OnboardingData, strategy: DataStrategy = .localFirst) async throws {
+        let key = "onboarding_data_\(data.email)"
+        try await saveData(data, key: key, strategy: strategy)
+        print("💾 DataLayer: Saved onboarding data for \(data.email)")
+    }
+    
+    /// Get data with convenience method
+    func getData<T: Codable>(key: String, strategy: DataStrategy = .memoryFirst) async throws -> T? {
+        return try await getData(T.self, key: key, strategy: strategy)
+    }
+    
     // MARK: - Private Methods
     
     private func setupDataLayer() {

@@ -29,6 +29,17 @@ class UserProfileService: ObservableObject {
             self.profileData = data
             self.lastUpdated = Date()
             self.cacheProfileData(data)
+            
+            // Save to DataLayer for intelligent caching and sync
+            Task {
+                do {
+                    guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+                    try await DataLayer.shared.saveData(data, key: "user_profile_\(userEmail)", strategy: .localFirst)
+                    print("💾 UserProfileService: Saved profile data to DataLayer")
+                } catch {
+                    print("❌ UserProfileService: Failed to save to DataLayer: \(error)")
+                }
+            }
         }
     }
     

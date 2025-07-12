@@ -189,11 +189,57 @@ class WorkoutLocalStorage {
     private let modelContainer: ModelContainer
     
     init() {
-        // Initialize SwiftData container
+        // Initialize SwiftData container with migration handling
+        let container: ModelContainer
+        
         do {
-            self.modelContainer = try ModelContainer(for: WorkoutSession.self)
+            // Create a dedicated store location for workout data to avoid conflicts
+            let storeURL = URL.documentsDirectory.appending(path: "WorkoutData.store")
+            let configuration = ModelConfiguration(url: storeURL)
+            container = try ModelContainer(for: WorkoutSession.self, configurations: configuration)
         } catch {
-            fatalError("Failed to initialize ModelContainer: \(error)")
+            // Handle migration errors by clearing the store and starting fresh
+            print("⚠️ SwiftData migration failed: \(error)")
+            print("🔄 Clearing existing workout data and starting fresh...")
+            
+            do {
+                // Clear the existing store and create a new one
+                let storeURL = URL.documentsDirectory.appending(path: "WorkoutData.store")
+                let configuration = ModelConfiguration(url: storeURL)
+                try Self.clearExistingStore(at: storeURL)
+                container = try ModelContainer(for: WorkoutSession.self, configurations: configuration)
+                print("✅ Successfully created new WorkoutSession container")
+            } catch {
+                fatalError("Failed to initialize ModelContainer even after clearing store: \(error)")
+            }
+        }
+        
+        // Assign the successfully created container
+        self.modelContainer = container
+    }
+    
+    /// Clear existing SwiftData store to handle migration issues
+    private static func clearExistingStore(at storeURL: URL) throws {
+        let fileManager = FileManager.default
+        let storeDirectory = storeURL.deletingLastPathComponent()
+        let storeName = storeURL.deletingPathExtension().lastPathComponent
+        
+        // Define all possible store files
+        let storeFiles = [
+            storeURL,                                                    // main store
+            storeDirectory.appending(path: "\(storeName).store-wal"),   // WAL file
+            storeDirectory.appending(path: "\(storeName).store-shm")    // SHM file
+        ]
+        
+        for file in storeFiles {
+            if fileManager.fileExists(atPath: file.path) {
+                do {
+                    try fileManager.removeItem(at: file)
+                    print("🗑️ Removed existing store file: \(file.lastPathComponent)")
+                } catch {
+                    print("⚠️ Failed to remove \(file.lastPathComponent): \(error)")
+                }
+            }
         }
     }
     

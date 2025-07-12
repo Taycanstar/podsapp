@@ -872,7 +872,7 @@ extension RecipeSummary: MealDisplayable {
 
 
 /// Structure to hold all the user's onboarding data
-struct OnboardingData {
+struct OnboardingData: Codable {
     let email: String
     let gender: String // "male", "female", or "other"
     let dateOfBirth: String // YYYY-MM-DD format
