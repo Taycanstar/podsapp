@@ -33,6 +33,8 @@
 		361FF32F2E2198D100B7F68E /* WorkoutHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */; };
 		361FF3312E21A4C600B7F68E /* WorkoutDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */; };
 		361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */; };
+		361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3342E22E54600B7F68E /* DataSyncService.swift */; };
+		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -307,6 +309,8 @@
 		361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryService.swift; sourceTree = "<group>"; };
 		361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDataManager.swift; sourceTree = "<group>"; };
 		361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
+		361FF3342E22E54600B7F68E /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
+		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -576,6 +580,8 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				361FF3362E22E56A00B7F68E /* DataLayer.swift */,
+				361FF3342E22E54600B7F68E /* DataSyncService.swift */,
 				361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */,
 				361FF3262E20721E00B7F68E /* UserProfileService.swift */,
 				361FF3172E20613F00B7F68E /* WorkoutRecommendationService.swift */,
@@ -1322,6 +1328,7 @@
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
 				36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */,
 				36ED35A72DD5294300D174FB /* HealthDataCard.swift in Sources */,
+				361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */,
 				36ED35E72DDE531A00D174FB /* DescribeMealView.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
@@ -1509,6 +1516,7 @@
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				361FF30D2E1D96E900B7F68E /* BodyweightExercisesView.swift in Sources */,
 				364A83BA2D8F6C6A009D2620 /* RecipeDetailView.swift in Sources */,
+				361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */,
 				3662A55B2DFE5FDA00847487 /* ExerciseDatabase.swift in Sources */,
 				36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */,
 				364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */,
