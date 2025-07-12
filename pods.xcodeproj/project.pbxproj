@@ -32,6 +32,7 @@
 		361FF32D2E21988A00B7F68E /* Equipment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32C2E21988600B7F68E /* Equipment.swift */; };
 		361FF32F2E2198D100B7F68E /* WorkoutHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */; };
 		361FF3312E21A4C600B7F68E /* WorkoutDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */; };
+		361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -305,6 +306,7 @@
 		361FF32C2E21988600B7F68E /* Equipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Equipment.swift; sourceTree = "<group>"; };
 		361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryService.swift; sourceTree = "<group>"; };
 		361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDataManager.swift; sourceTree = "<group>"; };
+		361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -585,6 +587,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */,
 				361FF32C2E21988600B7F68E /* Equipment.swift */,
 				361FF3242E2065E400B7F68E /* Exercise.swift */,
 				361FF3222E2065B600B7F68E /* UserProfile.swift */,
@@ -1485,6 +1488,7 @@
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				361FF3232E2065B900B7F68E /* UserProfile.swift in Sources */,
 				36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */,
+				361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
 				36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */,
 				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,

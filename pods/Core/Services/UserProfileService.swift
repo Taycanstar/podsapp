@@ -7,16 +7,72 @@
 
 import Foundation
 
-class UserProfileService {
+/// Service to manage user profile data and preferences for workout recommendations
+/// Now uses server data as primary source with UserDefaults fallback for backward compatibility
+class UserProfileService: ObservableObject {
     static let shared = UserProfileService()
     
-    private init() {}
+    @Published var profileData: ProfileDataResponse?
+    @Published var isLoading = false
+    @Published var lastUpdated: Date?
     
-    // MARK: - User Profile Data
+    private init() {
+        // Try to load cached profile data on initialization
+        loadCachedProfileData()
+    }
+    
+    // MARK: - Server Data Integration
+    
+    /// Update profile data from server response
+    func updateFromServer(_ data: ProfileDataResponse) {
+        DispatchQueue.main.async {
+            self.profileData = data
+            self.lastUpdated = Date()
+            self.cacheProfileData(data)
+        }
+    }
+    
+    /// Load cached profile data from UserDefaults
+    private func loadCachedProfileData() {
+        if let data = UserDefaults.standard.data(forKey: "cachedProfileData"),
+           let cached = try? JSONDecoder().decode(ProfileDataResponse.self, from: data) {
+            self.profileData = cached
+            
+            // Check if cached data is from today
+            if let timestamp = UserDefaults.standard.object(forKey: "profileDataTimestamp") as? Date,
+               Calendar.current.isDateInToday(timestamp) {
+                self.lastUpdated = timestamp
+            }
+        }
+    }
+    
+    /// Cache profile data to UserDefaults
+    private func cacheProfileData(_ data: ProfileDataResponse) {
+        if let encoded = try? JSONEncoder().encode(data) {
+            UserDefaults.standard.set(encoded, forKey: "cachedProfileData")
+            UserDefaults.standard.set(Date(), forKey: "profileDataTimestamp")
+        }
+    }
+    
+    /// Check if we should refresh data from server
+    var shouldRefreshFromServer: Bool {
+        guard let lastUpdated = lastUpdated else { return true }
+        return !Calendar.current.isDateInToday(lastUpdated)
+    }
+
+    // MARK: - User Profile Data (Server First, UserDefaults Fallback)
     
     // Basic Demographics
     var userAge: Int {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let dobString = UserDefaults.standard.string(forKey: "dateOfBirth"),
+               let dob = ISO8601DateFormatter().date(from: dobString) {
+                return Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 25
+            }
+            
+            // Fallback to UserDefaults
             if let dobString = UserDefaults.standard.string(forKey: "dateOfBirth"),
                let dob = ISO8601DateFormatter().date(from: dobString) {
                 return Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 25
@@ -33,6 +89,13 @@ class UserProfileService {
     // Physical Measurements
     var userHeight: Double {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let heightCm = profileData.heightCm {
+                return heightCm
+            }
+            
+            // Fallback to UserDefaults
             let heightCm = UserDefaults.standard.double(forKey: "heightCentimeters")
             return heightCm > 0 ? heightCm : 175.0 // Default 175cm
         }
@@ -40,14 +103,28 @@ class UserProfileService {
     
     var userWeight: Double {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let weightKg = profileData.currentWeightKg {
+                return weightKg
+            }
+            
+            // Fallback to UserDefaults
             let weightKg = UserDefaults.standard.double(forKey: "weightKilograms")
             return weightKg > 0 ? weightKg : 70.0 // Default 70kg
         }
     }
     
-    // Fitness Profile
+    // Fitness Profile (Server First)
     var fitnessGoal: FitnessGoal {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                return FitnessGoal.from(string: workoutProfile.fitnessGoal)
+            }
+            
+            // Fallback to UserDefaults
             let goalString = UserDefaults.standard.string(forKey: "fitnessGoalType") ?? "strength"
             return FitnessGoal.from(string: goalString)
         }
@@ -58,6 +135,14 @@ class UserProfileService {
     
     var experienceLevel: ExperienceLevel {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                let levelString = workoutProfile.fitnessLevel
+                return ExperienceLevel(rawValue: levelString) ?? .beginner
+            }
+            
+            // Fallback to UserDefaults
             let levelString = UserDefaults.standard.string(forKey: "experienceLevel") ?? "beginner"
             return ExperienceLevel(rawValue: levelString) ?? .beginner
         }
@@ -68,6 +153,14 @@ class UserProfileService {
     
     var workoutFrequency: WorkoutFrequency {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                let freqString = workoutProfile.workoutFrequency
+                return WorkoutFrequency.from(string: freqString)
+            }
+            
+            // Fallback to UserDefaults
             let freqString = UserDefaults.standard.string(forKey: "workoutFrequency") ?? "3x per week"
             return WorkoutFrequency(rawValue: freqString) ?? .three
         }
@@ -76,24 +169,65 @@ class UserProfileService {
         }
     }
     
-    // Workout Preferences
+    // Workout Preferences (Server First)
     var availableTime: Int {
-        get { UserDefaults.standard.integer(forKey: "availableTime") != 0 ? UserDefaults.standard.integer(forKey: "availableTime") : 45 }
+        get {
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                return workoutProfile.preferredWorkoutDuration
+            }
+            
+            // Fallback to UserDefaults
+            return UserDefaults.standard.integer(forKey: "availableTime") != 0 ? UserDefaults.standard.integer(forKey: "availableTime") : 45
+        }
         set { UserDefaults.standard.set(newValue, forKey: "availableTime") }
     }
     
     var workoutLocation: WorkoutLocation {
         get {
-            let locationString = UserDefaults.standard.string(forKey: "workoutLocation") ?? "gym"
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                let locationString = workoutProfile.workoutLocation
+                // Map Fitbod-style values to WorkoutLocation enum or use a string for display
+                return WorkoutLocation(rawValue: locationString.capitalized) ?? .gym
+            }
+            // Fallback to UserDefaults
+            let locationString = UserDefaults.standard.string(forKey: "workoutLocation") ?? "large_gym"
             return WorkoutLocation(rawValue: locationString.capitalized) ?? .gym
         }
         set {
             UserDefaults.standard.set(newValue.rawValue.lowercased(), forKey: "workoutLocation")
         }
     }
+    // Optionally, add a computed property for display:
+    var workoutLocationDisplay: String {
+        if let profileData = profileData,
+           let workoutProfile = profileData.workoutProfile {
+            switch workoutProfile.workoutLocation {
+            case "large_gym": return "Large Gym"
+            case "small_gym": return "Small Gym"
+            case "garage_gym": return "Garage Gym"
+            case "home": return "At Home"
+            case "bodyweight": return "Bodyweight Only"
+            case "custom": return "Custom"
+            default: return "Gym"
+            }
+        }
+        return "Gym"
+    }
     
     var availableEquipment: [Equipment] {
         get {
+            // Try server data first
+            if let profileData = profileData,
+               let workoutProfile = profileData.workoutProfile {
+                let equipmentStrings = workoutProfile.availableEquipment
+                return equipmentStrings.compactMap { Equipment(rawValue: $0) }
+            }
+            
+            // Fallback to UserDefaults
             let equipmentStrings = UserDefaults.standard.stringArray(forKey: "availableEquipment") ?? []
             return equipmentStrings.compactMap { Equipment(rawValue: $0) }
         }
@@ -118,7 +252,7 @@ class UserProfileService {
         get { UserDefaults.standard.array(forKey: "avoidedExercises") as? [Int] ?? [] }
         set { UserDefaults.standard.set(newValue, forKey: "avoidedExercises") }
     }
-    
+
     // MARK: - Workout History & Progress
     
     func getWorkoutHistory() -> [WorkoutHistoryEntry] {
@@ -292,6 +426,23 @@ class UserProfileService {
                     .resistanceBands, .stabilityBall
                 ]
             }
+        }
+    }
+}
+
+// MARK: - Extensions for Server Data Mapping
+
+extension WorkoutFrequency {
+    static func from(string: String) -> WorkoutFrequency {
+        switch string.lowercased() {
+        case "low":
+            return .twice
+        case "medium":
+            return .three
+        case "high":
+            return .five
+        default:
+            return .three
         }
     }
 }

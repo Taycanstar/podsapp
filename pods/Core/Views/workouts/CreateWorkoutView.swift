@@ -297,8 +297,8 @@ struct WorkoutExerciseRow: View {
                         .foregroundColor(.secondary)
                 } else {
                     Text("No sets configured")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
                 }
             }
             

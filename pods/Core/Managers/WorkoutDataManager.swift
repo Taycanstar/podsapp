@@ -153,8 +153,8 @@ class WorkoutDataManager: ObservableObject {
     private func syncPendingData() async {
         guard !isSyncing else { return }
         
-        isSyncing = true
-        syncError = nil
+            isSyncing = true
+            syncError = nil
         
         do {
             // 1. Get local changes
@@ -173,13 +173,13 @@ class WorkoutDataManager: ObservableObject {
             try await localStorage.applyChanges(resolvedChanges)
             try await cloudSync.pushChanges(resolvedChanges)
             
-            lastSyncDate = Date()
+                lastSyncDate = Date()
             
         } catch {
-            syncError = error.localizedDescription
+                syncError = error.localizedDescription
         }
         
-        isSyncing = false
+            isSyncing = false
     }
 }
 
@@ -234,7 +234,7 @@ class WorkoutLocalStorage {
         
         do {
             let workouts = try modelContext.fetch(descriptor)
-            return workouts.map { SyncableWorkoutSession(from: $0) }
+        return workouts.map { SyncableWorkoutSession(from: $0) }
         } catch {
             print("Error fetching unsynced changes: \(error)")
             return []

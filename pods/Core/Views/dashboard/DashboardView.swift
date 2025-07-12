@@ -565,7 +565,7 @@ private var remainingCal: Double { vm.remainingCalories }
     
     // Save function for swipe-to-save functionality
     private func saveMealAction(log: CombinedLog) {
-        print("💾 Saving meal/food log: \(log.id)")
+     
         
         switch log.type {
         case .food:

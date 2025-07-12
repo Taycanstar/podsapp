@@ -3094,7 +3094,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                     }
                     
                     self.hasMoreSavedMeals = response.hasMore
-                    print("✅ Loaded \(response.savedMeals.count) saved meals, savedLogIds now contains: \(self.savedLogIds)")
+
                     
                 case .failure(let error):
                     print("❌ Failed to load saved meals: \(error)")

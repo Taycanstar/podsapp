@@ -375,7 +375,12 @@ class OnboardingViewModel: ObservableObject {
                 case .success(let data):
                     self?.profileData = data
                     self?.updateLocalUserData(from: data)
+                    
+                    // Update UserProfileService with server data
+                    UserProfileService.shared.updateFromServer(data)
+                    
                     print("✅ OnboardingViewModel.fetchProfileData - Success with timezone offset: \(timezoneOffset)")
+                    print("✅ Updated UserProfileService with server data")
                     // No cache timestamp - always fetch fresh data
                 case .failure(let error):
                     self?.profileError = error.localizedDescription
