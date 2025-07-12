@@ -27,6 +27,8 @@ struct WorkoutContainerView: View {
                             .navigationTitle("Select Exercise")
                     case .recentlyAdded:
                         RecentlyAddedView()
+                    case .startWorkout(let todayWorkout):
+                        StartWorkoutView(todayWorkout: todayWorkout)
                     }
                 }
         }
@@ -39,6 +41,43 @@ enum WorkoutNavigationDestination: Hashable {
     case editWorkout(Workout)
     case exerciseSelection
     case recentlyAdded
+    case startWorkout(TodayWorkout)
+    
+    // Implement Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .createWorkout:
+            hasher.combine("createWorkout")
+        case .editWorkout(let workout):
+            hasher.combine("editWorkout")
+            hasher.combine(workout.id)
+        case .exerciseSelection:
+            hasher.combine("exerciseSelection")
+        case .recentlyAdded:
+            hasher.combine("recentlyAdded")
+        case .startWorkout(let todayWorkout):
+            hasher.combine("startWorkout")
+            hasher.combine(todayWorkout.id)
+        }
+    }
+    
+    // Implement Equatable conformance
+    static func == (lhs: WorkoutNavigationDestination, rhs: WorkoutNavigationDestination) -> Bool {
+        switch (lhs, rhs) {
+        case (.createWorkout, .createWorkout):
+            return true
+        case (.editWorkout(let lhsWorkout), .editWorkout(let rhsWorkout)):
+            return lhsWorkout.id == rhsWorkout.id
+        case (.exerciseSelection, .exerciseSelection):
+            return true
+        case (.recentlyAdded, .recentlyAdded):
+            return true
+        case (.startWorkout(let lhsTodayWorkout), .startWorkout(let rhsTodayWorkout)):
+            return lhsTodayWorkout.id == rhsTodayWorkout.id
+        default:
+            return false
+        }
+    }
 }
 
 #Preview {

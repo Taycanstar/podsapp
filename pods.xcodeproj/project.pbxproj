@@ -35,6 +35,7 @@
 		361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */; };
 		361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3342E22E54600B7F68E /* DataSyncService.swift */; };
 		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
+		361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3382E2308F900B7F68E /* StartWorkoutView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -311,6 +312,7 @@
 		361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
 		361FF3342E22E54600B7F68E /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
 		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
+		361FF3382E2308F900B7F68E /* StartWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -690,6 +692,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				361FF3382E2308F900B7F68E /* StartWorkoutView.swift */,
 				361FF32A2E2085EA00B7F68E /* ExerciseDetailView.swift */,
 				361FF3282E20752200B7F68E /* WorkoutCreationView.swift */,
 				3662A54E2DFDE03700847487 /* LogWorkoutView.swift */,
@@ -1358,6 +1361,7 @@
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
+				361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
