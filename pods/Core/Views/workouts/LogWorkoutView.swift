@@ -181,32 +181,6 @@ private struct TodayWorkoutView: View {
             // Add invisible spacing at the top to prevent overlap with header
             Color.clear.frame(height: 4)
             
-            // Generate Today's Workout button if no workout exists
-            if todayWorkout == nil && !isGeneratingWorkout {
-                Button(action: {
-                    generateTodayWorkout()
-                }) {
-                    HStack(spacing: 6) {
-                        Spacer()
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 24))
-                            .foregroundColor(.accentColor)
-                        Text("Generate Today's Workout")
-                            .font(.system(size: 17))
-                            .fontWeight(.semibold)
-                            .foregroundColor(.accentColor)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color("iosfit"))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal)
-                .padding(.top, 0)
-            }
-            
             // Show generation loading
             if isGeneratingWorkout {
                 WorkoutGenerationCard()
@@ -227,7 +201,7 @@ private struct TodayWorkoutView: View {
                 .padding(.horizontal)
             }
             
-            // Empty state when no workout
+            // Empty state when no workout and not generating
             if todayWorkout == nil && !isGeneratingWorkout {
                 VStack(spacing: 16) {
                     Image("blackex")
@@ -235,11 +209,11 @@ private struct TodayWorkoutView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: 200, maxHeight: 200)
                     
-                    Text("Your personalized workout")
+                    Text("Preparing your workout...")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("Get an AI-generated workout tailored to your goals, equipment, and progress.")
+                    Text("We're creating a personalized workout based on your goals and preferences.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -251,8 +225,24 @@ private struct TodayWorkoutView: View {
         .padding(.bottom, 16)
         .background(Color("iosbg2"))
         .onAppear {
-            loadTodayWorkout()
+            loadOrGenerateTodayWorkout()
         }
+    }
+    
+    private func loadOrGenerateTodayWorkout() {
+        // Check if we have a workout for today
+        if let data = UserDefaults.standard.data(forKey: "todayWorkout_\(userEmail)"),
+           let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
+            
+            // Check if the workout is from today
+            if Calendar.current.isDateInToday(workout.date) {
+                todayWorkout = workout
+                return
+            }
+        }
+        
+        // No workout for today, generate one automatically
+        generateTodayWorkout()
     }
     
     private func generateTodayWorkout() {
@@ -345,18 +335,6 @@ private struct TodayWorkoutView: View {
             return 60 // 1 minute
         default:
             return 90 // 1.5 minutes
-        }
-    }
-    
-    private func loadTodayWorkout() {
-        // Check if we have a workout for today
-        if let data = UserDefaults.standard.data(forKey: "todayWorkout_\(userEmail)"),
-           let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
-            
-            // Check if the workout is from today
-            if Calendar.current.isDateInToday(workout.date) {
-                todayWorkout = workout
-            }
         }
     }
     

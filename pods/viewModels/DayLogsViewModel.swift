@@ -54,6 +54,11 @@ final class DayLogsViewModel: ObservableObject {
     self.healthViewModel = healthViewModel
     // Clear any stale cached logs when initializing
     clearPendingCache()
+    
+    // Load nutrition goals if email is provided
+    if !email.isEmpty {
+      fetchNutritionGoals()
+    }
   }
 
   func setEmail(_ newEmail: String) {
@@ -65,6 +70,14 @@ final class DayLogsViewModel: ObservableObject {
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
     self.healthViewModel = healthViewModel
+  }
+
+  // MARK: - Public Methods
+  
+  /// Force refresh nutrition goals from UserDefaults
+  /// This ensures the ViewModel has the most up-to-date values
+  func refreshNutritionGoals() {
+    fetchNutritionGoals()
   }
 
 

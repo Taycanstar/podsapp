@@ -157,12 +157,51 @@ struct GoalProgress: View {
             }
         }
         .onAppear {
-            // Initialize fields with current values
-            calorieGoal = String(Int(vm.calorieGoal))
-            proteinGoal = String(Int(vm.proteinGoal))
-            carbsGoal = String(Int(vm.carbsGoal))
-            fatGoal = String(Int(vm.fatGoal))
+            // Load values directly from UserDefaults to ensure we get the most up-to-date saved values
+            // This prevents showing default values after app restart
+            loadGoalsFromUserDefaults()
         }
+    }
+    
+    // Load goals directly from UserDefaults instead of relying on ViewModel
+    private func loadGoalsFromUserDefaults() {
+        // Try to load from the nutritionGoalsData key first (most up-to-date)
+        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
+            
+            print("✅ GoalProgress: Loaded goals from UserDefaults nutritionGoalsData")
+            calorieGoal = String(Int(goals.calories))
+            proteinGoal = String(Int(goals.protein))
+            carbsGoal = String(Int(goals.carbs))
+            fatGoal = String(Int(goals.fat))
+            
+            // Also update the ViewModel to ensure consistency
+            vm.calorieGoal = goals.calories
+            vm.proteinGoal = goals.protein
+            vm.carbsGoal = goals.carbs
+            vm.fatGoal = goals.fat
+            
+        } else {
+            // Fallback to UserGoalsManager if nutritionGoalsData is not available
+            let userGoals = UserGoalsManager.shared.dailyGoals
+            print("⚠️ GoalProgress: Fallback to UserGoalsManager defaults")
+            
+            calorieGoal = String(userGoals.calories)
+            proteinGoal = String(userGoals.protein)
+            carbsGoal = String(userGoals.carbs)
+            fatGoal = String(userGoals.fat)
+            
+            // Also update the ViewModel to ensure consistency
+            vm.calorieGoal = Double(userGoals.calories)
+            vm.proteinGoal = Double(userGoals.protein)
+            vm.carbsGoal = Double(userGoals.carbs)
+            vm.fatGoal = Double(userGoals.fat)
+        }
+        
+        // Recalculate remaining calories to ensure UI consistency
+        vm.remainingCalories = max(0, vm.calorieGoal - vm.totalCalories)
+        
+        print("📊 GoalProgress: Loaded values - Calories: \(calorieGoal), Protein: \(proteinGoal)g, Carbs: \(carbsGoal)g, Fat: \(fatGoal)g")
     }
     
     // Save goals to backend
@@ -222,6 +261,10 @@ struct GoalProgress: View {
                     carbs: Int(response.goals.carbs),
                     fat: Int(response.goals.fat)
                 )
+                
+                // Post notification to refresh dashboard and other views
+                NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
+                print("🔄 Posted LogsChangedNotification after goal update")
                 
                 // Dismiss the view
                 dismiss()
@@ -286,6 +329,10 @@ struct GoalProgress: View {
                     carbs: Int(response.goals.carbs),
                     fat: Int(response.goals.fat)
                 )
+                
+                // Post notification to refresh dashboard and other views
+                NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
+                print("🔄 Posted LogsChangedNotification after goal generation")
                 
             case .failure(let error):
                 if let networkError = error as? NetworkManagerTwo.NetworkError {

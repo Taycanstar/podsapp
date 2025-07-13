@@ -230,8 +230,8 @@ private var remainingCal: Double { vm.remainingCalories }
                                         }
                                     }
                                 } label: {
-                                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                                        .font(.system(size: 20))
+                                    Image(systemName: "arrow.up.arrow.down")
+                                        .font(.system(size: 17))
                                         .foregroundColor(.primary)
                                 }
                             }
@@ -1319,6 +1319,10 @@ private extension DashboardView {
             } else if vm.email.isEmpty {
                 print("🔄 DashboardView - Setting initial email '\(currentEmail)' in DayLogsViewModel")
                 vm.setEmail(currentEmail)
+            } else {
+                // Email is already set correctly, but ensure nutrition goals are up-to-date
+                print("🔄 DashboardView - Email already set, refreshing nutrition goals")
+                vm.refreshNutritionGoals()
             }
             
             // Set up HealthKitViewModel connection

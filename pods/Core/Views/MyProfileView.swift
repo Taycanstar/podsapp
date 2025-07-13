@@ -100,7 +100,7 @@ struct MyProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: ProfileView(isAuthenticated: $isAuthenticated)) {
-                        Image(systemName: "gearshape")
+                        Image(systemName: "line.3.horizontal")
                             .font(.system(size: 18))
                             .foregroundColor(.primary)
                     }
