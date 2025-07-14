@@ -57,12 +57,9 @@ class WeightSyncService: ObservableObject {
         
         print("🔍 WeightSyncService: Starting sync debug...")
         print("  - HealthKit available: \(healthKitManager.isHealthDataAvailable)")
-        print("  - HealthKit authorized: \(healthKitManager.isAuthorized)")
         
-        guard healthKitManager.isAuthorized && healthKitManager.isHealthDataAvailable else {
-            print("⚠️ WeightSyncService: HealthKit not authorized or available")
-            print("  - isAuthorized: \(healthKitManager.isAuthorized)")
-            print("  - isHealthDataAvailable: \(healthKitManager.isHealthDataAvailable)")
+        guard healthKitManager.isHealthDataAvailable else {
+            print("⚠️ WeightSyncService: HealthKit not available on this device")
             return
         }
         
@@ -77,24 +74,13 @@ class WeightSyncService: ObservableObject {
         syncError = nil
         
         do {
-            // Determine sync start date (last sync or 30 days ago)
-            // For first-time sync or when no weights have been synced, always look back 30 days
-            let syncedIDs = getSyncedWeightIDs()
-            let isFirstTimeSync = syncedIDs.isEmpty
-            
-            let syncStartDate: Date
-            if isFirstTimeSync {
-                // First time sync - always look back 30 days regardless of stored date
-                syncStartDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-                print("📅 WeightSyncService: First-time sync - looking back 30 days")
-            } else {
-                // Subsequent sync - use last sync date
-                syncStartDate = lastSyncDate ?? Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-            }
+            // FIXED: Always check last 7 days to ensure we don't miss any weights
+            // The previous logic with lastSyncDate was causing weights to be missed
+            let syncStartDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             
             print("📅 WeightSyncService: Sync start date: \(syncStartDate)")
-            print("📅 WeightSyncService: Last sync date: \(lastSyncDate?.description ?? "never")")
-            print("📅 WeightSyncService: Is first-time sync: \(isFirstTimeSync) (synced IDs: \(syncedIDs.count))")
+            print("📅 WeightSyncService: Current time: \(Date())")
+            print("📅 WeightSyncService: Last sync date was: \(lastSyncDate?.description ?? "never")")
             
             // Fetch Apple Health weight entries
             let appleHealthWeights = try await fetchAppleHealthWeights(since: syncStartDate)
@@ -180,21 +166,30 @@ class WeightSyncService: ObservableObject {
         
         print("🔍 WeightSyncService: Checking for new weights...")
         print("  - HealthKit available: \(healthKitManager.isHealthDataAvailable)")
-        print("  - HealthKit authorized: \(healthKitManager.isAuthorized)")
         
-        guard healthKitManager.isAuthorized && healthKitManager.isHealthDataAvailable else {
-            print("❌ WeightSyncService: HealthKit not authorized or available for hasNewWeightsToSync")
+        guard healthKitManager.isHealthDataAvailable else {
+            print("❌ WeightSyncService: HealthKit not available on this device")
             return false
         }
         
         do {
-            let syncStartDate = lastSyncDate ?? Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+            // DEBUG: Always check last 24 hours instead of using lastSyncDate
+            // The lastSyncDate logic is flawed and causes weights to be missed
+            let syncStartDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
             print("📅 WeightSyncService: Checking for weights since: \(syncStartDate)")
+            print("📅 WeightSyncService: Current time: \(Date())")
+            print("📅 WeightSyncService: Last sync date was: \(lastSyncDate?.description ?? "never")")
             
             // Call the new, simple async function
             let weights = try await healthKitManager.fetchWeightEntriesSince(syncStartDate)
             
-            print("⚖️ WeightSyncService: Found \(weights.count) new weights since last sync")
+            print("⚖️ WeightSyncService: Found \(weights.count) weights in last 24 hours")
+            
+            // Debug: Print all weights found
+            for (index, weight) in weights.enumerated() {
+                print("  - Weight \(index + 1): \(weight.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo)))kg from \(weight.sourceRevision.source.name) at \(weight.startDate)")
+            }
+            
             return !weights.isEmpty
         } catch {
             print("❌ WeightSyncService: Error checking for new weights: \(error)")
@@ -522,6 +517,17 @@ class WeightSyncService: ObservableObject {
     private func updateLastSyncDate() {
         lastSyncDate = Date()
         UserDefaults.standard.set(lastSyncDate, forKey: lastSyncDateKey)
+    }
+    
+    // MARK: - Debug Methods
+    
+    /// Reset sync state for debugging (clears last sync date and synced IDs)
+    func resetSyncState() {
+        print("🔄 WeightSyncService: Resetting sync state")
+        lastSyncDate = nil
+        UserDefaults.standard.removeObject(forKey: lastSyncDateKey)
+        UserDefaults.standard.removeObject(forKey: syncedWeightIDsKey)
+        print("✅ WeightSyncService: Sync state reset - next sync will check all weights")
     }
 }
 

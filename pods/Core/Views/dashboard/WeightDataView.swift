@@ -328,8 +328,8 @@ struct WeightDataView: View {
                     await MainActor.run {
                         showSyncIndicator = hasNewWeights
                         
-                        // Auto-sync if user has HealthKit enabled and there are new weights
-                        if hasNewWeights && HealthKitManager.shared.isAuthorized {
+                        // Auto-sync if user has HealthKit available and there are new weights
+                        if hasNewWeights && HealthKitManager.shared.isHealthDataAvailable {
                             print("🍎 Auto-syncing Apple Health weights")
                             Task {
                                 await weightSyncService.syncAppleHealthWeights()
@@ -488,22 +488,33 @@ struct WeightDataView: View {
                     
                     Spacer()
                     
-                    Button(action: {
-                        Task {
-                            await weightSyncService.syncAppleHealthWeights()
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            Task {
+                                await weightSyncService.syncAppleHealthWeights()
+                            }
+                        }) {
+                            if weightSyncService.isSyncing {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .tint(.blue)
+                            } else {
+                                Image(systemName: showSyncIndicator ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath.circle")
+                                    .foregroundColor(.blue)
+                                    .font(.system(size: 20))
+                            }
                         }
-                    }) {
-                        if weightSyncService.isSyncing {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .tint(.blue)
-                        } else {
-                            Image(systemName: showSyncIndicator ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath.circle")
-                                .foregroundColor(.blue)
-                                .font(.system(size: 20))
+                        .disabled(weightSyncService.isSyncing || !HealthKitManager.shared.isHealthDataAvailable)
+                        
+                        // DEBUG: Reset sync state button
+                        Button(action: {
+                            weightSyncService.resetSyncState()
+                        }) {
+                            Image(systemName: "trash.circle")
+                                .foregroundColor(.red)
+                                .font(.system(size: 16))
                         }
                     }
-                    .disabled(weightSyncService.isSyncing || !HealthKitManager.shared.isAuthorized)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

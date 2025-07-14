@@ -172,7 +172,7 @@ struct EditWeightView: View {
         }
         .safeAreaInset(edge: .bottom) {
             // Apple Health sync tip
-            if HealthKitManager.shared.isHealthDataAvailable && HealthKitManager.shared.isAuthorized && showAppleHealthTip {
+            if HealthKitManager.shared.isHealthDataAvailable && showAppleHealthTip {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Image(systemName: "heart.text.square")
@@ -221,7 +221,6 @@ struct EditWeightView: View {
             
             // Show Apple Health tip if user hasn't seen it and HealthKit is available
             if HealthKitManager.shared.isHealthDataAvailable && 
-               HealthKitManager.shared.isAuthorized && 
                !UserDefaults.standard.bool(forKey: "hasSeenAppleHealthWeightTip") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     showAppleHealthTip = true
