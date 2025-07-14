@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import HealthKit
 
 struct WeightDataView: View {
     enum Timeframe: String, CaseIterable {
@@ -51,6 +52,11 @@ struct WeightDataView: View {
     @State private var loadedImages: [String: UIImage] = [:]
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var viewModel: OnboardingViewModel
+    
+    // Apple Health sync integration
+    @StateObject private var weightSyncService = WeightSyncService.shared
+    @State private var showSyncIndicator = false
+    @State private var hasCheckedForNewWeights = false
     
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -123,18 +129,55 @@ struct WeightDataView: View {
             // History section
             if !allLogs.isEmpty && errorMessage == nil {
                 Section {
-                    // History header
-                    HStack {
-                        Text("History")
-                            .font(.title)
-                            .foregroundColor(.primary)
-                            .fontWeight(.bold)
+                    // History header with summary
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("History")
+                                .font(.title)
+                                .foregroundColor(.primary)
+                                .fontWeight(.bold)
+                                .padding()
+                            
+                            Spacer()
+                            
+                            compareButton
+                        }
                         
-                        Spacer()
-                        
-                        compareButton
+                        // Summary of logs
+                        HStack {
+                            let appleHealthCount = allLogs.filter { $0.notes?.contains("Apple Health") == true || $0.notes?.contains("Withings") == true }.count
+                            let manualCount = allLogs.count - appleHealthCount
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "heart.text.square")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.pink)
+                                Text("\(appleHealthCount) Apple Health")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.pink)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.pink.opacity(0.1))
+                            .cornerRadius(6)
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.blue)
+                                Text("\(manualCount) Manual")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -142,11 +185,59 @@ struct WeightDataView: View {
                 
                 // History logs with swipe-to-delete and pagination
                 ForEach(Array(allLogs.enumerated()), id: \.element.id) { index, log in
-                    if let date = dateFormatter.date(from: log.dateLogged) {
+                    if let date = parseDate(log.dateLogged) {
                         VStack(spacing: 0) {
                             WeightLogRowView(
                                 log: log,
                                 date: date,
+                                isCompareMode: isCompareMode,
+                                isSelected: selectedLogsForComparison.contains(log.id),
+                                loadedImages: loadedImages,
+                                onToggleSelection: { toggleLogSelection(log.id) },
+                                onPhotoTap: { photoUrl in
+                                    if let cachedImage = loadedImages[photoUrl] {
+                                        fullScreenImage = cachedImage
+                                        fullScreenPhotoUrl = ""
+                                    } else {
+                                        fullScreenPhotoUrl = photoUrl
+                                        fullScreenImage = nil
+                                    }
+                                    showingFullScreenPhoto = true
+                                },
+                                onCameraTap: { selectedLogForEdit = log },
+                                onRowTap: {
+                                    if isCompareMode {
+                                        toggleLogSelection(log.id)
+                                    } else {
+                                        selectedLogForEdit = log
+                                    }
+                                },
+                                onImageLoaded: { url, image in
+                                    loadedImages[url] = image
+                                }
+                            )
+                            .onAppear {
+                                // Load more logs when approaching the end of the list
+                                if index >= allLogs.count - 5 && hasMoreLogs && !isLoadingMore {
+                                    loadMoreLogs()
+                                }
+                            }
+                            
+                            // Add divider except for the last item
+                            if index < allLogs.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
+                            }
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    } else {
+                        // Show logs with unparseable dates too, but with a placeholder date
+                        VStack(spacing: 0) {
+                            WeightLogRowView(
+                                log: log,
+                                date: Date(), // Fallback to current date
                                 isCompareMode: isCompareMode,
                                 isSelected: selectedLogsForComparison.contains(log.id),
                                 loadedImages: loadedImages,
@@ -228,6 +319,25 @@ struct WeightDataView: View {
         .onAppear {
             loadInitialLogs()
             isTabBarVisible.wrappedValue = false
+            
+            // Check for new Apple Health weights to sync
+            if !hasCheckedForNewWeights {
+                hasCheckedForNewWeights = true
+                Task {
+                    let hasNewWeights = await weightSyncService.hasNewWeightsToSync()
+                    await MainActor.run {
+                        showSyncIndicator = hasNewWeights
+                        
+                        // Auto-sync if user has HealthKit enabled and there are new weights
+                        if hasNewWeights && HealthKitManager.shared.isAuthorized {
+                            print("🍎 Auto-syncing Apple Health weights")
+                            Task {
+                                await weightSyncService.syncAppleHealthWeights()
+                            }
+                        }
+                    }
+                }
+            }
         }
         .onDisappear {
             isTabBarVisible.wrappedValue = true
@@ -243,6 +353,26 @@ struct WeightDataView: View {
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogUpdatedNotification"))) { notification in
             // Refresh data when a weight log is updated
             refreshFromNetwork()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppleHealthWeightSynced"))) { _ in
+            // Refresh data when Apple Health weights are synced
+            print("🍎 Apple Health weights synced - refreshing weight data")
+            showSyncIndicator = false
+            
+            // Add a small delay to ensure database transaction is committed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                print("🍎 Delayed refresh starting...")
+                refreshFromNetwork()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HealthKitPermissionsChanged"))) { _ in
+            // Check for new weights when HealthKit permissions change
+            Task {
+                let hasNewWeights = await weightSyncService.hasNewWeightsToSync()
+                await MainActor.run {
+                    showSyncIndicator = hasNewWeights
+                }
+            }
         }
         .sheet(isPresented: $showingEditSheet) {
             EditWeightView()
@@ -316,17 +446,74 @@ struct WeightDataView: View {
     }
     
     private var timeframePickerView: some View {
-        Picker("Timeframe", selection: $timeframe) {
-            ForEach(Timeframe.allCases, id: \.self) { tf in
-                Text(tf.rawValue)
-                    .tag(tf)
+        VStack(spacing: 12) {
+            // Timeframe picker
+            Picker("Timeframe", selection: $timeframe) {
+                ForEach(Timeframe.allCases, id: \.self) { tf in
+                    Text(tf.rawValue)
+                        .tag(tf)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: timeframe) { _ in
+                filterLogs()
+            }
+            
+            // Apple Health sync section
+            if HealthKitManager.shared.isHealthDataAvailable {
+                HStack {
+                    Image(systemName: "heart.text.square")
+                        .foregroundColor(.pink)
+                        .font(.system(size: 16))
+                    
+                    if weightSyncService.isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Syncing Apple Health...")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    } else if showSyncIndicator {
+                        Text("New Apple Health data available")
+                            .font(.system(size: 14))
+                            .foregroundColor(.blue)
+                    } else if let lastSync = weightSyncService.lastSyncDate {
+                        Text("Last synced \(formatSyncDate(lastSync))")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Apple Health sync available")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        Task {
+                            await weightSyncService.syncAppleHealthWeights()
+                        }
+                    }) {
+                        if weightSyncService.isSyncing {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .tint(.blue)
+                        } else {
+                            Image(systemName: showSyncIndicator ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath.circle")
+                                .foregroundColor(.blue)
+                                .font(.system(size: 20))
+                        }
+                    }
+                    .disabled(weightSyncService.isSyncing || !HealthKitManager.shared.isAuthorized)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color("iosnp").opacity(0.7))
+                .cornerRadius(8)
+                
+
             }
         }
-        .pickerStyle(SegmentedPickerStyle())
         .padding(.horizontal)
-        .onChange(of: timeframe) { _ in
-            filterLogs()
-        }
     }
     
     private var averageWeightView: some View {
@@ -556,6 +743,45 @@ struct WeightDataView: View {
         return formatter.string(from: date)
     }
     
+    // Helper function to parse dates robustly
+    private func parseDate(_ dateString: String) -> Date? {
+        // Try ISO8601 with fractional seconds first
+        let iso8601WithFractional = ISO8601DateFormatter()
+        iso8601WithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso8601WithFractional.date(from: dateString) {
+            return date
+        }
+        
+        // Try ISO8601 without fractional seconds
+        let iso8601 = ISO8601DateFormatter()
+        iso8601.formatOptions = [.withInternetDateTime]
+        if let date = iso8601.date(from: dateString) {
+            return date
+        }
+        
+        // Try other common formats
+        let formatters = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        ]
+        
+        for formatString in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = formatString
+            if let date = formatter.date(from: dateString) {
+                print("✅ Parsed date '\(dateString)' with format: \(formatString)")
+                return date
+            }
+        }
+        
+        print("❌ Failed to parse date: '\(dateString)'")
+        return nil
+    }
+    
     // Helper function to format dates for history section
     private func formatDateForHistory(_ date: Date) -> String {
         let calendar = Calendar.current
@@ -588,7 +814,7 @@ struct WeightDataView: View {
         case .week:
             // For week, show individual data points
             for log in logs {
-                if let date = dateFormatter.date(from: log.dateLogged) {
+                if let date = parseDate(log.dateLogged) {
                     result.append(ChartDataPoint(
                         date: date, 
                         weightKg: log.weightKg,
@@ -602,15 +828,15 @@ struct WeightDataView: View {
             let calendar = Calendar.current
             var dayGroups: [Date: [Double]] = [:]
             
-                            for log in logs {
-                    if let date = dateFormatter.date(from: log.dateLogged) {
-                        let day = calendar.startOfDay(for: date)
-                        if dayGroups[day] == nil {
-                            dayGroups[day] = []
-                        }
-                        dayGroups[day]?.append(log.weightKg)
+                                        for log in logs {
+                if let date = parseDate(log.dateLogged) {
+                    let day = calendar.startOfDay(for: date)
+                    if dayGroups[day] == nil {
+                        dayGroups[day] = []
                     }
+                    dayGroups[day]?.append(log.weightKg)
                 }
+            }
                 
                 for (day, weights) in dayGroups {
                     let avgWeightKg = weights.reduce(0, +) / Double(weights.count)
@@ -627,7 +853,7 @@ struct WeightDataView: View {
             var weekGroups: [Date: [Double]] = [:]
             
             for log in logs {
-                if let date = dateFormatter.date(from: log.dateLogged) {
+                if let date = parseDate(log.dateLogged) {
                     let weekOfYear = calendar.component(.weekOfYear, from: date)
                     let year = calendar.component(.year, from: date)
                     
@@ -658,7 +884,7 @@ struct WeightDataView: View {
             var monthGroups: [Date: [Double]] = [:]
             
             for log in logs {
-                if let date = dateFormatter.date(from: log.dateLogged) {
+                if let date = parseDate(log.dateLogged) {
                     let components = calendar.dateComponents([.year, .month], from: date)
                     guard let firstDayOfMonth = calendar.date(from: components) else {
                         continue
@@ -738,13 +964,13 @@ struct WeightDataView: View {
         let cutoff = Calendar.current.date(byAdding: .day, value: -timeframe.days, to: Date()) ?? Date()
         
         logs = allLogs.filter { log in
-            if let date = dateFormatter.date(from: log.dateLogged) {
+            if let date = parseDate(log.dateLogged) {
                 return date >= cutoff
             }
             return false
         }.sorted { log1, log2 in
-            guard let d1 = dateFormatter.date(from: log1.dateLogged),
-                  let d2 = dateFormatter.date(from: log2.dateLogged) else { return false }
+            guard let d1 = parseDate(log1.dateLogged),
+                  let d2 = parseDate(log2.dateLogged) else { return false }
             return d1 > d2
         }
         
@@ -871,10 +1097,16 @@ struct WeightDataView: View {
             isLoadingMore = true
         }
         
+        // Use larger limit for refresh to ensure we get all logs including newly synced ones
+        let fetchLimit = refresh ? 100 : pageSize
+        let fetchOffset = refresh ? 0 : (pageToLoad - 1) * pageSize
+        
+        print("🔍 WeightDataView: Fetching logs with limit=\(fetchLimit), offset=\(fetchOffset), refresh=\(refresh)")
+        
         NetworkManagerTwo.shared.fetchWeightLogs(
             userEmail: email, 
-            limit: pageSize, 
-            offset: (pageToLoad - 1) * pageSize
+            limit: fetchLimit, 
+            offset: fetchOffset
         ) { result in
             DispatchQueue.main.async {
                 if refresh {
@@ -887,17 +1119,35 @@ struct WeightDataView: View {
                 case .success(let response):
                     self.errorMessage = nil
                     
+                    // DEBUG: Enhanced logging for sync debugging
+                    print("🔍 WeightDataView: Received \(response.logs.count) logs from API")
+                    print("🔍 WeightDataView: Log IDs received: \(response.logs.map { $0.id })")
+                    
+                    // Count Apple Health vs manual logs
+                    let appleHealthLogs = response.logs.filter { $0.notes?.contains("Apple Health") == true || $0.notes?.contains("Withings") == true }
+                    let manualLogs = response.logs.filter { $0.notes?.contains("Apple Health") != true && $0.notes?.contains("Withings") != true }
+                    print("🔍 WeightDataView: Apple Health logs: \(appleHealthLogs.count), Manual logs: \(manualLogs.count)")
+                    
                     // Cache the response
                     self.cacheLogs(response, forPage: pageToLoad)
                     
                     if refresh {
                         // Replace all logs with new ones (newest first)
                         self.allLogs = response.logs.sorted { log1, log2 in
-                            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
-                                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
+                            guard let d1 = self.parseDate(log1.dateLogged),
+                                  let d2 = self.parseDate(log2.dateLogged) else { return false }
                             return d1 > d2
                         }
                         self.currentPage = 2
+                        print("🔍 WeightDataView: After refresh, allLogs count: \(self.allLogs.count)")
+                        
+                        // Debug: Show first few logs with their details
+                        print("🔍 WeightDataView: First 10 logs after refresh:")
+                        for (index, log) in self.allLogs.prefix(10).enumerated() {
+                            let isAppleHealth = log.notes?.contains("Apple Health") == true || log.notes?.contains("Withings") == true
+                            let source = isAppleHealth ? "Apple Health" : "Manual"
+                            print("  \(index + 1). ID: \(log.id), Weight: \(log.weightKg)kg, Date: \(log.dateLogged), Source: \(source)")
+                        }
                     } else {
                         // Append new logs, avoiding duplicates
                         let newLogs = response.logs.filter { newLog in
@@ -907,8 +1157,8 @@ struct WeightDataView: View {
                         }
                         
                         let sortedNewLogs = newLogs.sorted { log1, log2 in
-                            guard let d1 = self.dateFormatter.date(from: log1.dateLogged),
-                                  let d2 = self.dateFormatter.date(from: log2.dateLogged) else { return false }
+                            guard let d1 = self.parseDate(log1.dateLogged),
+                                  let d2 = self.parseDate(log2.dateLogged) else { return false }
                             return d1 > d2
                         }
                         
@@ -968,10 +1218,24 @@ struct WeightDataView: View {
         selectedDataPoint = closestPoint
     }
     
-    // Helper to get the date range of the current dataset
+        // Helper to get the date range of the current dataset
     private func getDateRange() -> (Date?, Date?) {
         let sortedPoints = groupedLogsForChart().sorted { $0.date < $1.date }
         return (sortedPoints.first?.date, sortedPoints.last?.date)
+    }
+    
+    // Helper to format sync date
+    private func formatSyncDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        if Calendar.current.isDateInToday(date) {
+            formatter.dateFormat = "h:mm a"
+            return "today at \(formatter.string(from: date))"
+        } else if Calendar.current.isDateInYesterday(date) {
+            return "yesterday"
+        } else {
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: date)
+        }
     }
 }
 
@@ -1032,10 +1296,28 @@ struct WeightLogRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                // Weight in appropriate units
-                Text(formatWeightDisplay())
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
+                // Weight in appropriate units with Apple Health indicator
+                HStack(spacing: 8) {
+                    Text(formatWeightDisplay())
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    // Show Apple Health indicator if this log came from Apple Health
+                    if let notes = log.notes, (notes.contains("Apple Health") || notes.contains("Withings")) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "heart.text.square")
+                                .font(.system(size: 12))
+                                .foregroundColor(.pink)
+                            Text("Apple Health")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.pink)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.pink.opacity(0.1))
+                        .cornerRadius(4)
+                    }
+                }
                 
                 Text(formatDateForHistory(date))
                     .font(.system(size: 14))

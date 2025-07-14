@@ -26,6 +26,10 @@ struct EditWeightView: View {
     // Completion handler to navigate after saving
     var onWeightSaved: (() -> Void)?
     
+    // Apple Health sync awareness
+    @StateObject private var weightSyncService = WeightSyncService.shared
+    @State private var showAppleHealthTip = false
+    
     // Computed properties for unit display
     private var weightUnit: String {
         switch viewModel.unitsSystem {
@@ -166,6 +170,38 @@ struct EditWeightView: View {
                 .disabled(weightText.isEmpty)
             )
         }
+        .safeAreaInset(edge: .bottom) {
+            // Apple Health sync tip
+            if HealthKitManager.shared.isHealthDataAvailable && HealthKitManager.shared.isAuthorized && showAppleHealthTip {
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "heart.text.square")
+                            .foregroundColor(.pink)
+                            .font(.system(size: 16))
+                        
+                        Text("Weight data from your scale automatically syncs from Apple Health")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.leading)
+                        
+                        Spacer()
+                        
+                        Button("Dismiss") {
+                            showAppleHealthTip = false
+                            UserDefaults.standard.set(true, forKey: "hasSeenAppleHealthWeightTip")
+                        }
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color("iosnp"))
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                }
+                .background(Color("iosbg"))
+            }
+        }
         .onAppear {
             // Initialize with current weight if available
             if vm.weight > 0 {
@@ -181,6 +217,15 @@ struct EditWeightView: View {
             // Automatically focus the weight field to show numpad
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isWeightFieldFocused = true
+            }
+            
+            // Show Apple Health tip if user hasn't seen it and HealthKit is available
+            if HealthKitManager.shared.isHealthDataAvailable && 
+               HealthKitManager.shared.isAuthorized && 
+               !UserDefaults.standard.bool(forKey: "hasSeenAppleHealthWeightTip") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showAppleHealthTip = true
+                }
             }
         }
         .fullScreenCover(isPresented: $showingProgressCamera) {

@@ -27,7 +27,21 @@ class HealthKitManager {
     
     // Check if user has authorized HealthKit access
     var isAuthorized: Bool {
-        return UserDefaults.standard.bool(forKey: "healthKitEnabled")
+        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        
+        // Check UserDefaults first - if user explicitly disabled it, respect that
+        let userDefaultsEnabled = UserDefaults.standard.bool(forKey: "healthKitEnabled")
+        guard userDefaultsEnabled else { return false }
+        
+        // IMPORTANT: Apple Health authorization status is unreliable
+        // Even when it shows "denied" (status 1), data queries often work
+        // So we'll assume it's authorized if UserDefaults says so
+        
+        print("🔍 HealthKit Authorization Check:")
+        print("  - UserDefaults enabled: \(userDefaultsEnabled)")
+        print("  - Final result: \(userDefaultsEnabled) (ignoring unreliable auth status)")
+        
+        return userDefaultsEnabled
     }
     
     private init() {}
@@ -313,21 +327,25 @@ class HealthKitManager {
     
     // Fetch step count for a specific date
     func fetchStepCount(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
-        let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Step count type not available"]))
+            return
+        }
         
-        let predicate = createDayPredicate(for: date)
-        let query = HKStatisticsQuery(
-            quantityType: stepsQuantityType,
-            quantitySamplePredicate: predicate,
-            options: .cumulativeSum
-        ) { _, result, error in
-            guard let result = result, let sum = result.sumQuantity() else {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
+            if let error = error {
                 completion(nil, error)
                 return
             }
             
-            let steps = sum.doubleValue(for: HKUnit.count())
-            completion(steps, nil)
+            let stepCount = result?.sumQuantity()?.doubleValue(for: HKUnit.count()) ?? 0
+            completion(stepCount, nil)
         }
         
         healthStore.execute(query)
@@ -658,6 +676,76 @@ class HealthKitManager {
         }
         
         healthStore.execute(query)
+    }
+    
+    // MARK: - Weight Data Methods
+    
+    /// Fetch the most recent weight entry from HealthKit
+    func fetchMostRecentWeight(completion: @escaping (Double?, Date?, Error?) -> Void) {
+        guard let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
+            completion(nil, nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Weight type not available"]))
+            return
+        }
+        
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(sampleType: weightType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, error in
+            if let error = error {
+                completion(nil, nil, error)
+                return
+            }
+            
+            guard let weightSample = samples?.first as? HKQuantitySample else {
+                completion(nil, nil, nil)
+                return
+            }
+            
+            let weightInKg = weightSample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
+            completion(weightInKg, weightSample.endDate, nil)
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    /// Fetch weight entries from HealthKit for a date range
+    func fetchWeightEntries(from startDate: Date, to endDate: Date, completion: @escaping ([HKQuantitySample]?, Error?) -> Void) {
+        guard let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Weight type not available"]))
+            return
+        }
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let query = HKSampleQuery(sampleType: weightType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { _, samples, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+            
+            let weightSamples = samples?.compactMap { $0 as? HKQuantitySample } ?? []
+            completion(weightSamples, nil)
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    /// Fetch weight entries from HealthKit since a specific date
+    func fetchWeightEntriesSince(_ date: Date, completion: @escaping ([HKQuantitySample]?, Error?) -> Void) {
+        let endDate = Date()
+        fetchWeightEntries(from: date, to: endDate, completion: completion)
+    }
+    
+    /// A modern async version of `fetchWeightEntriesSince`
+    func fetchWeightEntriesSince(_ date: Date) async throws -> [HKQuantitySample] {
+        try await withCheckedThrowingContinuation { continuation in
+            fetchWeightEntriesSince(date) { samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: samples ?? [])
+                }
+            }
+        }
     }
     
     // MARK: - Helper Methods

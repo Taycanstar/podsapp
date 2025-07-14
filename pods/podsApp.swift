@@ -31,6 +31,8 @@ struct podsApp: App {
     @StateObject private var dataLayer = DataLayer.shared
     @StateObject private var dataSyncService = DataSyncService.shared
     
+    // Apple Health weight sync service
+    @StateObject private var weightSyncService = WeightSyncService.shared
       
 
     var body: some Scene {
@@ -61,6 +63,14 @@ struct podsApp: App {
                 .onAppear{
                     NetworkManager().determineUserLocation()
                     initializeDataArchitecture()
+                }
+                .onChange(of: scenePhase) { newPhase in
+                    if newPhase == .active {
+                        // Trigger Apple Health weight sync when app becomes active
+                        Task {
+                            await weightSyncService.syncAppleHealthWeights()
+                        }
+                    }
                 }
                 .onOpenURL { url in
                                   deepLinkHandler.handle(url: url)

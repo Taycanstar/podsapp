@@ -36,6 +36,7 @@
 		361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3342E22E54600B7F68E /* DataSyncService.swift */; };
 		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
 		361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3382E2308F900B7F68E /* StartWorkoutView.swift */; };
+		361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -313,6 +314,7 @@
 		361FF3342E22E54600B7F68E /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
 		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
 		361FF3382E2308F900B7F68E /* StartWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutView.swift; sourceTree = "<group>"; };
+		361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightSyncService.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -582,6 +584,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */,
 				361FF3362E22E56A00B7F68E /* DataLayer.swift */,
 				361FF3342E22E54600B7F68E /* DataSyncService.swift */,
 				361FF32E2E2198C800B7F68E /* WorkoutHistoryService.swift */,
@@ -1534,6 +1537,7 @@
 				363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
+				361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				363068E02E19E3F400F2D4EC /* EditMyProfileView.swift in Sources */,
 				3662A54F2DFDE03700847487 /* LogWorkoutView.swift in Sources */,

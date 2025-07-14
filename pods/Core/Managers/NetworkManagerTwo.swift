@@ -14,8 +14,8 @@ class NetworkManagerTwo {
     
     
 
-// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//   let baseUrl = "http://192.168.1.92:8000"
 // let baseUrl = "http://172.20.10.4:8000"
     
     // Network errors - scoped to NetworkManagerTwo
@@ -903,6 +903,32 @@ class NetworkManagerTwo {
         photoUrl: String? = nil,
         completion: @escaping (Result<WeightLogResponse, Error>) -> Void
     ) {
+        logWeight(
+            userEmail: userEmail,
+            weightKg: weightKg,
+            notes: notes,
+            photoUrl: photoUrl,
+            date: nil,
+            completion: completion
+        )
+    }
+    
+    /// Log a weight measurement for a user with custom date (for Apple Health sync)
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - weightKg: Weight in kilograms
+    ///   - notes: Optional notes about the measurement
+    ///   - photoUrl: Optional photo URL
+    ///   - date: Optional custom date (for Apple Health sync)
+    ///   - completion: Result callback with the logged weight data or error
+    func logWeight(
+        userEmail: String,
+        weightKg: Double,
+        notes: String = "Logged from dashboard",
+        photoUrl: String? = nil,
+        date: Date? = nil,
+        completion: @escaping (Result<WeightLogResponse, Error>) -> Void
+    ) {
         let urlString = "\(baseUrl)/log-weight/"
         
         guard let url = URL(string: urlString) else {
@@ -925,6 +951,12 @@ class NetworkManagerTwo {
             parameters["photo_url"] = photoUrl
         }
         
+        // Add custom date if provided
+        if let date = date {
+            let formatter = ISO8601DateFormatter()
+            parameters["date_logged"] = formatter.string(from: date)
+        }
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
         } catch {
@@ -932,7 +964,8 @@ class NetworkManagerTwo {
             return
         }
         
-        print("⚖️ Logging weight: \(weightKg) kg for user: \(userEmail)")
+        let dateString = date != nil ? " at \(date!)" : ""
+        print("⚖️ Logging weight: \(weightKg) kg for user: \(userEmail)\(dateString)")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -951,7 +984,7 @@ class NetworkManagerTwo {
                 return
             }
             
-            // Check if there's an error response
+            // Check if there's an error response from server
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
                 print("❌ Server error logging weight: \(errorMessage)")
@@ -963,21 +996,107 @@ class NetworkManagerTwo {
             
             do {
                 let decoder = JSONDecoder()
-                // Don't use convertFromSnakeCase since WeightLogResponse has explicit CodingKeys
-                
                 let response = try decoder.decode(WeightLogResponse.self, from: data)
                 
                 DispatchQueue.main.async {
                     print("✅ Successfully logged weight: \(response.weightKg) kg")
                     completion(.success(response))
                 }
+                
             } catch {
-                print("❌ Error decoding weight log response: \(error)")
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("Response data: \(responseString)")
+                print("❌ Decoding error logging weight: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
                 }
+            }
+        }.resume()
+    }
+    
+    /// Log a weight measurement with Apple Health UUID for duplicate prevention
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - weightKg: Weight in kilograms
+    ///   - notes: Optional notes about the measurement
+    ///   - date: Date for the weight log
+    ///   - appleHealthUUID: Apple Health UUID for duplicate prevention
+    ///   - completion: Result callback with the logged weight data or error
+    func logWeightWithAppleHealthUUID(
+        userEmail: String,
+        weightKg: Double,
+        notes: String = "Synced from Apple Health",
+        date: Date,
+        appleHealthUUID: String,
+        completion: @escaping (Result<WeightLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/log-weight/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let formatter = ISO8601DateFormatter()
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "weight_kg": weightKg,
+            "notes": notes,
+            "date_logged": formatter.string(from: date),
+            "apple_health_uuid": appleHealthUUID
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🍎 Logging Apple Health weight: \(weightKg) kg with UUID: \(appleHealthUUID)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Network error logging Apple Health weight: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received when logging Apple Health weight")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response from server
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                print("❌ Server error logging Apple Health weight: \(errorMessage)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(WeightLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully logged Apple Health weight: \(response.weightKg) kg")
+                    completion(.success(response))
+                }
+                
+            } catch {
+                print("❌ Decoding error logging Apple Health weight: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
