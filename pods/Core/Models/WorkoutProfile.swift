@@ -40,6 +40,13 @@ struct ProfileDataResponse: Codable {
     var fatGoal: Double
     let workoutProfile: WorkoutProfile?
     
+    // Streaks data
+    var currentStreak: Int
+    var longestStreak: Int
+    var streakAsset: String
+    var lastActivityDate: String?
+    var streakStartDate: String?
+    
     enum CodingKeys: String, CodingKey {
         case email, name, username
         case profilePhoto = "profile_photo"
@@ -62,6 +69,11 @@ struct ProfileDataResponse: Codable {
         case carbsGoal = "carbs_goal"
         case fatGoal = "fat_goal"
         case workoutProfile = "workout_profile"
+        case currentStreak = "current_streak"
+        case longestStreak = "longest_streak"
+        case streakAsset = "streak_asset"
+        case lastActivityDate = "last_activity_date"
+        case streakStartDate = "streak_start_date"
     }
 }
 

@@ -37,6 +37,8 @@
 		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
 		361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3382E2308F900B7F68E /* StartWorkoutView.swift */; };
 		361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */; };
+		361FF33D2E26ECA300B7F68E /* StreaksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33C2E26EC9E00B7F68E /* StreaksView.swift */; };
+		361FF33F2E26EF5F00B7F68E /* StreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33E2E26EF5A00B7F68E /* StreakManager.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -315,6 +317,8 @@
 		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
 		361FF3382E2308F900B7F68E /* StartWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutView.swift; sourceTree = "<group>"; };
 		361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightSyncService.swift; sourceTree = "<group>"; };
+		361FF33C2E26EC9E00B7F68E /* StreaksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreaksView.swift; sourceTree = "<group>"; };
+		361FF33E2E26EF5A00B7F68E /* StreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakManager.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -650,6 +654,7 @@
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				361FF33E2E26EF5A00B7F68E /* StreakManager.swift */,
 				361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */,
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
 				363AF9FE2D21CCF600C91A14 /* ActivityManager.swift */,
@@ -1007,6 +1012,7 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				361FF33C2E26EC9E00B7F68E /* StreaksView.swift */,
 				36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */,
 				363AFA182D47471B00C91A14 /* DashboardView.swift */,
 				36ED35A82DD529B600D174FB /* HealthDataDetailView.swift */,
@@ -1412,6 +1418,7 @@
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
 				368D671A2BDD421B000434E0 /* MediaManager.swift in Sources */,
 				3694745C2CB9F07B00CD197F /* DetailedMetricView.swift in Sources */,
+				361FF33D2E26ECA300B7F68E /* StreaksView.swift in Sources */,
 				36A85CE92DB40BD100DD4266 /* TwoXView.swift in Sources */,
 				36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */,
 				36ED35E92DDE532400D174FB /* GenerateMealView.swift in Sources */,
@@ -1427,6 +1434,7 @@
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				361FF32B2E2085F000B7F68E /* ExerciseDetailView.swift in Sources */,
+				361FF33F2E26EF5F00B7F68E /* StreakManager.swift in Sources */,
 				363068C72E089D2A00F2D4EC /* AddedByMe.swift in Sources */,
 				36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */,
 				363068D92E107A6500F2D4EC /* CreateAddFoodView.swift in Sources */,

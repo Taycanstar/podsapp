@@ -155,6 +155,9 @@ func addPending(_ log: CombinedLog) {
   
   // Trigger profile data refresh since logs changed
   triggerProfileDataRefresh()
+  
+  // Update streak when any activity is logged
+  StreakManager.shared.updateStreak(activityDate: log.scheduledAt ?? Date())
 }
 
 

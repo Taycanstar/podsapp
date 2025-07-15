@@ -15,6 +15,11 @@ struct DashboardView: View {
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
+    
+    // ─── Streak state ─────────────────────────────────────────────────────
+    @State private var currentStreak: Int = 0
+    @State private var longestStreak: Int = 0
+    @State private var streakAsset: String = "streaks1"
 
 
     @State private var showLogFlowSheet = false
@@ -449,6 +454,14 @@ private var remainingCal: Double { vm.remainingCalories }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LogsChangedNotification"))) { _ in
                 print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
                 refreshPreloadedProfileData()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StreakUpdatedNotification"))) { notification in
+                if let streakData = notification.object as? UserStreakData {
+                    currentStreak = streakData.currentStreak
+                    longestStreak = streakData.longestStreak
+                    streakAsset = streakData.streakAsset
+                    print("🔥 DashboardView - Streak updated via notification: \(currentStreak) days")
+                }
             }
             .onChange(of: onboarding.onboardingCompleted) { _, isCompleted in
                 // CRITICAL: Show log flow after onboarding is completed (if user hasn't seen it yet)
@@ -1149,6 +1162,15 @@ private extension DashboardView {
             }
         }
 
+        ToolbarItem(placement: .navigationBarLeading) {
+            // Streaks display
+            StreaksView(
+                currentStreak: $currentStreak,
+                longestStreak: $longestStreak,
+                streakAsset: $streakAsset
+            )
+        }
+
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack(spacing: 16) {
                 // Debug button to reset all flows (remove in production)
@@ -1367,8 +1389,15 @@ private extension DashboardView {
                 case .success(let profileData):
                     // Store in onboarding for MyProfileView to use
                     onboarding.profileData = profileData
+                    
+                    // Update streak data
+                    currentStreak = profileData.currentStreak
+                    longestStreak = profileData.longestStreak
+                    streakAsset = profileData.streakAsset
+                    
                     print("✅ DashboardView - Preloaded profile data for \(profileData.email) - stored in onboarding.profileData")
                     print("✅ DashboardView - Preload success with timezone offset: \(timezoneOffset)")
+                    print("🔥 DashboardView - Streak data: \(currentStreak) days, asset: \(streakAsset)")
                 case .failure(let error):
                     print("❌ DashboardView - Error preloading profile data: \(error)")
                 }
@@ -1420,8 +1449,15 @@ private extension DashboardView {
                 case .success(let profileData):
                     // Update the preloaded profile data
                     onboarding.profileData = profileData
+                    
+                    // Update streak data
+                    currentStreak = profileData.currentStreak
+                    longestStreak = profileData.longestStreak
+                    streakAsset = profileData.streakAsset
+                    
                     print("✅ DashboardView - Refreshed profile data for \(profileData.email)")
                     print("✅ DashboardView - Refresh success with timezone offset: \(timezoneOffset)")
+                    print("🔥 DashboardView - Updated streak data: \(currentStreak) days, asset: \(streakAsset)")
                 case .failure(let error):
                     print("❌ DashboardView - Error refreshing profile data: \(error)")
                 }
