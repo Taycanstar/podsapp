@@ -530,7 +530,13 @@ struct MyProfileView: View {
     }
     
     private var weightTrendChart: some View {
-        let chartData = Array(recentWeightLogs.enumerated().reversed())
+        // Sort logs chronologically (oldest to newest) for proper chart display
+        let sortedLogs = recentWeightLogs.sorted { log1, log2 in
+            guard let date1 = parseDate(log1.dateLogged),
+                  let date2 = parseDate(log2.dateLogged) else { return false }
+            return date1 < date2 // oldest first
+        }
+        let chartData = Array(sortedLogs.enumerated())
         let weights = chartData.map { getDisplayWeight($0.1.weightKg) }
         
         // Calculate a better Y-axis range to show variation
@@ -588,7 +594,7 @@ struct MyProfileView: View {
         .onAppear {
             print("🏋️ Chart Data Debug:")
             print("  - Chart data count: \(chartData.count)")
-            print("  - Weight range: \(minWeight) to \(maxWeight) lbs")
+            print("  - Weight range: \(minWeight) to \(maxWeight) \(onboarding.unitsSystem == .imperial ? "lbs" : "kg")")
             print("  - Y-axis scale: \(yAxisMin) to \(yAxisMax)")
             print("  - X-axis scale: \(xAxisMin) to \(xAxisMax)")
             for (index, log) in chartData {
@@ -596,6 +602,7 @@ struct MyProfileView: View {
                 let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
                 print("  - Chart point \(index): \(displayWeight)\(unit) from \(log.dateLogged)")
             }
+            print("  - Chart trend: \(chartData.first?.1.weightKg ?? 0)kg → \(chartData.last?.1.weightKg ?? 0)kg")
         }
     }
     
@@ -751,6 +758,43 @@ struct MyProfileView: View {
         }
         
         print("✅ Processed preloaded profile data - weight: \(vm.weight)kg, height: \(vm.height)cm")
+    }
+    
+    // Helper function to parse dates robustly
+    private func parseDate(_ dateString: String) -> Date? {
+        // Try ISO8601 with fractional seconds first
+        let iso8601WithFractional = ISO8601DateFormatter()
+        iso8601WithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso8601WithFractional.date(from: dateString) {
+            return date
+        }
+        
+        // Try ISO8601 without fractional seconds
+        let iso8601 = ISO8601DateFormatter()
+        iso8601.formatOptions = [.withInternetDateTime]
+        if let date = iso8601.date(from: dateString) {
+            return date
+        }
+        
+        // Try other common formats
+        let formatters = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        ]
+        
+        for formatString in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = formatString
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+        }
+        
+        return nil
     }
     
     private func formatWeightLogDate(_ dateString: String) -> String {
