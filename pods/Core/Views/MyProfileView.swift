@@ -62,7 +62,6 @@ struct MyProfileView: View {
     
     // Streak state
     @StateObject private var streakManager = StreakManager.shared
-    @State private var isStreakHidden = false
     
     var body: some View {
         NavigationView {
@@ -548,7 +547,7 @@ struct MyProfileView: View {
             
             // Content - either streak info or motivational message
             HStack {
-                if isStreakHidden {
+                if !onboarding.isStreakVisible {
                     // Hidden state - show motivational message
                     Text("Consistency is key. Come back to tracking your health at times that feel good for you.")
                         .font(.system(size: 14))
@@ -575,10 +574,10 @@ struct MyProfileView: View {
                 // Eye toggle button
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        isStreakHidden.toggle()
+                        onboarding.isStreakVisible.toggle()
                     }
                 }) {
-                    Image(systemName: isStreakHidden ? "eye.slash" : "eye")
+                    Image(systemName: onboarding.isStreakVisible ? "eye" : "eye.slash")
                         .font(.system(size: 16))
                         .foregroundColor(.secondary)
                 }

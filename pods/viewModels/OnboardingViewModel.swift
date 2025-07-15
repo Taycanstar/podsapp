@@ -107,6 +107,14 @@ class OnboardingViewModel: ObservableObject {
     // Food container visibility control
     @Published var isShowingFoodContainer: Bool = false
     
+    // Streak visibility control
+    @Published var isStreakVisible: Bool = true {
+        didSet {
+            // Save to UserDefaults whenever the value changes
+            UserDefaults.standard.set(isStreakVisible, forKey: "isStreakVisible")
+        }
+    }
+    
     // Add these new properties for subscription information
     @Published var subscriptionStatus: String = "none"
     @Published var subscriptionPlan: String?
@@ -177,6 +185,15 @@ class OnboardingViewModel: ObservableObject {
             self.unitsSystem = .imperial
             // Save the default value
             UserDefaults.standard.set(UnitsSystem.imperial.rawValue, forKey: "unitsSystem")
+        }
+        
+        // Load streak visibility from UserDefaults, default to true (visible)
+        if UserDefaults.standard.object(forKey: "isStreakVisible") != nil {
+            self.isStreakVisible = UserDefaults.standard.bool(forKey: "isStreakVisible")
+        } else {
+            self.isStreakVisible = true
+            // Save the default value
+            UserDefaults.standard.set(true, forKey: "isStreakVisible")
         }
     }
     

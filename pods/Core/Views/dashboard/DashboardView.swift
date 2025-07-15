@@ -1158,7 +1158,8 @@ private extension DashboardView {
             StreaksView(
                 currentStreak: $streakManager.currentStreak,
                 longestStreak: $streakManager.longestStreak,
-                streakAsset: $streakManager.streakAsset
+                streakAsset: $streakManager.streakAsset,
+                isVisible: $onboarding.isStreakVisible
             )
         }
 
