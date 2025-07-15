@@ -60,6 +60,10 @@ struct MyProfileView: View {
     @State private var isRefreshing = false
     @State private var hasInitiallyLoaded = false
     
+    // Streak state
+    @StateObject private var streakManager = StreakManager.shared
+    @State private var isStreakHidden = false
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -406,6 +410,9 @@ struct MyProfileView: View {
                 // Weight card (matching the user's example design)
                 weightCardView
                 
+                // Run Streak card
+                runStreakCardView
+                
                 // BMI gauge
                 if let profileData = onboarding.profileData {
                     bmiGaugeView(profileData: profileData)
@@ -527,6 +534,61 @@ struct MyProfileView: View {
             print("  - vm.weight: \(vm.weight)")
             print("  - recentWeightLogs count: \(recentWeightLogs.count)")
         }
+    }
+    
+    private var runStreakCardView: some View {
+        VStack(spacing: 12) {
+            // Title
+            HStack {
+                Text("Run Streak")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            // Content - either streak info or motivational message
+            HStack {
+                if isStreakHidden {
+                    // Hidden state - show motivational message
+                    Text("Consistency is key. Come back to tracking your health at times that feel good for you.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                } else {
+                    // Visible state - show streak
+                    HStack(spacing: 8) {
+                        // Fire icon from StreakManager
+                        Image(streakManager.streakAsset)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 45, height: 45)
+                        
+                        // Streak count with days
+                        Text("\(streakManager.currentStreak) days")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Spacer()
+                
+                // Eye toggle button
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isStreakHidden.toggle()
+                    }
+                }) {
+                    Image(systemName: isStreakHidden ? "eye.slash" : "eye")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color("iosfit"))
+        .cornerRadius(12)
     }
     
     private var weightTrendChart: some View {
