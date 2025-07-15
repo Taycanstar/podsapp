@@ -21,6 +21,7 @@ struct SpecificDietView: View {
         case vegetarian = "vegetarian"
         case vegan = "vegan"
         case keto = "keto"
+        case lowCarb = "lowCarb"
         case glutenFree = "glutenFree"
         
         var id: Self { self }
@@ -32,6 +33,7 @@ struct SpecificDietView: View {
             case .vegetarian: return "Vegetarian"
             case .vegan: return "Vegan"
             case .keto: return "Keto"
+            case .lowCarb: return "Low Carb"
             case .glutenFree: return "Gluten Free"
             }
         }
@@ -43,6 +45,7 @@ struct SpecificDietView: View {
             case .vegetarian: return "leaf"
             case .vegan: return "leaf.fill"
             case .keto: return "chart.pie"
+            case .lowCarb: return "laurel.trailing"
             case .glutenFree: return "allergens"
             }
         }
