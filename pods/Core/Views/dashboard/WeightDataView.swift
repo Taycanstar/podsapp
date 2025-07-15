@@ -459,70 +459,7 @@ struct WeightDataView: View {
                 filterLogs()
             }
             
-            // Apple Health sync section
-            if HealthKitManager.shared.isHealthDataAvailable {
-                HStack {
-                    Image(systemName: "heart.text.square")
-                        .foregroundColor(.pink)
-                        .font(.system(size: 16))
-                    
-                    if weightSyncService.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Syncing Apple Health...")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    } else if showSyncIndicator {
-                        Text("New Apple Health data available")
-                            .font(.system(size: 14))
-                            .foregroundColor(.blue)
-                    } else if let lastSync = weightSyncService.lastSyncDate {
-                        Text("Last synced \(formatSyncDate(lastSync))")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Apple Health sync available")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        Button(action: {
-                            Task {
-                                await weightSyncService.syncAppleHealthWeights()
-                            }
-                        }) {
-                            if weightSyncService.isSyncing {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                    .tint(.blue)
-                            } else {
-                                Image(systemName: showSyncIndicator ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath.circle")
-                                    .foregroundColor(.blue)
-                                    .font(.system(size: 20))
-                            }
-                        }
-                        .disabled(weightSyncService.isSyncing || !HealthKitManager.shared.isHealthDataAvailable)
-                        
-                        // DEBUG: Reset sync state button
-                        Button(action: {
-                            weightSyncService.resetSyncState()
-                        }) {
-                            Image(systemName: "trash.circle")
-                                .foregroundColor(.red)
-                                .font(.system(size: 16))
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color("iosnp").opacity(0.7))
-                .cornerRadius(8)
-                
 
-            }
         }
         .padding(.horizontal)
     }
@@ -537,7 +474,7 @@ struct WeightDataView: View {
                 Text("\(String(format: "%.1f", currentWeight))")
                               .font(.system(size: 28, weight: .semibold, design: .rounded))
                 Text(weightUnit)
-                    .font(.system(size: 32))
+                    .font(.system(size: 22))
                     .foregroundColor(.gray)
             }
             
