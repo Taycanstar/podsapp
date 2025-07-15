@@ -38,13 +38,6 @@ struct StreaksView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.primary)
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StreakUpdatedNotification"))) { notification in
-            if let streakData = notification.object as? UserStreakData {
-                currentStreak = streakData.currentStreak
-                longestStreak = streakData.longestStreak
-                streakAsset = streakData.streakAsset
-            }
-        }
     }
 }
 
