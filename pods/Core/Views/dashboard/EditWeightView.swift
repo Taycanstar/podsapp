@@ -19,9 +19,7 @@ struct EditWeightView: View {
     @FocusState private var isWeightFieldFocused: Bool
     @State private var selectedPhoto: UIImage? = nil
     @State private var showingProgressCamera = false
-    @State private var image: Image? = nil
     @State private var showImagePicker = false
-    @State private var showCamera = false
     
     // Completion handler to navigate after saving
     var onWeightSaved: (() -> Void)?
@@ -132,9 +130,27 @@ struct EditWeightView: View {
                 
                 // Add Photo Button (only show if no photo is selected)
                 if selectedPhoto == nil {
-                    Button(action: {
-                        showingProgressCamera = true
-                    }) {
+                    Menu {
+                        Button(action: {
+                            showingProgressCamera = true
+                        }) {
+                            HStack {
+                                Text("Camera")
+                                Spacer()
+                                Image(systemName: "camera")
+                            }
+                        }
+                        
+                        Button(action: {
+                            showImagePicker = true
+                        }) {
+                            HStack {
+                                Text("Photos")
+                                Spacer()
+                                Image(systemName: "photo")
+                            }
+                        }
+                    } label: {
                         HStack {
                             Image(systemName: "camera")
                                 .font(.system(size: 17))
@@ -232,11 +248,6 @@ struct EditWeightView: View {
         }
         .sheet(isPresented: $showImagePicker) {
             CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary, showGalleryButton: .constant(true)) {
-                // Photo selected, no additional action needed
-            }
-        }
-        .sheet(isPresented: $showCamera) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera, showGalleryButton: .constant(true)) {
                 // Photo selected, no additional action needed
             }
         }

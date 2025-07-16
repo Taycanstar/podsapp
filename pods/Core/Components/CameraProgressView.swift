@@ -4,8 +4,6 @@ import PhotosUI
 struct CameraProgressView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedPhoto: UIImage?
-    @State private var showImagePicker = false
-    @State private var showGalleryButton = true // Control gallery button visibility
     
     var body: some View {
         ZStack {
@@ -14,40 +12,12 @@ struct CameraProgressView: View {
                 .ignoresSafeArea(.all)
             
             // Main camera view
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera, showGalleryButton: $showGalleryButton) {
+            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .camera, showGalleryButton: .constant(false)) {
                 dismiss()
             }
             .ignoresSafeArea(.all)
             
-            // Overlay with gallery button - only show during live camera
-            if showGalleryButton {
-                VStack {
-                    Spacer()
-                    
-                    HStack {
-                        // Gallery button (positioned higher, above native cancel button)
-                        Button(action: {
-                            showImagePicker = true
-                        }) {
-                            Image(systemName: "photo")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(width: 50, height: 50)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .padding(.leading, 30)
-                        
-                        Spacer()
-                    }
-                    .padding(.bottom, 120) // Higher position to sit above native controls
-                }
-            }
-        }
-        .sheet(isPresented: $showImagePicker) {
-            CustomImagePicker(selectedPhoto: $selectedPhoto, sourceType: .photoLibrary, showGalleryButton: .constant(true)) {
-                dismiss()
-            }
+            // Overlay removed - photo selection now handled by dropdown in EditWeightView
         }
     }
 }
