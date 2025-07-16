@@ -1382,19 +1382,25 @@ private extension DashboardView {
                     // Store in onboarding for MyProfileView to use
                     onboarding.profileData = profileData
                     
-                    // Update StreakManager with fresh data
-                    let streakData = UserStreakData(
-                        currentStreak: profileData.currentStreak,
-                        longestStreak: profileData.longestStreak,
-                        streakAsset: profileData.streakAsset,
-                        lastActivityDate: profileData.lastActivityDate,
-                        streakStartDate: profileData.streakStartDate
-                    )
-                    streakManager.syncFromServer(streakData: streakData)
+                    // Update StreakManager with fresh data (if available)
+                    if let currentStreak = profileData.currentStreak,
+                       let longestStreak = profileData.longestStreak,
+                       let streakAsset = profileData.streakAsset {
+                        let streakData = UserStreakData(
+                            currentStreak: currentStreak,
+                            longestStreak: longestStreak,
+                            streakAsset: streakAsset,
+                            lastActivityDate: profileData.lastActivityDate,
+                            streakStartDate: profileData.streakStartDate
+                        )
+                        streakManager.syncFromServer(streakData: streakData)
+                        print("🔥 DashboardView - Synced streak data: \(currentStreak) days, asset: \(streakAsset)")
+                    } else {
+                        print("⚠️ DashboardView - No streak data in profile response (backward compatibility)")
+                    }
                     
                     print("✅ DashboardView - Preloaded profile data for \(profileData.email) - stored in onboarding.profileData")
                     print("✅ DashboardView - Preload success with timezone offset: \(timezoneOffset)")
-                    print("🔥 DashboardView - Synced streak data: \(profileData.currentStreak) days, asset: \(profileData.streakAsset)")
                 case .failure(let error):
                     print("❌ DashboardView - Error preloading profile data: \(error)")
                 }
@@ -1447,19 +1453,25 @@ private extension DashboardView {
                     // Update the preloaded profile data
                     onboarding.profileData = profileData
                     
-                    // Update StreakManager with fresh data
-                    let streakData = UserStreakData(
-                        currentStreak: profileData.currentStreak,
-                        longestStreak: profileData.longestStreak,
-                        streakAsset: profileData.streakAsset,
-                        lastActivityDate: profileData.lastActivityDate,
-                        streakStartDate: profileData.streakStartDate
-                    )
-                    streakManager.syncFromServer(streakData: streakData)
+                    // Update StreakManager with fresh data (if available)
+                    if let currentStreak = profileData.currentStreak,
+                       let longestStreak = profileData.longestStreak,
+                       let streakAsset = profileData.streakAsset {
+                        let streakData = UserStreakData(
+                            currentStreak: currentStreak,
+                            longestStreak: longestStreak,
+                            streakAsset: streakAsset,
+                            lastActivityDate: profileData.lastActivityDate,
+                            streakStartDate: profileData.streakStartDate
+                        )
+                        streakManager.syncFromServer(streakData: streakData)
+                        print("🔥 DashboardView - Updated streak data: \(currentStreak) days, asset: \(streakAsset)")
+                    } else {
+                        print("⚠️ DashboardView - No streak data in profile response (backward compatibility)")
+                    }
                     
                     print("✅ DashboardView - Refreshed profile data for \(profileData.email)")
                     print("✅ DashboardView - Refresh success with timezone offset: \(timezoneOffset)")
-                    print("🔥 DashboardView - Updated streak data: \(profileData.currentStreak) days, asset: \(profileData.streakAsset)")
                 case .failure(let error):
                     print("❌ DashboardView - Error refreshing profile data: \(error)")
                 }

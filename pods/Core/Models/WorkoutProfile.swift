@@ -40,10 +40,10 @@ struct ProfileDataResponse: Codable {
     var fatGoal: Double
     let workoutProfile: WorkoutProfile?
     
-    // Streaks data
-    var currentStreak: Int
-    var longestStreak: Int
-    var streakAsset: String
+    // Streaks data (optional for backward compatibility)
+    var currentStreak: Int?
+    var longestStreak: Int?
+    var streakAsset: String?
     var lastActivityDate: String?
     var streakStartDate: String?
     
