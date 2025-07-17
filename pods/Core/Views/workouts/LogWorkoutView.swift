@@ -181,6 +181,10 @@ private struct TodayWorkoutView: View {
             // Add invisible spacing at the top to prevent overlap with header
             Color.clear.frame(height: 4)
             
+            // Muscle recovery status
+            MuscleRecoveryCompactView()
+                .padding(.horizontal)
+            
             // Show generation loading
             if isGeneratingWorkout {
                 WorkoutGenerationCard()
@@ -267,17 +271,28 @@ private struct TodayWorkoutView: View {
         let availableTime = userProfile.availableTime
         let experienceLevel = userProfile.experienceLevel
         
-        // Define muscle groups based on goal
+        // Get recovery-optimized muscle groups
+        let recoveryOptimizedMuscles = recommendationService.getRecoveryOptimizedWorkout(targetMuscleCount: 4)
+        
+        // Define muscle groups based on recovery and goal
         let muscleGroups: [String]
-        switch fitnessGoal {
-        case .strength, .powerlifting:
-            muscleGroups = ["Chest", "Back", "Shoulders", "Thighs", "Hips"]
-        case .hypertrophy:
-            muscleGroups = ["Chest", "Back", "Shoulders", "Upper Arms", "Thighs"]
-        case .endurance:
-            muscleGroups = ["Chest", "Back", "Thighs", "Cardio"]
-        default:
-            muscleGroups = ["Chest", "Back", "Shoulders", "Thighs"]
+        if recoveryOptimizedMuscles.count >= 3 {
+            // Use recovery-optimized selection
+            muscleGroups = recoveryOptimizedMuscles
+            print("🧠 Using recovery-optimized muscles: \(muscleGroups)")
+        } else {
+            // Fallback to goal-based selection
+            switch fitnessGoal {
+            case .strength, .powerlifting:
+                muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps", "Glutes"]
+            case .hypertrophy:
+                muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps"]
+            case .endurance:
+                muscleGroups = ["Chest", "Back", "Quadriceps", "Abs"]
+            default:
+                muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps"]
+            }
+            print("⚠️ Using fallback muscle groups: \(muscleGroups)")
         }
         
         var exercises: [TodayWorkoutExercise] = []
@@ -299,10 +314,15 @@ private struct TodayWorkoutView: View {
             }
         }
         
+        // Create dynamic title based on selected muscles
+        let workoutTitle = muscleGroups.count >= 2 ? 
+            "\(muscleGroups.prefix(2).joined(separator: " & ")) Focus" : 
+            getWorkoutTitle(for: fitnessGoal)
+        
         return TodayWorkout(
             id: UUID(),
             date: Date(),
-            title: getWorkoutTitle(for: fitnessGoal),
+            title: workoutTitle,
             exercises: exercises,
             estimatedDuration: availableTime,
             fitnessGoal: fitnessGoal,

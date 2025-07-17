@@ -59,6 +59,7 @@ class WorkoutHistoryService {
     
     func completeFullWorkout(_ exercises: [WorkoutExercise], duration: TimeInterval, notes: String? = nil) {
         let userProfile = UserProfileService.shared
+        let recoveryService = MuscleRecoveryService.shared
         
         // Convert all exercises to completed exercises
         let completedExercises = exercises.map { workout in
@@ -91,8 +92,12 @@ class WorkoutHistoryService {
         // Update performance tracking for all exercises
         completedExercises.forEach { updateExercisePerformance($0) }
         
+        // Record muscle recovery data for future workout optimization
+        recoveryService.recordWorkout(completedExercises)
+        
         // Log completion
         print("✅ Full workout completed with \(completedExercises.count) exercises")
+        print("💪 Muscle recovery data recorded for workout optimization")
     }
     
     private func updateExercisePerformance(_ exercise: CompletedExercise) {

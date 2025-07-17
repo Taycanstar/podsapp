@@ -306,6 +306,9 @@ struct WeightDataView: View {
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
+        .refreshable {
+            await refreshData()
+        }
         .safeAreaInset(edge: .bottom) {
             // Compare footer (only show when in compare mode)
             if isCompareMode {
@@ -1132,6 +1135,18 @@ struct WeightDataView: View {
     private func refreshFromNetwork() {
         clearStaleCache()
         loadMoreLogs(refresh: true)
+    }
+    
+    // Pull-to-refresh function (async)
+    private func refreshData() async {
+        print("🔄 WeightDataView: Pull to refresh triggered")
+        
+        await MainActor.run {
+            clearStaleCache()
+            loadMoreLogs(refresh: true)
+        }
+        
+        print("✅ WeightDataView: Pull to refresh completed")
     }
     
     // Helper method to find the closest data point to a tap location

@@ -55,7 +55,11 @@ class WorkoutRecommendationService {
     
     func getRecommendedExercises(for muscleGroup: String, count: Int = 5) -> [ExerciseData] {
         let userProfile = UserProfileService.shared
+        let recoveryService = MuscleRecoveryService.shared
         let allExercises = ExerciseDatabase.getAllExercises()
+        
+        // Check recovery status for this muscle group
+        let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
         
         // Filter by muscle group
         let muscleExercises = allExercises.filter { exercise in
@@ -73,10 +77,17 @@ class WorkoutRecommendationService {
             !userProfile.avoidedExercises.contains(exercise.id)
         }
         
-        // Prioritize exercises based on user preferences and experience
+        // Prioritize exercises based on user preferences, experience, and recovery
         let prioritizedExercises = prioritizeExercises(filteredExercises)
         
         return Array(prioritizedExercises.prefix(count))
+    }
+    
+    // New method to get recovery-optimized workout recommendations
+    func getRecoveryOptimizedWorkout(targetMuscleCount: Int = 4) -> [String] {
+        let recoveryService = MuscleRecoveryService.shared
+        let recommendedMuscles = recoveryService.getRecommendedMuscleGroups(for: targetMuscleCount)
+        return recommendedMuscles.map { $0.rawValue }
     }
     
     private func prioritizeExercises(_ exercises: [ExerciseData]) -> [ExerciseData] {
