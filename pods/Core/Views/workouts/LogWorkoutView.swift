@@ -810,6 +810,7 @@ struct WorkoutDurationPickerView: View {
         }
         .padding(.horizontal, 10)
         .background(Color(.systemBackground))
+        .cornerRadius(16)
         .presentationDetents([.fraction(0.33)])
         .presentationDragIndicator(.visible)
     }
@@ -837,8 +838,9 @@ struct WorkoutDurationPickerView: View {
                         .frame(width: 20, height: 20)
                         .overlay(
                             Circle()
-                                .stroke(Color.primary, lineWidth: 2)
+                                .stroke(Color.secondary, lineWidth: 1)
                         )
+                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
                         .position(
                             x: getSliderProgress(geometry.size.width),
                             y: 1
