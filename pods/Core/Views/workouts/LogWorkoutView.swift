@@ -137,8 +137,8 @@ struct LogWorkoutView: View {
         HStack(spacing: 12) {
             // Duration Control
             WorkoutControlButton(
-                title: "Duration",
-                value: selectedDuration.displayValue,
+                title: selectedDuration.displayValue,
+                value: "",
                 onTap: {
                     showingDurationPicker = true
                 }
@@ -146,8 +146,8 @@ struct LogWorkoutView: View {
             
             // Type Control  
             WorkoutControlButton(
-                title: "Type",
-                value: "Recovered Muscles",
+                title: "Recovered Muscles",
+                value: "",
                 onTap: {
                     print("Type picker tapped")
                 }
