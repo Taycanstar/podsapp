@@ -26,26 +26,27 @@ struct LogWorkoutView: View {
     // Workout controls state
     @State private var selectedDuration: WorkoutDuration = .oneHour
     @State private var showingDurationPicker = false
+    @State private var shouldRegenerateWorkout = false
     
     enum WorkoutTab: Hashable {
-        case today, routines
+        case today, workouts
         
         var title: String {
             switch self {
             case .today: return "Today"
-            case .routines: return "Routines"
+            case .workouts: return "Workouts"
             }
         }
         
         var searchPrompt: String {
             switch self {
             case .today: return "Search today's workout"
-            case .routines: return "Search routines"
+            case .workouts: return "Search workouts"
             }
         }
     }
     
-    let workoutTabs: [WorkoutTab] = [.today, .routines]
+    let workoutTabs: [WorkoutTab] = [.today, .workouts]
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -92,11 +93,20 @@ struct LogWorkoutView: View {
                     showingDurationPicker = false
                 },
                 onSetForWorkout: {
-                    // Apply to current workout
+                    // Apply to current workout and regenerate
                     showingDurationPicker = false
-                    // TODO: Update workout generation with new duration
+                    regenerateWorkoutWithNewDuration()
                 }
             )
+        }
+    }
+    
+    private func regenerateWorkoutWithNewDuration() {
+        // Trigger workout regeneration
+        shouldRegenerateWorkout = true
+        // Reset the flag after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            shouldRegenerateWorkout = false
         }
     }
     
@@ -156,9 +166,11 @@ struct LogWorkoutView: View {
                     searchText: searchText,
                     navigationPath: $navigationPath,
                     workoutManager: workoutManager,
-                    userEmail: userEmail
+                    userEmail: userEmail,
+                    selectedDuration: selectedDuration,
+                    shouldRegenerate: shouldRegenerateWorkout
                 )
-            case .routines:
+            case .workouts:
                 RoutinesWorkoutView(
                     searchText: searchText,
                     navigationPath: $navigationPath,
@@ -224,6 +236,8 @@ private struct TodayWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     @ObservedObject var workoutManager: WorkoutManager
     let userEmail: String
+    let selectedDuration: WorkoutDuration
+    let shouldRegenerate: Bool
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -284,6 +298,12 @@ private struct TodayWorkoutView: View {
         .onAppear {
             loadOrGenerateTodayWorkout()
         }
+        .onChange(of: shouldRegenerate) { _, newValue in
+            if newValue {
+                // Reset the flag and regenerate workout
+                generateTodayWorkout()
+            }
+        }
     }
     
     private func loadOrGenerateTodayWorkout() {
@@ -321,8 +341,10 @@ private struct TodayWorkoutView: View {
         
         // Get user's fitness goal and preferences
         let fitnessGoal = userProfile.fitnessGoal
-        let availableTime = userProfile.availableTime
         let experienceLevel = userProfile.experienceLevel
+        
+        // Use selected duration instead of user's available time
+        let targetDuration = selectedDuration.minutes
         
         // Get recovery-optimized muscle groups
         let recoveryOptimizedMuscles = recommendationService.getRecoveryOptimizedWorkout(targetMuscleCount: 4)
@@ -348,24 +370,16 @@ private struct TodayWorkoutView: View {
             print("⚠️ Using fallback muscle groups: \(muscleGroups)")
         }
         
-        var exercises: [TodayWorkoutExercise] = []
+        // Calculate workout parameters based on goal
+        let workoutParams = getWorkoutParameters(for: fitnessGoal, experienceLevel: experienceLevel)
         
-        // Generate exercises for each muscle group
-        for muscleGroup in muscleGroups.prefix(4) { // Limit to 4 muscle groups
-            let recommendedExercises = recommendationService.getRecommendedExercises(for: muscleGroup, count: 1)
-            
-            for exercise in recommendedExercises {
-                let recommendation = recommendationService.getSmartRecommendation(for: exercise)
-                
-                exercises.append(TodayWorkoutExercise(
-                    exercise: exercise,
-                    sets: recommendation.sets,
-                    reps: recommendation.reps,
-                    weight: recommendation.weight,
-                    restTime: getRestTime(for: fitnessGoal)
-                ))
-            }
-        }
+        // Calculate optimal exercises and sets to fit target duration
+        let workoutPlan = calculateOptimalWorkout(
+            targetDurationMinutes: targetDuration,
+            muscleGroups: muscleGroups,
+            parameters: workoutParams,
+            recommendationService: recommendationService
+        )
         
         // Create dynamic title based on selected muscles
         let workoutTitle = muscleGroups.count >= 2 ? 
@@ -376,11 +390,286 @@ private struct TodayWorkoutView: View {
             id: UUID(),
             date: Date(),
             title: workoutTitle,
-            exercises: exercises,
-            estimatedDuration: availableTime,
+            exercises: workoutPlan.exercises,
+            estimatedDuration: workoutPlan.actualDurationMinutes,
             fitnessGoal: fitnessGoal,
             difficulty: experienceLevel.workoutComplexity
         )
+    }
+    
+    private func getWorkoutParameters(for goal: FitnessGoal, experienceLevel: ExperienceLevel) -> WorkoutParameters {
+        switch goal {
+        case .strength:
+            return WorkoutParameters(
+                percentageOneRM: 80...90,
+                repRange: 1...6,
+                repDurationSeconds: 4...6,
+                setsPerExercise: 4...6,
+                restBetweenSetsSeconds: 120...300,
+                compoundSetupSeconds: 20,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 20
+            )
+            
+        case .hypertrophy:
+            return WorkoutParameters(
+                percentageOneRM: 60...80,
+                repRange: 6...12,
+                repDurationSeconds: 2...8,
+                setsPerExercise: 3...5,
+                restBetweenSetsSeconds: 30...90,
+                compoundSetupSeconds: 20,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 15
+            )
+            
+        case .tone:
+            return WorkoutParameters(
+                percentageOneRM: 50...70,
+                repRange: 12...15,
+                repDurationSeconds: 2...4,
+                setsPerExercise: 2...4,
+                restBetweenSetsSeconds: 45...60,
+                compoundSetupSeconds: 15,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 15
+            )
+            
+        case .endurance:
+            return WorkoutParameters(
+                percentageOneRM: 40...60,
+                repRange: 15...25,
+                repDurationSeconds: 2...4,
+                setsPerExercise: 2...4,
+                restBetweenSetsSeconds: 20...45,
+                compoundSetupSeconds: 15,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 10
+            )
+            
+        case .powerlifting:
+            return WorkoutParameters(
+                percentageOneRM: 85...100,
+                repRange: 1...3,
+                repDurationSeconds: 4...6,
+                setsPerExercise: 3...6,
+                restBetweenSetsSeconds: 180...420,
+                compoundSetupSeconds: 25,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 25
+            )
+            
+        default:
+            // General fitness fallback
+            return WorkoutParameters(
+                percentageOneRM: 60...75,
+                repRange: 8...12,
+                repDurationSeconds: 2...4,
+                setsPerExercise: 3...4,
+                restBetweenSetsSeconds: 60...90,
+                compoundSetupSeconds: 20,
+                isolationSetupSeconds: 7,
+                transitionSeconds: 15
+            )
+        }
+    }
+    
+    private func calculateOptimalWorkout(
+        targetDurationMinutes: Int,
+        muscleGroups: [String],
+        parameters: WorkoutParameters,
+        recommendationService: WorkoutRecommendationService
+    ) -> WorkoutPlan {
+        
+        let targetDurationSeconds = targetDurationMinutes * 60
+        
+        // Calculate warmup and cooldown based on workout duration
+        let warmupSeconds = getWarmupDuration(for: targetDurationMinutes)
+        let cooldownSeconds = warmupSeconds // Same as warmup
+        
+        // Available time for exercises (without warmup/cooldown)
+        let availableExerciseTime = targetDurationSeconds - warmupSeconds - cooldownSeconds
+        
+        var exercises: [TodayWorkoutExercise] = []
+        var totalExerciseTime = 0
+        
+        // Start with 1 exercise per muscle group and build up
+        var exercisesPerMuscle = 1
+        let maxExercisesPerMuscle = 4
+        
+        while exercisesPerMuscle <= maxExercisesPerMuscle {
+            let testExercises = generateExercises(
+                muscleGroups: muscleGroups,
+                exercisesPerMuscle: exercisesPerMuscle,
+                parameters: parameters,
+                recommendationService: recommendationService
+            )
+            
+            let testTime = calculateTotalExerciseTime(exercises: testExercises, parameters: parameters)
+            
+            // Add 10-15% buffer for real-world variability
+            let bufferedTime = Int(Double(testTime) * 1.125)
+            
+            if bufferedTime <= availableExerciseTime {
+                exercises = testExercises
+                totalExerciseTime = testTime
+                exercisesPerMuscle += 1
+            } else {
+                break
+            }
+        }
+        
+        // If no exercises fit, try with minimal sets
+        if exercises.isEmpty {
+            exercises = generateMinimalExercises(
+                muscleGroups: muscleGroups,
+                parameters: parameters,
+                recommendationService: recommendationService
+            )
+            totalExerciseTime = calculateTotalExerciseTime(exercises: exercises, parameters: parameters)
+        }
+        
+        let bufferSeconds = Int(Double(totalExerciseTime) * 0.125)
+        let actualTotalSeconds = warmupSeconds + totalExerciseTime + cooldownSeconds + bufferSeconds
+        let actualDurationMinutes = (actualTotalSeconds + 59) / 60 // Round up
+        
+        let breakdown = WorkoutTimeBreakdown(
+            warmupSeconds: warmupSeconds,
+            exerciseTimeSeconds: totalExerciseTime,
+            cooldownSeconds: cooldownSeconds,
+            bufferSeconds: bufferSeconds,
+            totalSeconds: actualTotalSeconds
+        )
+        
+        print("🎯 Workout Plan Generated:")
+        print("   Target: \(targetDurationMinutes)m, Actual: \(actualDurationMinutes)m")
+        print("   Exercises: \(exercises.count) (\(exercisesPerMuscle-1) per muscle)")
+        print("   Breakdown: \(warmupSeconds/60)m warmup + \(totalExerciseTime/60)m exercises + \(cooldownSeconds/60)m cooldown + \(bufferSeconds)s buffer")
+        
+        return WorkoutPlan(
+            exercises: exercises,
+            actualDurationMinutes: actualDurationMinutes,
+            totalTimeBreakdown: breakdown
+        )
+    }
+    
+    private func getWarmupDuration(for workoutMinutes: Int) -> Int {
+        switch workoutMinutes {
+        case 0..<30:   return 180  // 3 minutes for short workouts
+        case 30..<90:  return 300  // 5 minutes for medium workouts
+        default:       return 600  // 10 minutes for long workouts
+        }
+    }
+    
+    private func generateExercises(
+        muscleGroups: [String],
+        exercisesPerMuscle: Int,
+        parameters: WorkoutParameters,
+        recommendationService: WorkoutRecommendationService
+    ) -> [TodayWorkoutExercise] {
+        
+        var exercises: [TodayWorkoutExercise] = []
+        
+        for muscleGroup in muscleGroups.prefix(4) { // Limit to 4 muscle groups
+            let recommendedExercises = recommendationService.getRecommendedExercises(
+                for: muscleGroup, 
+                count: exercisesPerMuscle
+            )
+            
+            for exercise in recommendedExercises {
+                let sets = parameters.setsPerExercise.lowerBound + (exercisesPerMuscle > 2 ? 1 : 0)
+                let reps = getOptimalReps(for: exercise, parameters: parameters)
+                let restTime = getOptimalRestTime(for: exercise, parameters: parameters)
+                
+                exercises.append(TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: min(sets, parameters.setsPerExercise.upperBound),
+                    reps: reps,
+                    weight: nil, // Will be determined during workout
+                    restTime: restTime
+                ))
+            }
+        }
+        
+        return exercises
+    }
+    
+    private func generateMinimalExercises(
+        muscleGroups: [String],
+        parameters: WorkoutParameters,
+        recommendationService: WorkoutRecommendationService
+    ) -> [TodayWorkoutExercise] {
+        
+        var exercises: [TodayWorkoutExercise] = []
+        
+        // Generate 1 compound exercise per muscle group with minimal sets
+        for muscleGroup in muscleGroups.prefix(3) { // Limit to 3 muscle groups for time
+            let recommendedExercises = recommendationService.getRecommendedExercises(
+                for: muscleGroup, 
+                count: 1
+            )
+            
+            if let exercise = recommendedExercises.first {
+                exercises.append(TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: parameters.setsPerExercise.lowerBound,
+                    reps: parameters.repRange.lowerBound + 2,
+                    weight: nil,
+                    restTime: parameters.restBetweenSetsSeconds.lowerBound
+                ))
+            }
+        }
+        
+        return exercises
+    }
+    
+    private func calculateTotalExerciseTime(exercises: [TodayWorkoutExercise], parameters: WorkoutParameters) -> Int {
+        var totalTime = 0
+        
+        for (index, exercise) in exercises.enumerated() {
+            // SingleExerciseTime = (Reps × Sets × RepDurationSec) + ((Sets - 1) × RestBetweenSetsSec) + SetupTimeSec + TransitionTimeSec
+            
+            let repDuration = parameters.repDurationSeconds.lowerBound + 1 // Use middle of range
+            let workingTime = exercise.reps * exercise.sets * repDuration
+            let restTime = (exercise.sets - 1) * exercise.restTime
+            let setupTime = isCompoundExercise(exercise.exercise) ? 
+                parameters.compoundSetupSeconds : parameters.isolationSetupSeconds
+            let transitionTime = (index < exercises.count - 1) ? parameters.transitionSeconds : 0
+            
+            let exerciseTime = workingTime + restTime + setupTime + transitionTime
+            totalTime += exerciseTime
+            
+            print("   Exercise \(exercise.exercise.name): \(exerciseTime)s (\(workingTime)s work + \(restTime)s rest + \(setupTime)s setup + \(transitionTime)s transition)")
+        }
+        
+        return totalTime
+    }
+    
+    private func isCompoundExercise(_ exercise: ExerciseData) -> Bool {
+        let compoundKeywords = ["squat", "deadlift", "press", "row", "pull", "clean", "snatch", "lunge"]
+        let exerciseName = exercise.name.lowercased()
+        
+        return compoundKeywords.contains { keyword in
+            exerciseName.contains(keyword)
+        }
+    }
+    
+    private func getOptimalReps(for exercise: ExerciseData, parameters: WorkoutParameters) -> Int {
+        // Use middle of rep range for most exercises
+        let midRange = (parameters.repRange.lowerBound + parameters.repRange.upperBound) / 2
+        return midRange
+    }
+    
+    private func getOptimalRestTime(for exercise: ExerciseData, parameters: WorkoutParameters) -> Int {
+        // Compound exercises get longer rest, isolation exercises get shorter rest
+        let isCompound = isCompoundExercise(exercise)
+        
+        if isCompound {
+            return parameters.restBetweenSetsSeconds.upperBound
+        } else {
+            return parameters.restBetweenSetsSeconds.lowerBound + 
+                   (parameters.restBetweenSetsSeconds.upperBound - parameters.restBetweenSetsSeconds.lowerBound) / 2
+        }
     }
     
     private func getWorkoutTitle(for goal: FitnessGoal) -> String {
@@ -398,18 +687,7 @@ private struct TodayWorkoutView: View {
         }
     }
     
-    private func getRestTime(for goal: FitnessGoal) -> Int {
-        switch goal {
-        case .strength, .powerlifting:
-            return 180 // 3 minutes
-        case .hypertrophy:
-            return 120 // 2 minutes
-        case .endurance:
-            return 60 // 1 minute
-        default:
-            return 90 // 1.5 minutes
-        }
-    }
+
     
     private func saveTodayWorkout(_ workout: TodayWorkout) {
         if let data = try? JSONEncoder().encode(workout) {
@@ -694,6 +972,33 @@ struct TodayWorkoutExercise: Codable, Hashable {
     let restTime: Int // in seconds
 }
 
+// MARK: - Workout Parameters
+
+struct WorkoutParameters {
+    let percentageOneRM: ClosedRange<Int>  // e.g., 60...80
+    let repRange: ClosedRange<Int>         // e.g., 6...12
+    let repDurationSeconds: ClosedRange<Int> // e.g., 2...8
+    let setsPerExercise: ClosedRange<Int>  // e.g., 3...5
+    let restBetweenSetsSeconds: ClosedRange<Int> // e.g., 30...90
+    let compoundSetupSeconds: Int          // Setup time for compound exercises
+    let isolationSetupSeconds: Int         // Setup time for isolation exercises
+    let transitionSeconds: Int             // Time between exercises
+}
+
+struct WorkoutPlan {
+    let exercises: [TodayWorkoutExercise]
+    let actualDurationMinutes: Int
+    let totalTimeBreakdown: WorkoutTimeBreakdown
+}
+
+struct WorkoutTimeBreakdown {
+    let warmupSeconds: Int
+    let exerciseTimeSeconds: Int
+    let cooldownSeconds: Int
+    let bufferSeconds: Int
+    let totalSeconds: Int
+}
+
 // MARK: - Workout Control Button Component
 
 struct WorkoutControlButton: View {
@@ -838,7 +1143,7 @@ struct WorkoutDurationPickerView: View {
                         .frame(width: 20, height: 20)
                         .overlay(
                             Circle()
-                                .stroke(Color.secondary, lineWidth: 1)
+                                .stroke(Color(.systemGray5), lineWidth: 1)
                         )
                         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
                         .position(
