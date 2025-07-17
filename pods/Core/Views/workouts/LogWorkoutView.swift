@@ -142,6 +142,8 @@ struct LogWorkoutView: View {
                     print("Type picker tapped")
                 }
             )
+            
+            Spacer()
         }
         .padding(.horizontal)
     }
@@ -777,14 +779,13 @@ struct WorkoutDurationPickerView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 32, height: 32)
-                        .background(Color(.systemGray6))
-                        .clipShape(Circle())
+                        .foregroundColor(.primary)
+                        .frame(width: 30, height: 30)
+                      
                 }
             }
             .padding(.horizontal)
-            .padding(.top, 8)
+            .padding(.top, 16)
             .padding(.bottom, 20)
             
             Text("Duration")
@@ -807,8 +808,9 @@ struct WorkoutDurationPickerView: View {
             .padding(.horizontal)
             .padding(.bottom, 30)
         }
+        .padding(.horizontal, 10)
         .background(Color(.systemBackground))
-        .presentationDetents([.fraction(0.30)])
+        .presentationDetents([.fraction(0.33)])
         .presentationDragIndicator(.visible)
     }
     
@@ -876,12 +878,10 @@ struct WorkoutDurationPickerView: View {
                 selectedDuration = tempSelectedDuration
                 onSetDefault()
             }
-            .font(.system(size: 14, weight: .regular))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
+            
+            Spacer()
             
             Button("Set for this workout") {
                 selectedDuration = tempSelectedDuration
@@ -889,11 +889,12 @@ struct WorkoutDurationPickerView: View {
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color.primary)
             .cornerRadius(8)
         }
+        
     }
     
     private func getSliderProgress(_ totalWidth: CGFloat) -> CGFloat {
