@@ -808,15 +808,15 @@ struct WorkoutDurationPickerView: View {
             .padding(.bottom, 30)
         }
         .background(Color(.systemBackground))
-        .presentationDetents([.fraction(0.35)])
+        .presentationDetents([.fraction(0.30)])
         .presentationDragIndicator(.visible)
     }
     
     private var durationSelector: some View {
-        VStack(spacing: 16) {
+        VStack(spacing:16) {
             // Duration track with single selector
             GeometryReader { geometry in
-                let stepWidth = geometry.size.width / CGFloat(WorkoutDuration.allCases.count - 1)
+                let labelWidth = geometry.size.width / CGFloat(WorkoutDuration.allCases.count)
                 
                 ZStack(alignment: .leading) {
                     // Background track
@@ -829,7 +829,7 @@ struct WorkoutDurationPickerView: View {
                         .fill(Color.primary)
                         .frame(width: getSliderProgress(geometry.size.width), height: 2)
                     
-                    // Slider circle positioned to align with labels
+                    // Slider circle positioned to align with label centers
                     Circle()
                         .fill(Color(.systemBackground))
                         .frame(width: 20, height: 20)
@@ -883,7 +883,6 @@ struct WorkoutDurationPickerView: View {
             .background(Color(.systemGray6))
             .cornerRadius(8)
             
-            Spacer()
             Button("Set for this workout") {
                 selectedDuration = tempSelectedDuration
                 onSetForWorkout()
@@ -899,16 +898,14 @@ struct WorkoutDurationPickerView: View {
     
     private func getSliderProgress(_ totalWidth: CGFloat) -> CGFloat {
         let currentIndex = WorkoutDuration.allCases.firstIndex(of: tempSelectedDuration) ?? 0
-        let totalSteps = WorkoutDuration.allCases.count - 1
-        let stepWidth = totalWidth / CGFloat(totalSteps)
-        return CGFloat(currentIndex) * stepWidth
+        let labelWidth = totalWidth / CGFloat(WorkoutDuration.allCases.count)
+        return (CGFloat(currentIndex) + 0.5) * labelWidth
     }
     
     private func updateDurationFromSlider(_ xPosition: CGFloat, totalWidth: CGFloat) {
-        let totalSteps = WorkoutDuration.allCases.count - 1
-        let stepWidth = totalWidth / CGFloat(totalSteps)
-        let stepIndex = Int(round(xPosition / stepWidth))
-        let clampedIndex = max(0, min(stepIndex, totalSteps))
+        let labelWidth = totalWidth / CGFloat(WorkoutDuration.allCases.count)
+        let stepIndex = Int(round(xPosition / labelWidth))
+        let clampedIndex = max(0, min(stepIndex, WorkoutDuration.allCases.count - 1))
         
         tempSelectedDuration = WorkoutDuration.allCases[clampedIndex]
     }
