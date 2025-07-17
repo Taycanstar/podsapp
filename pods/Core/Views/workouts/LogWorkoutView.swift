@@ -83,13 +83,36 @@ struct LogWorkoutView: View {
             if !userEmail.isEmpty {
                 workoutManager.initialize(userEmail: userEmail)
             }
+            
+            // Load user's default workout duration preference
+            if let defaultDurationString = UserDefaults.standard.string(forKey: "defaultWorkoutDuration"),
+               let defaultDuration = WorkoutDuration(rawValue: defaultDurationString) {
+                selectedDuration = defaultDuration
+            } else {
+                // Fallback to UserProfileService preference
+                let availableTime = UserProfileService.shared.availableTime
+                selectedDuration = WorkoutDuration.fromMinutes(availableTime)
+            }
         }
         .sheet(isPresented: $showingDurationPicker) {
             WorkoutDurationPickerView(
                 selectedDuration: $selectedDuration,
                 onSetDefault: {
-                    // Save as default duration
+                    // Save as default duration - update both local and server
+                    let durationMinutes = selectedDuration.minutes
+                    
+                    // 1. Update UserDefaults (for immediate use)
+                    UserDefaults.standard.set(durationMinutes, forKey: "availableTime")
                     UserDefaults.standard.set(selectedDuration.rawValue, forKey: "defaultWorkoutDuration")
+                    
+                    // 2. Update UserProfileService 
+                    UserProfileService.shared.availableTime = durationMinutes
+                    
+                    // 3. Update server data (if user email exists)
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        updateServerWorkoutDuration(email: email, durationMinutes: durationMinutes)
+                    }
+                    
                     showingDurationPicker = false
                 },
                 onSetForWorkout: {
@@ -107,6 +130,38 @@ struct LogWorkoutView: View {
         // Reset the flag after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             shouldRegenerateWorkout = false
+        }
+    }
+    
+    private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
+        print("🔄 Updating server workout duration: \(durationMinutes) minutes for \(email)")
+        
+        // Create update payload
+        let updateData: [String: Any] = [
+            "preferred_workout_duration": durationMinutes
+        ]
+        
+        // Use NetworkManagerTwo to update workout preferences  
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: updateData
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully updated workout duration on server")
+                    
+                    // Update DataLayer cache
+                    Task {
+                        let profileUpdate = ["preferred_workout_duration": durationMinutes]
+                        await DataLayer.shared.updateProfileData(profileUpdate)
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to update workout duration on server: \(error.localizedDescription)")
+                    // Note: We still keep the local change since UserDefaults was already updated
+                }
+            }
         }
     }
     
@@ -1097,6 +1152,18 @@ enum WorkoutDuration: String, CaseIterable {
         case .oneHour: return 60
         case .oneAndHalfHours: return 90
         case .twoHours: return 120
+        }
+    }
+    
+    /// Create WorkoutDuration from minutes, choosing the closest match
+    static func fromMinutes(_ minutes: Int) -> WorkoutDuration {
+        switch minutes {
+        case 0..<23: return .fifteenMinutes
+        case 23..<38: return .thirtyMinutes
+        case 38..<53: return .fortyFiveMinutes
+        case 53..<75: return .oneHour
+        case 75..<105: return .oneAndHalfHours
+        default: return .twoHours
         }
     }
 }

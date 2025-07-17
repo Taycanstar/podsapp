@@ -2699,6 +2699,80 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+    
+    /// Update user's workout preferences
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - workoutData: Dictionary containing workout preference updates
+    ///   - completion: Result callback indicating success or error
+    func updateWorkoutPreferences(email: String, workoutData: [String: Any], completion: @escaping (Result<Void, Error>) -> Void) {
+        let urlString = "\(baseUrl)/update-workout-preferences/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var requestBody: [String: Any] = [
+            "email": email
+        ]
+        
+        // Merge workout data into request body
+        for (key, value) in workoutData {
+            requestBody[key] = value
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🔄 Updating workout preferences for user: \(email)")
+        print("   └── Data: \(workoutData)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                print("✅ Successfully updated workout preferences")
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            } else {
+                print("❌ Failed to update workout preferences: HTTP \(httpResponse.statusCode)")
+                
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                    }
+                }
+            }
+        }.resume()
+    }
 
 }
 
