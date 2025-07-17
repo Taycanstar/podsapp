@@ -23,6 +23,10 @@ struct LogWorkoutView: View {
     // Add user email - you'll need to pass this in or get it from environment
     @State private var userEmail: String = UserDefaults.standard.string(forKey: "user_email") ?? ""
     
+    // Workout controls state
+    @State private var selectedDuration: WorkoutDuration = .oneHour
+    @State private var showingDurationPicker = false
+    
     enum WorkoutTab: Hashable {
         case today, routines
         
@@ -79,20 +83,67 @@ struct LogWorkoutView: View {
                 workoutManager.initialize(userEmail: userEmail)
             }
         }
+        .sheet(isPresented: $showingDurationPicker) {
+            WorkoutDurationPickerView(
+                selectedDuration: $selectedDuration,
+                onSetDefault: {
+                    // Save as default duration
+                    UserDefaults.standard.set(selectedDuration.rawValue, forKey: "defaultWorkoutDuration")
+                    showingDurationPicker = false
+                },
+                onSetForWorkout: {
+                    // Apply to current workout
+                    showingDurationPicker = false
+                    // TODO: Update workout generation with new duration
+                }
+            )
+        }
     }
     
     // MARK: - Subviews
     
     private var tabHeaderView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(workoutTabs, id: \.self) { tab in
-                    TabButton(tab: tab, selectedTab: $selectedWorkoutTab)
+        VStack(spacing: 0) {
+            // Tab buttons
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(workoutTabs, id: \.self) { tab in
+                        TabButton(tab: tab, selectedTab: $selectedWorkoutTab)
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .padding(.bottom, 16)
+            
+            // Workout controls (only show for Today tab)
+            if selectedWorkoutTab == .today {
+                workoutControlsInHeader
+                    .padding(.bottom, 12)
+            }
         }
-        .padding(.bottom, 10)
+    }
+    
+    private var workoutControlsInHeader: some View {
+        HStack(spacing: 12) {
+            // Duration Control
+            WorkoutControlButton(
+                title: "Duration",
+                value: selectedDuration.displayValue,
+                onTap: {
+                    showingDurationPicker = true
+                }
+            )
+            
+            // Type Control  
+            WorkoutControlButton(
+                title: "Type",
+                value: "Recovered Muscles",
+                onTap: {
+                    print("Type picker tapped")
+                }
+            )
+        }
+        .padding(.horizontal)
     }
     
     private var mainContentView: some View {
@@ -639,6 +690,228 @@ struct TodayWorkoutExercise: Codable, Hashable {
     let reps: Int
     let weight: Double?
     let restTime: Int // in seconds
+}
+
+// MARK: - Workout Control Button Component
+
+struct WorkoutControlButton: View {
+    let title: String
+    let value: String
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Workout Duration Enum
+
+enum WorkoutDuration: String, CaseIterable {
+    case fifteenMinutes = "15m"
+    case thirtyMinutes = "30m"
+    case fortyFiveMinutes = "45m"
+    case oneHour = "1h"
+    case oneAndHalfHours = "1.5h"
+    case twoHours = "2h"
+    
+    var displayValue: String {
+        return rawValue
+    }
+    
+    var minutes: Int {
+        switch self {
+        case .fifteenMinutes: return 15
+        case .thirtyMinutes: return 30
+        case .fortyFiveMinutes: return 45
+        case .oneHour: return 60
+        case .oneAndHalfHours: return 90
+        case .twoHours: return 120
+        }
+    }
+}
+
+// MARK: - Workout Duration Picker View
+
+struct WorkoutDurationPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedDuration: WorkoutDuration
+    let onSetDefault: () -> Void
+    let onSetForWorkout: () -> Void
+    
+    @State private var tempSelectedDuration: WorkoutDuration
+    
+    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping () -> Void, onSetForWorkout: @escaping () -> Void) {
+        self._selectedDuration = selectedDuration
+        self.onSetDefault = onSetDefault
+        self.onSetForWorkout = onSetForWorkout
+        self._tempSelectedDuration = State(initialValue: selectedDuration.wrappedValue)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 32, height: 32)
+                        .background(Color(.systemGray6))
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 20)
+            
+            Text("Duration")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+            
+            // Duration Slider
+            VStack(spacing: 30) {
+                // Custom duration selector
+                durationSelector
+                
+                Spacer()
+                
+                // Action buttons
+                actionButtons
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 30)
+        }
+        .background(Color(.systemBackground))
+        .presentationDetents([.fraction(0.35)])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private var durationSelector: some View {
+        VStack(spacing: 16) {
+            // Duration track with single selector
+            GeometryReader { geometry in
+                let stepWidth = geometry.size.width / CGFloat(WorkoutDuration.allCases.count - 1)
+                
+                ZStack(alignment: .leading) {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 2)
+                    
+                    // Progress track (from start to selected position)
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.primary)
+                        .frame(width: getSliderProgress(geometry.size.width), height: 2)
+                    
+                    // Slider circle positioned to align with labels
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.primary, lineWidth: 2)
+                        )
+                        .position(
+                            x: getSliderProgress(geometry.size.width),
+                            y: 1
+                        )
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    updateDurationFromSlider(value.location.x, totalWidth: geometry.size.width)
+                                }
+                        )
+                }
+                .onTapGesture { location in
+                    updateDurationFromSlider(location.x, totalWidth: geometry.size.width)
+                }
+            }
+            .frame(height: 2)
+            
+            // Duration labels positioned to align with slider positions
+            HStack(spacing: 0) {
+                ForEach(Array(WorkoutDuration.allCases.enumerated()), id: \.element) { index, duration in
+                    Text(duration.displayValue)
+                        .font(.system(size: 13))
+                        .foregroundColor(duration == tempSelectedDuration ? .primary : .secondary)
+                        .fontWeight(duration == tempSelectedDuration ? .medium : .regular)
+                        .frame(maxWidth: .infinity)
+                        .onTapGesture {
+                            tempSelectedDuration = duration
+                        }
+                }
+            }
+        }
+    }
+    
+    private var actionButtons: some View {
+        HStack(spacing: 0) {
+            Button("Set as default") {
+                selectedDuration = tempSelectedDuration
+                onSetDefault()
+            }
+            .font(.system(size: 14, weight: .regular))
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+            
+            Spacer()
+            Button("Set for this workout") {
+                selectedDuration = tempSelectedDuration
+                onSetForWorkout()
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(Color(.systemBackground))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.primary)
+            .cornerRadius(8)
+        }
+    }
+    
+    private func getSliderProgress(_ totalWidth: CGFloat) -> CGFloat {
+        let currentIndex = WorkoutDuration.allCases.firstIndex(of: tempSelectedDuration) ?? 0
+        let totalSteps = WorkoutDuration.allCases.count - 1
+        let stepWidth = totalWidth / CGFloat(totalSteps)
+        return CGFloat(currentIndex) * stepWidth
+    }
+    
+    private func updateDurationFromSlider(_ xPosition: CGFloat, totalWidth: CGFloat) {
+        let totalSteps = WorkoutDuration.allCases.count - 1
+        let stepWidth = totalWidth / CGFloat(totalSteps)
+        let stepIndex = Int(round(xPosition / stepWidth))
+        let clampedIndex = max(0, min(stepIndex, totalSteps))
+        
+        tempSelectedDuration = WorkoutDuration.allCases[clampedIndex]
+    }
 }
 
 #Preview {
