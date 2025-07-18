@@ -53,6 +53,9 @@ class WorkoutHistoryService {
         // Update exercise performance tracking
         updateExercisePerformance(completedExercise)
         
+        // Clear workout session duration since workout is completed
+        LogWorkoutView.clearWorkoutSessionDuration()
+        
         // Log completion
         print("✅ Workout completed: \(completedExercise.exerciseName)")
     }
@@ -94,6 +97,9 @@ class WorkoutHistoryService {
         
         // Record muscle recovery data for future workout optimization
         recoveryService.recordWorkout(completedExercises)
+        
+        // Clear workout session duration since workout is completed
+        LogWorkoutView.clearWorkoutSessionDuration()
         
         // Log completion
         print("✅ Full workout completed with \(completedExercises.count) exercises")

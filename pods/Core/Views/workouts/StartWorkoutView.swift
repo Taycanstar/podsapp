@@ -370,6 +370,9 @@ struct StartWorkoutView: View {
             notes: "Today's AI-generated workout"
         )
         
+        // Clear the session duration since the workout is completed
+        LogWorkoutView.clearWorkoutSessionDuration()
+        
         dismiss()
     }
     

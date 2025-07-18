@@ -183,6 +183,9 @@ struct CreateWorkoutView: View {
             // Complete the workout and save to history
             WorkoutHistoryService.shared.completeFullWorkout(exercises, duration: duration, notes: notes)
             
+            // Clear workout session duration since workout is completed
+            LogWorkoutView.clearWorkoutSessionDuration()
+            
             print("✅ Workout saved: \(workoutTitle) with \(exercises.count) exercises")
         } else {
             print("📝 Workout template saved: \(workoutTitle)")

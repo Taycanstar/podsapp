@@ -4,6 +4,25 @@
 //
 //  Created by Dimi Nunez on 6/5/25.
 //
+//  WORKOUT SESSION DURATION PERSISTENCE:
+//  
+//  This view implements a two-tier duration system similar to Fitbod:
+//  
+//  1. DEFAULT DURATION (selectedDuration):
+//     - User's permanent preference stored in UserDefaults + server
+//     - Updated when "Set as default" is pressed
+//     - Syncs with UserProfileService and backend
+//
+//  2. SESSION DURATION (sessionDuration):
+//     - Temporary override for current workout session
+//     - Persists across app restarts until workout is completed
+//     - Updated when "Set for this workout" is pressed
+//     - Stored in UserDefaults with date validation (clears old sessions)
+//     - Automatically cleared when workout is completed
+//
+//  The effectiveDuration computed property returns sessionDuration ?? selectedDuration
+//  ensuring session overrides take precedence over defaults.
+//
 
 import SwiftUI
 
@@ -33,6 +52,10 @@ struct LogWorkoutView: View {
     private var effectiveDuration: WorkoutDuration {
         return sessionDuration ?? selectedDuration
     }
+    
+    // Keys for UserDefaults
+    private let sessionDurationKey = "currentWorkoutSessionDuration"
+    private let sessionDateKey = "currentWorkoutSessionDate"
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -75,12 +98,10 @@ struct LogWorkoutView: View {
                 Spacer()
             }
         }
-        .searchable(
-            text: $searchText,
-            placement: .automatic,
-            prompt: selectedWorkoutTab.searchPrompt
-        )
-        .focused($isSearchFieldFocused)
+        .modifier(SearchableModifier(
+            searchText: $searchText,
+            selectedTab: selectedWorkoutTab
+        ))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .navigationBarBackButtonHidden(true)
@@ -98,6 +119,22 @@ struct LogWorkoutView: View {
                 // Fallback to UserProfileService preference
                 let availableTime = UserProfileService.shared.availableTime
                 selectedDuration = WorkoutDuration.fromMinutes(availableTime)
+            }
+            
+            // Load session duration if it exists
+            if let savedDurationString = UserDefaults.standard.string(forKey: sessionDurationKey),
+               let savedDuration = WorkoutDuration(rawValue: savedDurationString) {
+                
+                // Check if session is from today (clear old sessions)
+                if let sessionDate = UserDefaults.standard.object(forKey: sessionDateKey) as? Date,
+                   Calendar.current.isDateInToday(sessionDate) {
+                    sessionDuration = savedDuration
+                    print("📱 Restored session duration: \(savedDuration.minutes) minutes from today")
+                } else {
+                    // Clear old session duration from previous days
+                    clearSessionDuration()
+                    print("🗑️ Cleared expired session duration from previous day")
+                }
             }
         }
         .sheet(isPresented: $showingDurationPicker) {
@@ -122,7 +159,11 @@ struct LogWorkoutView: View {
                     // 4. Clear session duration since it's now the default
                     sessionDuration = nil
                     
-                    // 5. Update server data (if user email exists)
+                    // 5. Clear session duration from UserDefaults
+                    UserDefaults.standard.removeObject(forKey: sessionDurationKey)
+                    UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                    
+                    // 6. Update server data (if user email exists)
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
                         updateServerWorkoutDuration(email: email, durationMinutes: durationMinutes)
                     }
@@ -133,6 +174,11 @@ struct LogWorkoutView: View {
                     // Apply to current workout session only (no server or default updates)
                     print("⚡ Setting session-only duration: \(newDuration.minutes) minutes (won't save to server)")
                     sessionDuration = newDuration
+                    
+                    // Save session duration to UserDefaults for persistence across app restarts
+                    UserDefaults.standard.set(newDuration.rawValue, forKey: sessionDurationKey)
+                    UserDefaults.standard.set(Date(), forKey: sessionDateKey)
+                    
                     showingDurationPicker = false
                     regenerateWorkoutWithNewDuration()
                 }
@@ -148,6 +194,20 @@ struct LogWorkoutView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             shouldRegenerateWorkout = false
         }
+    }
+    
+    private func clearSessionDuration() {
+        sessionDuration = nil
+        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
+        UserDefaults.standard.removeObject(forKey: sessionDateKey)
+        print("🗑️ Cleared session duration")
+    }
+    
+    // Static method to clear session duration from anywhere in the app
+    static func clearWorkoutSessionDuration() {
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDuration")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDate")
+        print("🗑️ Cleared workout session duration (static)")
     }
     
     private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
@@ -207,14 +267,68 @@ struct LogWorkoutView: View {
     
     private var workoutControlsInHeader: some View {
         HStack(spacing: 12) {
-            // Duration Control
-            WorkoutControlButton(
-                title: effectiveDuration.displayValue,
-                value: "",
-                onTap: {
+            // Duration Control with session modification styling
+            HStack(spacing: 8) {
+                Button(action: {
                     showingDurationPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text(effectiveDuration.displayValue)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Show chevron only when no session duration is set
+                        if sessionDuration == nil {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when session duration is set
+                        sessionDuration != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.2)) : nil
+                    )
                 }
-            )
+                .buttonStyle(PlainButtonStyle())
+                
+                // X button to reset session duration (only show when session duration is set)
+                if sessionDuration != nil {
+                    Button(action: {
+                        // Reset to default duration
+                        sessionDuration = nil
+                        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
+                        UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                        regenerateWorkoutWithNewDuration()
+                        print("🔄 Reset to default duration: \(selectedDuration.minutes) minutes")
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 24, height: 24)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.primary, lineWidth: 1)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary.opacity(0.2))
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
             
             // Type Control  
             WorkoutControlButton(
@@ -1344,6 +1458,30 @@ struct WorkoutDurationPickerView: View {
         let clampedIndex = max(0, min(stepIndex, WorkoutDuration.allCases.count - 1))
         
         tempSelectedDuration = WorkoutDuration.allCases[clampedIndex]
+    }
+}
+
+// MARK: - Searchable Modifier
+
+struct SearchableModifier: ViewModifier {
+    @Binding var searchText: String
+    let selectedTab: LogWorkoutView.WorkoutTab
+    @FocusState private var isSearchFieldFocused: Bool
+    
+    func body(content: Content) -> some View {
+        if selectedTab == .today {
+            // Don't show search bar for Today tab
+            content
+        } else {
+            // Show search bar for other tabs
+            content
+                .searchable(
+                    text: $searchText,
+                    placement: .automatic,
+                    prompt: selectedTab.searchPrompt
+                )
+                .focused($isSearchFieldFocused)
+        }
     }
 }
 
