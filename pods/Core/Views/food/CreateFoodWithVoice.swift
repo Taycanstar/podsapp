@@ -193,7 +193,7 @@ struct CreateFoodWithVoice: View {
                                 .padding(.horizontal)
                                 .padding(.bottom, 8)
                         } else {
-                            Text(audioRecorder.isRecording ? "Recording..." : "Describe the food you want to create")
+                            Text(audioRecorder.isRecording ? "Describe your food" : "Describe the food you want to create")
                                 .font(.headline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
                                 .padding(.bottom, 16)
@@ -222,9 +222,13 @@ struct CreateFoodWithVoice: View {
                             Image(systemName: "xmark")
                                 .font(.system(size: 22))
                                 .foregroundColor(.primary)
-                                .frame(width: 44, height: 44)
-                                .background(Color(UIColor.secondarySystemFill))
+                                    .frame(width: 60, height: 60)
+                                .background(Color(.systemBackground))
                                 .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(.systemGray3), lineWidth: 1)
+                                )
                         }
                         
                         Spacer()
@@ -251,11 +255,15 @@ struct CreateFoodWithVoice: View {
                             }
                         }) {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(.white)
+                                .font(.system(size: 24))
+                                .foregroundColor(.primary)
                                 .frame(width: 60, height: 60)
-                                .background(Color.green)
+                                .background(Color(.systemBackground))
                                 .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(.systemGray3), lineWidth: 1)
+                                )
                                 .opacity((foodManager.isGeneratingFood || audioRecorder.isProcessing) ? 0.5 : 1.0)
                         }
                         .disabled(foodManager.isGeneratingFood || audioRecorder.isProcessing)
