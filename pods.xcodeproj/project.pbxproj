@@ -42,6 +42,7 @@
 		361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3402E288D9600B7F68E /* MuscleRecoveryService.swift */; };
 		361FF3432E288DCF00B7F68E /* MuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3422E288DC800B7F68E /* MuscleRecoveryView.swift */; };
 		361FF3452E28920B00B7F68E /* MuscleRecoveryCompactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */; };
+		361FF3472E2A012700B7F68E /* TextLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3462E2A011700B7F68E /* TextLogView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -325,6 +326,7 @@
 		361FF3402E288D9600B7F68E /* MuscleRecoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryService.swift; sourceTree = "<group>"; };
 		361FF3422E288DC800B7F68E /* MuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryView.swift; sourceTree = "<group>"; };
 		361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryCompactView.swift; sourceTree = "<group>"; };
+		361FF3462E2A011700B7F68E /* TextLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLogView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -1021,6 +1023,7 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				361FF3462E2A011700B7F68E /* TextLogView.swift */,
 				361FF33C2E26EC9E00B7F68E /* StreaksView.swift */,
 				36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */,
 				363AFA182D47471B00C91A14 /* DashboardView.swift */,
@@ -1574,6 +1577,7 @@
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
 				36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
+				361FF3472E2A012700B7F68E /* TextLogView.swift in Sources */,
 				364A83CC2DACA02F009D2620 /* NetworkManagerTwo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1771,6 +1775,7 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Access to your microphone is required for text to speech capabilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1840,6 +1845,7 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Access to your microphone is required for text to speech capabilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

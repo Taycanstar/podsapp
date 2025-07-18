@@ -12,6 +12,7 @@ struct CustomTabBar: View {
     // Add states for food scanning/voice input
     @State private var showFoodScanner = false
     @State private var showVoiceRecording = false
+    @State private var showTextLog = false
     
     // Add states for barcode confirmation (same as ContentView)
     @State private var showConfirmFoodView = false
@@ -57,10 +58,15 @@ struct CustomTabBar: View {
                             
                             Spacer()
                             
-                            // Center text
-                            Text("Describe meal")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
+                            // Center text - tappable
+                            Button(action: {
+                                HapticFeedback.generate()
+                                showTextLog = true
+                            }) {
+                                Text("Describe meal")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                            }
                             
                             Spacer()
                             
@@ -153,6 +159,9 @@ struct CustomTabBar: View {
                     )
                 }
             }
+        }
+        .sheet(isPresented: $showTextLog) {
+            TextLogView(isPresented: $showTextLog, selectedMeal: selectedMeal)
         }
     }
 
