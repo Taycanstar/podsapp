@@ -29,6 +29,9 @@ struct TextLogView: View {
     @State private var scannedFood: Food?
     @State private var scannedFoodLogId: Int?
     
+    // Animation state for pulsing effect
+    @State private var pulseScale: CGFloat = 1.0
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -55,65 +58,91 @@ struct TextLogView: View {
                 
                 // Bottom action buttons
                 HStack(spacing: 16) {
-                    // Barcode scanner button
-                    Button(action: {
-                        HapticFeedback.generate()
-                        showFoodScanner = true
-                    }) {
-                        Image(systemName: "barcode.viewfinder")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 30, height: 30)
-                            .background(Color(.systemBackground))
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
-                            )
-                    }
-                    
-                    Spacer()
-                    
-                    // Microphone button (speech-to-text)
-                    Button(action: {
-                        HapticFeedback.generate()
-                        toggleSpeechRecognition()
-                    }) {
-                        Image(systemName: isListening ? "mic.fill" : "mic")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 30, height: 30)
-                            .background(Color(.systemBackground))
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
-                            )
-                    }
-                    
-                    
-                    
-                    // Waveform/Submit button - changes based on text input
-                    Button(action: {
-                        HapticFeedback.generate()
-                        if !mealDescription.isEmpty {
-                            // Submit the meal description
-                            submitMealDescription()
-                        } else {
-                            // Show voice log view
-                            showVoiceLog = true
+                    if isListening {
+                        // When listening, show only the pulsing orange checkmark
+                        Spacer()
+                        
+                        Button(action: {
+                            HapticFeedback.generate()
+                            toggleSpeechRecognition() // Stop listening
+                        }) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(Color(.systemBackground))
+                                .frame(width: 30, height: 30)
+                                .background(Color.orange)
+                                .clipShape(Circle())
+                                .scaleEffect(pulseScale)
+                                .animation(
+                                    Animation.easeInOut(duration: 1.0)
+                                        .repeatForever(autoreverses: true),
+                                    value: pulseScale
+                                )
                         }
-                    }) {
-                        Image(systemName: mealDescription.isEmpty ? "waveform" : "arrow.forward")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(mealDescription.isEmpty ? .primary : .white)
-                            .frame(width: 30, height: 30)
-                            .background(mealDescription.isEmpty ? Color(.systemBackground) : Color.accentColor)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(mealDescription.isEmpty ? Color(.systemGray4) : Color.clear, lineWidth: 1)
-                            )
+                        
+                        Spacer()
+                    } else {
+                        // Normal state - show all three icons
+                        // Barcode scanner button
+                        Button(action: {
+                            HapticFeedback.generate()
+                            showFoodScanner = true
+                        }) {
+                            Image(systemName: "barcode.viewfinder")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.primary)
+                                .frame(width: 30, height: 30)
+                                .background(Color(.systemBackground))
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                )
+                        }
+                        
+                        Spacer()
+                        
+                        // Microphone button (speech-to-text)
+                        Button(action: {
+                            HapticFeedback.generate()
+                            toggleSpeechRecognition()
+                        }) {
+                            Image(systemName: "mic")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.primary)
+                                .frame(width: 30, height: 30)
+                                .background(Color(.systemBackground))
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                )
+                        }
+                        
+                        Spacer()
+                        
+                        // Waveform/Submit button - changes based on text input
+                        Button(action: {
+                            HapticFeedback.generate()
+                            if !mealDescription.isEmpty {
+                                // Submit the meal description
+                                submitMealDescription()
+                            } else {
+                                // Show voice log view
+                                showVoiceLog = true
+                            }
+                        }) {
+                            Image(systemName: mealDescription.isEmpty ? "waveform" : "arrow.forward")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(mealDescription.isEmpty ? .primary : .white)
+                                .frame(width: 30, height: 30)
+                                .background(mealDescription.isEmpty ? Color(.systemBackground) : Color.accentColor)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(mealDescription.isEmpty ? Color(.systemGray4) : Color.clear, lineWidth: 1)
+                                )
+                        }
                     }
                 }
                 .padding(.horizontal, 24)
@@ -175,6 +204,15 @@ struct TextLogView: View {
         .onChange(of: speechRecognizer.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
                 mealDescription = newTranscript
+            }
+        }
+        .onChange(of: isListening) { _, newValue in
+            if newValue {
+                // Start pulsing animation when listening starts
+                pulseScale = 1.2
+            } else {
+                // Reset scale when listening stops
+                pulseScale = 1.0
             }
         }
     }
