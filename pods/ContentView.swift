@@ -173,7 +173,7 @@ struct ContentView: View {
                         .presentationBackground(Color(.systemBackground))
                 }
 
-                .sheet(isPresented: $showFoodScanner) {
+                .fullScreenCover(isPresented: $showFoodScanner) {
                     FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal, onFoodScanned: { food, foodLogId in
                         // When a barcode is scanned and food is returned, show the confirmation view
                         scannedFood = food

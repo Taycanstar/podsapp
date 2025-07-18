@@ -136,7 +136,7 @@ struct CustomTabBar: View {
             })
             .edgesIgnoringSafeArea(.all)
         }
-        .sheet(isPresented: $showVoiceRecording) {
+        .fullScreenCover(isPresented: $showVoiceRecording) {
             VoiceLogView(isPresented: $showVoiceRecording, selectedMeal: selectedMeal)
         }
         .sheet(isPresented: $showConfirmFoodView, onDismiss: {
