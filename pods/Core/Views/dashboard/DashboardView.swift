@@ -319,7 +319,7 @@ private var remainingCal: Double { vm.remainingCalories }
         VStack {
           Spacer()
           BottomPopup(message: "Food logged")
-            .padding(.bottom, 55)
+            .padding(.bottom, 90)
         }
         .zIndex(1)
         .transition(.opacity)
@@ -329,7 +329,7 @@ private var remainingCal: Double { vm.remainingCalories }
         VStack {
           Spacer()
           BottomPopup(message: "\(item.name) logged")
-            .padding(.bottom, 55)
+            .padding(.bottom, 90)
         }
         .zIndex(1)
         .transition(.opacity)
@@ -339,7 +339,7 @@ private var remainingCal: Double { vm.remainingCalories }
         VStack {
           Spacer()
           BottomPopup(message: "Saved Meal")
-            .padding(.bottom, 55)
+            .padding(.bottom, 90)
         }
         .zIndex(1)
         .transition(.opacity)
@@ -349,7 +349,7 @@ private var remainingCal: Double { vm.remainingCalories }
         VStack {
           Spacer()
           BottomPopup(message: "Unsaved Meal")
-            .padding(.bottom, 55)
+            .padding(.bottom, 90)
         }
         .zIndex(1)
         .transition(.opacity)

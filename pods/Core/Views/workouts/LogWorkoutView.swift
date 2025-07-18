@@ -25,8 +25,14 @@ struct LogWorkoutView: View {
     
     // Workout controls state
     @State private var selectedDuration: WorkoutDuration = .oneHour
+    @State private var sessionDuration: WorkoutDuration? = nil // Session-specific duration (doesn't affect defaults)
     @State private var showingDurationPicker = false
     @State private var shouldRegenerateWorkout = false
+    
+    // Computed property for the actual duration to use
+    private var effectiveDuration: WorkoutDuration {
+        return sessionDuration ?? selectedDuration
+    }
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -96,27 +102,37 @@ struct LogWorkoutView: View {
         }
         .sheet(isPresented: $showingDurationPicker) {
             WorkoutDurationPickerView(
-                selectedDuration: $selectedDuration,
+                selectedDuration: .constant(sessionDuration ?? selectedDuration),
                 onSetDefault: {
                     // Save as default duration - update both local and server
-                    let durationMinutes = selectedDuration.minutes
+                    let durationMinutes = (sessionDuration ?? selectedDuration).minutes
+                    
+                    print("🔧 Setting as default duration: \(durationMinutes) minutes")
                     
                     // 1. Update UserDefaults (for immediate use)
                     UserDefaults.standard.set(durationMinutes, forKey: "availableTime")
-                    UserDefaults.standard.set(selectedDuration.rawValue, forKey: "defaultWorkoutDuration")
+                    UserDefaults.standard.set((sessionDuration ?? selectedDuration).rawValue, forKey: "defaultWorkoutDuration")
                     
                     // 2. Update UserProfileService 
                     UserProfileService.shared.availableTime = durationMinutes
                     
-                    // 3. Update server data (if user email exists)
+                    // 3. Update the main selectedDuration to reflect the new default
+                    selectedDuration = sessionDuration ?? selectedDuration
+                    
+                    // 4. Clear session duration since it's now the default
+                    sessionDuration = nil
+                    
+                    // 5. Update server data (if user email exists)
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
                         updateServerWorkoutDuration(email: email, durationMinutes: durationMinutes)
                     }
                     
                     showingDurationPicker = false
                 },
-                onSetForWorkout: {
-                    // Apply to current workout and regenerate
+                onSetForWorkout: { newDuration in
+                    // Apply to current workout session only (no server or default updates)
+                    print("⚡ Setting session-only duration: \(newDuration.minutes) minutes (won't save to server)")
+                    sessionDuration = newDuration
                     showingDurationPicker = false
                     regenerateWorkoutWithNewDuration()
                 }
@@ -126,6 +142,7 @@ struct LogWorkoutView: View {
     
     private func regenerateWorkoutWithNewDuration() {
         // Trigger workout regeneration
+        print("🔄 Regenerating workout with duration: \(effectiveDuration.minutes) minutes")
         shouldRegenerateWorkout = true
         // Reset the flag after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -192,7 +209,7 @@ struct LogWorkoutView: View {
         HStack(spacing: 12) {
             // Duration Control
             WorkoutControlButton(
-                title: selectedDuration.displayValue,
+                title: effectiveDuration.displayValue,
                 value: "",
                 onTap: {
                     showingDurationPicker = true
@@ -222,7 +239,7 @@ struct LogWorkoutView: View {
                     navigationPath: $navigationPath,
                     workoutManager: workoutManager,
                     userEmail: userEmail,
-                    selectedDuration: selectedDuration,
+                    selectedDuration: effectiveDuration,
                     shouldRegenerate: shouldRegenerateWorkout
                 )
             case .workouts:
@@ -1174,11 +1191,11 @@ struct WorkoutDurationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedDuration: WorkoutDuration
     let onSetDefault: () -> Void
-    let onSetForWorkout: () -> Void
+    let onSetForWorkout: (WorkoutDuration) -> Void // Updated to pass the selected duration
     
     @State private var tempSelectedDuration: WorkoutDuration
     
-    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping () -> Void, onSetForWorkout: @escaping () -> Void) {
+    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping () -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
         self._selectedDuration = selectedDuration
         self.onSetDefault = onSetDefault
         self.onSetForWorkout = onSetForWorkout
@@ -1303,8 +1320,7 @@ struct WorkoutDurationPickerView: View {
             Spacer()
             
             Button("Set for this workout") {
-                selectedDuration = tempSelectedDuration
-                onSetForWorkout()
+                onSetForWorkout(tempSelectedDuration) // Pass the selected duration
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))

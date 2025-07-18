@@ -159,7 +159,6 @@ struct ProfileView: View {
                         
                     }
                     .scrollContentBackground(.hidden)
-                    .padding(.bottom, 70)
         }
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
         .sheet(isPresented: $showingMail) {
