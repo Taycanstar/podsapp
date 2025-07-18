@@ -119,7 +119,7 @@ struct TextLogView: View {
                                 )
                         }
                         
-                        Spacer()
+                        
                         
                         // Waveform/Submit button - changes based on text input
                         Button(action: {
