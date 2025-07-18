@@ -80,7 +80,7 @@ struct TextLogView: View {
                                 )
                         }
                         
-                        Spacer()
+                      
                     } else {
                         // Normal state - show all three icons
                         // Barcode scanner button
@@ -196,10 +196,8 @@ struct TextLogView: View {
             }
         }
         .onAppear {
-            // Auto-focus the input when sheet appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isInputFocused = true
-            }
+            // Auto-focus the input immediately when sheet appears
+            isInputFocused = true
         }
         .onChange(of: speechRecognizer.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
