@@ -267,68 +267,66 @@ struct LogWorkoutView: View {
     
     private var workoutControlsInHeader: some View {
         HStack(spacing: 12) {
-            // Duration Control with session modification styling
-            HStack(spacing: 8) {
+            // X button to reset session duration (only show when session duration is set) - positioned first
+            if sessionDuration != nil {
                 Button(action: {
-                    showingDurationPicker = true
+                    // Reset to default duration
+                    sessionDuration = nil
+                    UserDefaults.standard.removeObject(forKey: sessionDurationKey)
+                    UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                    regenerateWorkoutWithNewDuration()
+                    print("🔄 Reset to default duration: \(selectedDuration.minutes) minutes")
                 }) {
-                    HStack(spacing: 4) {
-                        Text(effectiveDuration.displayValue)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Show chevron only when no session duration is set
-                        if sessionDuration == nil {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when session duration is set
-                        sessionDuration != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.2)) : nil
-                    )
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 35, height: 35)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(17.5)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17.5)
+                                .stroke(Color.primary, lineWidth: 1)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17.5)
+                                .fill(Color.primary.opacity(0.05))
+                        )
                 }
                 .buttonStyle(PlainButtonStyle())
-                
-                // X button to reset session duration (only show when session duration is set)
-                if sessionDuration != nil {
-                    Button(action: {
-                        // Reset to default duration
-                        sessionDuration = nil
-                        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
-                        UserDefaults.standard.removeObject(forKey: sessionDateKey)
-                        regenerateWorkoutWithNewDuration()
-                        print("🔄 Reset to default duration: \(selectedDuration.minutes) minutes")
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 24, height: 24)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.primary, lineWidth: 1)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.primary.opacity(0.2))
-                            )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
             }
+            
+            // Duration Control with session modification styling
+            Button(action: {
+                showingDurationPicker = true
+            }) {
+                HStack(spacing: 4) {
+                    Text(effectiveDuration.displayValue)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    // Show chevron only when no session duration is set
+                    if sessionDuration == nil {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                .cornerRadius(20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .overlay(
+                    // Add primary color overlay when session duration is set
+                    sessionDuration != nil ? 
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.primary.opacity(0.05)) : nil
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
             
             // Type Control  
             WorkoutControlButton(
@@ -406,7 +404,7 @@ private struct TabButton: View {
                 .background(
                     Capsule()
                         .fill(selectedTab == tab 
-                              ? (colorScheme == .dark ? Color.white.opacity(0.2) : Color.black.opacity(0.06))
+                              ? (colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.06))
                               : Color.clear)
                 )
                 .foregroundColor(selectedTab == tab ? .primary : Color.gray.opacity(0.8))

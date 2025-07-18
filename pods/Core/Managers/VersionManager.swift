@@ -1,9 +1,4 @@
-//
-//  VersionManager.swift
-//  Pods
-//
-//  Created by Dimi Nunez on 2/18/25.
-//
+
 
 import Foundation
 import SwiftUI
